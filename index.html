@@ -2002,9 +2002,11 @@ updatePurchaseVisibility(line);
                     selectHtml;
             }
 
-            let actionsHtml =
-                '<button class="btn btn-primary btn-small" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-                ' <button class="btn btn-primary btn-small" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>';
+           let actionsHtml =
+    '<div class="actions-btns">' +
+        '<button class="btn btn-primary btn-small" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+        '<button class="btn btn-primary btn-small" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
+    '</div>';
 
             tr.innerHTML =
                 '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
@@ -2506,6 +2508,13 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
             font-size:10px;
             min-height:55px;
         }
+        .btn-small {
+    margin-bottom: 4px;
+}
+.btn-small:last-child {
+    margin-bottom: 0;
+}
+
         .signature-title{font-weight:bold;margin-bottom:3px;}
         img.sig{max-height:38px;margin-top:3px;}
 
@@ -2626,6 +2635,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
