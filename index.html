@@ -2353,7 +2353,10 @@ if (isDevis) {
         "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>" +
         (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
     "<style>" +
-    "*{margin:0;padding:0;box-sizing:border-box}" +
+"@media print{@page{margin:5mm;} body{padding:0!important;margin:0!important;}}" +
+"*{margin:0;padding:0;box-sizing:border-box}" +
+...
+
     "body{font-family:Arial,sans-serif;padding:24px 24px 30px;color:#333}" +
 ".header{text-align:center;margin-bottom:8px;border-bottom:1.5px solid #1a74d9;padding-bottom:6px}" +
 "img.logo{height:45px;margin-bottom:4px}" +
@@ -2465,4 +2468,5 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
