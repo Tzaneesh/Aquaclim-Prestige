@@ -2138,7 +2138,7 @@ function openPrintable(id) {
     const doc = getDocument(targetId);
     if (!doc) return;
 
-    // ---------- Détection piscine / clim ----------
+    // ---------- Détection piscine / clim / produits / déplacement ----------
     const hasPiscine = doc.prestations.some(p =>
         [
             "piscine_chlore",
@@ -2219,7 +2219,7 @@ function openPrintable(id) {
         `;
     });
 
-    // ---------- Important ----------
+    // ---------- Bloc Important (pour devis) ----------
     let importantHtml = "";
     if (isDevis) {
         const items = [];
@@ -2361,7 +2361,7 @@ function openPrintable(id) {
     }
 
     const notesHtml = notesText
-        ? `<div style="margin-top:20px;font-size:12px;"><p>${notesText.replace(/\n/g, "<br>")}</p></div>`
+        ? `<div style="margin-top:8px;font-size:10px;"><p>${notesText.replace(/\n/g, "<br>")}</p></div>`
         : "";
 
     // ---------- Dates devis ----------
@@ -2371,6 +2371,12 @@ function openPrintable(id) {
             <p><strong>Devis gratuit – valable jusqu'au : ${new Date(doc.validityDate).toLocaleDateString("fr-FR")}</strong></p>
         `;
     }
+
+    // ---------- Texte signatures ----------
+    const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
+    const signatureClientText = isDevis
+        ? "Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis."
+        : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
 
     // ---------- HTML complet ----------
     const printWindow = window.open("", "_blank");
@@ -2398,6 +2404,7 @@ function openPrintable(id) {
         }
         .page-main{flex:1 0 auto;}
         .page-footer{flex-shrink:0;margin-top:8mm;}
+        .bottom-block{page-break-inside:avoid;break-inside:avoid;}
 
         .header{text-align:center;margin-bottom:8px;border-bottom:1.3px solid #1a74d9;padding-bottom:7px;}
         img.logo{height:55px;margin-bottom:4px;}
@@ -2447,7 +2454,7 @@ function openPrintable(id) {
         .tva-note{margin-top:4px;font-size:9px;font-style:italic;color:#555;}
 
         .reglement-block{
-            margin-top:12px;
+            margin-top:4px;
             font-size:10px;
             border:1px solid #4caf50;
             padding:7px;
@@ -2459,7 +2466,7 @@ function openPrintable(id) {
         .reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px;}
 
         .rib-block{
-            margin-top:10px;
+            margin-top:6px;
             font-size:10px;
             border:1px solid #ccc;
             padding:7px;
@@ -2471,7 +2478,7 @@ function openPrintable(id) {
         .rib-title{font-weight:bold;margin-bottom:3px;font-size:10px;}
 
         .important-block{
-            margin-top:12px;
+            margin-top:8px;
             font-size:10px;
             border:1px solid #1a74d9;
             padding:7px;
@@ -2555,20 +2562,25 @@ function openPrintable(id) {
             </table>
             ${tvaNoteHtml}
         </div>
-
-        ${!isDevis ? (reglementHtml + ribHtml + notesHtml) : ""}
-
     </div>
 
-    ${isDevis ? `
     <div class="page-footer bottom-block">
-        ${notesHtml}
-        ${importantHtml}
-
+        ${
+            isDevis
+                ? `
+                    ${notesHtml}
+                    ${importantHtml}
+                `
+                : `
+                    ${reglementHtml}
+                    ${ribHtml}
+                    ${notesHtml}
+                `
+        }
         <div class="signatures">
             <div class="signature-block">
-                <div class="signature-title">Bon pour accord</div>
-                <p>Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis.</p>
+                <div class="signature-title">${signatureClientTitle}</div>
+                <p>${signatureClientText}</p>
                 <p style="margin-bottom:18px;">Date :</p>
                 <p>Signature :</p>
             </div>
@@ -2577,7 +2589,7 @@ function openPrintable(id) {
                 <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
             </div>
         </div>
-    </div>` : ""}
+    </div>
 </div>
 
 <script>
@@ -2594,6 +2606,7 @@ function openPrintable(id) {
 
 
 
+
 // ------- Init -------
 window.onload = function () {
     setTVA(0);
@@ -2604,6 +2617,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
