@@ -2390,30 +2390,12 @@ const html =
     "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>" +
     (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
     "<style>" +
-"<style>" +
-"@media print {" +
-    "@page {" +
-        "margin: 10mm;" +
-    "}" +
-
-    "body {" +
-        "margin: 0 !important;" +
-        "padding: 0 !important;" +
-    "}" +
-
-    ".page {" +
-        "display: block !important;" +
-        "min-height: auto !important;" +
-        "padding: 10mm 12mm 12mm 12mm !important;" +
-        "box-sizing: border-box;" +
-    "}" +
-"}" +
-
-"*{margin:0;padding:0;box-sizing:border-box}" +
-"body{font-family:Arial,sans-serif;padding:16px 16px 20px;color:#333;font-size:10.5px;}" +
-".page{display:flex;flex-direction:column;min-height:100vh;}" +
-".page-main{flex:1 0 auto;}" +
-".page-footer{flex-shrink:0;}" +
+    // Styles généraux (écran + base)
+    "*{margin:0;padding:0;box-sizing:border-box}" +
+    "body{font-family:Arial,sans-serif;padding:16px 16px 20px;color:#333;font-size:10.5px;}" +
+    ".page{display:flex;flex-direction:column;min-height:100vh;}" +
+    ".page-main{flex:1 0 auto;}" +
+    ".page-footer{flex-shrink:0;}" +
 
 
 
@@ -2492,9 +2474,25 @@ const html =
     ".rcpro{margin-top:6px;font-size:9.5px;}" +
 
     ".reglement-block{margin-top:12px;font-size:10px;border:1px solid #4caf50;padding:7px;border-radius:6px;background:#f1faf1;page-break-inside:avoid;break-inside:avoid;}" +
-    ".reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px}" +
+       ".reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px}" +
 
-        "</style></head><body>" +
+    // 🔹 Spécifique impression : marges propres + page qui ne force pas 100vh
+    "@media print{" +
+        "@page{margin:10mm;}" +  // marges physiques de la feuille
+        "body{" +
+            "margin:0 !important;" +
+            "padding:0 !important;" +
+        "}" +
+        ".page{" +
+            "display:block !important;" +
+            "min-height:auto !important;" +
+            "padding:10mm 12mm 12mm 12mm !important;" + // coussin interne
+            "box-sizing:border-box;" +
+        "}" +
+    "}" +
+
+    "</style></head><body>" +
+
 
     '<div class="page">' +
 
@@ -2505,7 +2503,7 @@ const html =
             '<div class="header">' +
                 '<img src="' + logoSrc + '" class="logo" alt="AquaClim Prestige">' +
                 "<h1>AquaClim Prestige</h1>" +
-                '<p class="subtitle">Entretien & Dépannage - Climatisation & Piscine</p>' +
+                '<p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>' +
                 '<p class="contact">Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>' +
                 "Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>" +
                 "SIRET : <strong>XXXXXXXXXXXXX</strong></p>" +
@@ -2601,6 +2599,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
