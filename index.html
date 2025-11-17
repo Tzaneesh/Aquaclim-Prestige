@@ -2391,10 +2391,11 @@ const html =
     (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
    "<style>" +
 "*{margin:0;padding:0;box-sizing:border-box}" +
-"body{font-family:Arial,sans-serif;padding:16px 16px 20px;color:#333;font-size:10.5px;}" +
-".page{display:flex;flex-direction:column;min-height:100vh;}" +
+"body{margin:0;padding:0;font-family:Arial,sans-serif;color:#333;font-size:10.5px;}" +
+".page{display:flex;flex-direction:column;min-height:100vh;padding:10mm 12mm 14mm 12mm;box-sizing:border-box;}" +
 ".page-main{flex:1 0 auto;}" +
-".page-footer{flex-shrink:0;margin-top:12px;}" +
+".page-footer{flex-shrink:0;margin-top:8mm;}" +
+
 
 ".header{text-align:center;margin-bottom:8px;border-bottom:1.3px solid #1a74d9;padding-bottom:7px}" +
 "img.logo{height:55px;margin-bottom:4px}" +
@@ -2449,10 +2450,12 @@ const html =
 ".reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px}" +
 
 "@media print{" +
-    "@page{margin:12mm;}" +
+    "@page{margin:8mm;}" +
     "body{margin:0;padding:0;}" +
     ".page{min-height:100vh;}" +
 "}" +
+
+
 "</style></head><body>" +
 
 
@@ -2563,6 +2566,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
