@@ -2347,114 +2347,142 @@ if (isDevis) {
 }
 
 
-    // ---------- HTML complet du PDF ----------
-    const printWindow = window.open("", "_blank");
-    const html =
-        "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>" +
-        (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
+  // ---------- HTML complet du PDF ----------
+const printWindow = window.open("", "_blank");
+const html =
+    "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>" +
+    (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
     "<style>" +
-"@media print{@page{margin:5mm;} body{padding:0!important;margin:0!important;}}" +
-"*{margin:0;padding:0;box-sizing:border-box}" +
-...
+    "@media print{@page{margin:5mm;} body{padding:0!important;margin:0!important;}}" +
+    "*{margin:0;padding:0;box-sizing:border-box}" +
 
-    "body{font-family:Arial,sans-serif;padding:24px 24px 30px;color:#333}" +
-".header{text-align:center;margin-bottom:8px;border-bottom:1.5px solid #1a74d9;padding-bottom:6px}" +
-"img.logo{height:45px;margin-bottom:4px}" +
-".header h1{color:#1a74d9;font-size:20px;margin-bottom:2px;font-weight:700}" +
-".header p{color:#444;font-size:10.5px;line-height:1.25}" +
+    // GLOBAL
+    "body{font-family:Arial,sans-serif;padding:16px 16px 20px;color:#333;font-size:10.5px;}" +
 
-    ".subtitle{font-weight:600;font-size:12px}" +
-    ".contact{font-size:11px;font-weight:500}" +
+    // HEADER
+    ".header{text-align:center;margin-bottom:6px;border-bottom:1.3px solid #1a74d9;padding-bottom:5px}" +
+    "img.logo{height:38px;margin-bottom:3px}" +
+    ".header h1{color:#1a74d9;font-size:18px;margin-bottom:2px;font-weight:700}" +
+    ".header p{color:#444;font-size:9.5px;line-height:1.2}" +
+    ".subtitle{font-weight:600;font-size:10px}" +
+    ".contact{font-size:9.5px;font-weight:500}" +
     ".contact strong{font-weight:700}" +
-    ".doc-header-center{text-align:center;margin:14px 0 16px 0}" +
-    ".doc-header-center h2{font-size:20px;color:#1a74d9;margin-bottom:4px}" +
-    ".doc-header-center p{font-size:12px;margin:2px 0}" +
-    ".client-block{margin-bottom:14px;font-size:12px}" +
-    ".client-block p{margin:3px 0}" +
-    "table{width:100%;border-collapse:collapse;margin:16px 0}" +
-    "th{background:#1a74d9;color:white;padding:8px;text-align:left;font-weight:600;font-size:12px;border-bottom:2px solid #0d47a1}" +
-    "td{padding:7px;border-bottom:1px solid #ddd;font-size:12px;vertical-align:top}" +
+
+    // TITRE DOC
+    ".doc-header-center{text-align:center;margin:10px 0 12px 0}" +
+    ".doc-header-center h2{font-size:18px;color:#1a74d9;margin-bottom:3px}" +
+    ".doc-header-center p{font-size:10px;margin:1px 0}" +
+
+    // CLIENT
+    ".client-block{margin-bottom:10px;font-size:10px}" +
+    ".client-block p{margin:2px 0}" +
+
+    // TABLE PRESTATIONS
+    "table{width:100%;border-collapse:collapse;margin:10px 0}" +
+    "th{background:#1a74d9;color:white;padding:6px;text-align:left;font-weight:600;font-size:10px;border-bottom:2px solid #0d47a1}" +
+    "td{padding:5px;border-bottom:1px solid #ddd;font-size:10px;vertical-align:top}" +
     ".text-right{text-align:right}" +
     ".price-col{white-space:nowrap;}" +
     ".total-col{white-space:nowrap;}" +
-    ".totals{margin-left:auto;width:260px;margin-top:6px}" +
+
+    // TOTALS
+    ".totals{margin-left:auto;width:230px;margin-top:4px}" +
     ".totals table{margin:0}" +
-    ".totals td{padding:4px 8px;font-size:12px}" +
-    ".totals .grand-total{background:#f0f0f0;color:#000;font-weight:bold;font-size:14px}" +
-    ".tva-note{margin-top:6px;font-size:11px;font-style:italic;color:#555}" +
+    ".totals td{padding:3px 6px;font-size:10px}" +
+    ".totals .grand-total{background:#f0f0f0;color:#000;font-weight:bold;font-size:11px}" +
+    ".tva-note{margin-top:4px;font-size:9px;font-style:italic;color:#555}" +
 
-        ".desc-main{font-size:13px;font-weight:600;margin-bottom:2px}" +
-        ".desc-detail{font-size:12px;color:#555;margin-top:2px}" +
-        ".sub-info{font-size:12px;color:#555;margin-top:6px}" +
-        ".sub-info-line{font-size:12px;}" +
-        ".dates-label{font-weight:bold;font-size:12px}" +
-        ".signatures{margin-top:35px;display:flex;justify-content:space-between;gap:40px;page-break-inside:avoid;break-inside:avoid;}" +
-        ".signature-block{flex:1;border-top:1px solid #333;padding-top:8px;font-size:12px;min-height:70px}" +
-        ".signature-title{font-weight:bold;margin-bottom:4px}" +
-        "img.sig{max-height:55px;margin-top:6px}" +
-        ".rib-block{margin-top:20px;font-size:12px;border:1px solid #ccc;padding:10px;border-radius:6px;background:#fafafa;page-break-inside:avoid;break-inside:avoid;}" +
-        ".rib-title{font-weight:bold;margin-bottom:4px;font-size:12px}" +
-        ".important-block{margin-top:20px;font-size:12px;border:1px solid #1a74d9;padding:10px;border-radius:6px;background:#f3f7ff;page-break-inside:avoid;break-inside:avoid;}" +
-        bottomBlockStyle +
-        ".rcpro{margin-top:10px;font-size:11px;}" +
-        ".important-title{font-weight:bold;margin-bottom:6px;font-size:12px;color:#1a74d9}" +
-        ".important-block ul{margin-left:18px}" +
-        ".important-block li{margin-bottom:4px}" +
-        ".reglement-block{margin-top:18px;font-size:12px;border:1px solid #4caf50;padding:10px;border-radius:6px;background:#f1faf1;page-break-inside:avoid;break-inside:avoid;}" +
-        ".reg-title{font-weight:bold;margin-bottom:4px;color:#2e7d32;font-size:12px}" +
-        "</style></head><body>" +
-        '<div class="header">' +
-            '<img src="' + logoSrc + '" class="logo" alt="AquaClim Prestige">' +
-            "<h1>AquaClim Prestige</h1>" +
-            '<p class="subtitle">Entretien & Dépannage - Climatisation & Piscine</p>' +
-            '<p class="contact">Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>' +
-            "Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>" +
-            "SIRET : <strong>XXXXXXXXXXXXX</strong></p>" +
-        "</div>" +
-        '<div class="doc-header-center">' +
-            "<h2>" + (isDevis ? "DEVIS " : "FACTURE ") + doc.number + "</h2>" +
-            topDatesHtml +
-        "</div>" +
-        '<div class="client-block">' +
-            "<p><strong>" + (doc.client?.name || "") + "</strong></p>" +
-            "<p>" + (doc.client?.address || "") + "</p>" +
-            (doc.client?.phone ? "<p>📞 " + doc.client.phone + "</p>" : "") +
-            (doc.client?.email ? "<p>✉️ " + doc.client.email + "</p>" : "") +
-        "</div>" +
-"<table><thead><tr>" +
-"<th>Description</th><th class=\"text-right\">Quantité</th>" +
-"<th class=\"text-right price-col\">Prix HT</th><th class=\"text-right total-col\">Total HT</th>" +
-"</tr></thead><tbody>" + prestationsHTML + "</tbody></table>" +
+    // DESCRIPTIONS LIGNES
+    ".desc-main{font-size:11px;font-weight:600;margin-bottom:2px}" +
+    ".desc-detail{font-size:10px;color:#555;margin-top:2px}" +
 
-        '<div class="totals"><table>' +
-            totalsRows +
-        "</table>" + tvaNoteHtml + "</div>" +
-        reglementHtml +
-        ribHtml +
-        notesHtml +
-        (isDevis
-            ? '<div class="bottom-block">' +
-                importantHtml +
-                '<div class="signatures">' +
-                    '<div class="signature-block">' +
-                        '<div class="signature-title">Bon pour accord</div>' +
-                        "<p>Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis.</p>" +
-                        "<p style=\"margin-bottom:25px;\">Date :</p><p>Signature :</p>" +
+    // SIGNATURES / IMPORTANT / RIB / RÈGLEMENT
+    ".signatures{margin-top:16px;display:flex;justify-content:space-between;gap:22px;page-break-inside:avoid;break-inside:avoid;}" +
+    ".signature-block{flex:1;border-top:1px solid #333;padding-top:6px;font-size:10px;min-height:45px}" +
+    ".signature-title{font-weight:bold;margin-bottom:3px}" +
+    "img.sig{max-height:38px;margin-top:3px}" +
 
-                    "</div>" +
-                    '<div class="signature-block">' +
-                        '<div class="signature-title">AquaClim Prestige</div>' +
-                        '<img src="' + signSrc + '" class="sig" alt="Signature AquaClim Prestige">' +
-                    "</div>" +
+    ".rib-block{margin-top:10px;font-size:10px;border:1px solid #ccc;padding:7px;border-radius:6px;background:#fafafa;page-break-inside:avoid;break-inside:avoid;}" +
+    ".rib-title{font-weight:bold;margin-bottom:3px;font-size:10px}" +
+
+    ".important-block{margin-top:12px;font-size:10px;border:1px solid #1a74d9;padding:7px;border-radius:6px;background:#f3f7ff;page-break-inside:avoid;break-inside:avoid;}" +
+    ".important-title{font-weight:bold;margin-bottom:4px;font-size:10px;color:#1a74d9}" +
+    ".important-block ul{margin-left:14px}" +
+    ".important-block li{margin-bottom:3px}" +
+
+    bottomBlockStyle +
+    ".rcpro{margin-top:6px;font-size:9.5px;}" +
+
+    ".reglement-block{margin-top:12px;font-size:10px;border:1px solid #4caf50;padding:7px;border-radius:6px;background:#f1faf1;page-break-inside:avoid;break-inside:avoid;}" +
+    ".reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px}" +
+
+    "</style></head><body>" +
+
+    // HEADER HTML
+    '<div class="header">' +
+        '<img src="' + logoSrc + '" class="logo" alt="AquaClim Prestige">' +
+        "<h1>AquaClim Prestige</h1>" +
+        '<p class="subtitle">Entretien & Dépannage - Climatisation & Piscine</p>' +
+        '<p class="contact">Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>' +
+        "Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>" +
+        "SIRET : <strong>XXXXXXXXXXXXX</strong></p>" +
+    "</div>" +
+
+    // TITRE DOC + DATES
+    '<div class="doc-header-center">' +
+        "<h2>" + (isDevis ? "DEVIS " : "FACTURE ") + doc.number + "</h2>" +
+        topDatesHtml +
+    "</div>" +
+
+    // CLIENT
+    '<div class="client-block">' +
+        "<p><strong>" + (doc.client?.name || "") + "</strong></p>" +
+        "<p>" + (doc.client?.address || "") + "</p>" +
+        (doc.client?.phone ? "<p>📞 " + doc.client.phone + "</p>" : "") +
+        (doc.client?.email ? "<p>✉️ " + doc.client.email + "</p>" : "") +
+    "</div>" +
+
+    // TABLEAU PRESTATIONS
+    "<table><thead><tr>" +
+        "<th>Description</th><th class=\"text-right\">Quantité</th>" +
+        "<th class=\"text-right price-col\">Prix HT</th><th class=\"text-right total-col\">Total HT</th>" +
+    "</tr></thead><tbody>" + prestationsHTML + "</tbody></table>" +
+
+    // TOTALS
+    '<div class="totals"><table>' +
+        totalsRows +
+    "</table>" + tvaNoteHtml + "</div>" +
+
+    // RÈGLEMENT / RIB / NOTES
+    reglementHtml +
+    ribHtml +
+    notesHtml +
+
+    // IMPORTANT + SIGNATURES (DEVIS UNIQUEMENT)
+    (isDevis
+        ? '<div class="bottom-block">' +
+            importantHtml +
+            '<div class="signatures">' +
+                '<div class="signature-block">' +
+                    '<div class="signature-title">Bon pour accord</div>' +
+                    "<p>Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis.</p>" +
+                    "<p style=\"margin-bottom:18px;\">Date :</p><p>Signature :</p>" +
                 "</div>" +
-              "</div>"
-            : ""
-        ) +
-        "<script>window.onload=function(){window.print()}<\/script>" +
-        "</body></html>";
+                '<div class="signature-block">' +
+                    '<div class="signature-title">AquaClim Prestige</div>' +
+                    '<img src="' + signSrc + '" class="sig" alt="Signature AquaClim Prestige">' +
+                "</div>" +
+            "</div>" +
+          "</div>"
+        : ""
+    ) +
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+    "<script>window.onload=function(){window.print()}<\/script>" +
+    "</body></html>";
+
+printWindow.document.write(html);
+printWindow.document.close();
+
 }
 
 
@@ -2468,5 +2496,6 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
