@@ -2478,26 +2478,33 @@ const html =
        ".reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px}" +
 
   // 🔹 Spécifique impression : marges propres + footer collé en bas
-"@media print{" +
-    "@page{margin:10mm;}" +  // marges physiques de la feuille
-    "body{" +
-        "margin:0 !important;" +
-        "padding:0 !important;" +
-    "}" +
-    ".page{" +
-        "display:flex !important;" +          // flex en print
-        "flex-direction:column !important;" +
-        "min-height:auto !important;" +       // pas de 100vh foireux
-        "padding:10mm 12mm 12mm 12mm !important;" + // coussin interne
-        "box-sizing:border-box;" +
-    "}" +
-    ".page-main{" +
-        "flex:1 0 auto !important;" +         // pousse le footer vers le bas
-    "}" +
-    ".page-footer{" +
-        "margin-top:auto !important;" +       // colle le bloc bas de page
-    "}" +
-"}" +
+@media print {
+    @page {
+        margin: 10mm;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .page {
+        display: flex !important;
+        flex-direction: column !important;
+        height: 100% !important;      /* ⭐ important */
+        min-height: 100% !important;   /* ⭐ important */
+        padding: 10mm 12mm 12mm 12mm !important;
+        box-sizing: border-box;
+    }
+
+    .page-main {
+        flex: 1 0 auto !important; 
+    }
+
+    .page-footer {
+        margin-top: auto !important;   /* le footer COLLE en bas */
+    }
+}
 
 
     "</style></head><body>" +
@@ -2608,6 +2615,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
