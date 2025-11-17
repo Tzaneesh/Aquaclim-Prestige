@@ -2315,6 +2315,8 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
 
     // ---------- Règlement / RIB / Notes ----------
     const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
+const validityStr = (isDevis && doc.validityDate)
+    ? new Date(doc.validityDate).toLocaleDateString("fr-FR")
     const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
     const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
 
@@ -2369,11 +2371,24 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
         ? `<div style="margin-top:8px;font-size:10px;"><p>${notesText.replace(/\n/g, "<br>")}</p></div>`
         : "";
 
-    let topDatesHtml = `<p><strong>Fait à Nice, le ${dateStr}</strong></p>`;
-    if (isDevis && doc.validityDate) {
-        topDatesHtml += `
-            <p><strong>Devis gratuit – valable jusqu'au : ${new Date(doc.validityDate).toLocaleDateString("fr-FR")}</strong></p>
-        `;
+   
+let topDatesHtml = `
+    <div class="doc-info-block">
+        <div class="doc-info-row">
+            <span class="doc-info-label">Date d’émission :</span>
+            <span class="doc-info-value">${dateStr}</span>
+        </div>
+        ${validityStr ? `
+        <div class="doc-info-row">
+            <span class="doc-info-label">Validité :</span>
+            <span class="doc-info-value">${validityStr}</span>
+        </div>` : ``}
+        <div class="doc-info-row">
+            <span class="doc-info-label">Lieu d’émission :</span>
+            <span class="doc-info-value">Nice</span>
+        </div>
+    </div>
+`;
     }
 
     const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
@@ -2416,9 +2431,41 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
         .contact{font-size:10.5px;font-weight:500;}
         .contact strong{font-weight:700;}
 
-        .doc-header-center{text-align:center;margin:10px 0 12px 0;}
-        .doc-header-center h2{font-size:18px;color:#1a74d9;margin-bottom:3px;}
-        .doc-header-center p{font-size:10px;margin:1px 0;}
+ .doc-header-center{
+    margin:10px 0 12px 0;
+}
+
+.doc-header-center h2{
+    font-size:18px;
+    color:#1a74d9;
+    margin-bottom:4px;
+    text-align:left;
+}
+
+.doc-info-block{
+    display:inline-block;
+    border:1px solid #ddd;
+    border-radius:6px;
+    padding:6px 8px;
+    font-size:10px;
+    background:#fafafa;
+}
+
+.doc-info-row{
+    display:flex;
+    gap:4px;
+    margin:1px 0;
+}
+
+.doc-info-label{
+    min-width:95px;
+    font-weight:bold;
+}
+
+.doc-info-value{
+    flex:1;
+}
+
 
        .client-block{
     margin-bottom:10px;
@@ -2684,6 +2731,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
