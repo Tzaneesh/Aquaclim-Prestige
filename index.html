@@ -2170,6 +2170,9 @@ function openPrintable(id) {
     );
 
     const isDevis = doc.type === "devis";
+    const isPaidInvoice = (!isDevis && doc.paid);
+const isUnpaidInvoice = (!isDevis && !doc.paid);
+
 
     // ---------- Lignes prestations ----------
     let prestationsHTML = "";
@@ -2554,45 +2557,48 @@ function openPrintable(id) {
         </table>
 
         <div class="totals">
-            <table>
-                ${totalsRows}
-            </table>
-            ${tvaNoteHtml}
-        </div>
+    <table>
+        ${totalsRows}
+    </table>
+    ${tvaNoteHtml}
+</div>
+
+${isPaidInvoice ? reglementHtml : ""}
+${isPaidInvoice ? notesHtml : ""}
+
     </div>
 
-        <div class="page-footer bottom-block">
-        ${
-            isDevis
-                ? `
-                    ${notesHtml}
-                    ${importantHtml}
-                `
-                : `
-                    ${reglementHtml}
-                    ${ribHtml}
-                    ${notesHtml}
-                `
-        }
-        ${
-            isDevis
-                ? `
-        <div class="signatures">
-            <div class="signature-block">
-                <div class="signature-title">${signatureClientTitle}</div>
-                <p>${signatureClientText}</p>
-                <p style="margin-bottom:18px;">Date :</p>
-                <p>Signature :</p>
-            </div>
-            <div class="signature-block">
-                <div class="signature-title">AquaClim Prestige</div>
-                <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-            </div>
-        </div>
-                `
-                : ``
-        }
-    </div>
+   <div class="page-footer bottom-block">
+    ${
+        isDevis
+            ? `
+                ${notesHtml}
+                ${importantHtml}
+
+                <div class="signatures">
+                    <div class="signature-block">
+                        <div class="signature-title">${signatureClientTitle}</div>
+                        <p>${signatureClientText}</p>
+                        <p style="margin-bottom:18px;">Date :</p>
+                        <p>Signature :</p>
+                    </div>
+                    <div class="signature-block">
+                        <div class="signature-title">AquaClim Prestige</div>
+                        <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+                    </div>
+                </div>
+            `
+            : (
+                isUnpaidInvoice
+                    ? `
+                        ${ribHtml}
+                        ${notesHtml}
+                    `
+                    : ``
+            )
+    }
+</div>
+
 </div>
 </body>
 </html>`;
@@ -2620,6 +2626,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
