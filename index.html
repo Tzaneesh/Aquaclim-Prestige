@@ -2561,7 +2561,7 @@ function openPrintable(id) {
         </div>
     </div>
 
-    <div class="page-footer bottom-block">
+        <div class="page-footer bottom-block">
         ${
             isDevis
                 ? `
@@ -2574,6 +2574,9 @@ function openPrintable(id) {
                     ${notesHtml}
                 `
         }
+        ${
+            isDevis
+                ? `
         <div class="signatures">
             <div class="signature-block">
                 <div class="signature-title">${signatureClientTitle}</div>
@@ -2586,17 +2589,25 @@ function openPrintable(id) {
                 <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
             </div>
         </div>
+                `
+                : ``
+        }
     </div>
 </div>
 </body>
 </html>`;
+    // 🔚 fin du template HTML
 
     printWindow.document.write(html);
     printWindow.document.close();
+
+    // Impression auto de la popup
     printWindow.onload = function () {
+        printWindow.focus();
         printWindow.print();
     };
-}
+} // 🔚 fin de function openPrintable
+
 
 
 // ------- Init -------
@@ -2609,6 +2620,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
