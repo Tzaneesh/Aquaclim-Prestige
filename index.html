@@ -568,7 +568,7 @@
 </div>
 
 <script>
-// ------- Modèles de prestations V4 (P/S, descriptions) -------
+// ------- Modèles de prestations V5 (P/S, descriptions simplifiées & jacuzzi ajoutés) -------
 const PRESTATION_TEMPLATES = [
     {
         label: "— Choisir un modèle —",
@@ -581,182 +581,213 @@ const PRESTATION_TEMPLATES = [
     },
 
     // 1. Entretien climatisation
-{
-    label: "Entretien climatisation",
-    kind: "entretien_clim",
-    title: "Entretien climatisation",
-    priceParticulier: 90,
-    priceSyndic: 110,
-    descParticulier: "Nettoyage filtres, nettoyage et désinfection turbine, désinfection batterie (évaporateur), nettoyage bac à condensats et test d’évacuation, nettoyage groupe extérieur, contrôle température soufflage avant/après, vérification fixation et capot du groupe extérieur.",
-    descSyndic: "Nettoyage complet filtres, désinfection turbine et batterie, nettoyage et contrôle bac à condensats, test d’évacuation des condensats, vérification supports et fixations, nettoyage groupe extérieur, vérification visuelle installation, contrôle température soufflage avant/après, rapport d’observations pour gestionnaire."
-},
+    {
+        label: "Entretien climatisation",
+        kind: "entretien_clim",
+        title: "Entretien climatisation",
+        priceParticulier: 90,
+        priceSyndic: 110,
+        descParticulier: "Nettoyage filtres, turbine, évaporateur et bac à condensats. Contrôle évacuation et nettoyage groupe extérieur.",
+        descSyndic: "Nettoyage complet intérieur/extérieur, contrôle évacuation, désinfection et vérification installation. Contrôle températures et rapport gestionnaire."
+    },
 
-// 2. Entretien piscine chlore
-{
-    label: "Entretien piscine chlore",
-    kind: "piscine_chlore",
-    title: "Entretien piscine chlore",
-    priceParticulier: 80,
-    priceSyndic: 100,
-    descParticulier: "Contrôle chlore pH stabilisant, nettoyage bassin, vérification filtration et rinçage, ajustement traitement, contrôle niveau d’eau, contrôle visuel skimmer bonde joints.",
-    descSyndic: "Analyse complète eau, nettoyage bassin, contrôle local technique, vérification pression filtre et rinçage complet, contrôle pompe, ajustement traitement et remise en conformité, contrôle niveau d’eau, vérification skimmer bonde joints, rapport gestionnaire."
-},
+    // 2. Entretien piscine chlore
+    {
+        label: "Entretien piscine chlore",
+        kind: "piscine_chlore",
+        title: "Entretien piscine chlore",
+        priceParticulier: 80,
+        priceSyndic: 100,
+        descParticulier: "Analyse de l’eau, nettoyage bassin, contrôle filtration, rinçage et ajustement traitement.",
+        descSyndic: "Analyse complète, nettoyage bassin, contrôle local technique, pression filtre, rinçage, vérification pompe et rapport gestionnaire."
+    },
 
-// 3. Entretien piscine sel
-{
-    label: "Entretien piscine sel",
-    kind: "piscine_sel",
-    title: "Entretien piscine sel",
-    priceParticulier: 80,
-    priceSyndic: 100,
-    descParticulier: "Analyse eau, nettoyage bassin, contrôle cellule électrolyse, vérification filtre et pompe, réglage production de sel, contrôle salinité, vérification paramètres boîtier.",
-    descSyndic: "Analyse complète, nettoyage bassin, inspection cellule électrolyse, contrôle production et optimisation, vérification local technique filtre pompe, contrôle salinité, réglages boîtier, rapport gestionnaire."
-},
+    // 3. Entretien piscine sel
+    {
+        label: "Entretien piscine sel",
+        kind: "piscine_sel",
+        title: "Entretien piscine sel",
+        priceParticulier: 80,
+        priceSyndic: 100,
+        descParticulier: "Analyse eau, nettoyage bassin, contrôle cellule électrolyse, pompe et filtration. Réglage production de sel.",
+        descSyndic: "Analyse complète, nettoyage, contrôle cellule et production, vérification filtration, réglages boîtier et rapport gestionnaire."
+    },
 
-// 4. Hivernage piscine
-{
-    label: "Hivernage piscine",
-    kind: "hivernage_piscine",
-    title: "Hivernage piscine",
-    priceParticulier: 100,
-    priceSyndic: 120,
-    descParticulier: "Nettoyage bassin, abaissement niveau d’eau, ajout produit d’hivernage, coupure et sécurisation local technique, pose gizzmo si nécessaire, fermeture buses si compatible.",
-    descSyndic: "Nettoyage complet bassin, abaissement contrôlé niveau d’eau, ajout produit d’hivernage, purge et vidange canalisations si nécessaire, arrêt et sécurisation local technique, pose gizzmo et protections, fermeture buses, rapport d’état gestionnaire."
-},
+    // 4. Entretien jacuzzi
+    {
+        label: "Entretien jacuzzi",
+        kind: "entretien_jacuzzi",
+        title: "Entretien jacuzzi / spa",
+        priceParticulier: 70,
+        priceSyndic: 90,
+        descParticulier: "Nettoyage spa, filtres, contrôle eau, désinfection buses et vérification pompe/chauffage.",
+        descSyndic: "Nettoyage complet, analyse eau, désinfection, contrôle installation, pompes/chauffage et rapport gestionnaire."
+    },
 
-// 5. Remise en service piscine
-{
-    label: "Remise en service piscine",
-    kind: "remise_service_piscine",
-    title: "Remise en service piscine",
-    priceParticulier: 100,
-    priceSyndic: 120,
-    descParticulier: "Nettoyage bassin, remise en route filtration, contrôle pH et chlore sel, vérification local technique, contrôle étanchéité raccords, réglage programmateur.",
-    descSyndic: "Nettoyage bassin, redémarrage complet filtration, analyse eau et réglages initiaux, contrôle cellule filtre pompe, vérification local technique, contrôle étanchéité et réglage programmateur, rapport remise en service."
-},
+    // 5. Hivernage piscine
+    {
+        label: "Hivernage piscine",
+        kind: "hivernage_piscine",
+        title: "Hivernage piscine",
+        priceParticulier: 100,
+        priceSyndic: 120,
+        descParticulier: "Nettoyage, baisse niveau eau, ajout produit d’hivernage et sécurisation local technique.",
+        descSyndic: "Nettoyage complet, abaissement contrôlé, purge éventuelle, sécurisation local technique et rapport gestionnaire."
+    },
 
-// 6. Traitement choc piscine
-{
-    label: "Traitement choc piscine",
-    kind: "traitement_choc",
-    title: "Traitement choc piscine",
-    priceParticulier: 70,
-    priceSyndic: 90,
-    descParticulier: "Application traitement choc, remise en route filtration, nettoyage filtre après clarification, vérification turbidité visuelle.",
-    descSyndic: "Traitement choc adapté à l’eau, contrôle filtration et suivi clarification, analyse après traitement, nettoyage filtre et rinçage, test turbidité, rapport gestionnaire."
-},
+    // 6. Remise en service piscine
+    {
+        label: "Remise en service piscine",
+        kind: "remise_service_piscine",
+        title: "Remise en service piscine",
+        priceParticulier: 100,
+        priceSyndic: 120,
+        descParticulier: "Nettoyage, remise en route filtration, analyse eau et réglages nécessaires.",
+        descSyndic: "Redémarrage complet, analyse et réglages, contrôle local technique, étanchéité et rapport gestionnaire."
+    },
 
-// 7. Changement sable / charge filtre
-{
-    label: "Changement sable / charge filtre",
-    kind: "changement_sable",
-    title: "Changement sable / charge filtre",
-    priceParticulier: 300,
-    priceSyndic: 360,
-    descParticulier: "Vidange filtre, remplacement sable charge, rinçage et remise en service, contrôle joint étoile vanne, contrôle fuites après mise en pression.",
-    descSyndic: "Vidange complète filtre, remplacement charge nouvelle génération, nettoyage cuve, contrôle crépines, rinçage et vérification pression, contrôle joint étoile étanchéité, rapport local technique."
-},
+    // 7. Vidange + nettoyage jacuzzi
+    {
+        label: "Vidange + nettoyage jacuzzi",
+        kind: "vidange_jacuzzi",
+        title: "Vidange et nettoyage jacuzzi / spa",
+        priceParticulier: 120,
+        priceSyndic: 150,
+        descParticulier: "Vidange complète, nettoyage cuve/buses, nettoyage filtre, remise en eau et équilibrage.",
+        descSyndic: "Vidange complète, nettoyage cuve/buses, remise en eau, équilibrage et rapport gestionnaire."
+    },
 
-// 8. Remplacement roulement pompe piscine
-{
-    label: "Remplacement roulement pompe piscine",
-    kind: "remplacement_roulement",
-    title: "Remplacement roulement pompe piscine",
-    priceParticulier: 180,
-    priceSyndic: 220,
-    descParticulier: "Remplacement roulements pompe",
-    descSyndic: "Démontage pompe, extraction et remplacement roulement, remontage et test,rapport technicien."
-},
+    // 8. Traitement choc piscine
+    {
+        label: "Traitement choc piscine",
+        kind: "traitement_choc",
+        title: "Traitement choc piscine",
+        priceParticulier: 70,
+        priceSyndic: 90,
+        descParticulier: "Application traitement choc, remise en route filtration et rinçage après clarification.",
+        descSyndic: "Traitement adapté, suivi filtration, analyse après traitement, rinçage filtre et rapport gestionnaire."
+    },
 
-// 9. Remplacement pompe piscine (MO)
-{
-    label: "Remplacement pompe piscine (MO)",
-    kind: "remplacement_pompe_mo",
-    title: "Remplacement pompe piscine (main-d’œuvre uniquement)",
-    priceParticulier: 150,
-    priceSyndic: 180,
-    descParticulier: "Remplacement pompe main d’œuvre uniquement, contrôle fonctionnement, pièce non fournie.",
-    descSyndic: "Dépose ancienne pompe, installation et raccordement, réglages pression débit, contrôle vibrations bruit, main d’œuvre uniquement, pièce non fournie, rapport technicien."
-},
+    // 9. Changement sable / charge filtre
+    {
+        label: "Changement sable / charge filtre",
+        kind: "changement_sable",
+        title: "Changement sable / charge filtre",
+        priceParticulier: 300,
+        priceSyndic: 360,
+        descParticulier: "Vidange filtre, remplacement charge, rinçage et remise en service.",
+        descSyndic: "Vidange complète, nettoyage cuve, contrôle crépines, remplacement charge, rinçage et rapport gestionnaire."
+    },
 
-// 10. Remplacement cellule électrolyseur (MO)
-{
-    label: "Remplacement cellule électrolyseur (MO)",
-    kind: "remplacement_cellule_mo",
-    title: "Remplacement cellule électrolyseur (main-d’œuvre uniquement)",
-    priceParticulier: 120,
-    priceSyndic: 150,
-    descParticulier: "Remplacement cellule main d’œuvre uniquement, vérification étanchéité, pièce non fournie.",
-    descSyndic: "Dépose ancienne cellule, installation et calibrage, test production chlore, reset compteur si compatible, contrôle final et rapport, main d’œuvre uniquement, pièce non fournie."
-},
+    // 10. Remplacement roulement pompe piscine
+    {
+        label: "Remplacement roulement pompe piscine",
+        kind: "remplacement_roulement",
+        title: "Remplacement roulement pompe piscine",
+        priceParticulier: 180,
+        priceSyndic: 220,
+        descParticulier: "Remplacement roulements pompe.",
+        descSyndic: "Démontage, extraction, remplacement roulement, remontage, test et rapport technicien."
+    },
 
-    // 11. Nettoyage local technique
+    // 11. Remplacement pompe piscine (MO)
+    {
+        label: "Remplacement pompe piscine (MO)",
+        kind: "remplacement_pompe_mo",
+        title: "Remplacement pompe piscine (main-d’œuvre uniquement)",
+        priceParticulier: 150,
+        priceSyndic: 180,
+        descParticulier: "Remplacement pompe (main d’œuvre uniquement).",
+        descSyndic: "Dépose/installation, raccordement, réglages et rapport technicien. Main d’œuvre uniquement."
+    },
+
+    // 12. Remplacement cellule électrolyseur (MO)
+    {
+        label: "Remplacement cellule électrolyseur (MO)",
+        kind: "remplacement_cellule_mo",
+        title: "Remplacement cellule électrolyseur (main-d’œuvre uniquement)",
+        priceParticulier: 120,
+        priceSyndic: 150,
+        descParticulier: "Remplacement cellule, contrôle étanchéité.",
+        descSyndic: "Dépose/installation, test production, réglages, contrôle étanchéité et rapport."
+    },
+
+    // 13. Nettoyage local technique
     {
         label: "Nettoyage local technique",
         kind: "nettoyage_local",
         title: "Nettoyage local technique",
         priceParticulier: 30,
         priceSyndic: 50,
-        descParticulier: "Nettoyage local technique et dépoussiérage équipements, contrôle humidité fuites.",
-        descSyndic: "Nettoyage complet, dépoussiérage détaillé, dégagement accès appareils, contrôle visuel matériel, contrôle humidité ventilation, rapport gestionnaire."
+        descParticulier: "Nettoyage local technique, dépoussiérage et contrôle humidité.",
+        descSyndic: "Nettoyage complet, dégagement accès appareils, contrôle matériel, ventilation et rapport gestionnaire."
     },
 
-// 12. Déplacement
-{
-    label: "Déplacement",
-    kind: "deplacement",
-    title: "Déplacement",
-    priceParticulier: 50,
-    priceSyndic: 50,
-    descParticulier: "Forfait déplacement",
-    descSyndic: "Forfait déplacement"
-},
+    // 14. Déplacement
+    {
+        label: "Déplacement",
+        kind: "deplacement",
+        title: "Déplacement",
+        priceParticulier: 50,
+        priceSyndic: 50,
+        descParticulier: "Forfait déplacement.",
+        descSyndic: "Forfait déplacement."
+    },
 
-       // 13. Dépannage climatisation (horaire)
+    // 15. Dépannage climatisation
     {
         label: "Dépannage climatisation (horaire)",
         kind: "depannage_clim",
-        title: "Diagnostic et dépannage climatisation.",
+        title: "Diagnostic et dépannage climatisation",
         priceParticulier: 120,
         priceSyndic: 150,
-        descParticulier: "Contrôles électriques, vérification soufflage, détection du dysfonctionnement et remise en service si possible. Main-d’œuvre hors pièces.",
-        descSyndic: "Contrôles électriques et sécurités, vérification soufflage et composants, recherche de dysfonctionnement et remise en service si possible.\nMain-d’œuvre hors pièces, rapport d’intervention pour gestionnaire."
+        descParticulier: "Diagnostic, tests électriques, vérification soufflage et remise en service si possible. Hors pièces.",
+        descSyndic: "Diagnostic complet, contrôle composants, sécurités, soufflage et rapport gestionnaire. Hors pièces."
     },
 
-    // 14. Dépannage piscine (horaire)
+    // 16. Dépannage piscine
     {
         label: "Dépannage piscine (horaire)",
         kind: "depannage_piscine",
-        title: "Diagnostic et dépannage piscine.",
+        title: "Diagnostic et dépannage piscine",
         priceParticulier: 120,
         priceSyndic: 150,
-        descParticulier: "Contrôle installation électrique, hydraulique et local technique, vérification pompe, filtre, vannes et accessoires, recherche de dysfonctionnement et mise en condition si possible.\nMain-d’œuvre hors pièces, rapport d’intervention pour gestionnaire.",
-        descSyndic: "Diagnostic complet, tests pompe filtration électrolyse, recherche fuite pression, test vanne 6 voies, rapport intervention."
+        descParticulier: "Diagnostic installation, filtration, pompe, vanne et accessoires. Hors pièces.",
+        descSyndic: "Diagnostic complet : pompe, filtration, électrolyse, tests fuite/pression et rapport gestionnaire. Hors pièces."
     },
 
-    // 15. Produits
-  {
-    label: "Produits",
-    kind: "produits",
-    title: "",
-    priceParticulier: 0,
-    priceSyndic: 0,
-    descParticulier: "",
-    descSyndic: ""
-},
+    // 17. Dépannage jacuzzi
+    {
+        label: "Dépannage jacuzzi",
+        kind: "depannage_jacuzzi",
+        title: "Diagnostic et dépannage jacuzzi / spa",
+        priceParticulier: 120,
+        priceSyndic: 150,
+        descParticulier: "Diagnostic panne : pompe, chauffage, fuite, carte. Tests électriques et hydrauliques. Hors pièces.",
+        descSyndic: "Diagnostic complet, tests électriques/hydrauliques, recherche fuite/défaut et rapport gestionnaire. Hors pièces."
+    },
 
+    // 18. Produits
+    {
+        label: "Produits",
+        kind: "produits",
+        title: "",
+        priceParticulier: 0,
+        priceSyndic: 0,
+        descParticulier: "",
+        descSyndic: ""
+    },
 
-    // 16. Fournitures
-{
-    label: "Fournitures",
-    kind: "fournitures",
-    title: "",
-    priceParticulier: 0,
-    priceSyndic: 0,
-    descParticulier: "",
-    descSyndic: ""
-},
-
+    // 19. Fournitures
+    {
+        label: "Fournitures",
+        kind: "fournitures",
+        title: "",
+        priceParticulier: 0,
+        priceSyndic: 0,
+        descParticulier: "",
+        descSyndic: ""
+    }
 ];
 
 
@@ -2496,6 +2527,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
