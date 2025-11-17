@@ -2474,21 +2474,14 @@ const html =
     bottomBlockStyle +
     ".rcpro{margin-top:6px;font-size:9.5px;}" +
 
-       ".reglement-block{margin-top:12px;font-size:10px;border:1px solid #4caf50;padding:7px;border-radius:6px;background:#f1faf1;page-break-inside:avoid;break-inside:avoid;}" +
-
-    // 🔹 Spécifique impression : marges propres + footer collé en bas (A4)
+           ".reglement-block{margin-top:12px;font-size:10px;border:1px solid #4caf50;padding:7px;border-radius:6px;background:#f1faf1;page-break-inside:avoid;break-inside:avoid;}" +
     "@media print{" +
         "@page{size:A4;margin:10mm;}" +
         "html,body{height:100%;margin:0;padding:0;}" +
-        ".page{position:relative;min-height:277mm;}" +   // hauteur intérieure d’une page A4
-        ".page-main{padding-bottom:35mm;}" +             // on laisse de la place pour les signatures
+        ".page{position:relative;min-height:277mm;}" +
+        ".page-main{padding-bottom:35mm;}" +
         ".page-footer{position:absolute;left:0;right:0;bottom:0;}" +
     "}" +
-
-    "</style></head><body>" +
-
-
-
     "</style></head><body>" +
 
 
@@ -2597,6 +2590,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
