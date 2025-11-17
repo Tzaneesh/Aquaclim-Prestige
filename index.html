@@ -2591,21 +2591,17 @@ function openPrintable(id) {
         </div>
     </div>
 </div>
-
-<script>
-    window.onload = function(){
-        window.print();
-    };
-</script>
 </body>
 </html>`;
 
     printWindow.document.write(html);
     printWindow.document.close();
+
+    // 🔔 Quand la fenêtre d'aperçu est chargée, on lance l'impression
+    printWindow.onload = function () {
+        printWindow.print();
+    };
 }
-
-
-
 
 // ------- Init -------
 window.onload = function () {
@@ -2617,6 +2613,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
