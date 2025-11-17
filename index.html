@@ -2364,7 +2364,6 @@ function openPrintable(id) {
         ? `<div style="margin-top:8px;font-size:10px;"><p>${notesText.replace(/\n/g, "<br>")}</p></div>`
         : "";
 
-    // ---------- Dates devis ----------
     let topDatesHtml = `<p><strong>Fait à Nice, le ${dateStr}</strong></p>`;
     if (isDevis && doc.validityDate) {
         topDatesHtml += `
@@ -2372,13 +2371,11 @@ function openPrintable(id) {
         `;
     }
 
-    // ---------- Texte signatures ----------
     const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
     const signatureClientText = isDevis
         ? "Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis."
         : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
 
-    // ---------- HTML complet ----------
     const printWindow = window.open("", "_blank");
 
     const html = `<!DOCTYPE html>
@@ -2596,12 +2593,11 @@ function openPrintable(id) {
 
     printWindow.document.write(html);
     printWindow.document.close();
-
-    // 🔔 Quand la fenêtre d'aperçu est chargée, on lance l'impression
     printWindow.onload = function () {
         printWindow.print();
     };
 }
+
 
 // ------- Init -------
 window.onload = function () {
@@ -2613,6 +2609,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
