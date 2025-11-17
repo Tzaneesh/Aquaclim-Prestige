@@ -2229,8 +2229,10 @@ const hasDeplacement = doc.prestations.some(p =>
 );
 
     // ---------- En-têtes, dates ----------
-    const logoSrc = window.location.href.replace(/[^\/]*$/, "logo.png");
-    const signSrc = window.location.href.replace(/[^\/]*$/, "signature.png");
+   const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
+
+   const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
+
     const isDevis = doc.type === "devis";
     const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
 
@@ -2388,7 +2390,11 @@ const html =
     "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>" +
     (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
     "<style>" +
-    "@media print{@page{margin:5mm;} body{padding:0!important;margin:0!important;}}" +
+    "@media print{" +
+    "@page{margin:12mm;}" +  // marge physique de la feuille
+    "body{margin:0!important;padding:10mm 14mm 16mm!important;}" + 
+"}" +
+
     "*{margin:0;padding:0;box-sizing:border-box}" +
 
   // GLOBAL
@@ -2581,6 +2587,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
