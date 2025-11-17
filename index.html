@@ -2551,35 +2551,36 @@ let topDatesHtml = `
 }
 
         .client-block{
-            margin-bottom:10px;
-            font-size:10px;
-            border:1px solid #ccc;
-            border-radius:6px;
-            padding:6px 8px;
-            background:#fafafa;
-        }
+    margin-bottom:8px;
+    font-size:10px;
+    border:1px solid #ccc;
+    border-radius:6px;
+    padding:6px 8px;
+    background:#fafafa;
+}
 
-        .client-title{
-            font-weight:bold;
-            font-size:10px;
-            margin-bottom:4px;
-            text-transform:uppercase;
-            letter-spacing:0.5px;
-        }
+.client-title{
+    font-weight:bold;
+    font-size:10px;
+    margin-bottom:4px;
+    text-transform:uppercase;
+    letter-spacing:0.5px;
+}
 
-   .client-line{
+.client-line{
     display:flex;
-    margin:4px 0;   /* ← mets plutôt 4px pour plus d’air */
+    margin:1px 0;           /* 🔹 moins d'espace vertical */
 }
 
 .client-label{
-    min-width:55px;
+    min-width:55px;          /* 🔹 colonnes "Nom / Adresse / Tél / Email" alignées */
     font-weight:600;
 }
 
 .client-value{
     flex:1;
 }
+
 
 
         .site-block{
@@ -2773,31 +2774,34 @@ let topDatesHtml = `
 </div>
 
 
-        <div class="client-block">
-            <div class="client-title">Client</div>
+      <div class="client-block">
+    <div class="client-title">Client</div>
 
-            <div class="client-line">
-                <div class="client-label">Nom :</div>
-                <div class="client-value"><strong>${doc.client?.name || ""}</strong></div>
-            </div>
+    ${doc.client?.name ? `
+    <div class="client-line">
+        <div class="client-label">Nom :</div>
+        <div class="client-value"><strong>${doc.client.name}</strong></div>
+    </div>` : ""}
 
-            <div class="client-line">
-                <div class="client-label">Adresse :</div>
-                <div class="client-value">${doc.client?.address || ""}</div>
-            </div>
+    ${doc.client?.address ? `
+    <div class="client-line">
+        <div class="client-label">Adresse :</div>
+        <div class="client-value">${doc.client.address}</div>
+    </div>` : ""}
 
-            ${doc.client?.phone ? `
-            <div class="client-line">
-                <div class="client-label">Tél :</div>
-                <div class="client-value">${doc.client.phone}</div>
-            </div>` : ""}
+    ${doc.client?.phone ? `
+    <div class="client-line">
+        <div class="client-label">Tél :</div>
+        <div class="client-value">${doc.client.phone}</div>
+    </div>` : ""}
 
-            ${doc.client?.email ? `
-            <div class="client-line">
-                <div class="client-label">Email :</div>
-                <div class="client-value">${doc.client.email}</div>
-            </div>` : ""}
-        </div>
+    ${doc.client?.email ? `
+    <div class="client-line">
+        <div class="client-label">Email :</div>
+        <div class="client-value">${doc.client.email}</div>
+    </div>` : ""}
+</div>
+
 
         ${doc.siteAddress && doc.siteAddress !== (doc.client?.address || "") ? `
         <div class="site-block">
@@ -2889,6 +2893,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
