@@ -2140,7 +2140,7 @@ function openPrintable(id) {
 
 // ---------- Décider si on force la 2e page pour le bloc du bas ----------
 // On ne force une 2e page que pour les gros devis (4 lignes ou plus)
-const forceSecondPage = doc.prestations && doc.prestations.length >= 4;
+const forceSecondPage = doc.prestations && doc.prestations.length >= 7;
 const bottomBlockStyle = forceSecondPage
     ? ".bottom-block{page-break-before:always;padding-top:30px;}"
     : ".bottom-block{padding-top:20px;}";
@@ -2533,6 +2533,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
