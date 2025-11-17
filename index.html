@@ -2138,37 +2138,60 @@ function openPrintable(id) {
     const doc = getDocument(targetId);
     if (!doc) return;
 
-// On laisse le navigateur gérer le saut de page naturellement
-const bottomBlockStyle =
-    ".bottom-block{" +
-        "padding-top:12px;" +      /* léger espace au-dessus du bloc bas de page */ 
-        "padding-bottom:20px;" +   /* laisse du blanc sous la signature pour signer */ 
-        "page-break-inside:avoid;" +
-        "break-inside:avoid;" +
-    "}";
+    // ---------- Détection piscine / clim ----------
+    const hasPiscine = doc.prestations.some(p =>
+        [
+            "piscine_chlore",
+            "piscine_sel",
+            "hivernage_piscine",
+            "remise_service_piscine",
+            "traitement_choc",
+            "changement_sable",
+            "remplacement_roulement",
+            "remplacement_pompe_mo",
+            "remplacement_cellule_mo",
+            "depannage_piscine"
+        ].includes(p.kind)
+    );
 
+    const hasClim = doc.prestations.some(p =>
+        [
+            "entretien_clim",
+            "depannage_clim"
+        ].includes(p.kind)
+    );
 
+    const hasProduitsOuFournitures = doc.prestations.some(p =>
+        p.kind === "produits" || p.kind === "fournitures"
+    );
 
+    const hasDeplacement = doc.prestations.some(p =>
+        p.kind === "deplacement" || p.kind === "forfait_deplacement"
+    );
 
-    // ---------- Lignes de prestations ----------
+    const isDevis = doc.type === "devis";
+
+    // ---------- Lignes prestations ----------
     let prestationsHTML = "";
     doc.prestations.forEach(p => {
         let extraHtml = "";
         if (p.note || (p.dates && p.dates.length)) {
-            extraHtml += '<div class="sub-info">';
+            extraHtml += `<div class="sub-info">`;
             if (p.note) {
-                extraHtml += '<div class="sub-info-line">' + p.note + '</div>';
+                extraHtml += `<div class="sub-info-line">${p.note}</div>`;
             }
             if (p.dates && p.dates.length) {
-                extraHtml += '<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>';
+                extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
                 p.dates.forEach(dv => {
-                    extraHtml += '<div class="sub-info-line">' + dv + '</div>';
+                    extraHtml += `<div class="sub-info-line">${dv}</div>`;
                 });
             }
-            extraHtml += '</div>';
+            extraHtml += `</div>`;
         }
 
-        const detailHtml = p.detail ? '<div class="desc-detail">' + p.detail + '</div>' : "";
+        const detailHtml = p.detail
+            ? `<div class="desc-detail">${p.detail}</div>`
+            : "";
 
         let qtyText = p.qty;
         if (p.kind === "depannage_piscine" || p.kind === "depannage_clim") {
@@ -2177,83 +2200,70 @@ const bottomBlockStyle =
 
         const priceUnitText =
             p.kind === "entretien_clim"
-                ? p.price.toFixed(2) + "&nbsp;€&nbsp;/&nbsp;u"
-                : p.price.toFixed(2) + "&nbsp;€";
+                ? p.price.toFixed(2) + " € / u"
+                : p.price.toFixed(2) + " €";
 
-   const totalText = p.total.toFixed(2) + "&nbsp;€";
+        const totalText = p.total.toFixed(2) + " €";
 
-prestationsHTML +=
-    '<tr>' +
-        '<td><div class="desc-main">' + p.desc + '</div>' +
-        detailHtml +
-        extraHtml +
-        '</td>' +
-        '<td class="qty-col">' + qtyText + '</td>' +
-        '<td class="text-right price-col">' + priceUnitText + '</td>' +
-        '<td class="text-right total-col"><strong>' + totalText + '</strong></td>' +
-    '</tr>';
-
+        prestationsHTML += `
+            <tr>
+                <td>
+                    <div class="desc-main">${p.desc}</div>
+                    ${detailHtml}
+                    ${extraHtml}
+                </td>
+                <td class="qty-col">${qtyText}</td>
+                <td class="text-right price-col">${priceUnitText}</td>
+                <td class="text-right total-col"><strong>${totalText}</strong></td>
+            </tr>
+        `;
     });
 
-    // ---------- Détection piscine / clim pour le bloc Important ----------
-const hasPiscine = doc.prestations.some(p =>
-    [
-        "piscine_chlore",
-        "piscine_sel",
-        "hivernage_piscine",
-        "remise_service_piscine",
-        "traitement_choc",
-        "changement_sable",
-        "remplacement_roulement_mo",
-        "remplacement_pompe_mo",
-        "remplacement_cellule_mo",
-        "depannage_piscine"
-    ].includes(p.kind)
-);
+    // ---------- Important ----------
+    let importantHtml = "";
+    if (isDevis) {
+        const items = [];
 
-const hasClim = doc.prestations.some(p =>
-    [
-        "entretien_clim",
-        "depannage_clim"
-    ].includes(p.kind)
-);
+        if (hasPiscine && hasClim) {
+            if (!hasProduitsOuFournitures) {
+                items.push("Les produits de traitement piscine (chlore choc, sel, cellule, pompe, etc.) ne sont pas inclus sauf mention contraire.");
+            }
+            items.push("Les prix des pièces sont susceptibles de varier. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
+        } else if (hasPiscine) {
+            if (!hasProduitsOuFournitures) {
+                items.push("Les produits de traitement piscine (chlore choc, sel, cellule, pompe, etc.) ne sont pas inclus sauf mention contraire.");
+            }
+            items.push("Les prix des pièces détachées piscine (pompes, cellules, roulements, etc.) sont susceptibles de varier. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
+        } else if (hasClim) {
+            items.push("Les pièces détachées de climatisation (moteurs, condensateurs, cartes électroniques, ventilateurs, etc.) sont susceptibles de varier en prix. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
+        }
 
-// ---------- Détection Produits / Fournitures ----------
-const hasProduitsOuFournitures = doc.prestations.some(p =>
-    p.kind === "produits" || p.kind === "fournitures"
-);
+        if (!hasDeplacement) {
+            items.push("Les prix incluent la main-d’œuvre et le déplacement.");
+        }
 
-// ---------- Détection prestation déplacement ----------
-const hasDeplacement = doc.prestations.some(p =>
-    p.kind === "deplacement" || p.kind === "forfait_deplacement"
-);
+        items.push("Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un accord écrit avant réalisation.");
+        items.push("Assurance RC Pro : [Assureur] – Contrat n° [XXXXXX].");
 
-    // ---------- En-têtes, dates ----------
-   const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
-
-   const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
-
-    const isDevis = doc.type === "devis";
-    const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
-
-    let topDatesHtml = '<p><strong>Fait à Nice, le ' + dateStr + '</strong></p>';
-    if (isDevis && doc.validityDate) {
-        topDatesHtml +=
-            '<p><strong>Devis gratuit – valable jusqu\'au : ' +
-            new Date(doc.validityDate).toLocaleDateString("fr-FR") +
-            "</strong></p>";
+        importantHtml = `
+            <div class="important-block">
+                <div class="important-title">Important</div>
+                <ul>
+                    ${items.map(t => `<li>${t}</li>`).join("")}
+                </ul>
+            </div>
+        `;
     }
 
-    // ---------- TVA / libellé total / remise ----------
-    let tvaNoteHtml = "";
+    // ---------- TVA & Totaux ----------
     const tvaRate = doc.tvaRate || 0;
-
-    if (tvaRate === 0 && doc.conditionsType !== "agence") {
-        tvaNoteHtml = '<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>';
-    }
-
     const discountAmountDoc = doc.discountAmount || 0;
     const discountRateDoc = doc.discountRate || 0;
+
+    let tvaNoteHtml = "";
+    if (tvaRate === 0 && doc.conditionsType !== "agence") {
+        tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
+    }
 
     let totalLabel = "";
     if (tvaRate === 0) {
@@ -2270,24 +2280,39 @@ const hasDeplacement = doc.prestations.some(p =>
         totalLabel = "TOTAL TTC :";
     }
 
-    let totalsRows =
-        '<tr><td>Sous-total HT :</td><td class="text-right">' +
-        doc.subtotal.toFixed(2) + " €</td></tr>";
+    let totalsRows = `
+        <tr>
+            <td>Sous-total HT :</td>
+            <td class="text-right">${doc.subtotal.toFixed(2)} €</td>
+        </tr>
+    `;
 
     if (discountAmountDoc > 0 && discountRateDoc > 0) {
         const rateLabel = discountRateDoc.toFixed(2).replace(/\.00$/, "");
-        totalsRows +=
-            '<tr><td>Réduction (' + rateLabel + ' %) :</td>' +
-            '<td class="text-right">- ' + discountAmountDoc.toFixed(2) + " €</td></tr>";
+        totalsRows += `
+            <tr>
+                <td>Réduction (${rateLabel} %) :</td>
+                <td class="text-right">- ${discountAmountDoc.toFixed(2)} €</td>
+            </tr>
+        `;
     }
 
-    totalsRows +=
-        '<tr><td>TVA (' + tvaRate + '%) :</td>' +
-            '<td class="text-right">' + doc.tvaAmount.toFixed(2) + " €</td></tr>" +
-        '<tr class="grand-total"><td>' + totalLabel + "</td>" +
-            '<td class="text-right">' + doc.totalTTC.toFixed(2) + " €</td></tr>";
+    totalsRows += `
+        <tr>
+            <td>TVA (${tvaRate}%) :</td>
+            <td class="text-right">${doc.tvaAmount.toFixed(2)} €</td>
+        </tr>
+        <tr class="grand-total">
+            <td>${totalLabel}</td>
+            <td class="text-right">${doc.totalTTC.toFixed(2)} €</td>
+        </tr>
+    `;
 
-    // ---------- Règlement / payé ou non ----------
+    // ---------- Règlement / RIB / Notes ----------
+    const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
+    const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
+    const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
+
     let reglementHtml = "";
     if (!isDevis && doc.paid && doc.paymentMode) {
         const payDate = doc.paymentDate || doc.date;
@@ -2298,27 +2323,27 @@ const hasDeplacement = doc.prestations.some(p =>
         else if (doc.paymentMode === "virement") modePhrase = "par virement";
         else if (doc.paymentMode === "cheque") modePhrase = "par chèque";
 
-        reglementHtml =
-            '<div class="reglement-block">' +
-                '<div class="reg-title">Règlement</div>' +
-                "<p>Facture réglée " + modePhrase + " le " + payDateStr + ".</p>" +
-            "</div>";
+        reglementHtml = `
+            <div class="reglement-block">
+                <div class="reg-title">Règlement</div>
+                <p>Facture réglée ${modePhrase} le ${payDateStr}.</p>
+            </div>
+        `;
     }
 
-    // ---------- RIB (uniquement facture non payée) ----------
     let ribHtml = "";
     if (!isDevis && !doc.paid) {
-        ribHtml =
-            '<div class="rib-block">' +
-                '<div class="rib-title">Coordonnées bancaires pour virement</div>' +
-                "<p>Titulaire : AquaClim Prestige – Le Blevennec Loïc</p>" +
-                "<p>Banque : Banque Fictive</p>" +
-                "<p>IBAN : FR76 1234 5678 9012 3456 7890 123</p>" +
-                "<p>BIC : FICTFRPPXXX</p>" +
-            "</div>";
+        ribHtml = `
+            <div class="rib-block">
+                <div class="rib-title">Coordonnées bancaires pour virement</div>
+                <p>Titulaire : AquaClim Prestige – Le Blevennec Loïc</p>
+                <p>Banque : Banque Fictive</p>
+                <p>IBAN : FR76 1234 5678 9012 3456 7890 123</p>
+                <p>BIC : FICTFRPPXXX</p>
+            </div>
+        `;
     }
 
-    // ---------- Notes / conditions ----------
     let notesText = doc.notes || "";
     if (!isDevis && doc.paid && notesText) {
         const removeLines = [
@@ -2336,224 +2361,237 @@ const hasDeplacement = doc.prestations.some(p =>
     }
 
     const notesHtml = notesText
-        ? '<div style="margin-top:20px;font-size:12px;"><p>' +
-            notesText.replace(/\n/g, "<br>") +
-          "</p></div>"
+        ? `<div style="margin-top:20px;font-size:12px;"><p>${notesText.replace(/\n/g, "<br>")}</p></div>`
         : "";
 
-   // ---------- Bloc Important + RC Pro (fusionné) ----------
-let importantHtml = "";
-if (isDevis) {
-    const items = [];
+    // ---------- Dates devis ----------
+    let topDatesHtml = `<p><strong>Fait à Nice, le ${dateStr}</strong></p>`;
+    if (isDevis && doc.validityDate) {
+        topDatesHtml += `
+            <p><strong>Devis gratuit – valable jusqu'au : ${new Date(doc.validityDate).toLocaleDateString("fr-FR")}</strong></p>
+        `;
+    }
 
-    // Piscine + Clim
-    if (hasPiscine && hasClim) {
-        // ✅ On ne met la phrase "produits non inclus" que s'il n'y a PAS de ligne Produits / Fournitures
-        if (!hasProduitsOuFournitures) {
-            items.push("Les produits de traitement piscine (chlore choc, sel, cellule, pompe, etc.) ne sont pas inclus sauf mention contraire.");
+    // ---------- HTML complet ----------
+    const printWindow = window.open("", "_blank");
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>${isDevis ? "Devis " : "Facture "}${doc.number}</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{
+            margin:0;
+            padding:0;
+            font-family:Arial,sans-serif;
+            color:#333;
+            font-size:10.5px;
         }
-        items.push("Les prix des pièces sont susceptibles de varier. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
-    }
-    // Piscine seule
-    else if (hasPiscine) {
-        if (!hasProduitsOuFournitures) {
-            items.push("Les produits de traitement piscine (chlore choc, sel, cellule, pompe, etc.) ne sont pas inclus sauf mention contraire.");
+        .page{
+            display:flex;
+            flex-direction:column;
+            min-height:100vh;
+            padding:10mm 12mm 14mm 12mm;
+            box-sizing:border-box;
         }
-        items.push("Les prix des pièces détachées piscine (pompes, cellules, roulements, etc.) sont susceptibles de varier. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
-    }
-    // Clim seule
-    else if (hasClim) {
-        items.push("Les pièces détachées de climatisation (moteurs, condensateurs, cartes électroniques, ventilateurs, etc.) sont susceptibles de varier en prix. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
-    }
+        .page-main{flex:1 0 auto;}
+        .page-footer{flex-shrink:0;margin-top:8mm;}
 
-    // ✅ Phrase sur main-d’œuvre + déplacement UNIQUEMENT si tu n’as pas la ligne "Forfait déplacement"
-    if (!hasDeplacement) {
-        items.push("Les prix incluent la main-d’œuvre et le déplacement.");
-    }
+        .header{text-align:center;margin-bottom:8px;border-bottom:1.3px solid #1a74d9;padding-bottom:7px;}
+        img.logo{height:55px;margin-bottom:4px;}
+        .header h1{color:#1a74d9;font-size:21px;margin-bottom:3px;font-weight:700;}
+        .header p{color:#444;font-size:10.5px;line-height:1.25;}
+        .subtitle{font-weight:600;font-size:11px;}
+        .contact{font-size:10.5px;font-weight:500;}
+        .contact strong{font-weight:700;}
 
-    items.push("Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un accord écrit avant réalisation.");
-    items.push("Assurance RC Pro : [Assureur] – Contrat n° [XXXXXX].");
+        .doc-header-center{text-align:center;margin:10px 0 12px 0;}
+        .doc-header-center h2{font-size:18px;color:#1a74d9;margin-bottom:3px;}
+        .doc-header-center p{font-size:10px;margin:1px 0;}
 
-    importantHtml =
-        '<div class="important-block">' +
-            '<div class="important-title">Important</div>' +
-            "<ul>" +
-                items.map(t => "<li>" + t + "</li>").join("") +
-            "</ul>" +
-        "</div>";
+        .client-block{margin-bottom:10px;font-size:10px;}
+        .client-block p{margin:2px 0;}
+
+        table{width:100%;border-collapse:collapse;margin:10px 0;}
+        th{
+            background:#1a74d9;
+            color:white;
+            padding:8px;
+            text-align:left;
+            font-weight:600;
+            font-size:12px;
+            border-bottom:2px solid #0d47a1;
+        }
+        td{
+            padding:5px;
+            border-bottom:1px solid #ddd;
+            font-size:10px;
+            vertical-align:top;
+        }
+        .text-right{text-align:right;}
+        .price-col,.total-col{white-space:nowrap;}
+        th.qty-col,td.qty-col{text-align:center;}
+        td.qty-col{vertical-align:middle !important;}
+
+        .desc-main{font-size:11px;font-weight:600;margin-bottom:2px;}
+        .desc-detail{font-size:10px;color:#555;margin-top:2px;}
+        .sub-info{margin-top:3px;font-size:9.5px;color:#555;}
+        .sub-info-line{margin-top:1px;}
+
+        .totals{margin-left:auto;width:230px;margin-top:4px;}
+        .totals table{margin:0;}
+        .totals td{padding:3px 6px;font-size:10px;}
+        .totals .grand-total{background:#f0f0f0;color:#000;font-weight:bold;font-size:11px;}
+        .tva-note{margin-top:4px;font-size:9px;font-style:italic;color:#555;}
+
+        .reglement-block{
+            margin-top:12px;
+            font-size:10px;
+            border:1px solid #4caf50;
+            padding:7px;
+            border-radius:6px;
+            background:#f1faf1;
+            page-break-inside:avoid;
+            break-inside:avoid;
+        }
+        .reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px;}
+
+        .rib-block{
+            margin-top:10px;
+            font-size:10px;
+            border:1px solid #ccc;
+            padding:7px;
+            border-radius:6px;
+            background:#fafafa;
+            page-break-inside:avoid;
+            break-inside:avoid;
+        }
+        .rib-title{font-weight:bold;margin-bottom:3px;font-size:10px;}
+
+        .important-block{
+            margin-top:12px;
+            font-size:10px;
+            border:1px solid #1a74d9;
+            padding:7px;
+            border-radius:6px;
+            background:#f3f7ff;
+            page-break-inside:avoid;
+            break-inside:avoid;
+        }
+        .important-title{font-weight:bold;margin-bottom:4px;font-size:10px;color:#1a74d9;}
+        .important-block ul{margin-left:14px;}
+        .important-block li{margin-bottom:3px;}
+
+        .signatures{
+            margin-top:10px;
+            display:flex;
+            justify-content:space-between;
+            gap:22px;
+            page-break-inside:avoid;
+            break-inside:avoid;
+        }
+        .signature-block{
+            flex:1;
+            border-top:1px solid #333;
+            padding-top:4px;
+            font-size:10px;
+            min-height:55px;
+        }
+        .signature-title{font-weight:bold;margin-bottom:3px;}
+        img.sig{max-height:38px;margin-top:3px;}
+
+        @media print{
+            @page{margin:0;}
+            body{margin:0;padding:0;}
+            .page{min-height:100vh;}
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="page-main">
+        <div class="header">
+            <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
+            <h1>AquaClim Prestige</h1>
+            <p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>
+            <p class="contact">
+                Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
+                Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
+                SIRET : <strong>XXXXXXXXXXXXX</strong>
+            </p>
+        </div>
+
+        <div class="doc-header-center">
+            <h2>${isDevis ? "DEVIS " : "FACTURE "}${doc.number}</h2>
+            ${topDatesHtml}
+        </div>
+
+        <div class="client-block">
+            <p><strong>${doc.client?.name || ""}</strong></p>
+            <p>${doc.client?.address || ""}</p>
+            ${doc.client?.phone ? `<p>📞 ${doc.client.phone}</p>` : ""}
+            ${doc.client?.email ? `<p>✉️ ${doc.client.email}</p>` : ""}
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="qty-col">Quantité</th>
+                    <th class="text-right price-col">Prix HT</th>
+                    <th class="text-right total-col">Total HT</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${prestationsHTML}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <table>
+                ${totalsRows}
+            </table>
+            ${tvaNoteHtml}
+        </div>
+
+        ${!isDevis ? (reglementHtml + ribHtml + notesHtml) : ""}
+
+    </div>
+
+    ${isDevis ? `
+    <div class="page-footer bottom-block">
+        ${notesHtml}
+        ${importantHtml}
+
+        <div class="signatures">
+            <div class="signature-block">
+                <div class="signature-title">Bon pour accord</div>
+                <p>Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis.</p>
+                <p style="margin-bottom:18px;">Date :</p>
+                <p>Signature :</p>
+            </div>
+            <div class="signature-block">
+                <div class="signature-title">AquaClim Prestige</div>
+                <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+            </div>
+        </div>
+    </div>` : ""}
+</div>
+
+<script>
+    window.onload = function(){
+        window.print();
+    };
+</script>
+</body>
+</html>`;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
 }
 
-
-  // ---------- HTML complet du PDF ----------
-const printWindow = window.open("", "_blank");
-const html =
-    "<!DOCTYPE html><html lang=\"fr\"><head><meta charset=\"UTF-8\"><title>" +
-    (isDevis ? "Devis " : "Facture ") + doc.number + "</title>" +
-   "<style>" +
-"*{margin:0;padding:0;box-sizing:border-box}" +
-"body{margin:0;padding:0;font-family:Arial,sans-serif;color:#333;font-size:10.5px;}" +
-".page{display:flex;flex-direction:column;min-height:100vh;padding:10mm 12mm 14mm 12mm;box-sizing:border-box;}" +
-".page-main{flex:1 0 auto;}" +
-".page-footer{flex-shrink:0;margin-top:8mm;}" +
-
-
-".header{text-align:center;margin-bottom:8px;border-bottom:1.3px solid #1a74d9;padding-bottom:7px}" +
-"img.logo{height:55px;margin-bottom:4px}" +
-".header h1{color:#1a74d9;font-size:21px;margin-bottom:3px;font-weight:700}" +
-".header p{color:#444;font-size:10.5px;line-height:1.25}" +
-".subtitle{font-weight:600;font-size:11px}" +
-".contact{font-size:10.5px;font-weight:500}" +
-".contact strong{font-weight:700}" +
-
-".doc-header-center{text-align:center;margin:10px 0 12px 0}" +
-".doc-header-center h2{font-size:18px;color:#1a74d9;margin-bottom:3px}" +
-".doc-header-center p{font-size:10px;margin:1px 0}" +
-
-".client-block{margin-bottom:10px;font-size:10px}" +
-".client-block p{margin:2px 0}" +
-
-"table{width:100%;border-collapse:collapse;margin:10px 0}" +
-"th{background:#1a74d9;color:white;padding:8px;text-align:left;font-weight:600;font-size:12px;border-bottom:2px solid #0d47a1}" +
-"td{padding:5px;border-bottom:1px solid #ddd;font-size:10px;vertical-align:top}" +
-".text-right{text-align:right}" +
-".price-col{white-space:nowrap;}" +
-".total-col{white-space:nowrap;}" +
-"th.qty-col, td.qty-col{text-align:center;}" +
-"td.qty-col{vertical-align:middle !important;}" +
-
-".totals{margin-left:auto;width:230px;margin-top:4px}" +
-".totals table{margin:0}" +
-".totals td{padding:3px 6px;font-size:10px}" +
-".totals .grand-total{background:#f0f0f0;color:#000;font-weight:bold;font-size:11px}" +
-".tva-note{margin-top:4px;font-size:9px;font-style:italic;color:#555}" +
-
-".desc-main{font-size:11px;font-weight:600;margin-bottom:2px}" +
-".desc-detail{font-size:10px;color:#555;margin-top:2px}" +
-
-".signatures{margin-top:10px;display:flex;justify-content:space-between;gap:22px;page-break-inside:avoid;break-inside:avoid;}" +
-".signature-block{flex:1;border-top:1px solid #333;padding-top:4px;font-size:10px;min-height:55px;}" +
-".signature-title{font-weight:bold;margin-bottom:3px}" +
-"img.sig{max-height:38px;margin-top:3px}" +
-
-".rib-block{margin-top:10px;font-size:10px;border:1px solid #ccc;padding:7px;border-radius:6px;background:#fafafa;page-break-inside:avoid;break-inside:avoid;}" +
-".rib-title{font-weight:bold;margin-bottom:3px;font-size:10px}" +
-
-".important-block{margin-top:12px;font-size:10px;border:1px solid #1a74d9;padding:7px;border-radius:6px;background:#f3f7ff;page-break-inside:avoid;break-inside:avoid;}" +
-".important-title{font-weight:bold;margin-bottom:4px;font-size:10px;color:#1a74d9}" +
-".important-block ul{margin-left:14px}" +
-".important-block li{margin-bottom:3px}" +
-
-".bottom-block{padding-top:12px;padding-bottom:20px;page-break-inside:avoid;break-inside:avoid;}" +
-".rcpro{margin-top:6px;font-size:9.5px;}" +
-
-".reglement-block{margin-top:12px;font-size:10px;border:1px solid #4caf50;padding:7px;border-radius:6px;background:#f1faf1;page-break-inside:avoid;break-inside:avoid;}" +
-".reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px}" +
-
-"@media print{" +
-    "@page{margin:8mm;}" +
-    "body{margin:0;padding:0;}" +
-    ".page{min-height:100vh;}" +
-"}" +
-
-
-"</style></head><body>" +
-
-
-
-
-    '<div class="page">' +
-
-        // PARTIE HAUTE : tout ce qui peut “monter”
-        '<div class="page-main">' +
-
-            // HEADER HTML
-            '<div class="header">' +
-                '<img src="' + logoSrc + '" class="logo" alt="AquaClim Prestige">' +
-                "<h1>AquaClim Prestige</h1>" +
-                '<p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>' +
-                '<p class="contact">Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>' +
-                "Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>" +
-                "SIRET : <strong>XXXXXXXXXXXXX</strong></p>" +
-            "</div>" +
-
-            // TITRE DOC + DATES
-            '<div class="doc-header-center">' +
-                "<h2>" + (isDevis ? "DEVIS " : "FACTURE ") + doc.number + "</h2>" +
-                topDatesHtml +
-            "</div>" +
-
-            // CLIENT
-            '<div class="client-block">' +
-                "<p><strong>" + (doc.client?.name || "") + "</strong></p>" +
-                "<p>" + (doc.client?.address || "") + "</p>" +
-                (doc.client?.phone ? "<p>📞 " + doc.client.phone + "</p>" : "") +
-                (doc.client?.email ? "<p>✉️ " + doc.client.email + "</p>" : "") +
-            "</div>" +
-
-            // TABLEAU PRESTATIONS
-            "<table><thead><tr>" +
-            "<th>Description</th><th class='qty-col'>Quantité</th>" +
-            "<th class='text-right price-col'>Prix HT</th><th class='text-right total-col'>Total HT</th>" +
-            "</tr></thead><tbody>" + prestationsHTML + "</tbody></table>" +
-
-            // TOTALS
-            '<div class="totals"><table>' +
-                totalsRows +
-            "</table>" + tvaNoteHtml + "</div>" +
-
-     // RÈGLEMENT / RIB / NOTES
-// - Factures : on affiche tout dans le corps
-// - Devis : les notes seront mises dans le footer
-(!isDevis ? (reglementHtml + ribHtml + notesHtml) : "") +
-
-
-"</div>" + // fin .page-main
-
-
-// FOOTER BLOQUÉ EN BAS (DEVIS UNIQUEMENT)
-(
-    isDevis
-    ? 
-    '<div class="page-footer bottom-block">' +
-
-        // Conditions (incluant "Règlement à réception...") juste au-dessus d’IMPORTANT
-        notesHtml +
-
-        // IMPORTANT
-        importantHtml +
-
-        // SIGNATURES
-        '<div class="signatures">' +
-
-            '<div class="signature-block">' +
-                '<div class="signature-title">Bon pour accord</div>' +
-                '<p>Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis.</p>' +
-                '<p style="margin-bottom:18px;">Date :</p>' +
-                '<p>Signature :</p>' +
-            '</div>' +
-
-            '<div class="signature-block">' +
-                '<div class="signature-title">AquaClim Prestige</div>' +
-                '<img src="' + signSrc + '" class="sig" alt="Signature AquaClim Prestige">' +
-            '</div>' +
-
-        '</div>' + // fin .signatures
-
-    "</div>" // fin .page-footer
-    : ""
-)
-+
-
-"</div>" // fin .page
-
-    "<script>window.onload=function(){window.print()}<\/script>" +
-    "</body></html>";
-
-
-printWindow.document.write(html);
-printWindow.document.close();
-
-}
 
 
 // ------- Init -------
@@ -2566,6 +2604,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
