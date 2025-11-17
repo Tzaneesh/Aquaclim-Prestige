@@ -1146,7 +1146,7 @@ function addPrestation() {
     line.dataset.kind = "";
     line.dataset.detail = "";
     line.dataset.basePrice = "0";
-    line.dataset.autoPrice = "1"; // 🔹 prix automatique actif par défaut
+    line.dataset.autoPrice = "1"; // prix auto actif par défaut
 
     const optionsHtml = PRESTATION_TEMPLATES.map((t, idx) =>
         '<option value="' + idx + '">' + t.label + '</option>'
@@ -1171,6 +1171,10 @@ function addPrestation() {
                     '<input type="number" class="prestation-qty" value="1" min="0" step="1" onchange="calculateTotals()">' +
                 '</div>' +
                 '<div>' +
+                    '<label>Unité</label>' +
+                    '<input type="text" class="prestation-unit" placeholder="ex : forfait, heure, unité">' +
+                '</div>' +
+                '<div>' +
                     '<label>Prix HT</label>' +
                     '<input type="number" class="prestation-price" value="0" min="0" step="0.01" onchange="onPriceChange(this)">' +
                 '</div>' +
@@ -1192,6 +1196,7 @@ function addPrestation() {
     container.appendChild(line);
     calculateTotals();
 }
+
 
 // 🔹 Fonction séparée, en dehors de addPrestation
 function removePrestation(id) {
@@ -1228,12 +1233,28 @@ function applyTemplate(selectEl) {
     const descInput  = line.querySelector(".prestation-desc");
     const qtyInput   = line.querySelector(".prestation-qty");
     const priceInput = line.querySelector(".prestation-price");
+    const unitInput  = line.querySelector(".prestation-unit");
 
     // Description détaillée pour le PDF
     const detailHidden = clientType === "particulier"
         ? template.descParticulier
         : template.descSyndic;
     line.dataset.detail = detailHidden || "";
+    // ---------- Unité par défaut selon le type ----------
+if (unitInput) {
+    let unitVal = "";
+    if (template.kind === "depannage_clim" ||
+        template.kind === "depannage_piscine" ||
+        template.kind === "depannage_jacuzzi") {
+        unitVal = "heure";
+    } else if (template.kind === "produits" || template.kind === "fournitures") {
+        unitVal = "unité";
+    } else {
+        unitVal = "forfait";
+    }
+    unitInput.value = unitVal;
+}
+
 
     // ---------- Intitulé ----------
     if (descInput) {
@@ -1629,33 +1650,36 @@ function saveDocument() {
     // 🔹 On récupère TOUTES les lignes de prestations (y compris déplacement)
     const prestations = [];
     document.querySelectorAll(".prestation-line").forEach(line => {
-        const desc   = (line.querySelector(".prestation-desc")?.value || "").trim();
-        const qty    = parseFloat(line.querySelector(".prestation-qty")?.value)   || 0;
-        const price  = parseFloat(line.querySelector(".prestation-price")?.value) || 0;
-        const note   = (line.querySelector(".prestation-note")?.value || "").trim();
-        const detail = line.dataset.detail || "";
-        const kind   = line.dataset.kind   || "";
+    const desc   = (line.querySelector(".prestation-desc")?.value || "").trim();
+    const qty    = parseFloat(line.querySelector(".prestation-qty")?.value)   || 0;
+    const price  = parseFloat(line.querySelector(".prestation-price")?.value) || 0;
+    const unit   = (line.querySelector(".prestation-unit")?.value || "").trim();
+    const note   = (line.querySelector(".prestation-note")?.value || "").trim();
+    const detail = line.dataset.detail || "";
+    const kind   = line.dataset.kind   || "";
 
-        const datesInputs = line.querySelectorAll(".prestation-date");
-        const dates = [];
-        datesInputs.forEach(i => {
-            const v = i.value.trim();
-            if (v) dates.push(v);
-        });
-
-        if (desc) {
-            prestations.push({
-                desc,
-                detail,
-                qty,
-                price,
-                total: qty * price,
-                dates,
-                note,
-                kind
-            });
-        }
+    const datesInputs = line.querySelectorAll(".prestation-date");
+    const dates = [];
+    datesInputs.forEach(i => {
+        const v = i.value.trim();
+        if (v) dates.push(v);
     });
+
+    if (desc) {
+        prestations.push({
+            desc,
+            detail,
+            qty,
+            price,
+            total: qty * price,
+            unit,
+            dates,
+            note,
+            kind
+        });
+    }
+});
+
 
     if (prestations.length === 0) {
         alert("Ajoutez au moins une prestation");
@@ -1864,12 +1888,15 @@ updatePurchaseVisibility(line);
 
 
         const descInput = line.querySelector(".prestation-desc");
-        const qtyInput = line.querySelector(".prestation-qty");
-        const priceInput = line.querySelector(".prestation-price");
+const qtyInput = line.querySelector(".prestation-qty");
+const priceInput = line.querySelector(".prestation-price");
+const unitInput = line.querySelector(".prestation-unit");
 
-        descInput.value = p.desc;
-        qtyInput.value = p.qty;
-        priceInput.value = p.price;
+descInput.value = p.desc;
+qtyInput.value = p.qty;
+priceInput.value = p.price;
+if (unitInput) unitInput.value = p.unit || "";
+
 
         const note = line.querySelector(".prestation-note");
         if (p.note && note) {
@@ -2189,52 +2216,58 @@ function openPrintable(id) {
     const isUnpaidInvoice = (!isDevis && !doc.paid);
 
     // ---------- Lignes prestations ----------
-    let prestationsHTML = "";
-    doc.prestations.forEach(p => {
-        let extraHtml = "";
-        if (p.note || (p.dates && p.dates.length)) {
-            extraHtml += `<div class="sub-info">`;
-            if (p.note) {
-                extraHtml += `<div class="sub-info-line">${p.note}</div>`;
-            }
-            if (p.dates && p.dates.length) {
-                extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
-                p.dates.forEach(dv => {
-                    extraHtml += `<div class="sub-info-line">${dv}</div>`;
-                });
-            }
-            extraHtml += `</div>`;
+  let prestationsHTML = "";
+doc.prestations.forEach(p => {
+    let extraHtml = "";
+    if (p.note || (p.dates && p.dates.length)) {
+        extraHtml += `<div class="sub-info">`;
+        if (p.note) {
+            extraHtml += `<div class="sub-info-line">${p.note}</div>`;
         }
-
-        const detailHtml = p.detail
-            ? `<div class="desc-detail">${p.detail}</div>`
-            : "";
-
-        let qtyText = p.qty;
-        if (p.kind === "depannage_piscine" || p.kind === "depannage_clim") {
-            qtyText = p.qty + " h";
+        if (p.dates && p.dates.length) {
+            extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
+            p.dates.forEach(dv => {
+                extraHtml += `<div class="sub-info-line">${dv}</div>`;
+            });
         }
+        extraHtml += `</div>`;
+    }
 
-        const priceUnitText =
-            p.kind === "entretien_clim"
-                ? p.price.toFixed(2) + " € / u"
-                : p.price.toFixed(2) + " €";
+    const detailHtml = p.detail
+        ? `<div class="desc-detail">${p.detail}</div>`
+        : "";
 
-        const totalText = p.total.toFixed(2) + " €";
+    const qtyText = p.qty;
 
-        prestationsHTML += `
-            <tr>
-                <td>
-                    <div class="desc-main">${p.desc}</div>
-                    ${detailHtml}
-                    ${extraHtml}
-                </td>
-                <td class="qty-col">${qtyText}</td>
-                <td class="text-right price-col">${priceUnitText}</td>
-                <td class="text-right total-col"><strong>${totalText}</strong></td>
-            </tr>
-        `;
-    });
+    let unitText = p.unit || "";
+    if (!unitText) {
+        if (p.kind === "depannage_clim" || p.kind === "depannage_piscine" || p.kind === "depannage_jacuzzi") {
+            unitText = "heure";
+        } else if (p.kind === "produits" || p.kind === "fournitures") {
+            unitText = "unité";
+        } else {
+            unitText = "forfait";
+        }
+    }
+
+    const priceUnitText = p.price.toFixed(2) + " €";
+    const totalText = p.total.toFixed(2) + " €";
+
+    prestationsHTML += `
+        <tr>
+            <td>
+                <div class="desc-main">${p.desc}</div>
+                ${detailHtml}
+                ${extraHtml}
+            </td>
+            <td class="qty-col">${qtyText}</td>
+            <td class="unit-col">${unitText}</td>
+            <td class="text-right price-col">${priceUnitText}</td>
+            <td class="text-right total-col"><strong>${totalText}</strong></td>
+        </tr>
+    `;
+});
+
 
     // ---------- Bloc Informations importantes (pour devis) ----------
     let importantHtml = "";
@@ -2620,6 +2653,12 @@ let topDatesHtml = `
         .price-col,.total-col{white-space:nowrap;}
         th.qty-col,td.qty-col{text-align:center;}
         td.qty-col{vertical-align:middle !important;}
+        th.unit-col, td.unit-col{
+    text-align:center;
+    font-size:10px;
+    white-space:nowrap;
+}
+
 
         .desc-main{font-size:11px;font-weight:600;margin-bottom:2px;}
         .desc-detail{font-size:10px;color:#555;margin-top:2px;}
@@ -2810,19 +2849,21 @@ let topDatesHtml = `
         </div>
         ` : ""}
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th class="qty-col">Quantité</th>
-                    <th class="text-right price-col">Prix HT</th>
-                    <th class="text-right total-col">Total HT</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${prestationsHTML}
-            </tbody>
-        </table>
+   <table>
+    <thead>
+        <tr>
+            <th>Description</th>
+            <th class="qty-col">Quantité</th>
+            <th class="unit-col">Unité</th>
+            <th class="text-right price-col">Prix HT</th>
+            <th class="text-right total-col">Total HT</th>
+        </tr>
+    </thead>
+    <tbody>
+        ${prestationsHTML}
+    </tbody>
+</table>
+
 
         <div class="totals">
             <table>
@@ -2893,6 +2934,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
