@@ -437,6 +437,10 @@
     <div id="devisStatusInfo" style="font-size:12px;color:#c62828;margin-top:4px;display:none;"></div>
 </div>
 </div> <!-- fin de la première .row -->
+<div class="form-group" style="margin-top:10px;">
+    <label>Objet du devis / de la facture</label>
+    <input type="text" id="docSubject" placeholder="Ex : Entretien piscine + clim – Villa Martin">
+</div>
 
 <!-- NOUVELLE ROW : choix Particulier / Syndic en haut --><div class="form-group" style="margin-top:10px;">
     <label>Type de client *</label>
@@ -1570,6 +1574,8 @@ document.getElementById("clientAddress").value = "";
 document.getElementById("clientPhone").value = "";
 document.getElementById("clientEmail").value = "";
 document.getElementById("notes").value = "";
+        const subjectInput = document.getElementById("docSubject");
+if (subjectInput) subjectInput.value = "";
 
 // on utilise maintenant UNIQUEMENT les cases du haut
 const cbClientPart = document.getElementById("clientParticulier");
@@ -1613,6 +1619,7 @@ function saveDocument() {
     const clientAddress = document.getElementById("clientAddress").value.trim();
     const clientPhone   = document.getElementById("clientPhone").value.trim();
     const clientEmail   = document.getElementById("clientEmail").value.trim();
+    const docSubject    = (document.getElementById("docSubject")?.value || "").trim();
 
     if (!clientName || !clientAddress) {
         alert("Veuillez renseigner au minimum le nom et l'adresse du client.");
@@ -1732,6 +1739,7 @@ function saveDocument() {
         number: docNumber,
         date: docDate,
         validityDate,
+          subject: docSubject,
         client: { name: clientName, address: clientAddress, phone: clientPhone, email: clientEmail },
         prestations,
         tvaRate,
@@ -1782,6 +1790,11 @@ function loadDocument(id) {
     document.getElementById("clientPhone").value = doc.client.phone;
     document.getElementById("clientEmail").value = doc.client.email;
     document.getElementById("notes").value = doc.notes || "";
+    const subjectInput = document.getElementById("docSubject");
+if (subjectInput) {
+    subjectInput.value = doc.subject || "";
+}
+
 
     // Type de client (Particulier / Syndic)
     const cbClientPart = document.getElementById("clientParticulier");
@@ -2507,6 +2520,11 @@ let topDatesHtml = `
     margin-bottom:4px;
     text-align:left;
 }
+.doc-subject{
+    margin-top:6px;
+    font-size:10px;
+    font-weight:bold;
+}
 
 .doc-info-block{
     display:inline-block;
@@ -2746,10 +2764,14 @@ let topDatesHtml = `
             </p>
         </div>
 
-        <div class="doc-header-center">
-            <h2>${isDevis ? "DEVIS " : "FACTURE "}${doc.number}</h2>
-            ${topDatesHtml}
-        </div>
+       <div class="doc-header-center">
+    <h2>${isDevis ? "DEVIS N° : " : "FACTURE N° : "}${doc.number}</h2>
+    ${topDatesHtml}
+    ${doc.subject ? `
+        <div class="doc-subject">Objet : ${doc.subject}</div>
+    ` : ``}
+</div>
+
 
         <div class="client-block">
             <div class="client-title">Client</div>
@@ -2867,6 +2889,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
