@@ -528,7 +528,7 @@
                     <span id="tvaAmount">0,00 €</span>
                 </div>
                 <div class="total-line grand-total">
-                    <span id="totalLabel">TOTAL À PAYER :</span>
+                    <span id="totalLabel">NET À PAYER :</span>
                     <span id="totalTTC">0,00 €</span>
                 </div>
                 <div class="tva-note" id="tvaNote">
@@ -1048,7 +1048,7 @@ function setTVA(rate) {
         } else {
             // PARTICULIER + TVA 0 % -> TOTAL À PAYER + mention 293B
             if (tvaNote)   tvaNote.textContent   = "TVA non applicable, article 293 B du CGI.";
-            if (totalLabel) totalLabel.textContent = "TOTAL À PAYER :";
+            if (totalLabel) totalLabel.textContent = "NET À PAYER :";
         }
     } else {
         // TVA 20 % -> toujours TOTAL TTC
@@ -1431,7 +1431,7 @@ function calculateTotals() {
             if (clientType === "syndic") {
                 totalLabelEl.textContent = "TOTAL HT :";
             } else {
-                totalLabelEl.textContent = "TOTAL À PAYER :";
+                totalLabelEl.textContent = "NET À PAYER :";
             }
         } else {
             totalLabelEl.textContent = "TOTAL TTC :";
@@ -2224,41 +2224,65 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
         `;
     });
 
-    // ---------- Bloc Important (pour devis) ----------
-    let importantHtml = "";
-    if (isDevis) {
-        const items = [];
+   // ---------- Bloc Informations importantes (pour devis) ----------
+let importantHtml = "";
+if (isDevis) {
+    const items = [];
 
-        if (hasPiscine && hasClim) {
-            if (!hasProduitsOuFournitures) {
-                items.push("Les produits de traitement piscine (chlore choc, sel, cellule, pompe, etc.) ne sont pas inclus sauf mention contraire.");
-            }
-            items.push("Les prix des pièces sont susceptibles de varier. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
-        } else if (hasPiscine) {
-            if (!hasProduitsOuFournitures) {
-                items.push("Les produits de traitement piscine (chlore choc, sel, cellule, pompe, etc.) ne sont pas inclus sauf mention contraire.");
-            }
-            items.push("Les prix des pièces détachées piscine (pompes, cellules, roulements, etc.) sont susceptibles de varier. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
-        } else if (hasClim) {
-            items.push("Les pièces détachées de climatisation (moteurs, condensateurs, cartes électroniques, ventilateurs, etc.) sont susceptibles de varier en prix. Le montant final pourra être ajusté en fonction du tarif fournisseur en vigueur le jour de l’intervention.");
-        }
-
-        if (!hasDeplacement) {
-            items.push("Les prix incluent la main-d’œuvre et le déplacement.");
-        }
-
-        items.push("Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un accord écrit avant réalisation.");
-        items.push("Assurance RC Pro : [Assureur] – Contrat n° [XXXXXX].");
-
-        importantHtml = `
-            <div class="important-block">
-                <div class="important-title">Important</div>
-                <ul>
-                    ${items.map(t => `<li>${t}</li>`).join("")}
-                </ul>
-            </div>
-        `;
+    // Produits de traitement piscine non inclus si pas de ligne "produits/fournitures"
+    if (hasPiscine && !hasProduitsOuFournitures) {
+        items.push(
+            "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) " +
+            "ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant."
+        );
     }
+
+    // Variation des prix de pièces détachées
+    if (hasPiscine && hasClim) {
+        items.push(
+            "Les tarifs des pièces détachées de piscine et de climatisation " +
+            "(pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction " +
+            "des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        );
+    } else if (hasPiscine) {
+        items.push(
+            "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) " +
+            "sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être " +
+            "ajusté après votre accord."
+        );
+    } else if (hasClim) {
+        items.push(
+            "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) " +
+            "sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être " +
+            "ajusté après votre accord."
+        );
+    }
+
+    // Main-d’œuvre / déplacement
+    items.push(
+        "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
+    );
+
+    // Prestations hors devis
+    items.push(
+        "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire " +
+        "ou d’un avenant écrit avant réalisation."
+    );
+
+    // Assurance (sans placeholder)
+    items.push(
+        "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
+    );
+
+    importantHtml = `
+        <div class="important-block">
+            <div class="important-title">Informations importantes</div>
+            <ul>
+                ${items.map(t => `<li>${t}</li>`).join("")}
+            </ul>
+        </div>
+    `;
+}
 
     // ---------- TVA & Totaux ----------
     const tvaRate = doc.tvaRate || 0;
@@ -2278,7 +2302,7 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
             if (!isDevis && doc.paid) {
                 totalLabel = "TOTAL PAYÉE :";
             } else {
-                totalLabel = "TOTAL À PAYER :";
+                totalLabel = "NET À PAYER :";
             }
         }
     } else {
@@ -2351,25 +2375,34 @@ const validityStr = (isDevis && doc.validityDate)
         `;
     }
 
-    let notesText = doc.notes || "";
-    if (!isDevis && doc.paid && notesText) {
-        const removeLines = [
-            "Paiement à 30 jours date de facture.",
-            "Règlement à réception de facture.",
-            "Aucun escompte pour paiement anticipé.",
-            "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-            "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
-        ];
-        removeLines.forEach(line => {
-            notesText = notesText.replace(line + "\n", "");
-            notesText = notesText.replace(line, "");
-        });
-        notesText = notesText.trim();
-    }
+  let notesText = doc.notes || "";
 
-    const notesHtml = notesText
-        ? `<div style="margin-top:8px;font-size:10px;"><p>${notesText.replace(/\n/g, "<br>")}</p></div>`
-        : "";
+// Si facture PAYÉE : on nettoie les mentions “paiement à X jours / retard”, qui n'ont plus de sens
+if (!isDevis && doc.paid && notesText) {
+    const removeLines = [
+        "Paiement à 30 jours date de facture.",
+        "Règlement à réception de facture.",
+        "Aucun escompte pour paiement anticipé.",
+        "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+        "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
+    ];
+    removeLines.forEach(line => {
+        notesText = notesText.replace(line + "\n", "");
+        notesText = notesText.replace(line, "");
+    });
+    notesText = notesText.trim();
+}
+
+// Bloc “Conditions de règlement” propre
+const notesHtml = notesText
+    ? `
+        <div class="conditions-block">
+            <div class="conditions-title">Conditions de règlement</div>
+            <p>${notesText.replace(/\n/g, "<br>")}</p>
+        </div>
+    `
+    : "";
+
 
    
 let topDatesHtml = `
@@ -2391,10 +2424,11 @@ let topDatesHtml = `
 `;
     }
 
-    const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
-    const signatureClientText = isDevis
-        ? "Le client reconnaît avoir pris connaissance des prestations et accepte le présent devis."
-        : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
+const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
+const signatureClientText = isDevis
+    ? "Précédé de la mention manuscrite : « Bon pour accord, lu et approuvé »."
+    : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
+
 
     const printWindow = window.open("", "_blank");
 
@@ -2553,6 +2587,23 @@ let topDatesHtml = `
             page-break-inside:avoid;
             break-inside:avoid;
         }
+        .conditions-block{
+    margin-top:6px;
+    font-size:9.5px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    padding:6px 8px;
+    background:#fafafa;
+    page-break-inside:avoid;
+    break-inside:avoid;
+}
+
+.conditions-title{
+    font-weight:bold;
+    margin-bottom:3px;
+    font-size:10px;
+}
+
         .rib-title{font-weight:bold;margin-bottom:3px;font-size:10px;}
 
         .important-block{
@@ -2673,7 +2724,7 @@ ${isPaidInvoice ? notesHtml : ""}
 
     </div>
 
-   <div class="page-footer bottom-block">
+<div class="page-footer bottom-block">
     ${
         isDevis
             ? `
@@ -2684,11 +2735,12 @@ ${isPaidInvoice ? notesHtml : ""}
                     <div class="signature-block">
                         <div class="signature-title">${signatureClientTitle}</div>
                         <p>${signatureClientText}</p>
-                        <p style="margin-bottom:18px;">Date :</p>
-                        <p>Signature :</p>
+                        <p style="margin-top:6px;">Date :</p>
+                        <p>Signature du client :</p>
                     </div>
                     <div class="signature-block">
                         <div class="signature-title">AquaClim Prestige</div>
+                        <p>Signature et cachet de l’entreprise</p>
                         <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
                     </div>
                 </div>
@@ -2703,6 +2755,7 @@ ${isPaidInvoice ? notesHtml : ""}
             )
     }
 </div>
+
 
 </div>
 </body>
@@ -2731,6 +2784,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
