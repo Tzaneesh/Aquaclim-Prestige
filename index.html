@@ -2004,9 +2004,10 @@ updatePurchaseVisibility(line);
 
            let actionsHtml =
     '<div class="actions-btns">' +
-        '<button class="btn btn-primary btn-small" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-        '<button class="btn btn-primary btn-small" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
+        '<button class="btn btn-success btn-small" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+        '<button class="btn btn-success btn-small" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
     '</div>';
+
 
             tr.innerHTML =
                 '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
@@ -2514,6 +2515,11 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
 .btn-small:last-child {
     margin-bottom: 0;
 }
+.actions-btns {
+    display: flex;
+    flex-direction: column; /* ou row si tu les veux côte à côte */
+    gap: 8px;               /* espace entre Ouvrir et Imprimer */
+}
 
         .signature-title{font-weight:bold;margin-bottom:3px;}
         img.sig{max-height:38px;margin-top:3px;}
@@ -2635,6 +2641,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
