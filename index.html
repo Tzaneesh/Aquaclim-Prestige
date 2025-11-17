@@ -2284,28 +2284,38 @@ function openPrintable(id) {
     }
 
     // ---------- TVA & Totaux ----------
-    const tvaRate = doc.tvaRate || 0;
-    const discountAmountDoc = doc.discountAmount || 0;
-    const discountRateDoc = doc.discountRate || 0;
+const tvaRate = doc.tvaRate || 0;
+const discountAmountDoc = doc.discountAmount || 0;
+const discountRateDoc = doc.discountRate || 0;
 
-    let tvaNoteHtml = "";
-    let totalLabel = "";
+let tvaNoteHtml = "";
+let totalLabel = "";
 
-    // Libellé principal du total
-    if (tvaRate === 0) {
-        if (!isDevis && doc.paid) {
-            totalLabel = "NET PAYÉ :";
-        } else {
-            totalLabel = "NET À PAYER :";
-        }
-        tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
+// Note TVA si 0 %
+if (tvaRate === 0) {
+    tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
+}
+
+// Libellé principal du total
+if (isDevis) {
+    // 👉 cas devis : Montant total
+    totalLabel = "Montant total :";
+} else if (tvaRate === 0) {
+    // 👉 facture TVA 0 %
+    if (doc.paid) {
+        totalLabel = "NET PAYÉ :";
     } else {
-        if (!isDevis && doc.paid) {
-            totalLabel = "TOTAL PAYÉ TTC :";
-        } else {
-            totalLabel = "TOTAL TTC :";
-        }
+        totalLabel = "NET À PAYER :";
     }
+} else {
+    // 👉 facture avec TVA
+    if (doc.paid) {
+        totalLabel = "TOTAL PAYÉ TTC :";
+    } else {
+        totalLabel = "TOTAL TTC :";
+    }
+}
+
 
     // Construction des lignes de totaux
     let totalsRows = `
@@ -2378,10 +2388,26 @@ function openPrintable(id) {
         `;
     }
 
+  let notesHtml = "";
+
+// 👉 Cas DEVIS : texte simple, fixe
+if (isDevis) {
+    const devisConditions =
+        "Paiement à réception de facture.\n" +
+        "Aucun acompte demandé sauf mention contraire.";
+
+    notesHtml = `
+        <div class="conditions-block">
+            <div class="conditions-title">Conditions de règlement</div>
+            <p>${devisConditions.replace(/\n/g, "<br>")}</p>
+        </div>
+    `;
+} else {
+    // 👉 Cas FACTURES : on utilise doc.notes comme avant
     let notesText = doc.notes || "";
 
     // Si facture PAYÉE : on nettoie les mentions “paiement à X jours / retard”
-    if (!isDevis && doc.paid && notesText) {
+    if (doc.paid && notesText) {
         const removeLines = [
             "Paiement à 30 jours date de facture.",
             "Règlement à réception de facture.",
@@ -2396,8 +2422,7 @@ function openPrintable(id) {
         notesText = notesText.trim();
     }
 
-    // Bloc “Conditions de règlement”
-    const notesHtml = notesText
+    notesHtml = notesText
         ? `
             <div class="conditions-block">
                 <div class="conditions-title">Conditions de règlement</div>
@@ -2405,6 +2430,8 @@ function openPrintable(id) {
             </div>
         `
         : "";
+}
+
 
     let topDatesHtml = `<p><strong>Fait à Nice, le ${dateStr}</strong></p>`;
     if (isDevis && doc.validityDate) {
@@ -2474,19 +2501,20 @@ function openPrintable(id) {
             letter-spacing:0.5px;
         }
 
-        .client-line{
-            display:flex;
-            margin:1px 0;
-        }
+   .client-line{
+    display:flex;
+    margin:4px 0;   /* ← mets plutôt 4px pour plus d’air */
+}
 
-        .client-label{
-            min-width:55px;
-            font-weight:600;
-        }
+.client-label{
+    min-width:55px;
+    font-weight:600;
+}
 
-        .client-value{
-            flex:1;
-        }
+.client-value{
+    flex:1;
+}
+
 
         .site-block{
             margin-bottom:10px;
@@ -2571,16 +2599,22 @@ function openPrintable(id) {
         }
 
         .reglement-block{
-            margin-top:4px;
-            font-size:10px;
-            border:1px solid #4caf50;
-            padding:7px;
-            border-radius:6px;
-            background:#f1faf1;
-            page-break-inside:avoid;
-            break-inside:avoid;
-        }
-        .reg-title{font-weight:bold;margin-bottom:3px;color:#2e7d32;font-size:10px;}
+    margin-top:4px;
+    font-size:10px;
+    border:1px solid #2e7d32;
+    padding:7px;
+    border-radius:6px;
+    background:#e8f5e9; /* vert plus marqué */
+    page-break-inside:avoid;
+    break-inside:avoid;
+}
+.reg-title{
+    font-weight:bold;
+    margin-bottom:3px;
+    color:#1b5e20;
+    font-size:10px;
+}
+
 
         .rib-block{
             margin-top:6px;
@@ -2785,6 +2819,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
