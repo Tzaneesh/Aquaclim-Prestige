@@ -2173,8 +2173,7 @@ function openPrintable(id) {
 
     const isDevis = doc.type === "devis";
     const isPaidInvoice = (!isDevis && doc.paid);
-const isUnpaidInvoice = (!isDevis && !doc.paid);
-
+    const isUnpaidInvoice = (!isDevis && !doc.paid);
 
     // ---------- Lignes prestations ----------
     let prestationsHTML = "";
@@ -2224,65 +2223,65 @@ const isUnpaidInvoice = (!isDevis && !doc.paid);
         `;
     });
 
-   // ---------- Bloc Informations importantes (pour devis) ----------
-let importantHtml = "";
-if (isDevis) {
-    const items = [];
+    // ---------- Bloc Informations importantes (pour devis) ----------
+    let importantHtml = "";
+    if (isDevis) {
+        const items = [];
 
-    // Produits de traitement piscine non inclus si pas de ligne "produits/fournitures"
-    if (hasPiscine && !hasProduitsOuFournitures) {
+        // Produits de traitement piscine non inclus si pas de ligne "produits/fournitures"
+        if (hasPiscine && !hasProduitsOuFournitures) {
+            items.push(
+                "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) " +
+                "ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant."
+            );
+        }
+
+        // Variation des prix de pièces détachées
+        if (hasPiscine && hasClim) {
+            items.push(
+                "Les tarifs des pièces détachées de piscine et de climatisation " +
+                "(pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction " +
+                "des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+            );
+        } else if (hasPiscine) {
+            items.push(
+                "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) " +
+                "sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être " +
+                "ajusté après votre accord."
+            );
+        } else if (hasClim) {
+            items.push(
+                "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) " +
+                "sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être " +
+                "ajusté après votre accord."
+            );
+        }
+
+        // Main-d’œuvre / déplacement
         items.push(
-            "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) " +
-            "ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant."
+            "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
         );
+
+        // Prestations hors devis
+        items.push(
+            "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire " +
+            "ou d’un avenant écrit avant réalisation."
+        );
+
+        // Assurance (sans placeholder)
+        items.push(
+            "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
+        );
+
+        importantHtml = `
+            <div class="important-block">
+                <div class="important-title">Informations importantes</div>
+                <ul>
+                    ${items.map(t => `<li>${t}</li>`).join("")}
+                </ul>
+            </div>
+        `;
     }
-
-    // Variation des prix de pièces détachées
-    if (hasPiscine && hasClim) {
-        items.push(
-            "Les tarifs des pièces détachées de piscine et de climatisation " +
-            "(pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction " +
-            "des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
-        );
-    } else if (hasPiscine) {
-        items.push(
-            "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) " +
-            "sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être " +
-            "ajusté après votre accord."
-        );
-    } else if (hasClim) {
-        items.push(
-            "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) " +
-            "sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être " +
-            "ajusté après votre accord."
-        );
-    }
-
-    // Main-d’œuvre / déplacement
-    items.push(
-        "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
-    );
-
-    // Prestations hors devis
-    items.push(
-        "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire " +
-        "ou d’un avenant écrit avant réalisation."
-    );
-
-    // Assurance (sans placeholder)
-    items.push(
-        "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
-    );
-
-    importantHtml = `
-        <div class="important-block">
-            <div class="important-title">Informations importantes</div>
-            <ul>
-                ${items.map(t => `<li>${t}</li>`).join("")}
-            </ul>
-        </div>
-    `;
-}
 
     // ---------- TVA & Totaux ----------
     const tvaRate = doc.tvaRate || 0;
@@ -2290,25 +2289,25 @@ if (isDevis) {
     const discountRateDoc = doc.discountRate || 0;
 
     let tvaNoteHtml = "";
-    if (tvaRate === 0 && doc.conditionsType !== "agence") {
-        tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
-    }
-
     let totalLabel = "";
+
+    // Libellé principal du total
     if (tvaRate === 0) {
-        if (doc.conditionsType === "agence") {
-            totalLabel = "TOTAL HT :";
+        if (!isDevis && doc.paid) {
+            totalLabel = "NET PAYÉ :";
         } else {
-            if (!isDevis && doc.paid) {
-                totalLabel = "TOTAL PAYÉE :";
-            } else {
-                totalLabel = "NET À PAYER :";
-            }
+            totalLabel = "NET À PAYER :";
         }
+        tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
     } else {
-        totalLabel = "TOTAL TTC :";
+        if (!isDevis && doc.paid) {
+            totalLabel = "TOTAL PAYÉ TTC :";
+        } else {
+            totalLabel = "TOTAL TTC :";
+        }
     }
 
+    // Construction des lignes de totaux
     let totalsRows = `
         <tr>
             <td>Sous-total HT :</td>
@@ -2326,11 +2325,17 @@ if (isDevis) {
         `;
     }
 
+    // TVA affichée uniquement si > 0
+    if (tvaRate > 0) {
+        totalsRows += `
+            <tr>
+                <td>TVA (${tvaRate} %) :</td>
+                <td class="text-right">${doc.tvaAmount.toFixed(2)} €</td>
+            </tr>
+        `;
+    }
+
     totalsRows += `
-        <tr>
-            <td>TVA (${tvaRate}%) :</td>
-            <td class="text-right">${doc.tvaAmount.toFixed(2)} €</td>
-        </tr>
         <tr class="grand-total">
             <td>${totalLabel}</td>
             <td class="text-right">${doc.totalTTC.toFixed(2)} €</td>
@@ -2339,8 +2344,6 @@ if (isDevis) {
 
     // ---------- Règlement / RIB / Notes ----------
     const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
-const validityStr = (isDevis && doc.validityDate)
-    ? new Date(doc.validityDate).toLocaleDateString("fr-FR")
     const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
     const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
 
@@ -2375,60 +2378,45 @@ const validityStr = (isDevis && doc.validityDate)
         `;
     }
 
-  let notesText = doc.notes || "";
+    let notesText = doc.notes || "";
 
-// Si facture PAYÉE : on nettoie les mentions “paiement à X jours / retard”, qui n'ont plus de sens
-if (!isDevis && doc.paid && notesText) {
-    const removeLines = [
-        "Paiement à 30 jours date de facture.",
-        "Règlement à réception de facture.",
-        "Aucun escompte pour paiement anticipé.",
-        "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-        "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
-    ];
-    removeLines.forEach(line => {
-        notesText = notesText.replace(line + "\n", "");
-        notesText = notesText.replace(line, "");
-    });
-    notesText = notesText.trim();
-}
-
-// Bloc “Conditions de règlement” propre
-const notesHtml = notesText
-    ? `
-        <div class="conditions-block">
-            <div class="conditions-title">Conditions de règlement</div>
-            <p>${notesText.replace(/\n/g, "<br>")}</p>
-        </div>
-    `
-    : "";
-
-
-   
-let topDatesHtml = `
-    <div class="doc-info-block">
-        <div class="doc-info-row">
-            <span class="doc-info-label">Date d’émission :</span>
-            <span class="doc-info-value">${dateStr}</span>
-        </div>
-        ${validityStr ? `
-        <div class="doc-info-row">
-            <span class="doc-info-label">Validité :</span>
-            <span class="doc-info-value">${validityStr}</span>
-        </div>` : ``}
-        <div class="doc-info-row">
-            <span class="doc-info-label">Lieu d’émission :</span>
-            <span class="doc-info-value">Nice</span>
-        </div>
-    </div>
-`;
+    // Si facture PAYÉE : on nettoie les mentions “paiement à X jours / retard”
+    if (!isDevis && doc.paid && notesText) {
+        const removeLines = [
+            "Paiement à 30 jours date de facture.",
+            "Règlement à réception de facture.",
+            "Aucun escompte pour paiement anticipé.",
+            "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+            "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
+        ];
+        removeLines.forEach(line => {
+            notesText = notesText.replace(line + "\n", "");
+            notesText = notesText.replace(line, "");
+        });
+        notesText = notesText.trim();
     }
 
-const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
-const signatureClientText = isDevis
-    ? "Précédé de la mention manuscrite : « Bon pour accord, lu et approuvé »."
-    : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
+    // Bloc “Conditions de règlement”
+    const notesHtml = notesText
+        ? `
+            <div class="conditions-block">
+                <div class="conditions-title">Conditions de règlement</div>
+                <p>${notesText.replace(/\n/g, "<br>")}</p>
+            </div>
+        `
+        : "";
 
+    let topDatesHtml = `<p><strong>Fait à Nice, le ${dateStr}</strong></p>`;
+    if (isDevis && doc.validityDate) {
+        topDatesHtml += `
+            <p><strong>Devis gratuit – valable jusqu'au : ${new Date(doc.validityDate).toLocaleDateString("fr-FR")}</strong></p>
+        `;
+    }
+
+    const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
+    const signatureClientText = isDevis
+        ? "Précédé de la mention manuscrite : « Bon pour accord, lu et approuvé »."
+        : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
 
     const printWindow = window.open("", "_blank");
 
@@ -2465,73 +2453,57 @@ const signatureClientText = isDevis
         .contact{font-size:10.5px;font-weight:500;}
         .contact strong{font-weight:700;}
 
- .doc-header-center{
-    margin:10px 0 12px 0;
-}
+        .doc-header-center{text-align:center;margin:10px 0 12px 0;}
+        .doc-header-center h2{font-size:18px;color:#1a74d9;margin-bottom:3px;}
+        .doc-header-center p{font-size:10px;margin:1px 0;}
 
-.doc-header-center h2{
-    font-size:18px;
-    color:#1a74d9;
-    margin-bottom:4px;
-    text-align:left;
-}
+        .client-block{
+            margin-bottom:10px;
+            font-size:10px;
+            border:1px solid #ccc;
+            border-radius:6px;
+            padding:6px 8px;
+            background:#fafafa;
+        }
 
-.doc-info-block{
-    display:inline-block;
-    border:1px solid #ddd;
-    border-radius:6px;
-    padding:6px 8px;
-    font-size:10px;
-    background:#fafafa;
-}
+        .client-title{
+            font-weight:bold;
+            font-size:10px;
+            margin-bottom:4px;
+            text-transform:uppercase;
+            letter-spacing:0.5px;
+        }
 
-.doc-info-row{
-    display:flex;
-    gap:4px;
-    margin:1px 0;
-}
+        .client-line{
+            display:flex;
+            margin:1px 0;
+        }
 
-.doc-info-label{
-    min-width:95px;
-    font-weight:bold;
-}
+        .client-label{
+            min-width:55px;
+            font-weight:600;
+        }
 
-.doc-info-value{
-    flex:1;
-}
+        .client-value{
+            flex:1;
+        }
 
+        .site-block{
+            margin-bottom:10px;
+            font-size:10px;
+            border:1px solid #ccc;
+            border-radius:6px;
+            padding:6px 8px;
+            background:#fdfdfd;
+        }
 
-       .client-block{
-    margin-bottom:10px;
-    font-size:10px;
-    border:1px solid #ccc;
-    border-radius:6px;
-    padding:6px 8px;
-    background:#fafafa;
-}
-
-.client-title{
-    font-weight:bold;
-    font-size:10px;
-    margin-bottom:4px;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-}
-
-.client-line{
-    display:flex;
-    margin:1px 0;
-}
-
-.client-label{
-    min-width:55px;
-    font-weight:600;
-}
-
-.client-value{
-    flex:1;
-}
-
+        .site-title{
+            font-weight:bold;
+            font-size:10px;
+            margin-bottom:4px;
+            text-transform:uppercase;
+            letter-spacing:0.5px;
+        }
 
         table{width:100%;border-collapse:collapse;margin:10px 0;}
         th{
@@ -2559,11 +2531,44 @@ const signatureClientText = isDevis
         .sub-info{margin-top:3px;font-size:9.5px;color:#555;}
         .sub-info-line{margin-top:1px;}
 
-        .totals{margin-left:auto;width:230px;margin-top:4px;}
-        .totals table{margin:0;}
-        .totals td{padding:3px 6px;font-size:10px;}
-        .totals .grand-total{background:#f0f0f0;color:#000;font-weight:bold;font-size:11px;}
-        .tva-note{margin-top:4px;font-size:9px;font-style:italic;color:#555;}
+        .totals{
+            margin-left:auto;
+            width:230px;
+            margin-top:6px;
+            border:1px solid #ddd;
+            border-radius:6px;
+            padding:6px 8px;
+            background:#fafafa;
+        }
+
+        .totals table{
+            width:100%;
+            border-collapse:collapse;
+            margin:0;
+        }
+
+        .totals td{
+            padding:3px 0;
+            font-size:10px;
+        }
+
+        .totals tr:not(.grand-total) td:first-child{
+            color:#555;
+        }
+
+        .totals .grand-total td{
+            padding-top:5px;
+            border-top:1px solid #bbb;
+            font-weight:bold;
+            font-size:11px;
+        }
+
+        .tva-note{
+            margin-top:4px;
+            font-size:9px;
+            font-style:italic;
+            color:#555;
+        }
 
         .reglement-block{
             margin-top:4px;
@@ -2587,23 +2592,6 @@ const signatureClientText = isDevis
             page-break-inside:avoid;
             break-inside:avoid;
         }
-        .conditions-block{
-    margin-top:6px;
-    font-size:9.5px;
-    border:1px solid #ddd;
-    border-radius:6px;
-    padding:6px 8px;
-    background:#fafafa;
-    page-break-inside:avoid;
-    break-inside:avoid;
-}
-
-.conditions-title{
-    font-weight:bold;
-    margin-bottom:3px;
-    font-size:10px;
-}
-
         .rib-title{font-weight:bold;margin-bottom:3px;font-size:10px;}
 
         .important-block{
@@ -2620,6 +2608,23 @@ const signatureClientText = isDevis
         .important-block ul{margin-left:14px;}
         .important-block li{margin-bottom:3px;}
 
+        .conditions-block{
+            margin-top:6px;
+            font-size:9.5px;
+            border:1px solid #ddd;
+            border-radius:6px;
+            padding:6px 8px;
+            background:#fafafa;
+            page-break-inside:avoid;
+            break-inside:avoid;
+        }
+
+        .conditions-title{
+            font-weight:bold;
+            margin-bottom:3px;
+            font-size:10px;
+        }
+
         .signatures{
             margin-top:10px;
             display:flex;
@@ -2635,13 +2640,6 @@ const signatureClientText = isDevis
             font-size:10px;
             min-height:55px;
         }
-        .btn-small {
-    margin-bottom: 10px;
-}
-.btn-small:last-child {
-    margin-bottom: 0;
-}
-
         .signature-title{font-weight:bold;margin-bottom:3px;}
         img.sig{max-height:38px;margin-top:3px;}
 
@@ -2671,32 +2669,38 @@ const signatureClientText = isDevis
             ${topDatesHtml}
         </div>
 
-   <div class="client-block">
-    <div class="client-title">Client</div>
+        <div class="client-block">
+            <div class="client-title">Client</div>
 
-    <div class="client-line">
-        <div class="client-label">Nom :</div>
-        <div class="client-value"><strong>${doc.client?.name || ""}</strong></div>
-    </div>
+            <div class="client-line">
+                <div class="client-label">Nom :</div>
+                <div class="client-value"><strong>${doc.client?.name || ""}</strong></div>
+            </div>
 
-    <div class="client-line">
-        <div class="client-label">Adresse :</div>
-        <div class="client-value">${doc.client?.address || ""}</div>
-    </div>
+            <div class="client-line">
+                <div class="client-label">Adresse :</div>
+                <div class="client-value">${doc.client?.address || ""}</div>
+            </div>
 
-    ${doc.client?.phone ? `
-    <div class="client-line">
-        <div class="client-label">Tél :</div>
-        <div class="client-value">${doc.client.phone}</div>
-    </div>` : ""}
+            ${doc.client?.phone ? `
+            <div class="client-line">
+                <div class="client-label">Tél :</div>
+                <div class="client-value">${doc.client.phone}</div>
+            </div>` : ""}
 
-    ${doc.client?.email ? `
-    <div class="client-line">
-        <div class="client-label">Email :</div>
-        <div class="client-value">${doc.client.email}</div>
-    </div>` : ""}
-</div>
+            ${doc.client?.email ? `
+            <div class="client-line">
+                <div class="client-label">Email :</div>
+                <div class="client-value">${doc.client.email}</div>
+            </div>` : ""}
+        </div>
 
+        ${doc.siteAddress && doc.siteAddress !== (doc.client?.address || "") ? `
+        <div class="site-block">
+            <div class="site-title">Lieu d’intervention</div>
+            <p>${doc.siteAddress}</p>
+        </div>
+        ` : ""}
 
         <table>
             <thead>
@@ -2713,64 +2717,61 @@ const signatureClientText = isDevis
         </table>
 
         <div class="totals">
-    <table>
-        ${totalsRows}
-    </table>
-    ${tvaNoteHtml}
-</div>
+            <table>
+                ${totalsRows}
+            </table>
+            ${tvaNoteHtml}
+        </div>
 
-${isPaidInvoice ? reglementHtml : ""}
-${isPaidInvoice ? notesHtml : ""}
+        ${isPaidInvoice ? reglementHtml : ""}
+        ${isPaidInvoice ? notesHtml : ""}
 
     </div>
 
-<div class="page-footer bottom-block">
-    ${
-        isDevis
-            ? `
-                ${notesHtml}
-                ${importantHtml}
+    <div class="page-footer bottom-block">
+        ${
+            isDevis
+                ? `
+                    ${notesHtml}
+                    ${importantHtml}
 
-                <div class="signatures">
-                    <div class="signature-block">
-                        <div class="signature-title">${signatureClientTitle}</div>
-                        <p>${signatureClientText}</p>
-                        <p style="margin-top:6px;">Date :</p>
-                        <p>Signature du client :</p>
+                    <div class="signatures">
+                        <div class="signature-block">
+                            <div class="signature-title">${signatureClientTitle}</div>
+                            <p>${signatureClientText}</p>
+                            <p style="margin-top:6px;">Date :</p>
+                            <p>Signature du client :</p>
+                        </div>
+                        <div class="signature-block">
+                            <div class="signature-title">AquaClim Prestige</div>
+                            <p>Signature et cachet de l’entreprise</p>
+                            <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+                        </div>
                     </div>
-                    <div class="signature-block">
-                        <div class="signature-title">AquaClim Prestige</div>
-                        <p>Signature et cachet de l’entreprise</p>
-                        <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-                    </div>
-                </div>
-            `
-            : (
-                isUnpaidInvoice
-                    ? `
-                        ${ribHtml}
-                        ${notesHtml}
-                    `
-                    : ``
-            )
-    }
-</div>
-
+                `
+                : (
+                    isUnpaidInvoice
+                        ? `
+                            ${ribHtml}
+                            ${notesHtml}
+                        `
+                        : ``
+                )
+        }
+    </div>
 
 </div>
 </body>
 </html>`;
-    // 🔚 fin du template HTML
 
     printWindow.document.write(html);
     printWindow.document.close();
 
-    // Impression auto de la popup
     printWindow.onload = function () {
         printWindow.focus();
         printWindow.print();
     };
-} // 🔚 fin de function openPrintable
+}
 
 
 
@@ -2784,6 +2785,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
