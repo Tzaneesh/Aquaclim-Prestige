@@ -2223,70 +2223,77 @@ function openPrintable(id) {
         p.kind === "deplacement" || p.kind === "forfait_deplacement"
     );
 
-    const isDevis = doc.type === "devis";
-    const isPaidInvoice = (!isDevis && doc.paid);
+    const isDevis        = doc.type === "devis";
+    const isPaidInvoice  = (!isDevis && doc.paid);
     const isUnpaidInvoice = (!isDevis && !doc.paid);
 
+    // ---------- Helper format prix FR ----------
+    const formatEuroFR = (value) => {
+        const v = Number(value) || 0;
+        return v.toLocaleString("fr-FR", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }) + " €";
+    };
+
     // ---------- Lignes prestations ----------
-  let prestationsHTML = "";
-doc.prestations.forEach(p => {
-    let extraHtml = "";
-    if (p.note || (p.dates && p.dates.length)) {
-        extraHtml += `<div class="sub-info">`;
-        if (p.note) {
-            extraHtml += `<div class="sub-info-line">${p.note}</div>`;
+    let prestationsHTML = "";
+    doc.prestations.forEach(p => {
+        let extraHtml = "";
+        if (p.note || (p.dates && p.dates.length)) {
+            extraHtml += `<div class="sub-info">`;
+            if (p.note) {
+                extraHtml += `<div class="sub-info-line">${p.note}</div>`;
+            }
+            if (p.dates && p.dates.length) {
+                extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
+                p.dates.forEach(dv => {
+                    extraHtml += `<div class="sub-info-line">${dv}</div>`;
+                });
+            }
+            extraHtml += `</div>`;
         }
-        if (p.dates && p.dates.length) {
-            extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
-            p.dates.forEach(dv => {
-                extraHtml += `<div class="sub-info-line">${dv}</div>`;
-            });
+
+        const detailHtml = p.detail
+            ? `<div class="desc-detail">${p.detail}</div>`
+            : "";
+
+        const qtyText = p.qty;
+
+        let unitText = p.unit || "";
+        if (!unitText) {
+            if (p.kind === "depannage_clim" || p.kind === "depannage_piscine" || p.kind === "depannage_jacuzzi") {
+                unitText = "heure";
+            } else if (p.kind === "produits" || p.kind === "fournitures") {
+                unitText = "unité";
+            } else {
+                unitText = "forfait";
+            }
         }
-        extraHtml += `</div>`;
-    }
 
-    const detailHtml = p.detail
-        ? `<div class="desc-detail">${p.detail}</div>`
-        : "";
+        const priceText = formatEuroFR(p.price);
+        const totalText = formatEuroFR(p.total);
 
-    const qtyText = p.qty;
-
-    let unitText = p.unit || "";
-    if (!unitText) {
-        if (p.kind === "depannage_clim" || p.kind === "depannage_piscine" || p.kind === "depannage_jacuzzi") {
-            unitText = "heure";
-        } else if (p.kind === "produits" || p.kind === "fournitures") {
-            unitText = "unité";
-        } else {
-            unitText = "forfait";
-        }
-    }
-
-    const priceUnitText = p.price.toFixed(2) + " €";
-    const totalText = p.total.toFixed(2) + " €";
-
-    prestationsHTML += `
-        <tr>
-            <td>
-                <div class="desc-main">${p.desc}</div>
-                ${detailHtml}
-                ${extraHtml}
-            </td>
-            <td class="qty-col">${qtyText}</td>
-            <td class="unit-col">${unitText}</td>
-            <td class="text-right price-col">${priceUnitText}</td>
-            <td class="text-right total-col"><strong>${totalText}</strong></td>
-        </tr>
-    `;
-});
-
+        prestationsHTML += `
+            <tr>
+                <td>
+                    <div class="desc-main">${p.desc}</div>
+                    ${detailHtml}
+                    ${extraHtml}
+                </td>
+                <td class="qty-col">${qtyText}</td>
+                <td class="unit-col">${unitText}</td>
+                <td class="price-col text-right">${priceText}</td>
+                <td class="total-col text-right"><strong>${totalText}</strong></td>
+            </tr>
+        `;
+    });
 
     // ---------- Bloc Informations importantes (pour devis) ----------
     let importantHtml = "";
     if (isDevis) {
         const items = [];
 
-        // Produits de traitement piscine non inclus si pas de ligne "produits/fournitures"
         if (hasPiscine && !hasProduitsOuFournitures) {
             items.push(
                 "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) " +
@@ -2294,7 +2301,6 @@ doc.prestations.forEach(p => {
             );
         }
 
-        // Variation des prix de pièces détachées
         if (hasPiscine && hasClim) {
             items.push(
                 "Les tarifs des pièces détachées de piscine et de climatisation " +
@@ -2315,18 +2321,15 @@ doc.prestations.forEach(p => {
             );
         }
 
-        // Main-d’œuvre / déplacement
         items.push(
             "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
         );
 
-        // Prestations hors devis
         items.push(
             "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire " +
             "ou d’un avenant écrit avant réalisation."
         );
 
-        // Assurance (sans placeholder)
         items.push(
             "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
         );
@@ -2342,44 +2345,41 @@ doc.prestations.forEach(p => {
     }
 
     // ---------- TVA & Totaux ----------
-const tvaRate = doc.tvaRate || 0;
-const discountAmountDoc = doc.discountAmount || 0;
-const discountRateDoc = doc.discountRate || 0;
+    const tvaRate          = doc.tvaRate || 0;
+    const discountAmountDoc = doc.discountAmount || 0;
+    const discountRateDoc   = doc.discountRate || 0;
 
-let tvaNoteHtml = "";
-let totalLabel = "";
-
-// Note TVA si 0 %
-if (tvaRate === 0) {
-    tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
-}
-
-// Libellé principal du total
-if (isDevis) {
-    // 👉 cas devis : Montant total
-    totalLabel = "Montant total :";
-} else if (tvaRate === 0) {
-    // 👉 facture TVA 0 %
-    if (doc.paid) {
-        totalLabel = "NET PAYÉ :";
-    } else {
-        totalLabel = "NET À PAYER :";
+    let tvaNoteHtml = "";
+    if (tvaRate === 0) {
+        tvaNoteHtml = `<div class="tva-note">TVA non applicable, article 293 B du CGI.</div>`;
     }
-} else {
-    // 👉 facture avec TVA
-    if (doc.paid) {
-        totalLabel = "TOTAL PAYÉ TTC :";
+
+    let totalLabel = "";
+    if (isDevis) {
+        totalLabel = "Montant total :";
+    } else if (tvaRate === 0) {
+        if (doc.paid) {
+            totalLabel = "NET PAYÉ :";
+        } else {
+            totalLabel = "NET À PAYER :";
+        }
     } else {
-        totalLabel = "TOTAL TTC :";
+        if (doc.paid) {
+            totalLabel = "TOTAL PAYÉ TTC :";
+        } else {
+            totalLabel = "TOTAL TTC :";
+        }
     }
-}
 
+    const subtotalText       = formatEuroFR(doc.subtotal || 0);
+    const discountAmountText = formatEuroFR(discountAmountDoc || 0);
+    const tvaAmountText      = formatEuroFR(doc.tvaAmount || 0);
+    const totalTTCText       = formatEuroFR(doc.totalTTC || 0);
 
-    // Construction des lignes de totaux
     let totalsRows = `
         <tr>
             <td>Sous-total HT :</td>
-            <td class="text-right">${doc.subtotal.toFixed(2)} €</td>
+            <td class="text-right">${subtotalText}</td>
         </tr>
     `;
 
@@ -2388,17 +2388,16 @@ if (isDevis) {
         totalsRows += `
             <tr>
                 <td>Réduction (${rateLabel} %) :</td>
-                <td class="text-right">- ${discountAmountDoc.toFixed(2)} €</td>
+                <td class="text-right">- ${discountAmountText}</td>
             </tr>
         `;
     }
 
-    // TVA affichée uniquement si > 0
     if (tvaRate > 0) {
         totalsRows += `
             <tr>
                 <td>TVA (${tvaRate} %) :</td>
-                <td class="text-right">${doc.tvaAmount.toFixed(2)} €</td>
+                <td class="text-right">${tvaAmountText}</td>
             </tr>
         `;
     }
@@ -2406,114 +2405,110 @@ if (isDevis) {
     totalsRows += `
         <tr class="grand-total">
             <td>${totalLabel}</td>
-            <td class="text-right">${doc.totalTTC.toFixed(2)} €</td>
+            <td class="text-right">${totalTTCText}</td>
         </tr>
     `;
 
-// ---------- Règlement / RIB / Notes ----------
-const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
-const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
-const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
+    // ---------- Règlement / RIB / Notes ----------
+    const dateStr = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "";
+    const logoSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
+    const signSrc = "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
 
-let reglementHtml = "";
-if (!isDevis && doc.paid && doc.paymentMode) {
-    const payDate = doc.paymentDate || doc.date;
-    const payDateStr = payDate ? new Date(payDate).toLocaleDateString("fr-FR") : dateStr;
-    let modePhrase = "";
-    if (doc.paymentMode === "especes") modePhrase = "en espèces";
-    else if (doc.paymentMode === "cb") modePhrase = "par carte bancaire";
-    else if (doc.paymentMode === "virement") modePhrase = "par virement";
-    else if (doc.paymentMode === "cheque") modePhrase = "par chèque";
+    let reglementHtml = "";
+    if (!isDevis && doc.paid && doc.paymentMode) {
+        const payDate   = doc.paymentDate || doc.date;
+        const payDateStr = payDate ? new Date(payDate).toLocaleDateString("fr-FR") : dateStr;
+        let modePhrase = "";
+        if (doc.paymentMode === "especes") modePhrase = "en espèces";
+        else if (doc.paymentMode === "cb") modePhrase = "par carte bancaire";
+        else if (doc.paymentMode === "virement") modePhrase = "par virement";
+        else if (doc.paymentMode === "cheque") modePhrase = "par chèque";
 
-    reglementHtml = `
-        <div class="reglement-block">
-            <div class="reg-title">Règlement</div>
-            <p>Facture réglée ${modePhrase} le ${payDateStr}.</p>
-        </div>
-    `;
-}
-
-let ribHtml = "";
-if (!isDevis && !doc.paid) {
-    ribHtml = `
-        <div class="rib-block">
-            <div class="rib-title">Coordonnées bancaires pour virement</div>
-            <p>Titulaire : AquaClim Prestige – Le Blevennec Loïc</p>
-            <p>Banque : Banque Fictive</p>
-            <p>IBAN : FR76 1234 5678 9012 3456 7890 123</p>
-            <p>BIC : FICTFRPPXXX</p>
-        </div>
-    `;
-}
-
-// ---------- Conditions de règlement ----------
-let notesHtml = "";
-
-if (isDevis) {
-    // 👉 Cas DEVIS : texte fixe simple
-    const devisConditions =
-        "Paiement à réception de facture.\n" +
-        "Aucun acompte demandé sauf mention contraire.";
-
-    notesHtml = `
-        <div class="conditions-block">
-            <div class="conditions-title">Conditions de règlement</div>
-            <p>${devisConditions.replace(/\n/g, "<br>")}</p>
-        </div>
-    `;
-} else {
-    // 👉 Cas FACTURES : on utilise doc.notes comme avant
-    let notesText = doc.notes || "";
-
-    // Si facture PAYÉE : on nettoie les mentions “paiement à X jours / retard”
-    if (doc.paid && notesText) {
-        const removeLines = [
-            "Paiement à 30 jours date de facture.",
-            "Règlement à réception de facture.",
-            "Aucun escompte pour paiement anticipé.",
-            "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-            "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
-        ];
-        removeLines.forEach(line => {
-            notesText = notesText.replace(line + "\n", "");
-            notesText = notesText.replace(line, "");
-        });
-        notesText = notesText.trim();
+        reglementHtml = `
+            <div class="reglement-block">
+                <div class="reg-title">Règlement</div>
+                <p>Facture réglée ${modePhrase} le ${payDateStr}.</p>
+            </div>
+        `;
     }
 
-    notesHtml = notesText
-        ? `
+    let ribHtml = "";
+    if (!isDevis && !doc.paid) {
+        ribHtml = `
+            <div class="rib-block">
+                <div class="rib-title">Coordonnées bancaires pour virement</div>
+                <p>Titulaire : AquaClim Prestige – Le Blevennec Loïc</p>
+                <p>Banque : Banque Fictive</p>
+                <p>IBAN : FR76 1234 5678 9012 3456 7890 123</p>
+                <p>BIC : FICTFRPPXXX</p>
+            </div>
+        `;
+    }
+
+    // ---------- Conditions de règlement ----------
+    let notesHtml = "";
+
+    if (isDevis) {
+        const devisConditions =
+            "Paiement à réception de facture.\n" +
+            "Aucun acompte demandé sauf mention contraire.";
+
+        notesHtml = `
             <div class="conditions-block">
                 <div class="conditions-title">Conditions de règlement</div>
-                <p>${notesText.replace(/\n/g, "<br>")}</p>
+                <p>${devisConditions.replace(/\n/g, "<br>")}</p>
             </div>
-        `
+        `;
+    } else {
+        let notesText = doc.notes || "";
+
+        if (doc.paid && notesText) {
+            const removeLines = [
+                "Paiement à 30 jours date de facture.",
+                "Règlement à réception de facture.",
+                "Aucun escompte pour paiement anticipé.",
+                "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+                "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
+            ];
+            removeLines.forEach(line => {
+                notesText = notesText.replace(line + "\n", "");
+                notesText = notesText.replace(line, "");
+            });
+            notesText = notesText.trim();
+        }
+
+        notesHtml = notesText
+            ? `
+                <div class="conditions-block">
+                    <div class="conditions-title">Conditions de règlement</div>
+                    <p>${notesText.replace(/\n/g, "<br>")}</p>
+                </div>
+            `
+            : "";
+    }
+
+    // ---------- Bloc Date / Validité / Lieu ----------
+    const validityStr = (isDevis && doc.validityDate)
+        ? new Date(doc.validityDate).toLocaleDateString("fr-FR")
         : "";
-}
 
-// ---------- Bloc Date / Validité / Lieu (sous le titre) ----------
-const validityStr = (isDevis && doc.validityDate)
-    ? new Date(doc.validityDate).toLocaleDateString("fr-FR")
-    : "";
-
-let topDatesHtml = `
-    <div class="doc-info-block">
-        <div class="doc-info-row">
-            <span class="doc-info-label">Date d’émission :</span>
-            <span class="doc-info-value">${dateStr}</span>
+    let topDatesHtml = `
+        <div class="doc-info-block">
+            <div class="doc-info-row">
+                <span class="doc-info-label">Date d’émission :</span>
+                <span class="doc-info-value">${dateStr}</span>
+            </div>
+            ${validityStr ? `
+            <div class="doc-info-row">
+                <span class="doc-info-label">Validité :</span>
+                <span class="doc-info-value">${validityStr}</span>
+            </div>` : ``}
+            <div class="doc-info-row">
+                <span class="doc-info-label">Lieu d’émission :</span>
+                <span class="doc-info-value">Nice</span>
+            </div>
         </div>
-        ${validityStr ? `
-        <div class="doc-info-row">
-            <span class="doc-info-label">Validité :</span>
-            <span class="doc-info-value">${validityStr}</span>
-        </div>` : ``}
-        <div class="doc-info-row">
-            <span class="doc-info-label">Lieu d’émission :</span>
-            <span class="doc-info-value">Nice</span>
-        </div>
-    </div>
-`;
-
+    `;
 
     const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
     const signatureClientText = isDevis
@@ -2547,110 +2542,106 @@ let topDatesHtml = `
         .page-footer{flex-shrink:0;margin-top:8mm;}
         .bottom-block{page-break-inside:avoid;break-inside:avoid;}
 
-        .header{text-align:center;margin-bottom:8px;border-bottom:1.3px solid #1a74d9;padding-bottom:7px;}
+        .header{
+            text-align:center;
+            margin-bottom:8px;
+            border-bottom:1.3px solid #1a74d9;
+            padding-bottom:7px;
+        }
         img.logo{height:55px;margin-bottom:4px;}
-        .header h1{color:#1a74d9;font-size:21px;margin-bottom:3px;font-weight:700;}
-        .header p{color:#444;font-size:10.5px;line-height:1.25;}
-        .subtitle{font-weight:600;font-size:11px;}
-        .contact{font-size:10.5px;font-weight:500;}
+        .header h1{
+            color:#1a74d9;
+            font-size:21px;
+            margin-bottom:3px;
+            font-weight:700;
+        }
+        .header p{
+            color:#444;
+            font-size:10.5px;
+            line-height:1.25;
+        }
+        .subtitle{
+            font-weight:600;
+            font-size:11px;
+        }
+        .contact{
+            font-size:10.5px;
+            font-weight:500;
+        }
         .contact strong{font-weight:700;}
 
-.doc-header-center{
-    margin:10px 0 12px 0;
-}
-
-.doc-header-center h2{
-    font-size:18px;
-    color:#1a74d9;
-    margin-top:10px;      /* 🔹 petit espace sous le header entreprise */
-    margin-bottom:4px;
-    text-align:left;
-}
-
-.doc-subject{
-    margin-top:6px;
-    font-size:10px;
-    font-weight:bold;
-}
-
-
-.doc-info-block{
-    display:inline-block;
-    border:1px solid #ddd;
-    border-radius:6px;
-    padding:6px 8px;
-    font-size:10px;
-    background:#fafafa;
-}
-
-.doc-info-row{
-    display:flex;
-    gap:4px;
-    margin:1px 0;
-}
-
-.doc-info-label{
-    min-width:95px;
-    font-weight:bold;
-}
-
-.doc-info-value{
-    flex:1;
-}
-
-.client-block{
-    margin-bottom:8px;
-    font-size:10px;
-    border:1px solid #ccc;
-    border-radius:6px;
-    padding:6px 8px;
-    background:#fafafa;
-}
-
-.client-title{
-    font-weight:bold;
-    font-size:10px;
-    margin-bottom:4px;
-    text-transform:uppercase;
-    letter-spacing:0.5px;
-}
-
-.client-line{
-    margin:2px 0;          /* 🔹 léger espacement, plus compact */
-}
-
-.client-label{
-    font-weight:600;
-    display:inline;         /* 🔹 pas de colonne alignée */
-}
-
-.client-value{
-    display:inline;
-    margin-left:4px;        /* 🔹 petit espace après les ":" */
-}
-th:first-child,
-td:first-child{
-    width:50%;          /* 🔹 la colonne Description prend + de place */
-}
-
-th.qty-col, td.qty-col,
-th.unit-col, td.unit-col,
-th.price-col, td.price-col,
-th.total-col, td.total-col{
-    padding:0 6px;      /* 🔹 un peu d’air entre les chiffres */
-}
-
-
-
-        .site-block{
-            margin-bottom:10px;
-            font-size:10px;
-            border:1px solid #ccc;
-            border-radius:6px;
-            padding:6px 8px;
-            background:#fdfdfd;
+        .doc-header-center{
+            margin:10px 0 12px 0;
+        }
+        .doc-header-center h2{
+            font-size:18px;
+            color:#1a74d9;
+            margin-top:10px;
+            margin-bottom:4px;
+            text-align:left;
+        }
+        .doc-subject{
+            margin-top:6px;
+            font-size:11px;
+            font-weight:bold;
         }
 
+        .doc-info-block{
+            display:inline-block;
+            border:1px solid #000;
+            border-radius:6px;
+            padding:6px 8px;
+            font-size:10px;
+            background:#fafafa;
+        }
+        .doc-info-row{
+            display:flex;
+            gap:4px;
+            margin:1px 0;
+        }
+        .doc-info-label{
+            min-width:95px;
+            font-weight:bold;
+        }
+        .doc-info-value{
+            flex:1;
+        }
+
+        .client-block{
+            margin-bottom:8px;
+            font-size:10px;
+            border:1px solid #000;
+            border-radius:6px;
+            padding:8px 10px;
+            background:#fff;
+        }
+        .client-title{
+            font-weight:bold;
+            font-size:10px;
+            margin-bottom:4px;
+            text-transform:uppercase;
+            letter-spacing:0.5px;
+        }
+        .client-line{
+            margin:2px 0;
+        }
+        .client-label{
+            font-weight:600;
+            display:inline;
+        }
+        .client-value{
+            display:inline;
+            margin-left:4px;
+        }
+
+        .site-block{
+            margin-bottom:8px;
+            font-size:10px;
+            border:1px solid #000;
+            border-radius:6px;
+            padding:8px 10px;
+            background:#fff;
+        }
         .site-title{
             font-weight:bold;
             font-size:10px;
@@ -2659,70 +2650,87 @@ th.total-col, td.total-col{
             letter-spacing:0.5px;
         }
 
-        table{width:100%;border-collapse:collapse;margin:10px 0;}
+        table{
+            width:100%;
+            border-collapse:collapse;
+            margin:10px 0;
+        }
         th{
             background:#1a74d9;
             color:white;
-            padding:8px;
+            padding:6px 6px;
             text-align:left;
             font-weight:600;
-            font-size:12px;
-            border-bottom:2px solid #0d47a1;
+            font-size:11px;
+            border-bottom:2px solid #000;
         }
         td{
-            padding:5px;
-            border-bottom:1px solid #ddd;
+            padding:4px 6px;
+            border-bottom:1px solid #000;
             font-size:10px;
             vertical-align:top;
         }
+
+        th:first-child,
+        td:first-child{
+            width:55%;
+        }
+
         .text-right{text-align:right;}
-        .price-col,.total-col{white-space:nowrap;}
-        th.qty-col,td.qty-col{text-align:center;}
-        td.qty-col{vertical-align:middle !important;}
-        th.unit-col, td.unit-col{
-    text-align:center;
-    font-size:10px;
-    white-space:nowrap;
-}
 
+        .qty-col,
+        .unit-col{
+            text-align:center;
+            white-space:nowrap;
+        }
+        .price-col,
+        .total-col{
+            white-space:nowrap;
+            text-align:right;
+        }
 
-        .desc-main{font-size:11px;font-weight:600;margin-bottom:2px;}
-        .desc-detail{font-size:10px;color:#555;margin-top:2px;}
-        .sub-info{margin-top:3px;font-size:9.5px;color:#555;}
+        .desc-main{
+            font-size:11px;
+            font-weight:600;
+            margin-bottom:2px;
+        }
+        .desc-detail{
+            font-size:10px;
+            color:#555;
+            margin-top:2px;
+        }
+        .sub-info{
+            margin-top:3px;
+            font-size:9.5px;
+            color:#555;
+        }
         .sub-info-line{margin-top:1px;}
 
         .totals{
             margin-left:auto;
             width:230px;
             margin-top:6px;
-            border:1px solid #ddd;
+            border:1px solid #000;
             border-radius:6px;
             padding:6px 8px;
-            background:#fafafa;
+            background:#fff;
         }
-
         .totals table{
             width:100%;
             border-collapse:collapse;
             margin:0;
         }
-
         .totals td{
             padding:3px 0;
             font-size:10px;
         }
-
-        .totals tr:not(.grand-total) td:first-child{
-            color:#555;
-        }
-
         .totals .grand-total td{
             padding-top:5px;
-            border-top:1px solid #bbb;
+            border-top:1px solid #000;
             font-weight:bold;
             font-size:11px;
+            background:#f0f0f0;
         }
-
         .tva-note{
             margin-top:4px;
             font-size:9px;
@@ -2731,60 +2739,71 @@ th.total-col, td.total-col{
         }
 
         .reglement-block{
-    margin-top:4px;
-    font-size:10px;
-    border:1px solid #2e7d32;
-    padding:7px;
-    border-radius:6px;
-    background:#e8f5e9; /* vert plus marqué */
-    page-break-inside:avoid;
-    break-inside:avoid;
-}
-.reg-title{
-    font-weight:bold;
-    margin-bottom:3px;
-    color:#1b5e20;
-    font-size:10px;
-}
-
+            margin-top:6px;
+            font-size:10px;
+            border:1px solid #000;
+            padding:8px;
+            border-radius:6px;
+            background:#e8f5e9;
+            page-break-inside:avoid;
+            break-inside:avoid;
+        }
+        .reg-title{
+            font-weight:bold;
+            margin-bottom:3px;
+            color:#1b5e20;
+            font-size:10px;
+        }
 
         .rib-block{
             margin-top:6px;
             font-size:10px;
-            border:1px solid #ccc;
-            padding:7px;
+            border:1px solid #000;
+            padding:8px;
             border-radius:6px;
-            background:#fafafa;
+            background:#fff;
             page-break-inside:avoid;
             break-inside:avoid;
         }
-        .rib-title{font-weight:bold;margin-bottom:3px;font-size:10px;}
+        .rib-title{
+            font-weight:bold;
+            margin-bottom:3px;
+            font-size:10px;
+        }
 
         .important-block{
             margin-top:8px;
             font-size:10px;
-            border:1px solid #1a74d9;
-            padding:7px;
+            border:1px solid #000;
+            padding:8px;
             border-radius:6px;
             background:#f3f7ff;
             page-break-inside:avoid;
             break-inside:avoid;
         }
-        .important-title{font-weight:bold;margin-bottom:4px;font-size:10px;color:#1a74d9;}
-        .important-block ul{margin-left:14px;}
-        .important-block li{margin-bottom:3px;}
+        .important-title{
+            font-weight:bold;
+            margin-bottom:4px;
+            font-size:10px;
+            color:#1a74d9;
+        }
+        .important-block ul{
+            margin-left:14px;
+        }
+        .important-block li{
+            margin-bottom:3px;
+        }
 
         .conditions-block{
             margin-top:6px;
-            font-size:9.5px;
-            border:1px solid #ddd;
+            font-size:10px;
+            border:1px solid #000;
             border-radius:6px;
-            padding:6px 8px;
-            background:#fafafa;
+            padding:8px;
+            background:#fff;
             page-break-inside:avoid;
             break-inside:avoid;
         }
-
         .conditions-title{
             font-weight:bold;
             margin-bottom:3px;
@@ -2806,8 +2825,14 @@ th.total-col, td.total-col{
             font-size:10px;
             min-height:55px;
         }
-        .signature-title{font-weight:bold;margin-bottom:3px;}
-        img.sig{max-height:38px;margin-top:3px;}
+        .signature-title{
+            font-weight:bold;
+            margin-bottom:3px;
+        }
+        img.sig{
+            max-height:38px;
+            margin-top:3px;
+        }
 
         @media print{
             @page{margin:0;}
@@ -2830,44 +2855,37 @@ th.total-col, td.total-col{
             </p>
         </div>
 
-       <div class="doc-header-center">
-    <h2>${isDevis ? "DEVIS N° : " : "FACTURE N° : "}${doc.number}</h2>
-    ${topDatesHtml}
-    ${doc.subject ? `
-        <div class="doc-subject">Objet : ${doc.subject}</div>
-    ` : ``}
-</div>
+        <div class="doc-header-center">
+            <h2>${isDevis ? "DEVIS N° : " : "FACTURE N° : "}${doc.number}</h2>
+            ${topDatesHtml}
+            ${doc.subject ? `
+                <div class="doc-subject">Objet : ${doc.subject}</div>
+            ` : ``}
+        </div>
 
-
-<div class="client-block">
-    <div class="client-title">Client</div>
-
-    ${doc.client?.name ? `
-    <div class="client-line">
-        <span class="client-label">Nom :</span>
-        <span class="client-value">${doc.client.name}</span>
-    </div>` : ""}
-
-    ${doc.client?.address ? `
-    <div class="client-line">
-        <span class="client-label">Adresse :</span>
-        <span class="client-value">${doc.client.address}</span>
-    </div>` : ""}
-
-    ${doc.client?.phone ? `
-    <div class="client-line">
-        <span class="client-label">Tél :</span>
-        <span class="client-value">${doc.client.phone}</span>
-    </div>` : ""}
-
-    ${doc.client?.email ? `
-    <div class="client-line">
-        <span class="client-label">Email :</span>
-        <span class="client-value">${doc.client.email}</span>
-    </div>` : ""}
-</div>
-
-
+        <div class="client-block">
+            <div class="client-title">Client</div>
+            ${doc.client?.name ? `
+            <div class="client-line">
+                <span class="client-label">Nom :</span>
+                <span class="client-value">${doc.client.name}</span>
+            </div>` : ""}
+            ${doc.client?.address ? `
+            <div class="client-line">
+                <span class="client-label">Adresse :</span>
+                <span class="client-value">${doc.client.address}</span>
+            </div>` : ""}
+            ${doc.client?.phone ? `
+            <div class="client-line">
+                <span class="client-label">Tél :</span>
+                <span class="client-value">${doc.client.phone}</span>
+            </div>` : ""}
+            ${doc.client?.email ? `
+            <div class="client-line">
+                <span class="client-label">Email :</span>
+                <span class="client-value">${doc.client.email}</span>
+            </div>` : ""}
+        </div>
 
         ${doc.siteAddress && doc.siteAddress !== (doc.client?.address || "") ? `
         <div class="site-block">
@@ -2876,21 +2894,20 @@ th.total-col, td.total-col{
         </div>
         ` : ""}
 
-   <table>
-    <thead>
-        <tr>
-            <th>Description</th>
-            <th class="qty-col">Quantité</th>
-            <th class="unit-col">Unité</th>
-            <th class="text-right price-col">Prix HT</th>
-            <th class="text-right total-col">Total HT</th>
-        </tr>
-    </thead>
-    <tbody>
-        ${prestationsHTML}
-    </tbody>
-</table>
-
+        <table>
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="qty-col">Quantité</th>
+                    <th class="unit-col">Unité</th>
+                    <th class="price-col text-right">Prix HT</th>
+                    <th class="total-col text-right">Total HT</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${prestationsHTML}
+            </tbody>
+        </table>
 
         <div class="totals">
             <table>
@@ -2910,7 +2927,6 @@ th.total-col, td.total-col{
                 ? `
                     ${notesHtml}
                     ${importantHtml}
-
                     <div class="signatures">
                         <div class="signature-block">
                             <div class="signature-title">${signatureClientTitle}</div>
@@ -2951,6 +2967,7 @@ th.total-col, td.total-col{
 
 
 
+
 // ------- Init -------
 window.onload = function () {
     setTVA(0);
@@ -2961,6 +2978,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
