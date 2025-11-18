@@ -246,12 +246,12 @@
             padding: 7px;
         }
 
-        .dates-add-btn,
-        .note-add-btn {
-            margin-top: 4px;
-            padding: 4px 10px;
-            font-size: 11px;
-        }
+    .dates-add-btn {
+    margin-top: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
 
         .qty-price-group {
             display: grid;
@@ -962,26 +962,26 @@ function getDocument(id) {
 
 function saveDocuments(docs) {
     console.log("saveDocuments appelé, nb docs =", docs.length);
-
-    // Sauvegarde locale (comme avant)
+    // 👉 Maintenant : uniquement le localStorage
     localStorage.setItem("documents", JSON.stringify(docs));
-
-    // Sauvegarde dans Firestore si dispo
-    if (db) {
-        console.log("db est OK, envoi vers Firestore...");
-        docs.forEach(doc => {
-            if (!doc.id) return;
-            console.log(" → Envoi doc id =", doc.id);
-            db.collection("documents")
-              .doc(doc.id)
-              .set(doc)
-              .then(() => console.log("   ✔ Doc enregistré dans Firestore :", doc.id))
-              .catch(err => console.error("Erreur Firestore save :", err));
-        });
-    } else {
-        console.warn("db est NULL dans saveDocuments, pas d’envoi Firestore");
-    }
 }
+function saveSingleDocumentToFirestore(doc) {
+    if (!db) {
+        console.warn("Firestore non initialisé, pas d'envoi cloud.");
+        return;
+    }
+    if (!doc || !doc.id) {
+        console.warn("Document sans id, impossible de sauvegarder dans Firestore.");
+        return;
+    }
+
+    db.collection("documents")
+      .doc(doc.id)
+      .set(doc)
+      .then(() => console.log("✔ Doc sauvegardé dans Firestore :", doc.id))
+      .catch(err => console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err));
+}
+
 
 
 
@@ -1198,11 +1198,7 @@ function setTVA(rate) {
         container.appendChild(input);
     }
 
-    function toggleNote(btn) {
-        const note = btn.closest(".form-group").querySelector(".prestation-note");
-        if (!note) return;
-        note.classList.toggle("hidden");
-    }
+   
 
 function addPrestation() {
     prestationCount++;
@@ -1729,9 +1725,8 @@ function saveDocument() {
     const clientPhone   = document.getElementById("clientPhone").value.trim();
     const clientEmail   = document.getElementById("clientEmail").value.trim();
     const docSubject    = (document.getElementById("docSubject")?.value || "").trim();
-    const siteName    = (document.getElementById("siteName")?.value || "").trim();
-const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
-
+    const siteName      = (document.getElementById("siteName")?.value || "").trim();
+    const siteAddress   = (document.getElementById("siteAddress")?.value || "").trim();
 
     // ✅ Vérif client
     if (!clientName || !clientAddress) {
@@ -1745,16 +1740,16 @@ const siteAddress = (document.getElementById("siteAddress")?.value || "").trim()
         return;
     }
 
-    // 🔹 On récupère TOUTES les lignes de prestations (y compris déplacement)
+    // 🔹 On récupère TOUTES les lignes de prestations
     const prestations = [];
     document.querySelectorAll(".prestation-line").forEach(line => {
-        const desc   = (line.querySelector(".prestation-desc")?.value || "").trim();
-        const qty    = parseFloat(line.querySelector(".prestation-qty")?.value)   || 0;
-        const price  = parseFloat(line.querySelector(".prestation-price")?.value) || 0;
-        const unit   = (line.querySelector(".prestation-unit")?.value || "").trim();
-        const note   = (line.querySelector(".prestation-note")?.value || "").trim();
-        const detail = line.dataset.detail || "";
-        const kind   = line.dataset.kind   || "";
+   const desc   = (line.querySelector(".prestation-desc")?.value || "").trim();
+const qty    = parseFloat(line.querySelector(".prestation-qty")?.value)   || 0;
+const price  = parseFloat(line.querySelector(".prestation-price")?.value) || 0;
+const unit   = (line.querySelector(".prestation-unit")?.value || "").trim();
+const detail = line.dataset.detail || "";
+const kind   = line.dataset.kind   || "";
+
 
         const datesInputs = line.querySelectorAll(".prestation-date");
         const dates = [];
@@ -1764,17 +1759,17 @@ const siteAddress = (document.getElementById("siteAddress")?.value || "").trim()
         });
 
         if (desc) {
-            prestations.push({
-                desc,
-                detail,
-                qty,
-                price,
-                total: qty * price,
-                unit,
-                dates,
-                note,
-                kind
-            });
+     prestations.push({
+    desc,
+    detail,
+    qty,
+    price,
+    total: qty * price,
+    unit,
+    dates,
+    kind
+});
+
         }
     });
 
@@ -1860,15 +1855,15 @@ const siteAddress = (document.getElementById("siteAddress")?.value || "").trim()
         number: docNumber,
         date: docDate,
         validityDate,
-        subject: docSubject, // ✅ UNE seule fois, propre
+        subject: docSubject,
         client: {
             name: clientName,
             address: clientAddress,
             phone: clientPhone,
             email: clientEmail
         },
-           siteName,
-    siteAddress,
+        siteName,
+        siteAddress,
         prestations,
         tvaRate,
         subtotal,
@@ -1889,13 +1884,19 @@ const siteAddress = (document.getElementById("siteAddress")?.value || "").trim()
     const idx  = docs.findIndex(d => d.id === doc.id);
     if (idx >= 0) docs[idx] = doc;
     else docs.push(doc);
+
+    // 💾 1) LocalStorage (tous les docs)
     saveDocuments(docs);
+
+    // ☁️ 2) Firestore (UN SEUL doc)
+    saveSingleDocumentToFirestore(doc);
 
     alert("Document enregistré avec succès !");
     currentDocumentId = doc.id;
     loadDocumentsList();
     updateTransformButtonVisibility();
 }
+
 
 
 
@@ -2021,12 +2022,6 @@ qtyInput.value = p.qty;
 priceInput.value = p.price;
 if (unitInput) unitInput.value = p.unit || "";
 
-
-        const note = line.querySelector(".prestation-note");
-        if (p.note && note) {
-            note.value = p.note;
-            note.classList.remove("hidden");
-        }
 
         const datesContainer = line.querySelector(".prestation-dates");
         datesContainer.innerHTML = "";
@@ -2266,48 +2261,60 @@ function setPaymentMode(id, mode) {
         }
     }
 
-    saveDocuments(docs);
+    saveDocuments(docs);              // localStorage
+    saveSingleDocumentToFirestore(doc); // 🔥 on push SEULEMENT cette facture
     loadDocumentsList();
 }
 
 
-    function setDevisStatus(id, status) {
-        const docs = getAllDocuments();
-        const doc = docs.find(d => d.id === id);
-        if (!doc || doc.type !== "devis") return;
-        doc.status = status;
-        saveDocuments(docs);
-        loadDocumentsList();
-    }
+
+function setDevisStatus(id, status) {
+    const docs = getAllDocuments();
+    const doc = docs.find(d => d.id === id);
+    if (!doc || doc.type !== "devis") return;
+
+    doc.status = status;
+
+    saveDocuments(docs);              // local
+    saveSingleDocumentToFirestore(doc); // cloud (uniquement ce devis)
+    loadDocumentsList();
+}
+
 
     // ------- Transformer devis -> facture -------
-    function transformToInvoice() {
-        if (!currentDocumentId) {
-            alert("Ouvrez d'abord un devis pour le transformer.");
-            return;
-        }
-        const devis = getDocument(currentDocumentId);
-        if (!devis || devis.type !== "devis") {
-            alert("Ce document n'est pas un devis.");
-            return;
-        }
-        const docs = getAllDocuments();
-        const facture = JSON.parse(JSON.stringify(devis));
-        facture.id = Date.now().toString();
-        facture.type = "facture";
-        facture.number = getNextNumber("facture");
-        facture.date = new Date().toISOString().split("T")[0];
-        facture.validityDate = "";
-        facture.paid = false;
-        facture.paymentMode = "";
-        facture.paymentDate = "";
-        facture.status = "";
-        facture.createdAt = new Date().toISOString();
-        docs.push(facture);
-        saveDocuments(docs);
-        alert("Devis transformé en facture : " + facture.number);
-        loadDocument(facture.id);
+function transformToInvoice() {
+    if (!currentDocumentId) {
+        alert("Ouvrez d'abord un devis pour le transformer.");
+        return;
     }
+    const devis = getDocument(currentDocumentId);
+    if (!devis || devis.type !== "devis") {
+        alert("Ce document n'est pas un devis.");
+        return;
+    }
+
+    const docs = getAllDocuments();
+    const facture = JSON.parse(JSON.stringify(devis));
+
+    facture.id          = Date.now().toString();
+    facture.type        = "facture";
+    facture.number      = getNextNumber("facture");
+    facture.date        = new Date().toISOString().split("T")[0];
+    facture.validityDate = "";
+    facture.paid        = false;
+    facture.paymentMode = "";
+    facture.paymentDate = "";
+    facture.status      = "";
+    facture.createdAt   = new Date().toISOString();
+
+    docs.push(facture);
+    saveDocuments(docs);                 // local
+    saveSingleDocumentToFirestore(facture); // cloud pour la nouvelle facture
+
+    alert("Devis transformé en facture : " + facture.number);
+    loadDocument(facture.id);
+}
+
 
     // ------- Export CSV factures -------
     function exportFacturesCSV() {
@@ -2411,20 +2418,16 @@ const titleColor = isDevis
     // ---------- Lignes prestations ----------
     let prestationsHTML = "";
     doc.prestations.forEach(p => {
-        let extraHtml = "";
-        if (p.note || (p.dates && p.dates.length)) {
-            extraHtml += `<div class="sub-info">`;
-            if (p.note) {
-                extraHtml += `<div class="sub-info-line">${p.note}</div>`;
-            }
-            if (p.dates && p.dates.length) {
-                extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
-                p.dates.forEach(dv => {
-                    extraHtml += `<div class="sub-info-line">${dv}</div>`;
-                });
-            }
-            extraHtml += `</div>`;
-        }
+ let extraHtml = "";
+if (p.dates && p.dates.length) {
+    extraHtml += `<div class="sub-info">`;
+    extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
+    p.dates.forEach(dv => {
+        extraHtml += `<div class="sub-info-line">${dv}</div>`;
+    });
+    extraHtml += `</div>`;
+}
+
 
         const detailHtml = p.detail
             ? `<div class="desc-detail">${p.detail}</div>`
@@ -3162,6 +3165,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
