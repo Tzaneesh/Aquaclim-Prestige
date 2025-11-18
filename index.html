@@ -85,6 +85,28 @@
             display: inline-block;
             text-decoration: none;
         }
+/* Boutons liés au document (Enregistrer / PDF / Transformer) */
+.action-button {
+    /* ne change rien ici, on garde la base .btn */
+}
+
+/* Devis = bleu */
+.btn-devis {
+    background: #1a74d9;
+    color: white;
+}
+.btn-devis:hover {
+    background: #0d5ab8;
+}
+
+/* Facture = vert */
+.btn-facture {
+    background: #2e7d32;
+    color: white;
+}
+.btn-facture:hover {
+    background: #1b5e20;
+}
 
         .btn-primary { background: #1a74d9; color: white; }
         .btn-primary:hover {
@@ -403,13 +425,18 @@
 
     <!-- Vue Formulaire -->
     <div id="formView" class="hidden">
-        <div class="actions no-print">
-            <button class="btn btn-secondary" type="button" onclick="backToList()">← Retour</button>
-            <button class="btn btn-success" type="button" onclick="saveDocument()">💾 Enregistrer</button>
-            <button class="btn btn-primary" type="button" onclick="openPrintable()">🖨️ Imprimer / PDF</button>
-            <button id="transformButton" class="btn btn-success" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
-            <button class="btn btn-danger" type="button" onclick="deleteCurrent()">🗑️ Supprimer</button>
-        </div>
+  <div class="actions no-print">
+    <button class="btn btn-secondary" type="button" onclick="backToList()">← Retour</button>
+
+    <!-- Boutons liés au document -->
+    <button class="btn action-button" type="button" onclick="saveDocument()">💾 Enregistrer</button>
+    <button class="btn action-button" type="button" onclick="openPrintable()">🖨️ Imprimer / PDF</button>
+    <button id="transformButton" class="btn action-button" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
+
+    <!-- Supprimer reste en rouge -->
+    <button class="btn btn-danger" type="button" onclick="deleteCurrent()">🗑️ Supprimer</button>
+</div>
+
 
         <div class="card">
             <h2 id="formTitle">Nouveau document</h2>
@@ -562,11 +589,12 @@
                 <textarea id="notes" placeholder="Conditions de paiement, garanties, notes diverses..."></textarea>
             </div>
 
-            <div class="form-actions no-print">
-                <button class="btn btn-success" type="button" onclick="saveDocument()">💾 Enregistrer</button>
-                <button class="btn btn-primary" type="button" onclick="openPrintable()">🖨️ Imprimer / PDF</button>
-                <button class="btn btn-secondary" type="button" onclick="backToList()">← Retour</button>
-            </div>
+        <div class="form-actions no-print">
+    <button class="btn action-button" type="button" onclick="saveDocument()">💾 Enregistrer</button>
+    <button class="btn action-button" type="button" onclick="openPrintable()">🖨️ Imprimer / PDF</button>
+    <button class="btn btn-secondary" type="button" onclick="backToList()">← Retour</button>
+</div>
+
         </div>
     </div>
 </div>
@@ -1019,9 +1047,21 @@ function saveDocuments(docs) {
         }
 
         refreshDevisStatusUI(type, validityInput.value);
+        updateButtonColors();
+
     }
 
-    function onDocDateChange() {
+    function updateButtonColors() {
+    const type = document.getElementById("docType").value;
+    const isDevis = (type === "devis");
+    const buttons = document.querySelectorAll(".action-button");
+
+    buttons.forEach(btn => {
+        btn.classList.remove("btn-devis", "btn-facture");
+        btn.classList.add(isDevis ? "btn-devis" : "btn-facture");
+    });
+}
+function onDocDateChange() {
         if (document.getElementById("docType").value === "devis") {
             updateDocType();
         }
@@ -1621,6 +1661,7 @@ setConditions('particulier'); // pour remplir les notes par défaut
             discountInput.disabled = true;
         }
         if (discountLine) discountLine.style.display = "none";
+updateButtonColors();
 
         setTVA(0);
         updateDocType();
@@ -1829,6 +1870,8 @@ function loadDocument(id) {
     const subjectInput = document.getElementById("docSubject");
 if (subjectInput) {
     subjectInput.value = doc.subject || "";
+    updateButtonColors();
+
 }
 
 
@@ -2978,11 +3021,14 @@ window.onload = function () {
     setTVA(0);
     switchListType("devis");
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
+    updateButtonColors();
+
 };
 
 </script>
 </body>
 </html>
+
 
 
 
