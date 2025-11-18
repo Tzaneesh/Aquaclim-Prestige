@@ -2863,29 +2863,22 @@ function openPrintable(id) {
             ` : ``}
         </div>
 
-        <div class="client-block">
-            <div class="client-title">Client</div>
-            ${doc.client?.name ? `
-            <div class="client-line">
-                <span class="client-label">Nom :</span>
-                <span class="client-value">${doc.client.name}</span>
-            </div>` : ""}
-            ${doc.client?.address ? `
-            <div class="client-line">
-                <span class="client-label">Adresse :</span>
-                <span class="client-value">${doc.client.address}</span>
-            </div>` : ""}
-            ${doc.client?.phone ? `
-            <div class="client-line">
-                <span class="client-label">Tél :</span>
-                <span class="client-value">${doc.client.phone}</span>
-            </div>` : ""}
-            ${doc.client?.email ? `
-            <div class="client-line">
-                <span class="client-label">Email :</span>
-                <span class="client-value">${doc.client.email}</span>
-            </div>` : ""}
-        </div>
+  <div class="client-block">
+    <div class="client-title">Client</div>
+
+    ${doc.client?.name ? `
+    <p class="client-line">${doc.client.name}</p>` : ""}
+
+    ${doc.client?.address ? `
+    <p class="client-line">${doc.client.address}</p>` : ""}
+
+    ${doc.client?.phone ? `
+    <p class="client-line">${doc.client.phone}</p>` : ""}
+
+    ${doc.client?.email ? `
+    <p class="client-line">${doc.client.email}</p>` : ""}
+</div>
+
 
         ${doc.siteAddress && doc.siteAddress !== (doc.client?.address || "") ? `
         <div class="site-block">
@@ -2978,6 +2971,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
