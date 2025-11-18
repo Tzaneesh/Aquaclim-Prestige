@@ -130,6 +130,14 @@
             background: #1a74d9;
             color: #fff;
         }
+/* Couleurs spécifiques onglets */
+#tabDevis.tab-btn.active {
+    background: #1a74d9; /* bleu */
+}
+
+#tabFactures.tab-btn.active {
+    background: #2e7d32; /* vert */
+}
 
         .actions {
             display: flex;
@@ -515,6 +523,18 @@
                     <input type="email" id="clientEmail">
                 </div>
             </div>
+            <!-- Lieu d’intervention (visible surtout pour syndic / agence) -->
+<div id="siteBlock" class="row" style="margin-top:10px; display:none;">
+    <div class="form-group">
+        <label>Nom du client sur site</label>
+        <input type="text" id="siteName" placeholder="Ex : Mme Dupont Élise">
+    </div>
+    <div class="form-group">
+        <label>Adresse du lieu d’intervention</label>
+        <input type="text" id="siteAddress" placeholder="Ex : Résidence Le Parc, Bât A, 14 rue de la Liberté, 06000 Nice">
+    </div>
+</div>
+
 
             <div class="prestations-section">
                 <h3 style="color:#1a74d9;margin-bottom:12px;">Prestations</h3>
@@ -1572,25 +1592,38 @@ updatePurchaseVisibility(line);
 function selectClientType(type) {
     const part = document.getElementById("clientParticulier");
     const syn  = document.getElementById("clientSyndic");
+    const siteBlock   = document.getElementById("siteBlock");
+    const siteNameInp = document.getElementById("siteName");
+    const siteAddrInp = document.getElementById("siteAddress");
 
     if (type === "particulier") {
         if (part) part.checked = true;
         if (syn)  syn.checked  = false;
         setConditions('particulier');
+
+        // 🔻 On masque le bloc lieu d’intervention pour un particulier
+        if (siteBlock) siteBlock.style.display = "none";
+        // (optionnel) on vide les champs
+        if (siteNameInp) siteNameInp.value = "";
+        if (siteAddrInp) siteAddrInp.value = "";
     } else {
         if (syn)  syn.checked  = true;
         if (part) part.checked = false;
         setConditions('agence');
+
+        // ✅ Pour un syndic / agence : on affiche le bloc
+        if (siteBlock) siteBlock.style.display = "block";
     }
 
     // Met à jour les prix/descriptions selon le type client
     onClientTypeChange();
 
-    // Relance setTVA avec le taux actuellement sélectionné
+    // Rafraîchit les libellés TVA / total
     const tvaInput = document.getElementById("tvaRate");
     const rate = tvaInput ? (parseFloat(tvaInput.value) || 0) : 0;
-    setTVA(rate); // setTVA fera aussi calculateTotals()
+    setTVA(rate);
 }
+
 
 function setConditions(type) {
     const notesEl = document.getElementById("notes");
@@ -1642,6 +1675,13 @@ document.getElementById("clientAddress").value = "";
 document.getElementById("clientPhone").value = "";
 document.getElementById("clientEmail").value = "";
 document.getElementById("notes").value = "";
+        const siteBlock   = document.getElementById("siteBlock");
+const siteNameInp = document.getElementById("siteName");
+const siteAddrInp = document.getElementById("siteAddress");
+if (siteNameInp) siteNameInp.value = "";
+if (siteAddrInp) siteAddrInp.value = "";
+if (siteBlock) siteBlock.style.display = "none";
+
         const subjectInput = document.getElementById("docSubject");
 if (subjectInput) subjectInput.value = "";
 
@@ -1689,6 +1729,9 @@ function saveDocument() {
     const clientPhone   = document.getElementById("clientPhone").value.trim();
     const clientEmail   = document.getElementById("clientEmail").value.trim();
     const docSubject    = (document.getElementById("docSubject")?.value || "").trim();
+    const siteName    = (document.getElementById("siteName")?.value || "").trim();
+const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
+
 
     // ✅ Vérif client
     if (!clientName || !clientAddress) {
@@ -1824,6 +1867,8 @@ function saveDocument() {
             phone: clientPhone,
             email: clientEmail
         },
+           siteName,
+    siteAddress,
         prestations,
         tvaRate,
         subtotal,
@@ -1874,6 +1919,23 @@ function loadDocument(id) {
     document.getElementById("clientPhone").value = doc.client.phone;
     document.getElementById("clientEmail").value = doc.client.email;
     document.getElementById("notes").value = doc.notes || "";
+    // Lieu d’intervention (si existant)
+const siteBlock   = document.getElementById("siteBlock");
+const siteNameInp = document.getElementById("siteName");
+const siteAddrInp = document.getElementById("siteAddress");
+
+if (siteNameInp) siteNameInp.value = doc.siteName || "";
+if (siteAddrInp) siteAddrInp.value = doc.siteAddress || "";
+
+// Affichage du bloc selon type de client
+if (siteBlock) {
+    if (doc.conditionsType === "agence") {
+        siteBlock.style.display = "block";
+    } else {
+        siteBlock.style.display = "none";
+    }
+}
+
     const subjectInput = document.getElementById("docSubject");
 if (subjectInput) {
     subjectInput.value = doc.subject || "";
@@ -2049,28 +2111,30 @@ if (unitInput) unitInput.value = p.unit || "";
 
             let statutHTML = "";
 
-            if (doc.type === "facture") {
-                const checked = doc.paid ? "checked" : "";
-                const mode = doc.paymentMode || "";
-                const modeLabel =
-                    mode === "especes" ? "Espèces" :
-                    mode === "cb" ? "CB" :
-                    mode === "virement" ? "Virement" :
-                    mode === "cheque" ? "Chèque" : "";
-                const badgeStatus = doc.paid ? "badge-paid" : "badge-unpaid";
-                const statusText = doc.paid
-                    ? ("🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : ""))
-                    : "🔴 Non payée";
+          if (doc.type === "facture") {
+    const mode = doc.paymentMode || "";
+    const modeLabel =
+        mode === "especes" ? "Espèces" :
+        mode === "cb" ? "CB" :
+        mode === "virement" ? "Virement" :
+        mode === "cheque" ? "Chèque" : "";
+    const badgeStatus = doc.paid ? "badge-paid" : "badge-unpaid";
+    const statusText = doc.paid
+        ? ("🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : ""))
+        : "🔴 Non payée";
 
-                statutHTML =
-                    '<span class="badge ' + badgeStatus + '">' + statusText + '</span><br>' +
-                    '<label style="font-size:11px;"><input type="checkbox" onchange="togglePaid(\'' + doc.id + '\', this)" ' + checked + '> Marquer payée</label>' +
-                    '<div style="font-size:11px;margin-top:4px;white-space:nowrap;">' +
-                        '<label><input type="radio" name="mode-' + doc.id + '" value="especes" ' + (mode === "especes" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'especes\')"> Espèces</label> ' +
-                        '<label><input type="radio" name="mode-' + doc.id + '" value="cb" ' + (mode === "cb" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'cb\')"> CB</label> ' +
-                        '<label><input type="radio" name="mode-' + doc.id + '" value="virement" ' + (mode === "virement" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'virement\')"> Virement</label> ' +
-                        '<label><input type="radio" name="mode-' + doc.id + '" value="cheque" ' + (mode === "cheque" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'cheque\')"> Chèque</label>' +
-                    '</div>';
+    statutHTML =
+        '<span class="badge ' + badgeStatus + '">' + statusText + '</span><br>' +
+        '<div style="font-size:11px;margin-top:4px;white-space:nowrap;">' +
+            // 🔹 Nouvel état "Non réglée"
+            '<label><input type="radio" name="mode-' + doc.id + '" value="" ' + (!mode ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'\')"> Non réglée</label> ' +
+            '<label><input type="radio" name="mode-' + doc.id + '" value="especes" ' + (mode === "especes" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'especes\')"> Espèces</label> ' +
+            '<label><input type="radio" name="mode-' + doc.id + '" value="cb" ' + (mode === "cb" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'cb\')"> CB</label> ' +
+            '<label><input type="radio" name="mode-' + doc.id + '" value="virement" ' + (mode === "virement" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'virement\')"> Virement</label> ' +
+            '<label><input type="radio" name="mode-' + doc.id + '" value="cheque" ' + (mode === "cheque" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'cheque\')"> Chèque</label>' +
+        '</div>';
+}
+
             } else {
                 let storedStatus = doc.status || "en_attente";
                 let displayStatus = storedStatus;
@@ -2160,20 +2224,32 @@ let actionsHtml =
         loadDocumentsList();
     }
 
-    function setPaymentMode(id, mode) {
-        const docs = getAllDocuments();
-        const doc = docs.find(d => d.id === id);
-        if (!doc) return;
+function setPaymentMode(id, mode) {
+    const docs = getAllDocuments();
+    const doc = docs.find(d => d.id === id);
+    if (!doc) return;
+
+    if (!mode) {
+        // 🔴 Aucun mode choisi → facture non payée
+        doc.paymentMode = "";
+        doc.paid = false;
+        doc.paymentDate = "";
+    } else {
+        // 🟢 Mode choisi → facture payée
         doc.paymentMode = mode;
         doc.paid = true;
+
         if (mode === "virement" || mode === "cheque") {
             doc.paymentDate = doc.paymentDate || doc.date;
         } else {
             doc.paymentDate = doc.date;
         }
-        saveDocuments(docs);
-        loadDocumentsList();
     }
+
+    saveDocuments(docs);
+    loadDocumentsList();
+}
+
 
     function setDevisStatus(id, status) {
         const docs = getAllDocuments();
@@ -2961,12 +3037,24 @@ td{
 </div>
 
 
-        ${doc.siteAddress && doc.siteAddress !== (doc.client?.address || "") ? `
+   ${(doc.siteName || doc.siteAddress) ? `
         <div class="site-block">
             <div class="site-title">Lieu d’intervention</div>
-            <p>${doc.siteAddress}</p>
+
+            ${doc.siteName ? `
+            <p class="client-line">
+                <span class="client-label">Client sur site :</span>
+                <span class="client-value">${doc.siteName}</span>
+            </p>` : ``}
+
+            ${doc.siteAddress ? `
+            <p class="client-line">
+                <span class="client-label">Adresse :</span>
+                <span class="client-value">${doc.siteAddress}</span>
+            </p>` : ``}
         </div>
-        ` : ""}
+        ` : ``}
+
 
         <table>
             <thead>
@@ -3054,6 +3142,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
