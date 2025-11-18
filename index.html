@@ -2622,13 +2622,14 @@ const titleColor = isDevis
             padding:8px 10px;
             background:#fff;
         }
-        .client-title{
-            font-weight:bold;
-            font-size:10px;
-            margin-bottom:4px;
-            text-transform:uppercase;
-            letter-spacing:0.5px;
-        }
+ .client-title{
+    font-weight:bold;
+    font-size:10.5px;
+    margin-bottom:4px;
+    text-transform:none;  /* plus de majuscules forcées */
+    letter-spacing:0;     /* plus d'espacement entre lettres */
+}
+
         .client-line{
             margin:2px 0;
         }
@@ -2982,6 +2983,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
