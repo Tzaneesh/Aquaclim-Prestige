@@ -2261,26 +2261,35 @@ function duplicateDocument(id) {
         // ------- COULEUR DES BOUTONS -------
         let openBtnClass  = "btn btn-primary btn-small";
         let printBtnClass = "btn btn-primary btn-small";
+                let openBtnClass  = "btn btn-primary btn-small";
+        let printBtnClass = "btn btn-primary btn-small";
+        let duplicateBtnClass = "btn btn-primary btn-small"; // 🔵 par défaut (devis)
+
 
         if (doc.type === "facture") {
             if (doc.paid) {
                 // Facture payée → boutons verts
-                openBtnClass  = "btn btn-success btn-small";
-                printBtnClass = "btn btn-success btn-small";
+                openBtnClass       = "btn btn-success btn-small";
+                printBtnClass      = "btn btn-success btn-small";
+                duplicateBtnClass  = "btn btn-success btn-small"; // 🟢 dupliquer facture
             } else {
                 // Facture non payée → boutons rouges
-                openBtnClass  = "btn btn-danger btn-small";
-                printBtnClass = "btn btn-danger btn-small";
+                openBtnClass       = "btn btn-danger btn-small";
+                printBtnClass      = "btn btn-danger btn-small";
+                duplicateBtnClass  = "btn btn-success btn-small"; // 🟢 dupliquer facture
             }
         }
 
-        const actionsHtml =
+
+                const actionsHtml =
             '<div class="actions-btns">' +
-                 '<div class="actions-btns">' +
-        '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-        '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
-        '<button class="btn btn-secondary btn-small" type="button" onclick="duplicateDocument(\'' + doc.id + '\')">Dupliquer</button>' +
-    '</div>';
+                '<div class="actions-btns">' +
+                    '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+                    '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
+                    '<button class="' + duplicateBtnClass + '" type="button" onclick="duplicateDocument(\'' + doc.id + '\')">Dupliquer</button>' +
+                '</div>' +
+            '</div>';
+
 
         tr.innerHTML =
             '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
@@ -3328,6 +3337,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
