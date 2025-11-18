@@ -986,10 +986,20 @@ function formatEuro(value) {
     }
 
     // ------- LocalStorage helpers -------
-    function getAllDocuments() {
-        const data = localStorage.getItem("documents");
-        return data ? JSON.parse(data) : [];
+function getAllDocuments() {
+    const data = localStorage.getItem("documents");
+    if (!data) return [];
+
+    try {
+        return JSON.parse(data);
+    } catch (e) {
+        console.error("Données 'documents' corrompues dans localStorage :", e);
+        // On supprime les données HS pour repartir propre
+        localStorage.removeItem("documents");
+        return [];
     }
+}
+
 function getDocument(id) {
     return getAllDocuments().find(d => d.id === id) || null;
 }
@@ -1254,7 +1264,7 @@ function addPrestation() {
             '<label>Modèle</label>' +
             '<select class="prestation-template" onchange="applyTemplate(this)">' + optionsHtml + '</select>' +
             '<label style="margin-top:6px;">Intitulé</label>' +
-            '<input type="text" class="prestation-desc" placeholder="Ex: Forfait entretien piscine, Dépannage clim..." onchange="calculateTotals()">' +
+            '<input type="text" class="prestation-desc" placeholder="Ex: Entretien piscine, Dépannage clim..." onchange="calculateTotals()">' +
             '<label style="margin-top:6px;">Dates de passage</label>' +
             '<div class="prestation-dates">' +
                 '<input type="text" class="prestation-date" placeholder="JJ/MM/AAAA">' +
@@ -1365,7 +1375,7 @@ if (unitInput) {
             if (template.kind === "entretien_clim") {
                 const qty    = qtyInput ? (parseFloat(qtyInput.value) || 1) : 1;
                 const plural = qty >= 2 ? "s" : "";
-                title = "Forfait entretien climatisation" + plural;
+                title = "Entretien climatisation" + plural;
             }
 
             descInput.value = title;
@@ -1473,7 +1483,7 @@ function calculateTotals() {
             // Met à jour l'intitulé avec ou sans "s"
             if (descInput) {
                 const plural = n >= 2 ? "s" : "";
-                descInput.value = "Forfait entretien climatisation" + plural;
+                descInput.value = "Entretien climatisation" + plural;
             }
 
             const clientType = getCurrentClientType(); // "particulier" ou "syndic"
@@ -1597,7 +1607,7 @@ updatePurchaseVisibility(line);
             if (template.kind === "entretien_clim") {
                 const qty    = qtyInput ? (parseFloat(qtyInput.value) || 1) : 1;
                 const plural = qty >= 2 ? "s" : "";
-                title = "Forfait entretien climatisation" + plural;
+                title = "Entretien climatisation" + plural;
             }
 
             descInput.value = title;
@@ -3339,6 +3349,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
