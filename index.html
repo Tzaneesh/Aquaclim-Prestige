@@ -406,11 +406,27 @@
 
     <!-- Vue Liste -->
     <div id="listView">
-       <div class="actions no-print">
-    <button class="btn btn-primary" type="button" onclick="newDocument('devis')">➕ Nouveau devis</button>
-    <button class="btn btn-success" type="button" onclick="newDocument('facture')">📄 Nouvelle facture</button>
-    <button class="btn btn-secondary" type="button" onclick="openTarifsPanel()">⚙️ Tarifs prestations</button>
+      <div class="actions no-print">
+    <button class="btn btn-secondary" type="button" onclick="backToList()">← Retour</button>
+
+    <!-- Boutons liés au document -->
+    <button class="btn action-button" type="button" onclick="saveDocument()">💾 Enregistrer</button>
+    <button class="btn action-button" type="button" onclick="openPrintable()">🖨️ Imprimer / PDF</button>
+
+    <!-- 🔹 Nouveau bouton Tarifs prestations -->
+    <button id="tarifsButton"
+            class="btn btn-secondary"
+            type="button"
+            onclick="openTarifsPanel()">
+        📋 Tarifs prestations
+    </button>
+
+    <button id="transformButton" class="btn action-button" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
+
+    <!-- Supprimer reste en rouge -->
+    <button class="btn btn-danger" type="button" onclick="deleteCurrent()">🗑️ Supprimer</button>
 </div>
+
 <div id="tarifsPanel" class="card no-print" style="display:none; margin-top:10px;">
     <h2>Tarifs des prestations</h2>
     <p style="font-size:13px;margin-bottom:8px;">
@@ -570,14 +586,19 @@
 </div>
 
 
-            <div class="prestations-section">
-                <h3 style="color:#1a74d9;margin-bottom:12px;">Prestations</h3>
-                <div id="prestationsContainer"></div>
-           <button class="btn btn-primary no-print" type="button" onclick="addPrestation()">➕ Ajouter une prestation</button>
+           <div class="prestations-section">
+    <h3 style="color:#1a74d9;margin-bottom:12px;">Prestations</h3>
+    <div id="prestationsContainer"></div>
 
+    <!-- Bouton qui prend la couleur du type de document -->
+    <button id="addPrestationBtn"
+            class="btn action-button no-print"
+            type="button"
+            onclick="addPrestation()">
+        ➕ Ajouter une prestation
+    </button>
+</div>
 
-
-            </div>
 
             <div class="totals">
                 <div class="total-line">
@@ -1122,16 +1143,25 @@ function saveSingleDocumentToFirestore(doc) {
 
     }
 
-    function updateButtonColors() {
+   function updateButtonColors() {
     const type = document.getElementById("docType").value;
     const isDevis = (type === "devis");
-    const buttons = document.querySelectorAll(".action-button");
 
+    // Boutons d’action en haut / bas (Enregistrer / PDF / Transformer)
+    const buttons = document.querySelectorAll(".action-button");
     buttons.forEach(btn => {
         btn.classList.remove("btn-devis", "btn-facture");
         btn.classList.add(isDevis ? "btn-devis" : "btn-facture");
     });
+
+    // Bouton "Ajouter une prestation"
+    const addBtn = document.getElementById("addPrestationBtn");
+    if (addBtn) {
+        addBtn.classList.remove("btn-devis", "btn-facture", "btn-primary");
+        addBtn.classList.add(isDevis ? "btn-devis" : "btn-facture");
+    }
 }
+
 function onDocDateChange() {
         if (document.getElementById("docType").value === "devis") {
             updateDocType();
@@ -2461,7 +2491,39 @@ function saveCustomPrices(obj) {
 function openTarifsPanel() {
     const panel = document.getElementById("tarifsPanel");
     const tbody = document.getElementById("tarifsTableBody");
+    const btn   = document.getElementById("tarifsButton");
+    const prestationsSection = document.querySelector(".prestations-section");
+
     if (!panel || !tbody) return;
+
+    const isHidden = panel.classList.contains("hidden");
+
+    if (isHidden) {
+        // 🔹 ON OUVRE LE PANNEAU
+        panel.classList.remove("hidden");
+
+        // ⬇️ Ici tu remets TON ANCIEN CODE qui remplissait tarifsTableBody
+        // ex: vider le tbody puis boucler sur PRESTATION_TEMPLATES
+        // ...
+        // tbody.innerHTML = "...";
+
+        if (btn) btn.textContent = "⬆️ Revenir aux prestations";
+
+        // on descend vers les tarifs
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    } else {
+        // 🔹 ON FERME LE PANNEAU
+        panel.classList.add("hidden");
+        if (btn) btn.textContent = "📋 Tarifs prestations";
+
+        // on remonte vers les prestations
+        if (prestationsSection) {
+            prestationsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+    }
+}
+
 
     panel.style.display = "block";
     tbody.innerHTML = "";
@@ -3338,6 +3400,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
