@@ -2085,125 +2085,145 @@ if (unitInput) unitInput.value = p.unit || "";
 
     // ------- Liste + statut devis / factures -------
     function loadDocumentsList() {
-        const docs = getAllDocuments();
-        let filtered = docs.filter(d => d.type === currentListType);
-        if (currentListType === "facture") {
-            const yearSel = document.getElementById("yearFilter");
-            if (yearSel && yearSel.value !== "all") {
-                const y = parseInt(yearSel.value, 10);
-                filtered = filtered.filter(d => d.date && new Date(d.date).getFullYear() === y);
+    const docs = getAllDocuments();
+    let filtered = docs.filter(d => d.type === currentListType);
+
+    // Filtre par année pour les factures
+    if (currentListType === "facture") {
+        const yearSel = document.getElementById("yearFilter");
+        if (yearSel && yearSel.value !== "all") {
+            const y = parseInt(yearSel.value, 10);
+            filtered = filtered.filter(d => d.date && new Date(d.date).getFullYear() === y);
+        }
+    }
+
+    // Tri par date (plus récents en premier)
+    filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    const tbody = document.getElementById("documentsTableBody");
+    tbody.innerHTML = "";
+
+    if (filtered.length === 0) {
+        tbody.innerHTML =
+            '<tr><td colspan="7" style="text-align:center;color:#999;">Aucun document pour le moment</td></tr>';
+        return;
+    }
+
+    filtered.forEach(doc => {
+        const tr = document.createElement("tr");
+        const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
+        const badgeClass = doc.type === "devis" ? "badge-devis" : "badge-facture";
+
+        let statutHTML = "";
+
+        // ------- STATUT FACTURE -------
+        if (doc.type === "facture") {
+            const mode = doc.paymentMode || "";
+            const modeLabel =
+                mode === "especes"  ? "Espèces"  :
+                mode === "cb"       ? "CB"       :
+                mode === "virement" ? "Virement" :
+                mode === "cheque"   ? "Chèque"   :
+                "";
+
+            const badgeStatus = doc.paid ? "badge-paid" : "badge-unpaid";
+            const statusText = doc.paid
+                ? ("🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : ""))
+                : "🔴 Non payée";
+
+            statutHTML =
+                '<span class="badge ' + badgeStatus + '">' + statusText + '</span><br>' +
+                '<div style="font-size:11px;margin-top:4px;white-space:nowrap;">' +
+                    '<label><input type="radio" name="mode-' + doc.id + '" value="" ' +
+                        (!mode ? 'checked' : '') +
+                        ' onchange="setPaymentMode(\'' + doc.id + '\', \'\')"> Non réglée</label> ' +
+                    '<label><input type="radio" name="mode-' + doc.id + '" value="especes" ' +
+                        (mode === 'especes' ? 'checked' : '') +
+                        ' onchange="setPaymentMode(\'' + doc.id + '\', \'especes\')"> Espèces</label> ' +
+                    '<label><input type="radio" name="mode-' + doc.id + '" value="cb" ' +
+                        (mode === 'cb' ? 'checked' : '') +
+                        ' onchange="setPaymentMode(\'' + doc.id + '\', \'cb\')"> CB</label> ' +
+                    '<label><input type="radio" name="mode-' + doc.id + '" value="virement" ' +
+                        (mode === 'virement' ? 'checked' : '') +
+                        ' onchange="setPaymentMode(\'' + doc.id + '\', \'virement\')"> Virement</label> ' +
+                    '<label><input type="radio" name="mode-' + doc.id + '" value="cheque" ' +
+                        (mode === 'cheque' ? 'checked' : '') +
+                        ' onchange="setPaymentMode(\'' + doc.id + '\', \'cheque\')"> Chèque</label>' +
+                '</div>';
+        }
+
+        // ------- STATUT DEVIS -------
+        else { // doc.type === "devis"
+            let storedStatus = doc.status || "en_attente";
+            let displayStatus = storedStatus;
+
+            if (isDevisExpired("devis", doc.validityDate) && storedStatus === "en_attente") {
+                displayStatus = "expire";
             }
+
+            let badgeDevisClass = "badge-devis-en-attente";
+            let text = "En attente";
+
+            if (displayStatus === "accepte") {
+                badgeDevisClass = "badge-devis-accepte";
+                text = "Accepté";
+            } else if (displayStatus === "refuse") {
+                badgeDevisClass = "badge-devis-refuse";
+                text = "Refusé";
+            } else if (displayStatus === "expire") {
+                badgeDevisClass = "badge-devis-expire";
+                text = "Expiré";
+            }
+
+            const selectHtml =
+                '<select style="font-size:11px;margin-top:4px;" ' +
+                    'onchange="setDevisStatus(\'' + doc.id + '\', this.value)">' +
+                    '<option value="en_attente"' + (storedStatus === 'en_attente' ? ' selected' : '') + '>En attente</option>' +
+                    '<option value="accepte"'    + (storedStatus === 'accepte'    ? ' selected' : '') + '>Accepté</option>' +
+                    '<option value="refuse"'     + (storedStatus === 'refuse'     ? ' selected' : '') + '>Refusé</option>' +
+                    '<option value="expire"'     + (storedStatus === 'expire'     ? ' selected' : '') + '>Expiré</option>' +
+                '</select>';
+
+            statutHTML =
+                '<span class="badge ' + badgeDevisClass + '">' + text + '</span><br>' +
+                selectHtml;
         }
 
-        filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // ------- COULEUR DES BOUTONS -------
+        let openBtnClass  = "btn btn-primary btn-small";
+        let printBtnClass = "btn btn-primary btn-small";
 
-        const tbody = document.getElementById("documentsTableBody");
-        tbody.innerHTML = "";
-        if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#999;">Aucun document pour le moment</td></tr>';
-            return;
-        }
-
-        filtered.forEach(doc => {
-            const tr = document.createElement("tr");
-            const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
-            const badgeClass = doc.type === "devis" ? "badge-devis" : "badge-facture";
-
-            let statutHTML = "";
-
-          if (doc.type === "facture") {
-    const mode = doc.paymentMode || "";
-    const modeLabel =
-        mode === "especes" ? "Espèces" :
-        mode === "cb" ? "CB" :
-        mode === "virement" ? "Virement" :
-        mode === "cheque" ? "Chèque" : "";
-    const badgeStatus = doc.paid ? "badge-paid" : "badge-unpaid";
-    const statusText = doc.paid
-        ? ("🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : ""))
-        : "🔴 Non payée";
-
-    statutHTML =
-        '<span class="badge ' + badgeStatus + '">' + statusText + '</span><br>' +
-        '<div style="font-size:11px;margin-top:4px;white-space:nowrap;">' +
-            // 🔹 Nouvel état "Non réglée"
-            '<label><input type="radio" name="mode-' + doc.id + '" value="" ' + (!mode ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'\')"> Non réglée</label> ' +
-            '<label><input type="radio" name="mode-' + doc.id + '" value="especes" ' + (mode === "especes" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'especes\')"> Espèces</label> ' +
-            '<label><input type="radio" name="mode-' + doc.id + '" value="cb" ' + (mode === "cb" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'cb\')"> CB</label> ' +
-            '<label><input type="radio" name="mode-' + doc.id + '" value="virement" ' + (mode === "virement" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'virement\')"> Virement</label> ' +
-            '<label><input type="radio" name="mode-' + doc.id + '" value="cheque" ' + (mode === "cheque" ? "checked" : "") + ' onchange="setPaymentMode(\'' + doc.id + '\', \'cheque\')"> Chèque</label>' +
-        '</div>';
-}
-
+        if (doc.type === "facture") {
+            if (doc.paid) {
+                // Facture payée → boutons verts
+                openBtnClass  = "btn btn-success btn-small";
+                printBtnClass = "btn btn-success btn-small";
             } else {
-                let storedStatus = doc.status || "en_attente";
-                let displayStatus = storedStatus;
-                if (isDevisExpired("devis", doc.validityDate) && storedStatus === "en_attente") {
-                    displayStatus = "expire";
-                }
-
-                let badgeDevisClass = "badge-devis-en-attente";
-                let text = "En attente";
-                if (displayStatus === "accepte") {
-                    badgeDevisClass = "badge-devis-accepte";
-                    text = "Accepté";
-                } else if (displayStatus === "refuse") {
-                    badgeDevisClass = "badge-devis-refuse";
-                    text = "Refusé";
-                } else if (displayStatus === "expire") {
-                    badgeDevisClass = "badge-devis-expire";
-                    text = "Expiré";
-                }
-
-                const selectHtml =
-                    '<select style="font-size:11px;margin-top:4px;" onchange="setDevisStatus(\'' + doc.id + '\', this.value)">' +
-                        '<option value="en_attente"' + (storedStatus === "en_attente" ? " selected" : "") + '>En attente</option>' +
-                        '<option value="accepte"' + (storedStatus === "accepte" ? " selected" : "") + '>Accepté</option>' +
-                        '<option value="refuse"' + (storedStatus === "refuse" ? " selected" : "") + '>Refusé</option>' +
-                        '<option value="expire"' + (storedStatus === "expire" ? " selected" : "") + '>Expiré</option>' +
-                    '</select>';
-
-                statutHTML =
-                    '<span class="badge ' + badgeDevisClass + '">' + text + '</span><br>' +
-                    selectHtml;
+                // Facture non payée → boutons rouges
+                openBtnClass  = "btn btn-danger btn-small";
+                printBtnClass = "btn btn-danger btn-small";
             }
+        }
 
-    // Déterminer la couleur des boutons
-let openBtnClass  = "btn btn-primary btn-small";
-let printBtnClass = "btn btn-primary btn-small";
+        const actionsHtml =
+            '<div class="actions-btns">' +
+                '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+                '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
+            '</div>';
 
-// Pour les factures : couleur selon payé / impayé
-if (doc.type === "facture") {
-    if (doc.paid) {
-        // Facture payée → boutons verts
-        openBtnClass  = "btn btn-success btn-small";
-        printBtnClass = "btn btn-success btn-small";
-    } else {
-        // Facture non payée → boutons rouges
-        openBtnClass  = "btn btn-danger btn-small";
-        printBtnClass = "btn btn-danger btn-small";
-    }
+        tr.innerHTML =
+            '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
+            '<td>' + doc.number + '</td>' +
+            '<td>' + (doc.client?.name || "") + '</td>' +
+            '<td>' + (doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "") + '</td>' +
+            '<td><strong>' + formatEuro(doc.totalTTC) + '</strong></td>' +
+            '<td class="status-cell">' + statutHTML + '</td>' +
+            '<td>' + actionsHtml + '</td>';
+
+        tbody.appendChild(tr);
+    });
 }
 
-// Bloc HTML des boutons
-let actionsHtml =
-    '<div class="actions-btns">' +
-        '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-        '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
-    '</div>';
-
-
-            tr.innerHTML =
-                '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
-                '<td>' + doc.number + '</td>' +
-                '<td>' + (doc.client?.name || "") + '</td>' +
-                '<td>' + (doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : "") + '</td>' +
-                '<td><strong>' + formatEuro(doc.totalTTC) + '</strong></td>' +
-                '<td class="status-cell">' + statutHTML + '</td>' +
-                '<td>' + actionsHtml + '</td>';
-            tbody.appendChild(tr);
-        });
-    }
 
     function togglePaid(id, checkbox) {
         const docs = getAllDocuments();
@@ -3142,6 +3162,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
