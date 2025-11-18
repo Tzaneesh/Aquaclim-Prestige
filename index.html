@@ -2499,58 +2499,67 @@ function openTarifsPanel() {
     const isHidden = panel.classList.contains("hidden");
 
     if (isHidden) {
-        // 🔹 ON OUVRE LE PANNEAU
+        // ON OUVRE LE PANNEAU
         panel.classList.remove("hidden");
+        panel.style.display = "block";
 
-        // ⬇️ Ici tu remets TON ANCIEN CODE qui remplissait tarifsTableBody
-        // ex: vider le tbody puis boucler sur PRESTATION_TEMPLATES
-        // ...
-        // tbody.innerHTML = "...";
+        // On reconstruit la table des tarifs
+        tbody.innerHTML = "";
+        const custom = getCustomPrices();
+
+        PRESTATION_TEMPLATES.forEach(t => {
+            // on saute l'entrée vide
+            if (!t.kind) return;
+
+            const keyPart = t.kind + "_particulier";
+            const keySyn  = t.kind + "_syndic";
+
+            const valPart = (custom[keyPart] != null)
+                ? custom[keyPart]
+                : (t.priceParticulier != null ? t.priceParticulier : "");
+            const valSyn  = (custom[keySyn] != null)
+                ? custom[keySyn]
+                : (t.priceSyndic != null ? t.priceSyndic : "");
+
+            const tr = document.createElement("tr");
+            tr.innerHTML =
+                '<td>' + t.label + '</td>' +
+                '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
+                '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
+            tbody.appendChild(tr);
+        });
 
         if (btn) btn.textContent = "⬆️ Revenir aux prestations";
 
-        // on descend vers les tarifs
+        // on fait défiler vers le panneau de tarifs
         panel.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } else {
-        // 🔹 ON FERME LE PANNEAU
+        // ON FERME LE PANNEAU (via le même bouton)
         panel.classList.add("hidden");
+        panel.style.display = "none";
+
         if (btn) btn.textContent = "📋 Tarifs prestations";
 
-        // on remonte vers les prestations
         if (prestationsSection) {
             prestationsSection.scrollIntoView({ behavior: "smooth", block: "start" });
         }
     }
 }
+function closeTarifsPanel() {
+    const panel = document.getElementById("tarifsPanel");
+    const btn   = document.getElementById("tarifsButton");
 
-
-    panel.style.display = "block";
-    tbody.innerHTML = "";
-
-    const custom = getCustomPrices();
-
-    PRESTATION_TEMPLATES.forEach(t => {
-        if (!t.kind) return; // on saute la ligne "— Choisir un modèle —"
-
-        const keyPart = t.kind + "_particulier";
-        const keySyn  = t.kind + "_syndic";
-
-        const valPart = (custom[keyPart] != null)
-            ? custom[keyPart]
-            : (t.priceParticulier != null ? t.priceParticulier : "");
-        const valSyn  = (custom[keySyn] != null)
-            ? custom[keySyn]
-            : (t.priceSyndic != null ? t.priceSyndic : "");
-
-        const tr = document.createElement("tr");
-        tr.innerHTML =
-            '<td>' + t.label + '</td>' +
-            '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
-            '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
-        tbody.appendChild(tr);
-    });
+    if (panel) {
+        panel.classList.add("hidden");
+        panel.style.display = "none";
+    }
+    if (btn) {
+        btn.textContent = "📋 Tarifs prestations";
+    }
 }
+
+
 
 function closeTarifsPanel() {
     const panel = document.getElementById("tarifsPanel");
@@ -3400,6 +3409,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
