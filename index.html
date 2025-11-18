@@ -134,6 +134,9 @@
 #tabDevis.tab-btn.active {
     background: #1a74d9; /* bleu */
 }
+.actions .action-button {
+    min-width: 140px;
+}
 
 #tabFactures.tab-btn.active {
     background: #2e7d32; /* vert */
@@ -305,7 +308,11 @@
             padding: 10px;
             text-align: left;
             font-weight: 600;
-        }
+        }#tarifsPanel table.documents-table th,
+#tarifsPanel table.documents-table td {
+    font-size: 12px;
+}
+
 
         .documents-table td {
             padding: 10px;
@@ -398,10 +405,34 @@
 
     <!-- Vue Liste -->
     <div id="listView">
-        <div class="actions no-print">
-            <button class="btn btn-primary" type="button" onclick="newDocument('devis')">➕ Nouveau devis</button>
-            <button class="btn btn-success" type="button" onclick="newDocument('facture')">📄 Nouvelle facture</button>
-        </div>
+       <div class="actions no-print">
+    <button class="btn btn-primary" type="button" onclick="newDocument('devis')">➕ Nouveau devis</button>
+    <button class="btn btn-success" type="button" onclick="newDocument('facture')">📄 Nouvelle facture</button>
+    <button class="btn btn-secondary" type="button" onclick="openTarifsPanel()">⚙️ Tarifs prestations</button>
+</div>
+<div id="tarifsPanel" class="card no-print" style="display:none; margin-top:10px;">
+    <h2>Tarifs des prestations</h2>
+    <p style="font-size:13px;margin-bottom:8px;">
+        Modifie ici les prix HT par défaut utilisés quand tu choisis un modèle.
+        Laisse un champ vide pour revenir au prix d’origine du code.
+    </p>
+    <table class="documents-table">
+        <thead>
+            <tr>
+                <th>Prestation</th>
+                <th>Prix Particulier</th>
+                <th>Prix Syndic / Agence</th>
+            </tr>
+        </thead>
+        <tbody id="tarifsTableBody"></tbody>
+    </table>
+    <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">💾 Enregistrer les tarifs</button>
+        <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">Fermer</button>
+        <button class="btn btn-danger" type="button" onclick="resetTarifs()">Réinitialiser</button>
+    </div>
+</div>
+
 
         <div class="card">
             <div class="filters-row no-print">
@@ -481,7 +512,9 @@
 </div> <!-- fin de la première .row -->
 <div class="form-group" style="margin-top:10px;">
     <label>Objet du devis / de la facture</label>
-    <input type="text" id="docSubject" placeholder="Ex : Entretien piscine + clim – Villa Martin">
+   <input type="text" id="docSubject" required
+       placeholder="Ex : Entretien piscine + clim – Villa Martin">
+
 </div>
 
 <!-- NOUVELLE ROW : choix Particulier / Syndic en haut --><div class="form-group" style="margin-top:10px;">
@@ -2067,6 +2100,47 @@ if (unitInput) unitInput.value = p.unit || "";
     alert("Document supprimé");
     backToList();
 }
+function duplicateDocument(id) {
+    const original = getDocument(id);
+    if (!original) return;
+
+    const docs = getAllDocuments();
+    const copy = JSON.parse(JSON.stringify(original));
+
+    // 🔹 Nouvel ID
+    copy.id = Date.now().toString();
+    // 🔹 Nouveau numéro selon type (DEV-AAAA-XXX ou FAC-AAAA-XXX)
+    copy.number = getNextNumber(original.type);
+
+    // 🔹 Nouvelle date = aujourd’hui
+    const today = new Date().toISOString().split("T")[0];
+    copy.date = today;
+
+    if (copy.type === "devis") {
+        // Devis : nouvelle date de validité (30 jours à partir d’aujourd’hui)
+        const base = new Date(today);
+        base.setDate(base.getDate() + 30);
+        copy.validityDate = base.toISOString().split("T")[0];
+        copy.status = "en_attente";
+    } else {
+        // Facture : on repart sur une facture NON PAYÉE
+        copy.validityDate = "";
+        copy.paid = false;
+        copy.paymentMode = "";
+        copy.paymentDate = "";
+        copy.status = "";
+    }
+
+    // Date de création
+    copy.createdAt = new Date().toISOString();
+
+    docs.push(copy);
+    saveDocuments(docs);
+    loadDocumentsList();
+
+    // 👉 On ouvre directement la copie pour que tu vérifies / changes la date si besoin
+    loadDocument(copy.id);
+}
 
 
     function backToList() {
@@ -2202,9 +2276,11 @@ if (unitInput) unitInput.value = p.unit || "";
 
         const actionsHtml =
             '<div class="actions-btns">' +
-                '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-                '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
-            '</div>';
+                 '<div class="actions-btns">' +
+        '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+        '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
+        '<button class="btn btn-secondary btn-small" type="button" onclick="duplicateDocument(\'' + doc.id + '\')">Dupliquer</button>' +
+    '</div>';
 
         tr.innerHTML =
             '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
@@ -2352,7 +2428,94 @@ function transformToInvoice() {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+    }// ------- Sauvegarde / lecture des tarifs personnalisés -------
+function getCustomPrices() {
+    try {
+        const raw = localStorage.getItem("customTarifs");
+        if (!raw) return {};
+        return JSON.parse(raw);
+    } catch (e) {
+        console.error("Erreur lecture customTarifs :", e);
+        return {};
     }
+}
+
+function saveCustomPrices(obj) {
+    try {
+        localStorage.setItem("customTarifs", JSON.stringify(obj || {}));
+    } catch (e) {
+        console.error("Erreur sauvegarde customTarifs :", e);
+    }
+}
+
+function openTarifsPanel() {
+    const panel = document.getElementById("tarifsPanel");
+    const tbody = document.getElementById("tarifsTableBody");
+    if (!panel || !tbody) return;
+
+    panel.style.display = "block";
+    tbody.innerHTML = "";
+
+    const custom = getCustomPrices();
+
+    PRESTATION_TEMPLATES.forEach(t => {
+        if (!t.kind) return; // on saute la ligne "— Choisir un modèle —"
+
+        const keyPart = t.kind + "_particulier";
+        const keySyn  = t.kind + "_syndic";
+
+        const valPart = (custom[keyPart] != null)
+            ? custom[keyPart]
+            : (t.priceParticulier != null ? t.priceParticulier : "");
+        const valSyn  = (custom[keySyn] != null)
+            ? custom[keySyn]
+            : (t.priceSyndic != null ? t.priceSyndic : "");
+
+        const tr = document.createElement("tr");
+        tr.innerHTML =
+            '<td>' + t.label + '</td>' +
+            '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
+            '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
+        tbody.appendChild(tr);
+    });
+}
+
+function closeTarifsPanel() {
+    const panel = document.getElementById("tarifsPanel");
+    if (panel) panel.style.display = "none";
+}
+
+function saveTarifsFromUI() {
+    const tbody = document.getElementById("tarifsTableBody");
+    if (!tbody) return;
+
+    const inputs = tbody.querySelectorAll("input[type='number']");
+    const custom = {};
+
+    inputs.forEach(inp => {
+        const kind = inp.dataset.kind;
+        const type = inp.dataset.type;
+        if (!kind || !type) return;
+
+        const v = inp.value;
+        if (v !== "") {
+            const n = parseFloat(v);
+            if (!isNaN(n)) {
+                custom[kind + "_" + type] = n;
+            }
+        }
+    });
+
+    saveCustomPrices(custom);
+    alert("Tarifs enregistrés. Ils seront utilisés pour les prochaines lignes ajoutées.");
+}
+
+function resetTarifs() {
+    if (!confirm("Réinitialiser tous les tarifs personnalisés et revenir aux valeurs par défaut ?")) return;
+    saveCustomPrices({});
+    alert("Tarifs réinitialisés.");
+    openTarifsPanel(); // recharge la table avec les valeurs par défaut
+}
 
 // ------- Impression / PDF -------
 function openPrintable(id) {
@@ -3165,6 +3328,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
