@@ -2266,19 +2266,20 @@ function duplicateDocument(id) {
         let duplicateBtnClass = "btn btn-primary btn-small"; // 🔵 par défaut (devis)
 
 
-        if (doc.type === "facture") {
-            if (doc.paid) {
-                // Facture payée → boutons verts
-                openBtnClass       = "btn btn-success btn-small";
-                printBtnClass      = "btn btn-success btn-small";
-                duplicateBtnClass  = "btn btn-success btn-small"; // 🟢 dupliquer facture
-            } else {
-                // Facture non payée → boutons rouges
-                openBtnClass       = "btn btn-danger btn-small";
-                printBtnClass      = "btn btn-danger btn-small";
-                duplicateBtnClass  = "btn btn-success btn-small"; // 🟢 dupliquer facture
-            }
-        }
+if (doc.type === "facture") {
+    if (doc.paid) {
+        // Facture payée → boutons verts
+        openBtnClass       = "btn btn-success btn-small";
+        printBtnClass      = "btn btn-success btn-small";
+        duplicateBtnClass  = "btn btn-success btn-small";
+    } else {
+        // Facture non payée → boutons rouges
+        openBtnClass       = "btn btn-danger btn-small";
+        printBtnClass      = "btn btn-danger btn-small";
+        duplicateBtnClass  = "btn btn-danger btn-small";
+    }
+}
+
 
 
                 const actionsHtml =
@@ -3337,6 +3338,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
