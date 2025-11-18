@@ -2164,7 +2164,7 @@ function duplicateDocument(id) {
     }
 
     // ------- Liste + statut devis / factures -------
-    function loadDocumentsList() {
+function loadDocumentsList() {
     const docs = getAllDocuments();
     let filtered = docs.filter(d => d.type === currentListType);
 
@@ -2272,36 +2272,24 @@ function duplicateDocument(id) {
         // ------- COULEUR DES BOUTONS -------
         let openBtnClass  = "btn btn-primary btn-small";
         let printBtnClass = "btn btn-primary btn-small";
-                let openBtnClass  = "btn btn-primary btn-small";
-        let printBtnClass = "btn btn-primary btn-small";
-        let duplicateBtnClass = "btn btn-primary btn-small"; // 🔵 par défaut (devis)
 
+        if (doc.type === "facture") {
+            if (doc.paid) {
+                // Facture payée → boutons verts
+                openBtnClass  = "btn btn-success btn-small";
+                printBtnClass = "btn btn-success btn-small";
+            } else {
+                // Facture non payée → boutons rouges
+                openBtnClass  = "btn btn-danger btn-small";
+                printBtnClass = "btn btn-danger btn-small";
+            }
+        }
 
-if (doc.type === "facture") {
-    if (doc.paid) {
-        // Facture payée → boutons verts
-        openBtnClass       = "btn btn-success btn-small";
-        printBtnClass      = "btn btn-success btn-small";
-        duplicateBtnClass  = "btn btn-success btn-small";
-    } else {
-        // Facture non payée → boutons rouges
-        openBtnClass       = "btn btn-danger btn-small";
-        printBtnClass      = "btn btn-danger btn-small";
-        duplicateBtnClass  = "btn btn-danger btn-small";
-    }
-}
-
-
-
-                const actionsHtml =
+        const actionsHtml =
             '<div class="actions-btns">' +
-                '<div class="actions-btns">' +
-                    '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-                    '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
-                    '<button class="' + duplicateBtnClass + '" type="button" onclick="duplicateDocument(\'' + doc.id + '\')">Dupliquer</button>' +
-                '</div>' +
+                '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+                '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
             '</div>';
-
 
         tr.innerHTML =
             '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
@@ -2315,6 +2303,7 @@ if (doc.type === "facture") {
         tbody.appendChild(tr);
     });
 }
+
 
 
     function togglePaid(id, checkbox) {
@@ -3349,6 +3338,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
