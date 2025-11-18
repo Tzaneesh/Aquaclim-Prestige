@@ -137,6 +137,13 @@
             margin-bottom: 20px;
             flex-wrap: wrap;
         }
+.actions-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    margin-bottom: 4px;
+}
 
         .card {
             background: white;
@@ -2097,11 +2104,30 @@ if (unitInput) unitInput.value = p.unit || "";
                     selectHtml;
             }
 
-           let actionsHtml =
+    // Déterminer la couleur des boutons
+let openBtnClass  = "btn btn-primary btn-small";
+let printBtnClass = "btn btn-primary btn-small";
+
+// Pour les factures : couleur selon payé / impayé
+if (doc.type === "facture") {
+    if (doc.paid) {
+        // Facture payée → boutons verts
+        openBtnClass  = "btn btn-success btn-small";
+        printBtnClass = "btn btn-success btn-small";
+    } else {
+        // Facture non payée → boutons rouges
+        openBtnClass  = "btn btn-danger btn-small";
+        printBtnClass = "btn btn-danger btn-small";
+    }
+}
+
+// Bloc HTML des boutons
+let actionsHtml =
     '<div class="actions-btns">' +
-        '<button class="btn btn-primary btn-small" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
-        '<button class="btn btn-primary btn-small" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
+        '<button class="' + openBtnClass + '" type="button" onclick="loadDocument(\'' + doc.id + '\')">Ouvrir</button>' +
+        '<button class="' + printBtnClass + '" type="button" onclick="openPrintable(\'' + doc.id + '\')">Imprimer</button>' +
     '</div>';
+
 
             tr.innerHTML =
                 '<td><span class="badge ' + badgeClass + '">' + typeLabel + '</span></td>' +
@@ -3028,6 +3054,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
