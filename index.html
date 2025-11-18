@@ -1642,44 +1642,50 @@ function saveDocument() {
     const clientEmail   = document.getElementById("clientEmail").value.trim();
     const docSubject    = (document.getElementById("docSubject")?.value || "").trim();
 
+    // ✅ Vérif client
     if (!clientName || !clientAddress) {
         alert("Veuillez renseigner au minimum le nom et l'adresse du client.");
+        return;
+    }
+
+    // ✅ Objet obligatoire
+    if (!docSubject) {
+        alert("Veuillez saisir l'objet du devis / de la facture.");
         return;
     }
 
     // 🔹 On récupère TOUTES les lignes de prestations (y compris déplacement)
     const prestations = [];
     document.querySelectorAll(".prestation-line").forEach(line => {
-    const desc   = (line.querySelector(".prestation-desc")?.value || "").trim();
-    const qty    = parseFloat(line.querySelector(".prestation-qty")?.value)   || 0;
-    const price  = parseFloat(line.querySelector(".prestation-price")?.value) || 0;
-    const unit   = (line.querySelector(".prestation-unit")?.value || "").trim();
-    const note   = (line.querySelector(".prestation-note")?.value || "").trim();
-    const detail = line.dataset.detail || "";
-    const kind   = line.dataset.kind   || "";
+        const desc   = (line.querySelector(".prestation-desc")?.value || "").trim();
+        const qty    = parseFloat(line.querySelector(".prestation-qty")?.value)   || 0;
+        const price  = parseFloat(line.querySelector(".prestation-price")?.value) || 0;
+        const unit   = (line.querySelector(".prestation-unit")?.value || "").trim();
+        const note   = (line.querySelector(".prestation-note")?.value || "").trim();
+        const detail = line.dataset.detail || "";
+        const kind   = line.dataset.kind   || "";
 
-    const datesInputs = line.querySelectorAll(".prestation-date");
-    const dates = [];
-    datesInputs.forEach(i => {
-        const v = i.value.trim();
-        if (v) dates.push(v);
-    });
-
-    if (desc) {
-        prestations.push({
-            desc,
-            detail,
-            qty,
-            price,
-            total: qty * price,
-            unit,
-            dates,
-            note,
-            kind
+        const datesInputs = line.querySelectorAll(".prestation-date");
+        const dates = [];
+        datesInputs.forEach(i => {
+            const v = i.value.trim();
+            if (v) dates.push(v);
         });
-    }
-});
 
+        if (desc) {
+            prestations.push({
+                desc,
+                detail,
+                qty,
+                price,
+                total: qty * price,
+                unit,
+                dates,
+                note,
+                kind
+            });
+        }
+    });
 
     if (prestations.length === 0) {
         alert("Ajoutez au moins une prestation");
@@ -1763,8 +1769,13 @@ function saveDocument() {
         number: docNumber,
         date: docDate,
         validityDate,
-          subject: docSubject,
-        client: { name: clientName, address: clientAddress, phone: clientPhone, email: clientEmail },
+        subject: docSubject, // ✅ UNE seule fois, propre
+        client: {
+            name: clientName,
+            address: clientAddress,
+            phone: clientPhone,
+            email: clientEmail
+        },
         prestations,
         tvaRate,
         subtotal,
@@ -1792,6 +1803,7 @@ function saveDocument() {
     loadDocumentsList();
     updateTransformButtonVisibility();
 }
+
 
 
 function loadDocument(id) {
@@ -2543,21 +2555,24 @@ let topDatesHtml = `
         .contact{font-size:10.5px;font-weight:500;}
         .contact strong{font-weight:700;}
 
-       .doc-header-center{
+.doc-header-center{
     margin:10px 0 12px 0;
 }
 
 .doc-header-center h2{
     font-size:18px;
     color:#1a74d9;
+    margin-top:10px;      /* 🔹 petit espace sous le header entreprise */
     margin-bottom:4px;
     text-align:left;
 }
+
 .doc-subject{
     margin-top:6px;
     font-size:10px;
     font-weight:bold;
 }
+
 
 .doc-info-block{
     display:inline-block;
@@ -2583,7 +2598,7 @@ let topDatesHtml = `
     flex:1;
 }
 
-        .client-block{
+.client-block{
     margin-bottom:8px;
     font-size:10px;
     border:1px solid #ccc;
@@ -2601,17 +2616,28 @@ let topDatesHtml = `
 }
 
 .client-line{
-    display:flex;
-    margin:1px 0;           /* 🔹 moins d'espace vertical */
+    margin:2px 0;          /* 🔹 léger espacement, plus compact */
 }
 
 .client-label{
-    min-width:55px;          /* 🔹 colonnes "Nom / Adresse / Tél / Email" alignées */
     font-weight:600;
+    display:inline;         /* 🔹 pas de colonne alignée */
 }
 
 .client-value{
-    flex:1;
+    display:inline;
+    margin-left:4px;        /* 🔹 petit espace après les ":" */
+}
+th:first-child,
+td:first-child{
+    width:50%;          /* 🔹 la colonne Description prend + de place */
+}
+
+th.qty-col, td.qty-col,
+th.unit-col, td.unit-col,
+th.price-col, td.price-col,
+th.total-col, td.total-col{
+    padding:0 6px;      /* 🔹 un peu d’air entre les chiffres */
 }
 
 
@@ -2813,33 +2839,34 @@ let topDatesHtml = `
 </div>
 
 
-      <div class="client-block">
+<div class="client-block">
     <div class="client-title">Client</div>
 
     ${doc.client?.name ? `
     <div class="client-line">
-        <div class="client-label">Nom :</div>
-        <div class="client-value"><strong>${doc.client.name}</strong></div>
+        <span class="client-label">Nom :</span>
+        <span class="client-value">${doc.client.name}</span>
     </div>` : ""}
 
     ${doc.client?.address ? `
     <div class="client-line">
-        <div class="client-label">Adresse :</div>
-        <div class="client-value">${doc.client.address}</div>
+        <span class="client-label">Adresse :</span>
+        <span class="client-value">${doc.client.address}</span>
     </div>` : ""}
 
     ${doc.client?.phone ? `
     <div class="client-line">
-        <div class="client-label">Tél :</div>
-        <div class="client-value">${doc.client.phone}</div>
+        <span class="client-label">Tél :</span>
+        <span class="client-value">${doc.client.phone}</span>
     </div>` : ""}
 
     ${doc.client?.email ? `
     <div class="client-line">
-        <div class="client-label">Email :</div>
-        <div class="client-value">${doc.client.email}</div>
+        <span class="client-label">Email :</span>
+        <span class="client-value">${doc.client.email}</span>
     </div>` : ""}
 </div>
+
 
 
         ${doc.siteAddress && doc.siteAddress !== (doc.client?.address || "") ? `
@@ -2934,6 +2961,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
