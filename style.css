@@ -555,10 +555,18 @@ textarea {
   color: #1976d2;
 }
 
-.badge-facture {
+/* Facture payée = vert */
+.badge-facture-paid {
   background: #e8f5e9;
   color: #388e3c;
 }
+
+/* Facture non payée = rouge */
+.badge-facture-unpaid {
+  background: #ffebee;
+  color: #c62828;
+}
+
 
 /* Factures payées / non payées */
 .badge-paid {

@@ -1777,9 +1777,16 @@ function loadDocumentsList() {
 
   filtered.forEach((doc) => {
     const tr = document.createElement("tr");
-    const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
-    const badgeClass =
-      doc.type === "devis" ? "badge-devis" : "badge-facture";
+const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
+
+let badgeClass;
+if (doc.type === "devis") {
+  badgeClass = "badge-devis";
+} else {
+  // Facture : rouge si non payée, vert si payée
+  badgeClass = doc.paid ? "badge-facture-paid" : "badge-facture-unpaid";
+}
+
 
     let statutHTML = "";
 
