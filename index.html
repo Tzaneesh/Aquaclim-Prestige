@@ -411,13 +411,14 @@
     <!-- Vue Liste -->
     <div id="listView">
       <div class="actions no-print">
-          <button class="btn btn-primary" type="button" onclick="newDocument('devis')">
+         <button id="createDevis" class="btn btn-primary" type="button" onclick="newDocument('devis')">
     ➕ Nouveau devis
 </button>
 
-<button class="btn btn-success" type="button" onclick="newDocument('facture')">
+<button id="createFacture" class="btn btn-success" type="button" onclick="newDocument('facture')">
     ➕ Nouvelle facture
 </button>
+
 
 
 <button id="tarifsButton"
@@ -3503,6 +3504,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
