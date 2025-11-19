@@ -429,10 +429,14 @@
 </button>
 
 
-   <button id="transformButtonList" class="btn action-button" type="button"
-        onclick="transformToInvoice()" style="display:none;">
+<button id="transformButtonList"
+        class="btn action-button"
+        type="button"
+        onclick="transformToInvoice()"
+        style="display:none;">
     🔁 Transformer en facture
 </button>
+
 
 
 
@@ -506,7 +510,14 @@
 
 
 
-    <button id="transformButton" class="btn action-button" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
+    <button id="transformButtonForm"
+        class="btn action-button"
+        type="button"
+        onclick="transformToInvoice()"
+        style="display:none;">
+    🔁 Transformer en facture
+</button>
+
 
     <button class="btn btn-danger" type="button" onclick="deleteCurrent()">🗑️ Supprimer</button>
 </div>
@@ -1206,13 +1217,17 @@ function recomputeEntretienClim() {
     }
 
     // ------- TVA, Doc type -------
-    function updateTransformButtonVisibility() {
-        const btn = document.querySelector("#formView #transformButton");
+ function updateTransformButtonVisibility() {
+    const btn = document.getElementById("transformButtonForm");
+    if (!btn) return;
 
-        if (!btn) return;
-        const type = document.getElementById("docType").value;
-        btn.style.display = (type === "devis" && currentDocumentId) ? "inline-block" : "none";
-    }
+    const type = document.getElementById("docType").value;
+
+    btn.style.display = (type === "devis" && currentDocumentId)
+        ? "inline-block"
+        : "none";
+}
+
 
     function updateDocType() {
         const type = document.getElementById("docType").value;
@@ -3503,6 +3518,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
