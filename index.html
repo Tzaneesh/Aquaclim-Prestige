@@ -1141,16 +1141,32 @@ function syncTarifRow(input) {
     const part = row.querySelector(".tarif-part");
     const syn  = row.querySelector(".tarif-syn");
 
-    const coef = 1.25; // ton coefficient actuel
+    const coef = 1.25; // coefficient actuel
 
     if (input.classList.contains("tarif-part")) {
+        // Prix particulier saisi
         const p = parseFloat(part.value) || 0;
-        syn.value = (p * coef).toFixed(2);
+
+        // Calcul du syndic brut
+        let newSyn = p * coef;
+
+        // 🔥 ARRONDI À LA DIZAINE SUPÉRIEURE
+        newSyn = Math.ceil(newSyn / 10) * 10;
+
+        syn.value = newSyn;
+
     } else {
+        // Prix syndic saisi
         const s = parseFloat(syn.value) || 0;
-        part.value = (s / coef).toFixed(2);
+
+        // Calcul du prix particulier (sans arrondi particulier)
+        let newPart = s / coef;
+
+        // garder 2 décimales max mais propres
+        part.value = (Math.round(newPart * 100) / 100);
     }
 }
+
 
 // --- Recalcule les prix entretien clim (1, 2, 3+) ---
 function recomputeEntretienClim() {
@@ -3487,6 +3503,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
