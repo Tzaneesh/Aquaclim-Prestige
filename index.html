@@ -415,19 +415,22 @@
     ➕ Nouvelle facture
 </button>
 
-    <button class="btn btn-secondary" type="button" onclick="backToList()">← Retour</button>
+ <!-- LISTE : seulement les bonnes actions -->
+<button id="btnNewDevis" class="btn btn-devis" type="button" onclick="newDocument('devis')">
+    ➕ Nouveau devis
+</button>
 
-    <!-- Boutons liés au document -->
-    <button class="btn action-button" type="button" onclick="saveDocument()">💾 Enregistrer</button>
-    <button class="btn action-button" type="button" onclick="openPrintable()">🖨️ Imprimer / PDF</button>
+<button id="btnNewFacture" class="btn btn-facture" type="button" onclick="newDocument('facture')">
+    ➕ Nouvelle facture
+</button>
 
-    <!-- 🔹 Nouveau bouton Tarifs prestations -->
-    <button id="tarifsButton"
-            class="btn btn-secondary"
-            type="button"
-            onclick="openTarifsPanel()">
-        📋 Tarifs prestations
-    </button>
+<button id="tarifsButton"
+        class="btn btn-devis"
+        type="button"
+        onclick="openTarifsPanel()">
+    📋 Tarifs prestations
+</button>
+
 
     <button id="transformButton" class="btn action-button" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
 
@@ -1100,6 +1103,7 @@ function saveSingleDocumentToFirestore(doc) {
         document.getElementById("listTitle").textContent = type === "devis" ? "Liste des devis" : "Liste des factures";
         document.getElementById("yearFilterContainer").classList.toggle("hidden", type !== "facture");
         document.getElementById("exportContainer").classList.toggle("hidden", type !== "facture");
+        document.getElementById("tarifsPanel").style.display = "none";
 
         document.getElementById("formView").classList.add("hidden");
         document.getElementById("listView").classList.remove("hidden");
@@ -1107,7 +1111,45 @@ function saveSingleDocumentToFirestore(doc) {
 
         loadYearFilter();
         loadDocumentsList();
+        updateNewButtons();
     }
+function syncTarifRow(input) {
+    const row = input.closest("tr");
+    const part = row.querySelector(".tarif-part");
+    const syn  = row.querySelector(".tarif-syn");
+    recomputeEntretienClim();
+
+
+    const coef = 1.25; // ← Ton coefficient actuel (change si besoin)
+
+    if (input.classList.contains("tarif-part")) {
+        const p = parseFloat(part.value) || 0;
+        syn.value = (p * coef).toFixed(2);
+    } else {
+        const s = parseFloat(syn.value) || 0;
+        part.value = (s / coef).toFixed(2);
+    }
+function recomputeEntretienClim() {
+    PRESTATION_TEMPLATES.forEach(t => {
+        if (t.kind === "entretien_clim") {
+            const basePart = parseFloat(t.priceParticulier) || 0;
+            const baseSyn  = parseFloat(t.priceSyndic) || 0;
+
+            // 1 clim = base
+            t.priceParticulier = basePart;
+            t.priceSyndic = baseSyn;
+
+            // 2 clims -10%
+            t.priceParticulier2 = basePart * 0.9;
+            t.priceSyndic2 = baseSyn * 0.9;
+
+            // 3+ clims -20%
+            t.priceParticulier3 = basePart * 0.8;
+            t.priceSyndic3 = baseSyn * 0.8;
+        }
+    });
+}
+
 
     function loadYearFilter() {
         const select = document.getElementById("yearFilter");
@@ -1190,6 +1232,14 @@ function onDocDateChange() {
         const validityDate = document.getElementById("validityDate").value;
         refreshDevisStatusUI(type, validityDate);
     }
+function updateNewButtons() {
+    const isDevis = (currentListType === "devis");
+    document.getElementById("btnNewDevis").disabled = !isDevis;
+    document.getElementById("btnNewFacture").disabled = isDevis;
+
+    document.getElementById("btnNewDevis").style.opacity = isDevis ? "1" : "0.4";
+    document.getElementById("btnNewFacture").style.opacity = isDevis ? "0.4" : "1";
+}
 
 function setTVA(rate) {
     const tvaInput   = document.getElementById("tvaRate");
@@ -2540,9 +2590,10 @@ function openTarifsPanel() {
 
             const tr = document.createElement("tr");
             tr.innerHTML =
-                '<td>' + t.label + '</td>' +
-                '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
-                '<td><input type="number" step="0.01" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
+    '<td>' + t.label + '</td>' +
+    '<td><input type="number" step="0.01" class="tarif-part" oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
+    '<td><input type="number" step="0.01" class="tarif-syn"  oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
+
             tbody.appendChild(tr);
         });
 
@@ -3426,6 +3477,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
