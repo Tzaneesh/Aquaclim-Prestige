@@ -334,7 +334,11 @@
             border-radius: 12px;
             font-size: 11px;
             font-weight: 600;
-        }
+        }.disabled-btn {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
 
         .badge-devis   { background: #e3f2fd; color: #1976d2; }
         .badge-facture { background: #e8f5e9; color: #388e3c; }
@@ -415,14 +419,6 @@
     ➕ Nouvelle facture
 </button>
 
- <!-- LISTE : seulement les bonnes actions -->
-<button id="btnNewDevis" class="btn btn-devis" type="button" onclick="newDocument('devis')">
-    ➕ Nouveau devis
-</button>
-
-<button id="btnNewFacture" class="btn btn-facture" type="button" onclick="newDocument('facture')">
-    ➕ Nouvelle facture
-</button>
 
 <button id="tarifsButton"
         class="btn btn-devis"
@@ -434,9 +430,6 @@
 
     <button id="transformButton" class="btn action-button" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
 
-    <!-- Supprimer reste en rouge -->
-    <button class="btn btn-danger" type="button" onclick="deleteCurrent()">🗑️ Supprimer</button>
-</div>
 
 <div id="tarifsPanel" class="card no-print" style="display:none; margin-top:10px;">
     <h2>Tarifs des prestations</h2>
@@ -1096,23 +1089,52 @@ function saveSingleDocumentToFirestore(doc) {
     }
 
     // ------- Tabs Devis / Factures -------
-    function switchListType(type) {
-        currentListType = type;
-        document.getElementById("tabDevis").classList.toggle("active", type === "devis");
-        document.getElementById("tabFactures").classList.toggle("active", type === "facture");
-        document.getElementById("listTitle").textContent = type === "devis" ? "Liste des devis" : "Liste des factures";
-        document.getElementById("yearFilterContainer").classList.toggle("hidden", type !== "facture");
-        document.getElementById("exportContainer").classList.toggle("hidden", type !== "facture");
-        document.getElementById("tarifsPanel").style.display = "none";
+  function switchListType(type) {
+    currentListType = type;
 
-        document.getElementById("formView").classList.add("hidden");
-        document.getElementById("listView").classList.remove("hidden");
-        currentDocumentId = null;
+    document.getElementById("tabDevis").classList.toggle("active", type === "devis");
+    document.getElementById("tabFactures").classList.toggle("active", type === "facture");
 
-        loadYearFilter();
-        loadDocumentsList();
-        updateNewButtons();
+    document.getElementById("listTitle").textContent =
+        type === "devis" ? "Liste des devis" : "Liste des factures";
+
+    document.getElementById("yearFilterContainer").classList.toggle("hidden", type !== "facture");
+    document.getElementById("exportContainer").classList.toggle("hidden", type !== "facture");
+
+    document.getElementById("tarifsPanel").style.display = "none";
+
+    document.getElementById("formView").classList.add("hidden");
+    document.getElementById("listView").classList.remove("hidden");
+
+    currentDocumentId = null;
+
+    // --- ACTIVATION / DÉSACTIVATION DES BOUTONS ---
+    const btnDevis = document.getElementById("createDevis");
+    const btnFacture = document.getElementById("createFacture");
+
+    if (type === "devis") {
+        btnDevis.disabled = false;
+        btnDevis.classList.remove("disabled-btn");
+
+        btnFacture.disabled = true;
+        btnFacture.classList.add("disabled-btn");
+    } else {
+        btnFacture.disabled = false;
+        btnFacture.classList.remove("disabled-btn");
+
+        btnDevis.disabled = true;
+        btnDevis.classList.add("disabled-btn");
     }
+
+    // --- FERMER LES TARIFS ---
+    resetTarifsPanel();
+
+    // --- RAFRAÎCHISSEMENT DE LA LISTE ---
+    loadYearFilter();
+    loadDocumentsList();
+    updateNewButtons();
+}
+
 // --- Synchronisation tableau tarifs ---
 function syncTarifRow(input) {
     const row  = input.closest("tr");
@@ -2574,7 +2596,6 @@ function openTarifsPanel() {
         const custom = getCustomPrices();
 
         PRESTATION_TEMPLATES.forEach(t => {
-            // on saute l'entrée vide
             if (!t.kind) return;
 
             const keyPart = t.kind + "_particulier";
@@ -2582,50 +2603,44 @@ function openTarifsPanel() {
 
             const valPart = (custom[keyPart] != null)
                 ? custom[keyPart]
-                : (t.priceParticulier != null ? t.priceParticulier : "");
+                : (t.priceParticulier ?? "");
             const valSyn  = (custom[keySyn] != null)
                 ? custom[keySyn]
-                : (t.priceSyndic != null ? t.priceSyndic : "");
+                : (t.priceSyndic ?? "");
 
             const tr = document.createElement("tr");
             tr.innerHTML =
-tr.innerHTML =
-    '<td>' + t.label + '</td>' +
-    '<td><input type="number" step="0.01" class="tarif-part" oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
-    '<td><input type="number" step="0.01" class="tarif-syn"  oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
-
+                '<td>' + t.label + '</td>' +
+                '<td><input type="number" step="0.01" class="tarif-part" oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="particulier" value="' + valPart + '"></td>' +
+                '<td><input type="number" step="0.01" class="tarif-syn"  oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="syndic" value="' + valSyn + '"></td>';
 
             tbody.appendChild(tr);
         });
 
         if (btn) btn.textContent = "⬆️ Revenir aux prestations";
-
-        // on fait défiler vers le panneau de tarifs
         panel.scrollIntoView({ behavior: "smooth", block: "start" });
 
     } else {
         // ON FERME LE PANNEAU (via le même bouton)
-        panel.classList.add("hidden");
-        panel.style.display = "none";
-
-        if (btn) btn.textContent = "📋 Tarifs prestations";
+        resetTarifsPanel();
 
         if (prestationsSection) {
             prestationsSection.scrollIntoView({ behavior: "smooth", block: "start" });
         }
     }
 }
-function closeTarifsPanel() {
+
+
+function resetTarifsPanel() {
     const panel = document.getElementById("tarifsPanel");
     const btn   = document.getElementById("tarifsButton");
 
-    if (panel) {
-        panel.classList.add("hidden");
-        panel.style.display = "none";
-    }
-    if (btn) {
-        btn.textContent = "📋 Tarifs prestations";
-    }
+    if (!panel) return;
+
+    // On remet exactement l'état d'origine
+    panel.classList.add("hidden");
+    panel.style.display = ""; // enlève le display:block
+    if (btn) btn.textContent = "📋 Tarifs prestations";
 }
 
 
@@ -3472,6 +3487,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
