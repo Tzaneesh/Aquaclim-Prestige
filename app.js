@@ -2604,7 +2604,15 @@ function openPrintable(id) {
       text-transform:none;
       letter-spacing:0;
     }
-    .client-line{margin:2px 0;}
+    .client-line{margin:2px 0;}    .client-inner-row{
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+    }
+    .client-col{
+      width:48%;
+    }
+
 
     .site-block{
       margin-bottom:8px;
@@ -2842,39 +2850,33 @@ function openPrintable(id) {
             ` : ``}
         </div>
 
-        <div class="client-block">
-            <div class="client-title">Client</div>
+  <div class="client-block">
+  <div class="client-inner-row">
 
-            ${doc.client?.name ? `
-            <p class="client-line">${doc.client.name}</p>` : ""}
+    <!-- COLONNE GAUCHE -->
+    <div class="client-col">
+      <div class="client-title">Client</div>
 
-            ${doc.client?.address ? `
-            <p class="client-line">${doc.client.address}</p>` : ""}
+      ${doc.client?.name ? `<p class="client-line">${doc.client.name}</p>` : ""}
+      ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
+      ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
+      ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
+    </div>
 
-            ${doc.client?.phone ? `
-            <p class="client-line">${doc.client.phone}</p>` : ""}
+    <!-- COLONNE DROITE (poussée complètement à droite) -->
+    ${(doc.siteName || doc.siteAddress) ? `
+    <div class="client-col right">
+      <div class="client-title">Lieu d’intervention</div>
 
-            ${doc.client?.email ? `
-            <p class="client-line">${doc.client.email}</p>` : ""}
-        </div>
+      ${doc.siteName ? `<p class="client-line">Client sur site : ${doc.siteName}</p>` : ""}
+      ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
+    </div>
+    ` : ""}
 
-        ${(doc.siteName || doc.siteAddress) ? `
-        <div class="site-block">
-            <div class="site-title">Lieu d’intervention</div>
+  </div>
+</div>
 
-            ${doc.siteName ? `
-            <p class="client-line">
-                <span class="client-label">Client sur site :</span>
-                <span class="client-value">${doc.siteName}</span>
-            </p>` : ``}
 
-            ${doc.siteAddress ? `
-            <p class="client-line">
-                <span class="client-label">Adresse :</span>
-                <span class="client-value">${doc.siteAddress}</span>
-            </p>` : ``}
-        </div>
-        ` : ``}
 
         <table>
             <thead>
