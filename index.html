@@ -1113,14 +1113,13 @@ function saveSingleDocumentToFirestore(doc) {
         loadDocumentsList();
         updateNewButtons();
     }
+// --- Synchronisation tableau tarifs ---
 function syncTarifRow(input) {
-    const row = input.closest("tr");
+    const row  = input.closest("tr");
     const part = row.querySelector(".tarif-part");
     const syn  = row.querySelector(".tarif-syn");
-    recomputeEntretienClim();
 
-
-    const coef = 1.25; // ← Ton coefficient actuel (change si besoin)
+    const coef = 1.25; // ton coefficient actuel
 
     if (input.classList.contains("tarif-part")) {
         const p = parseFloat(part.value) || 0;
@@ -1129,26 +1128,26 @@ function syncTarifRow(input) {
         const s = parseFloat(syn.value) || 0;
         part.value = (s / coef).toFixed(2);
     }
+}
+
+// --- Recalcule les prix entretien clim (1, 2, 3+) ---
 function recomputeEntretienClim() {
     PRESTATION_TEMPLATES.forEach(t => {
         if (t.kind === "entretien_clim") {
-            const basePart = parseFloat(t.priceParticulier) || 0;
-            const baseSyn  = parseFloat(t.priceSyndic) || 0;
+            const basePart = 90;
+            const baseSyn  = 110;
 
-            // 1 clim = base
-            t.priceParticulier = basePart;
-            t.priceSyndic = baseSyn;
-
-            // 2 clims -10%
+            t.priceParticulier  = basePart;
             t.priceParticulier2 = basePart * 0.9;
-            t.priceSyndic2 = baseSyn * 0.9;
-
-            // 3+ clims -20%
             t.priceParticulier3 = basePart * 0.8;
+
+            t.priceSyndic  = baseSyn;
+            t.priceSyndic2 = baseSyn * 0.9;
             t.priceSyndic3 = baseSyn * 0.8;
         }
     });
 }
+
 
 
     function loadYearFilter() {
@@ -2590,9 +2589,11 @@ function openTarifsPanel() {
 
             const tr = document.createElement("tr");
             tr.innerHTML =
+tr.innerHTML =
     '<td>' + t.label + '</td>' +
     '<td><input type="number" step="0.01" class="tarif-part" oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="particulier" value="' + (valPart !== "" ? valPart : "") + '"></td>' +
     '<td><input type="number" step="0.01" class="tarif-syn"  oninput="syncTarifRow(this)" data-kind="' + t.kind + '" data-type="syndic" value="' + (valSyn !== "" ? valSyn : "") + '"></td>';
+
 
             tbody.appendChild(tr);
         });
@@ -3477,6 +3478,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
