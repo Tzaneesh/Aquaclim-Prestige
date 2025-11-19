@@ -429,7 +429,11 @@
 </button>
 
 
-    <button id="transformButton" class="btn action-button" type="button" onclick="transformToInvoice()" style="display:none;">🔁 Transformer en facture</button>
+   <button id="transformButtonList" class="btn action-button" type="button"
+        onclick="transformToInvoice()" style="display:none;">
+    🔁 Transformer en facture
+</button>
+
 
 
 <div id="tarifsPanel" class="card no-print" style="display:none; margin-top:10px;">
@@ -1203,7 +1207,8 @@ function recomputeEntretienClim() {
 
     // ------- TVA, Doc type -------
     function updateTransformButtonVisibility() {
-        const btn = document.getElementById("transformButton");
+        const btn = document.querySelector("#formView #transformButton");
+
         if (!btn) return;
         const type = document.getElementById("docType").value;
         btn.style.display = (type === "devis" && currentDocumentId) ? "inline-block" : "none";
@@ -3498,6 +3503,7 @@ window.onload = function () {
 </script>
 </body>
 </html>
+
 
 
 
