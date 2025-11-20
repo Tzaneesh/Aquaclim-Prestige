@@ -795,6 +795,31 @@ textarea {
   font-size: 12px;
   border-radius: 999px;
 }
+/* Position centrée en haut */
+#confirmOverlay .confirm-box {
+  position: absolute;
+  top: 20px;               /* distance du haut */
+  left: 50%;
+  transform: translateX(-50%);
+  width: 340px;
+  padding: 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0,0,0,0.25);
+  animation: slideDown 0.25s ease-out;
+}
+
+/* Effet transition douce */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
 
 /* ========== IMPRESSION ========== */
 
@@ -817,6 +842,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
