@@ -631,18 +631,65 @@
 <!-- ================= POPUP CONFIRM CUSTOM ================= -->
 <div id="confirmOverlay" class="confirm-overlay hidden">
   <div class="confirm-box">
-
     <div class="confirm-icon" id="confirmIcon">⚠️</div>
-
     <h3 class="confirm-title" id="confirmTitle"></h3>
-
     <p class="confirm-message" id="confirmMessage"></p>
-
     <div class="confirm-buttons">
       <button id="confirmCancel" class="btn btn-secondary" type="button">Annuler</button>
       <button id="confirmOk" class="btn btn-danger" type="button">OK</button>
     </div>
+  </div>
+</div>
 
+<!-- =============== POPUP AJOUT PRESTATION ================== -->
+<div id="templateModal" class="confirm-overlay hidden">
+  <div class="confirm-box">
+    <div class="confirm-icon info">➕</div>
+    <h3 id="tplTitle">Nouvelle prestation</h3>
+
+    <div class="tpl-body">
+      <div class="tpl-row">
+        <label for="tplName">Nom de la prestation *</label>
+        <input type="text" id="tplName" />
+      </div>
+
+      <div class="tpl-row tpl-row-2cols">
+        <div>
+          <label for="tplPart">Prix HT Particulier *</label>
+          <input
+            type="number"
+            step="0.01"
+            id="tplPart"
+            oninput="onTplPartChange()"
+          />
+        </div>
+        <div>
+          <label for="tplSyn">Prix HT Syndic / Agence *</label>
+          <input
+            type="number"
+            step="0.01"
+            id="tplSyn"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="confirm-buttons">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        onclick="closeTemplateModal()"
+      >
+        Annuler
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        onclick="validateTemplateModal()"
+      >
+        Enregistrer
+      </button>
+    </div>
   </div>
 </div>
 <!-- ========================================================= -->
@@ -651,6 +698,8 @@
 <script src="app.js"></script>
 </body>
 </html>
+
+
 
 
 
