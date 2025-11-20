@@ -2607,14 +2607,11 @@ function openPrintable(id) {
 .client-line{margin:2px 0;}
 .client-inner-row{
   display:flex;
+  justify-content:space-between;
   gap:18px;
 }
 .client-col{
-  flex:1 1 auto;
-}
-.client-col.right{
-  flex:0 0 auto;
-  margin-left:auto;
+  width:48%;
 }
 
 
@@ -2962,5 +2959,6 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
