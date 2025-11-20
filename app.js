@@ -1478,23 +1478,32 @@ function loadDocument(id) {
     if (unitInput) unitInput.value = p.unit || "";
 
     const datesContainer = line.querySelector(".prestation-dates");
-    datesContainer.innerHTML = "";
-    if (p.dates && p.dates.length) {
-      p.dates.forEach((dv) => {
-        const inp = document.createElement("input");
-        inp.type = "text";
-        inp.className = "prestation-date";
-        inp.value = dv;
-        datesContainer.appendChild(inp);
-      });
-    } else {
-      const inp = document.createElement("input");
-      inp.type = "text";
-      inp.className = "prestation-date";
-      inp.placeholder = "JJ/MM/AAAA";
-      datesContainer.appendChild(inp);
-    }
-  });
+datesContainer.innerHTML = "";
+
+const dates = (p.dates && p.dates.length) ? p.dates : [""];
+
+dates.forEach((dv) => {
+  const row = document.createElement("div");
+  row.className = "prestation-date-row";
+
+  const inp = document.createElement("input");
+  inp.type = "date";
+  inp.className = "prestation-date";
+  if (dv) inp.value = dv; // dv doit être au format YYYY-MM-DD pour bien préremplir
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
+  removeBtn.textContent = "✖";
+  removeBtn.onclick = function () {
+    removePassageDate(removeBtn);
+  };
+
+  row.appendChild(inp);
+  row.appendChild(removeBtn);
+  datesContainer.appendChild(row);
+});
+
 
   calculateTotals();
 
@@ -2993,5 +3002,6 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
