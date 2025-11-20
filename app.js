@@ -1495,8 +1495,7 @@ doc.prestations.forEach((p) => {
 
   line.dataset.kind = p.kind || "";
   line.dataset.detail = p.detail || "";
-  line.dataset.basePrice = (p.price || 0).toFixed(2);
-  line.dataset.autoPrice = "1"; // ou "0" si tu veux figer le prix
+  // ⚠️ on NE met plus basePrice = p.price ici
   updatePurchaseVisibility(line);
   updatePriceLayout(line);
 
@@ -1504,26 +1503,41 @@ doc.prestations.forEach((p) => {
   const qtyInput = line.querySelector(".prestation-qty");
   const priceInput = line.querySelector(".prestation-price");
   const unitInput = line.querySelector(".prestation-unit");
-  const templateSelect = line.querySelector(".prestation-template"); // 👈 ICI
+  const templateSelect = line.querySelector(".prestation-template");
 
   if (descInput) descInput.value = p.desc;
   if (qtyInput) qtyInput.value = p.qty;
   if (priceInput) priceInput.value = p.price;
   if (unitInput) unitInput.value = p.unit || "";
 
-  // 🔙 On remet le BON modèle dans le select
+  // 🔁 on remet le bon modèle dans le select
   if (templateSelect) {
-    const idx = PRESTATION_TEMPLATES.findIndex(
-      (t) => t.kind === p.kind
-    );
+    const idx = PRESTATION_TEMPLATES.findIndex((t) => t.kind === p.kind);
     templateSelect.value = idx >= 0 ? String(idx) : "0";
   }
 
+  // 🧠 ICI on re-calcule le "prix de base" à partir du modèle + type client
+  const template = PRESTATION_TEMPLATES.find((t) => t.kind === p.kind);
+  if (template) {
+    const custom = getCustomPrices();
+    const clientType =
+      (document.getElementById("clientSyndic")?.checked ? "syndic" : "particulier");
+
+    const key = template.kind + "_" + clientType;
+    let base =
+      custom[key] != null
+        ? custom[key]
+        : clientType === "syndic"
+        ? (template.priceSyndic || 0)
+        : (template.priceParticulier || 0);
+
+    line.dataset.basePrice = base.toFixed(2); // ✅ base = tarif pour 1 clim
+  }
+
+  // dates…
   const datesContainer = line.querySelector(".prestation-dates");
   datesContainer.innerHTML = "";
-
   const dates = (p.dates && p.dates.length) ? p.dates : [""];
-
   dates.forEach((dv) => {
     const row = document.createElement("div");
     row.className = "prestation-date-row";
@@ -1547,8 +1561,8 @@ doc.prestations.forEach((p) => {
   });
 });
 
+calculateTotals(); // et on laisse faire la logique dégressive normale
 
-  calculateTotals();
 
   document.getElementById("formTitle").textContent =
     (doc.type === "devis" ? "Devis " : "Facture ") + doc.number;
@@ -3045,6 +3059,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
