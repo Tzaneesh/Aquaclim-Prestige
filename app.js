@@ -252,8 +252,7 @@ const PRESTATION_TEMPLATES = [
 ];
 
 const MARGIN_MULTIPLIER = 1.4;
-// Coefficient pour calculer le prix Syndic à partir du prix Particulier
-const SYNDIC_COEFF = 1.2; // adapte si tu veux 1.3, 1.4, etc
+
 // ================== VARIABLES GLOBALES ==================
 
 let currentDocumentId = null;
@@ -944,22 +943,11 @@ function applyTemplate(selectEl) {
   const unitInput = line.querySelector(".prestation-unit");
 
   // Description détaillée pour PDF
-  const customDescs = getCustomDescriptions();
-  let detailHidden =
+  const detailHidden =
     clientType === "particulier"
       ? template.descParticulier
       : template.descSyndic;
-
-  if (template.kind) {
-    const descKey =
-      template.kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
-    if (customDescs[descKey]) {
-      detailHidden = customDescs[descKey];
-    }
-  }
-
   line.dataset.detail = detailHidden || "";
-
 
   // Unité par défaut
   if (unitInput) {
@@ -1242,21 +1230,11 @@ function onClientTypeChange() {
     updatePurchaseVisibility(line);
     updatePriceLayout(line);
 
-     const customDescs = getCustomDescriptions();
-    let detailHidden =
+    const detailHidden =
       clientType === "particulier"
         ? template.descParticulier
         : template.descSyndic;
-
-    if (template.kind) {
-      const descKey =
-        template.kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
-      if (customDescs[descKey]) {
-        detailHidden = customDescs[descKey];
-      }
-    }
     line.dataset.detail = detailHidden || "";
-
 
     if (descInput) {
       let title = template.title || template.label || "";
@@ -1300,193 +1278,6 @@ function onClientTypeChange() {
 
   calculateTotals();
 }
-// ================== MODÈLES PERSO ==================
-
-// Récupère la liste des modèles personnalisés
-function getCustomTemplates() {
-  try {
-    const raw = localStorage.getItem("customTemplates");
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) {
-    console.error("Erreur lecture customTemplates :", e);
-    return [];
-  }
-}
-
-// Sauvegarde la liste des modèles personnalisés
-function saveCustomTemplates(arr) {
-  try {
-    localStorage.setItem("customTemplates", JSON.stringify(arr || []));
-  } catch (e) {
-    console.error("Erreur sauvegarde customTemplates :", e);
-  }
-}
-
-// Injecte les modèles persos dans PRESTATION_TEMPLATES au démarrage
-function initCustomTemplates() {
-  const extras = getCustomTemplates();
-  extras.forEach((t) => {
-    if (!t.kind) return;
-    const exists = PRESTATION_TEMPLATES.some((x) => x.kind === t.kind);
-    if (!exists) {
-      PRESTATION_TEMPLATES.push(t);
-    }
-  });
-}
-
-// -------- POPUP "AJOUTER UNE PRESTATION" --------
-
-// Ouvre la popup
-function openTemplateModal() {
-  const modal = document.getElementById("templateModal");
-  if (!modal) return;
-
-  const nameInput = document.getElementById("tplName");
-  const partInput = document.getElementById("tplPart");
-  const synInput = document.getElementById("tplSyn");
-
-  if (nameInput) nameInput.value = "";
-  if (partInput) partInput.value = "";
-  if (synInput) synInput.value = "";
-
-  modal.classList.remove("hidden");
-}
-
-// Ferme la popup
-function closeTemplateModal() {
-  const modal = document.getElementById("templateModal");
-  if (!modal) return;
-  modal.classList.add("hidden");
-}
-
-// Quand on tape le prix Particulier → calcule Syndic auto
-function onTplPartChange() {
-  const partInput = document.getElementById("tplPart");
-  const synInput = document.getElementById("tplSyn");
-  if (!partInput || !synInput) return;
-
-  const v = parseFloat(partInput.value || "0");
-  if (!v || v <= 0) {
-    synInput.value = "";
-    return;
-  }
-
-  // Utilise le coeff global + arrondi "pro" au multiple de 10 supérieur
-  let syn = v * SYNDIC_COEFF;      // SYNDIC_COEFF = 1.2 par ex.
-  syn = Math.ceil(syn / 10) * 10;  // arrondi au 10 supérieur
-  synInput.value = syn.toFixed(2);
-}
-
-// Valider la création du modèle
-function validateTemplateModal() {
-  const nameInput = document.getElementById("tplName");
-  const partInput = document.getElementById("tplPart");
-  const synInput = document.getElementById("tplSyn");
-
-  const label = (nameInput?.value || "").trim();
-  const partVal = parseFloat(partInput?.value || "0");
-  let synVal = parseFloat(synInput?.value || "0");
-
-  if (!label || !partVal || partVal <= 0) {
-    showConfirmDialog({
-      title: "Champs incomplets",
-      message: "Merci de renseigner au minimum le nom et le prix HT Particulier.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "warning",
-      icon: "⚠️"
-    });
-    return;
-  }
-
-  // Si le prix Syndic est vide ou nul → on recalcule
-  if (!synVal || synVal <= 0) {
-    synVal = partVal * SYNDIC_COEFF;
-    synVal = Math.ceil(synVal / 10) * 10;
-  }
-
-  // Création d'un "kind" unique
-  const slug = label
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-  const kind = "custom_" + slug + "_" + Date.now();
-
-  const newTpl = {
-    label,
-    kind,
-    title: label,
-    priceParticulier: partVal,
-    priceSyndic: synVal,
-    descParticulier: "",
-    descSyndic: ""
-  };
-
-  // 1) Ajouter à la liste des modèles persos
-  const extras = getCustomTemplates();
-  extras.push(newTpl);
-  saveCustomTemplates(extras);
-
-  // 2) Ajouter dans PRESTATION_TEMPLATES (pour le select des devis)
-  PRESTATION_TEMPLATES.push(newTpl);
-
-  // 3) Fermer la popup + recharger le panel tarifs
-  closeTemplateModal();
-  openTarifsPanel();
-
-  // 4) Petit message sympa
-  showConfirmDialog({
-    title: "Prestation créée",
-    message: "La nouvelle prestation a été ajoutée à la liste et sera disponible dans les devis et factures.",
-    confirmLabel: "OK",
-    cancelLabel: "",
-    variant: "success",
-    icon: "✅"
-  });
-}
-
-// Supprimer un modèle personnalisé (bouton ✖ dans le tableau des tarifs)
-function deleteTemplate(kind) {
-  if (!kind) return;
-
-  showConfirmDialog({
-    title: "Supprimer la prestation",
-    message:
-      "Es-tu sûr de vouloir supprimer cette prestation personnalisée ?\n" +
-      "Les lignes déjà créées dans les devis / factures ne seront pas supprimées.",
-    confirmLabel: "Supprimer",
-    cancelLabel: "Annuler",
-    variant: "danger",
-    icon: "🗑️",
-    onConfirm: function () {
-      // 1) retirer des modèles perso
-      let extras = getCustomTemplates();
-      extras = extras.filter((t) => t.kind !== kind);
-      saveCustomTemplates(extras);
-
-      // 2) retirer de PRESTATION_TEMPLATES
-      const idx = PRESTATION_TEMPLATES.findIndex((t) => t.kind === kind);
-      if (idx >= 0) PRESTATION_TEMPLATES.splice(idx, 1);
-
-      // 3) supprimer tarifs personnalisés liés
-      const customTarifs = getCustomPrices();
-      delete customTarifs[kind + "_particulier"];
-      delete customTarifs[kind + "_syndic"];
-      saveCustomPrices(customTarifs);
-
-      // 4) supprimer textes personnalisés liés
-      const customDescs = getCustomDescriptions();
-      delete customDescs[kind + "_particulier"];
-      delete customDescs[kind + "_syndic"];
-      saveCustomDescriptions(customDescs);
-
-      openTarifsPanel();
-    }
-  });
-}
-
 
 
 function selectClientType(type) {
@@ -2585,72 +2376,36 @@ function saveCustomPrices(obj) {
     console.error("Erreur sauvegarde customTarifs :", e);
   }
 }
-// ================== TEXTES PERSONNALISÉS (DESCRIPTIONS) ==================
-
-function getCustomDescriptions() {
-  try {
-    const raw = localStorage.getItem("customDescriptions");
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch (e) {
-    console.error("Erreur lecture customDescriptions :", e);
-    return {};
-  }
-}
-
-function saveCustomDescriptions(obj) {
-  try {
-    localStorage.setItem("customDescriptions", JSON.stringify(obj || {}));
-  } catch (e) {
-    console.error("Erreur sauvegarde customDescriptions :", e);
-  }
-}
 
 function syncTarifRow(input) {
   const row = input.closest("tr");
-  if (!row) return;
-
   const part = row.querySelector(".tarif-part");
   const syn = row.querySelector(".tarif-syn");
   const kind = input.dataset.kind || "";
+  const coef = 1.25;
 
-  if (!part || !syn) return;
-
-  // 🔹 CAS SPÉCIAL : DÉPLACEMENT = même prix pour tout le monde
+  // CAS SPÉCIAL : DÉPLACEMENT
+  // => Particulier = Syndic, aucun coefficient
   if (kind === "deplacement") {
-    const v = parseFloat(input.value || "0");
+    const v = parseFloat(input.value) || 0;
     const val = v > 0 ? v : 0;
-    part.value = val ? val.toFixed(2) : "";
-    syn.value = val ? val.toFixed(2) : "";
+    if (part) part.value = val;
+    if (syn) syn.value = val;
     return;
   }
 
-  // 🔹 CAS GÉNÉRAL : on utilise SYNDIC_COEFF (ex: 1.2) + arrondi
+  // CAS GÉNÉRAL : on garde ton coefficient 1,25
   if (input.classList.contains("tarif-part")) {
-    // Tu modifies Particulier → on recalcule Syndic
-    const p = parseFloat(part.value || "0");
-    if (!p || p <= 0) {
-      syn.value = "";
-      return;
-    }
-    let newSyn = p * SYNDIC_COEFF;
-    // arrondi au multiple de 10 supérieur
+    const p = parseFloat(part.value) || 0;
+    let newSyn = p * coef;
     newSyn = Math.ceil(newSyn / 10) * 10;
-    syn.value = newSyn.toFixed(2);
+    syn.value = newSyn;
   } else {
-    // Tu modifies Syndic → on recalcule le Particulier à partir du coeff
-    const s = parseFloat(syn.value || "0");
-    if (!s || s <= 0) {
-      part.value = "";
-      return;
-    }
-    let newPart = s / SYNDIC_COEFF;
-    // arrondi à 2 décimales classique
-    newPart = Math.round(newPart * 100) / 100;
-    part.value = newPart.toFixed(2);
+    const s = parseFloat(syn.value) || 0;
+    let newPart = s / coef;
+    part.value = Math.round(newPart * 100) / 100;
   }
 }
-
 
 
 function openTarifsPanel() {
@@ -2666,89 +2421,42 @@ function openTarifsPanel() {
     panel.style.display = "block";
 
     tbody.innerHTML = "";
-    const customPrices = getCustomPrices();
-    const customDescs = getCustomDescriptions();
+    const custom = getCustomPrices();
 
     PRESTATION_TEMPLATES.forEach((t) => {
-      // On ignore Produits & Fournitures dans ce tableau
-      if (!t.kind || t.kind === "produits" || t.kind === "fournitures") {
-        return;
-      }
+  // ⛔ On ignore Produits & Fournitures dans le tableau des tarifs
+  if (
+    !t.kind ||
+    t.kind === "produits" ||
+    t.kind === "fournitures"
+  ) {
+    return;
+  }
 
-      const keyPart = t.kind + "_particulier";
-      const keySyn = t.kind + "_syndic";
+  const keyPart = t.kind + "_particulier";
+  const keySyn = t.kind + "_syndic";
 
-      const valPart =
-        customPrices[keyPart] != null
-          ? customPrices[keyPart]
-          : t.priceParticulier ?? "";
-      const valSyn =
-        customPrices[keySyn] != null
-          ? customPrices[keySyn]
-          : t.priceSyndic ?? "";
+  const valPart =
+    custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
+  const valSyn =
+    custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
 
-      const descPart =
-        customDescs[keyPart] != null
-          ? customDescs[keyPart]
-          : t.descParticulier || "";
-      const descSyn =
-        customDescs[keySyn] != null
-          ? customDescs[keySyn]
-          : t.descSyndic || "";
+  const tr = document.createElement("tr");
+  tr.innerHTML =
+    `<td>${t.label}</td>` +
+    `<td><input type="number" step="0.01" class="tarif-part" ` +
+    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
+    `<td><input type="number" step="0.01" class="tarif-syn" ` +
+    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>`;
+  tbody.appendChild(tr);
+});
 
-      const tr = document.createElement("tr");
-
-      const canDelete = t.kind && t.kind.startsWith("custom_");
-      const deleteHtml = canDelete
-        ? `<button type="button"
-                    class="btn btn-danger btn-small tarif-delete-btn"
-                    onclick="deleteTemplate('${t.kind}')">✖</button>`
-        : "";
-
-      tr.innerHTML =
-        `<td>
-          <div class="tarif-label" onclick="toggleTarifDetails('${t.kind}')">
-            ${t.label}
-          </div>
-          <div class="tarif-details" id="tarifDetails-${t.kind}" style="display:none;">
-            <div class="tarif-desc-group">
-              <span class="tarif-desc-label">Texte Particulier</span>
-              <textarea
-                data-kind="${t.kind}"
-                data-type="particulier"
-                oninput="onTarifDescChange(this)"
-              >${descPart}</textarea>
-            </div>
-            <div class="tarif-desc-group">
-              <span class="tarif-desc-label">Texte Syndic / Agence</span>
-              <textarea
-                data-kind="${t.kind}"
-                data-type="syndic"
-                oninput="onTarifDescChange(this)"
-              >${descSyn}</textarea>
-            </div>
-          </div>
-        </td>` +
-        `<td>
-          <input type="number" step="0.01" class="tarif-part"
-            oninput="syncTarifRow(this)"
-            data-kind="${t.kind}" data-type="particulier"
-            value="${valPart}">
-        </td>` +
-        `<td>
-          <input type="number" step="0.01" class="tarif-syn"
-            oninput="syncTarifRow(this)"
-            data-kind="${t.kind}" data-type="syndic"
-            value="${valSyn}">
-        </td>` +
-        `<td style="text-align:right;">${deleteHtml}</td>`;
-
-      tbody.appendChild(tr);
-    });
 
     document.querySelectorAll(".tarifs-button").forEach((btn) => {
       btn.textContent = "⬆️ Revenir aux prestations";
     });
+
+ 
   } else {
     resetTarifsPanel();
     if (prestationsSection) {
@@ -2756,28 +2464,6 @@ function openTarifsPanel() {
     }
   }
 }
-function toggleTarifDetails(kind) {
-  const el = document.getElementById("tarifDetails-" + kind);
-  if (!el) return;
-  const isHidden = !el.style.display || el.style.display === "none";
-  el.style.display = isHidden ? "block" : "none";
-}
-
-function onTarifDescChange(textarea) {
-  const kind = textarea.dataset.kind;
-  const type = textarea.dataset.type;
-  if (!kind || !type) return;
-
-  const key = kind + "_" + (type === "syndic" ? "syndic" : "particulier");
-  const custom = getCustomDescriptions();
-  const value = textarea.value.trim();
-
-  if (value) custom[key] = value;
-  else delete custom[key];
-
-  saveCustomDescriptions(custom);
-}
-
 
 function resetTarifsPanel() {
   const panel = document.getElementById("tarifsPanel");
@@ -3739,15 +3425,11 @@ function openPrintable(id, previewOnly) {
 
 // ------- Init -------
 window.onload = function () {
-    initCustomTemplates();
     setTVA(0);
     switchListType("devis");
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
-
-
-
 
 
 

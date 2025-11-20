@@ -81,97 +81,50 @@
         </button>
       </div>
 
-    <!-- Panel Tarifs -->
-<div
-  id="tarifsPanel"
-  class="card no-print hidden"
->
-  <h2>Tarifs des prestations</h2>
-
-<!-- Boutons TOP -->
-<div class="tarifs-actions tarifs-actions-top">
-  <button
-    class="btn btn-secondary"
-    type="button"
-    onclick="closeTarifsPanel()"
-  >
-    ← Retour
-  </button>
-
-  <button
-    class="btn btn-primary"
-    type="button"
-    onclick="saveTarifsFromUI()"
-  >
-    💾 Enregistrer les tarifs
-  </button>
-
-  <button
-    class="btn btn-primary btn-small"
-    type="button"
-    onclick="openTemplateModal()"
-  >
-    ➕ Ajouter une prestation
-  </button>
-
-  <button
-    class="btn btn-danger"
-    type="button"
-    onclick="resetTarifs()"
-  >
-    Réinitialiser
-  </button>
-</div>
-
-
-  <table class="documents-table">
-    <thead>
-      <tr>
-        <th>Prestation</th>
-        <th>Prix Particulier</th>
-        <th>Prix Syndic / Agence</th>
-        <th style="width:70px;">Actions</th>
-      </tr>
-    </thead>
-    <tbody id="tarifsTableBody"></tbody>
-  </table>
-
-<!-- Boutons BOTTOM (mêmes actions) -->
-<div class="tarifs-actions tarifs-actions-bottom">
-  <button
-    class="btn btn-secondary"
-    type="button"
-    onclick="closeTarifsPanel()"
-  >
-    ← Retour
-  </button>
-
-  <button
-    class="btn btn-primary"
-    type="button"
-    onclick="saveTarifsFromUI()"
-  >
-    💾 Enregistrer les tarifs
-  </button>
-
-  <button
-    class="btn btn-primary btn-small"
-    type="button"
-    onclick="openTemplateModal()"
-  >
-    ➕ Ajouter une prestation
-  </button>
-
-  <button
-    class="btn btn-danger"
-    type="button"
-    onclick="resetTarifs()"
-  >
-    Réinitialiser
-  </button>
-</div>
-
-
+      <!-- Panel Tarifs -->
+      <div
+        id="tarifsPanel"
+        class="card no-print hidden"
+      >
+        <h2>Tarifs des prestations</h2>
+        <p class="tarifs-intro">
+          Modifie ici les prix HT par défaut utilisés quand tu choisis un modèle.
+          Laisse un champ vide pour revenir au prix d’origine du code.
+        </p>
+        <table class="documents-table">
+          <thead>
+            <tr>
+              <th>Prestation</th>
+              <th>Prix Particulier</th>
+              <th>Prix Syndic / Agence</th>
+            </tr>
+          </thead>
+          <tbody id="tarifsTableBody"></tbody>
+        </table>
+        <div class="tarifs-actions">
+          <button
+            class="btn btn-primary"
+            type="button"
+            onclick="saveTarifsFromUI()"
+          >
+            💾 Enregistrer les tarifs
+          </button>
+          <button
+            class="btn btn-secondary"
+            type="button"
+            onclick="closeTarifsPanel()"
+          >
+            Fermer
+          </button>
+          <button
+            class="btn btn-danger"
+            type="button"
+            onclick="resetTarifs()"
+          >
+            Réinitialiser
+          </button>
+        </div>
+      </div>
 
       <!-- Tableau documents -->
       <div class="card">
@@ -621,87 +574,30 @@
       </div>
     </section>
   </div>
-<!-- ================= MODAL AJOUT PRESTATION ================= -->
-<div id="templateModal" class="confirm-overlay hidden">
-  <div class="confirm-box info">
-    <div class="confirm-icon info">🧾</div>
-    <h3 class="confirm-title">Nouvelle prestation</h3>
-
-    <div class="form-group">
-      <label>Nom de la prestation *</label>
-      <input
-        type="text"
-        id="tplName"
-        placeholder="Ex : Entretien pompe piscine"
-      />
-    </div>
-
-    <div class="form-group">
-      <label>Prix HT Particulier *</label>
-      <input
-        type="number"
-        id="tplPart"
-        step="0.01"
-        min="0"
-        oninput="onTplPartChange()"
-        placeholder="Ex : 120"
-      />
-    </div>
-
-    <div class="form-group">
-      <label>Prix HT Syndic / Agence</label>
-      <input
-        type="number"
-        id="tplSyn"
-        step="0.01"
-        min="0"
-        placeholder="Calculé automatiquement"
-      />
-    </div>
-
-    <div class="confirm-buttons">
-      <button
-        type="button"
-        class="btn btn-secondary"
-        onclick="closeTemplateModal()"
-      >
-        Annuler
-      </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        onclick="validateTemplateModal()"
-      >
-        ✅ Créer
-      </button>
-    </div>
-  </div>
-</div>
-<!-- ========================================================= -->
 
 <!-- ================= POPUP CONFIRM CUSTOM ================= -->
 <div id="confirmOverlay" class="confirm-overlay hidden">
   <div class="confirm-box">
+
     <div class="confirm-icon" id="confirmIcon">⚠️</div>
+
     <h3 class="confirm-title" id="confirmTitle"></h3>
+
     <p class="confirm-message" id="confirmMessage"></p>
+
     <div class="confirm-buttons">
       <button id="confirmCancel" class="btn btn-secondary" type="button">Annuler</button>
       <button id="confirmOk" class="btn btn-danger" type="button">OK</button>
     </div>
+
   </div>
 </div>
+<!-- ========================================================= -->
+
 <!-- App JS -->
 <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
 
 
 

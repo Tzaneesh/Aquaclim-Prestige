@@ -762,79 +762,6 @@ textarea {
   z-index: 9999;
 }
 
-/* Tarifs panel */
-
-.tarifs-actions {
-  margin: 10px 0;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.tarifs-actions-top {
-  margin-bottom: 8px;
-}
-
-.tarifs-actions-bottom {
-  margin-top: 12px;
-}
-
-/* Label de prestation cliquable */
-.tarif-label {
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 13px;
-  margin-bottom: 4px;
-}
-
-.tarif-label::after {
-  content: " ✎";
-  font-size: 11px;
-  color: #777;
-}
-
-/* Zone cachée avec les textes détaillés */
-.tarif-details {
-  margin-top: 6px;
-  padding: 8px;
-  border-radius: 8px;
-  background: #f5f7fa;
-  border: 1px solid #dde4ee;
-}
-
-.tarif-desc-group {
-  margin-bottom: 6px;
-}
-
-.tarif-desc-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  margin-bottom: 3px;
-  color: #555;
-}
-
-.tarif-details textarea {
-  width: 100%;
-  min-height: 45px;
-  resize: vertical;
-  font-size: 12px;
-  padding: 6px;
-  border-radius: 6px;
-  border: 1px solid #d0d7e2;
-}
-
-.tarif-details textarea:focus {
-  outline: none;
-  border-color: #1a74d9;
-}
-
-/* Bouton de suppression de prestation (custom uniquement) */
-.tarif-delete-btn {
-  padding: 4px 8px;
-  font-size: 12px;
-  border-radius: 999px;
-}
 
 /* POPUP */
 #confirmOverlay .confirm-box {
@@ -861,38 +788,6 @@ textarea {
 }
 .confirm-box.info {
   border-top-color: #1a74d9;
-}
-/* Popup ajout prestation */
-.tpl-body {
-  margin: 10px 0 16px;
-  text-align: left;
-}
-
-.tpl-row {
-  margin-bottom: 10px;
-}
-
-.tpl-row label {
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 4px;
-  display: block;
-  color: #555;
-}
-
-.tpl-row input[type="text"],
-.tpl-row input[type="number"] {
-  width: 100%;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #d0d7e2;
-  font-size: 13px;
-}
-
-.tpl-row-2cols {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
 }
 
 /* ICÔNE RONDE EN HAUT CENTRÉ */
@@ -1005,8 +900,6 @@ textarea {
     border-radius: 0;
   }
 }
-
-
 
 
 
