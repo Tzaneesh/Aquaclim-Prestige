@@ -820,6 +820,131 @@ textarea {
     transform: translateX(-50%) translateY(0);
   }
 }
+/* OVERLAY */
+#confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 40px;
+  z-index: 9999;
+}
+
+/* POPUP */
+#confirmOverlay .confirm-box {
+  position: relative;
+  background: #fff;
+  width: 360px;
+  padding: 28px 22px 22px 22px;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  animation: popupSlideDown 0.25s ease-out;
+  border-top: 4px solid #1a74d9; /* par défaut info */
+  text-align: center;
+}
+
+/* variantes de couleur */
+.confirm-box.danger {
+  border-top-color: #d32f2f;
+}
+.confirm-box.success {
+  border-top-color: #2e7d32;
+}
+.confirm-box.info {
+  border-top-color: #1a74d9;
+}
+
+/* ICÔNE RONDE EN HAUT CENTRÉ */
+.confirm-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin: 0 auto 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: #e3f2fd;
+  color: #1a74d9;
+}
+
+/* variantes icône */
+.confirm-icon.danger {
+  background: #ffebee;
+  color: #d32f2f;
+}
+.confirm-icon.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.confirm-icon.info {
+  background: #e3f2fd;
+  color: #1a74d9;
+}
+
+/* TITRE + MESSAGE */
+#confirmTitle {
+  font-weight: 700;
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+#confirmMessage {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.45;
+  margin-bottom: 18px;
+  white-space: pre-line; /* garde les \n */
+}
+
+/* BOUTONS */
+.confirm-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+#confirmOk,
+#confirmCancel {
+  padding: 6px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  border: none;
+}
+
+#confirmOk {
+  background: #d32f2f;
+  color: white;
+}
+#confirmOk:hover {
+  background: #b71c1c;
+}
+
+#confirmCancel {
+  background: #e0e0e0;
+  color: #333;
+}
+#confirmCancel:hover {
+  background: #bdbdbd;
+}
+
+/* ANIM */
+@keyframes popupSlideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 /* ========== IMPRESSION ========== */
 
@@ -842,6 +967,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
