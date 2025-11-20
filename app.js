@@ -943,11 +943,22 @@ function applyTemplate(selectEl) {
   const unitInput = line.querySelector(".prestation-unit");
 
   // Description détaillée pour PDF
-  const detailHidden =
+  const customDescs = getCustomDescriptions();
+  let detailHidden =
     clientType === "particulier"
       ? template.descParticulier
       : template.descSyndic;
+
+  if (template.kind) {
+    const descKey =
+      template.kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
+    if (customDescs[descKey]) {
+      detailHidden = customDescs[descKey];
+    }
+  }
+
   line.dataset.detail = detailHidden || "";
+
 
   // Unité par défaut
   if (unitInput) {
@@ -1230,11 +1241,21 @@ function onClientTypeChange() {
     updatePurchaseVisibility(line);
     updatePriceLayout(line);
 
-    const detailHidden =
+     const customDescs = getCustomDescriptions();
+    let detailHidden =
       clientType === "particulier"
         ? template.descParticulier
         : template.descSyndic;
+
+    if (template.kind) {
+      const descKey =
+        template.kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
+      if (customDescs[descKey]) {
+        detailHidden = customDescs[descKey];
+      }
+    }
     line.dataset.detail = detailHidden || "";
+
 
     if (descInput) {
       let title = template.title || template.label || "";
@@ -1277,6 +1298,116 @@ function onClientTypeChange() {
   });
 
   calculateTotals();
+}
+// ================== MODÈLES PERSO ==================
+
+function getCustomTemplates() {
+  try {
+    const raw = localStorage.getItem("customTemplates");
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    console.error("Erreur lecture customTemplates :", e);
+    return [];
+  }
+}
+
+function saveCustomTemplates(arr) {
+  try {
+    localStorage.setItem("customTemplates", JSON.stringify(arr || []));
+  } catch (e) {
+    console.error("Erreur sauvegarde customTemplates :", e);
+  }
+}
+
+// Injecter les modèles perso dans PRESTATION_TEMPLATES au démarrage
+function initCustomTemplates() {
+  const extras = getCustomTemplates();
+  extras.forEach((t) => {
+    // on évite les doublons sur kind
+    if (!t.kind) return;
+    const exists = PRESTATION_TEMPLATES.some((x) => x.kind === t.kind);
+    if (!exists) {
+      PRESTATION_TEMPLATES.push(t);
+    }
+  });
+}
+
+// Ajouter une nouvelle prestation personnalisée
+function addCustomTemplate() {
+  const label = prompt("Nom de la nouvelle prestation :");
+  if (!label) return;
+
+  const pricePart = parseFloat(
+    prompt("Prix HT Particulier :", "0") || "0"
+  ) || 0;
+  const priceSyn = parseFloat(
+    prompt("Prix HT Syndic / Agence :", "0") || "0"
+  ) || 0;
+
+  const slug = label.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  const kind = "custom_" + slug + "_" + Date.now();
+
+  const newTpl = {
+    label,
+    kind,
+    title: label,
+    priceParticulier: pricePart,
+    priceSyndic: priceSyn,
+    descParticulier: "",
+    descSyndic: ""
+  };
+
+  const extras = getCustomTemplates();
+  extras.push(newTpl);
+  saveCustomTemplates(extras);
+
+  PRESTATION_TEMPLATES.push(newTpl);
+
+  // On recharge le panel si ouvert
+  openTarifsPanel();
+}
+
+// Supprimer un modèle personnalisé
+function deleteTemplate(kind) {
+  if (!kind) return;
+
+  // on demande une petite confirmation
+  showConfirmDialog({
+    title: "Supprimer la prestation",
+    message:
+      "Es-tu sûr de vouloir supprimer cette prestation personnalisée ?\n" +
+      "Les lignes déjà créées dans les devis / factures ne seront pas supprimées.",
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "🗑️",
+    onConfirm: function () {
+      // 1) retirer des modèles perso
+      let extras = getCustomTemplates();
+      extras = extras.filter((t) => t.kind !== kind);
+      saveCustomTemplates(extras);
+
+      // 2) retirer de PRESTATION_TEMPLATES
+      const idx = PRESTATION_TEMPLATES.findIndex((t) => t.kind === kind);
+      if (idx >= 0) PRESTATION_TEMPLATES.splice(idx, 1);
+
+      // 3) supprimer tarifs personnalisés liés
+      const customTarifs = getCustomPrices();
+      delete customTarifs[kind + "_particulier"];
+      delete customTarifs[kind + "_syndic"];
+      saveCustomPrices(customTarifs);
+
+      // 4) supprimer textes personnalisés liés
+      const customDescs = getCustomDescriptions();
+      delete customDescs[kind + "_particulier"];
+      delete customDescs[kind + "_syndic"];
+      saveCustomDescriptions(customDescs);
+
+      openTarifsPanel();
+    }
+  });
 }
 
 
@@ -2376,6 +2507,26 @@ function saveCustomPrices(obj) {
     console.error("Erreur sauvegarde customTarifs :", e);
   }
 }
+// ================== TEXTES PERSONNALISÉS (DESCRIPTIONS) ==================
+
+function getCustomDescriptions() {
+  try {
+    const raw = localStorage.getItem("customDescriptions");
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Erreur lecture customDescriptions :", e);
+    return {};
+  }
+}
+
+function saveCustomDescriptions(obj) {
+  try {
+    localStorage.setItem("customDescriptions", JSON.stringify(obj || {}));
+  } catch (e) {
+    console.error("Erreur sauvegarde customDescriptions :", e);
+  }
+}
 
 function syncTarifRow(input) {
   const row = input.closest("tr");
@@ -2421,42 +2572,89 @@ function openTarifsPanel() {
     panel.style.display = "block";
 
     tbody.innerHTML = "";
-    const custom = getCustomPrices();
+    const customPrices = getCustomPrices();
+    const customDescs = getCustomDescriptions();
 
     PRESTATION_TEMPLATES.forEach((t) => {
-  // ⛔ On ignore Produits & Fournitures dans le tableau des tarifs
-  if (
-    !t.kind ||
-    t.kind === "produits" ||
-    t.kind === "fournitures"
-  ) {
-    return;
-  }
+      // On ignore Produits & Fournitures dans ce tableau
+      if (!t.kind || t.kind === "produits" || t.kind === "fournitures") {
+        return;
+      }
 
-  const keyPart = t.kind + "_particulier";
-  const keySyn = t.kind + "_syndic";
+      const keyPart = t.kind + "_particulier";
+      const keySyn = t.kind + "_syndic";
 
-  const valPart =
-    custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
-  const valSyn =
-    custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
+      const valPart =
+        customPrices[keyPart] != null
+          ? customPrices[keyPart]
+          : t.priceParticulier ?? "";
+      const valSyn =
+        customPrices[keySyn] != null
+          ? customPrices[keySyn]
+          : t.priceSyndic ?? "";
 
-  const tr = document.createElement("tr");
-  tr.innerHTML =
-    `<td>${t.label}</td>` +
-    `<td><input type="number" step="0.01" class="tarif-part" ` +
-    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
-    `<td><input type="number" step="0.01" class="tarif-syn" ` +
-    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>`;
-  tbody.appendChild(tr);
-});
+      const descPart =
+        customDescs[keyPart] != null
+          ? customDescs[keyPart]
+          : t.descParticulier || "";
+      const descSyn =
+        customDescs[keySyn] != null
+          ? customDescs[keySyn]
+          : t.descSyndic || "";
 
+      const tr = document.createElement("tr");
+
+      const canDelete = t.kind && t.kind.startsWith("custom_");
+      const deleteHtml = canDelete
+        ? `<button type="button"
+                    class="btn btn-danger btn-small tarif-delete-btn"
+                    onclick="deleteTemplate('${t.kind}')">✖</button>`
+        : "";
+
+      tr.innerHTML =
+        `<td>
+          <div class="tarif-label" onclick="toggleTarifDetails('${t.kind}')">
+            ${t.label}
+          </div>
+          <div class="tarif-details" id="tarifDetails-${t.kind}" style="display:none;">
+            <div class="tarif-desc-group">
+              <span class="tarif-desc-label">Texte Particulier</span>
+              <textarea
+                data-kind="${t.kind}"
+                data-type="particulier"
+                oninput="onTarifDescChange(this)"
+              >${descPart}</textarea>
+            </div>
+            <div class="tarif-desc-group">
+              <span class="tarif-desc-label">Texte Syndic / Agence</span>
+              <textarea
+                data-kind="${t.kind}"
+                data-type="syndic"
+                oninput="onTarifDescChange(this)"
+              >${descSyn}</textarea>
+            </div>
+          </div>
+        </td>` +
+        `<td>
+          <input type="number" step="0.01" class="tarif-part"
+            oninput="syncTarifRow(this)"
+            data-kind="${t.kind}" data-type="particulier"
+            value="${valPart}">
+        </td>` +
+        `<td>
+          <input type="number" step="0.01" class="tarif-syn"
+            oninput="syncTarifRow(this)"
+            data-kind="${t.kind}" data-type="syndic"
+            value="${valSyn}">
+        </td>` +
+        `<td style="text-align:right;">${deleteHtml}</td>`;
+
+      tbody.appendChild(tr);
+    });
 
     document.querySelectorAll(".tarifs-button").forEach((btn) => {
       btn.textContent = "⬆️ Revenir aux prestations";
     });
-
- 
   } else {
     resetTarifsPanel();
     if (prestationsSection) {
@@ -2464,6 +2662,28 @@ function openTarifsPanel() {
     }
   }
 }
+function toggleTarifDetails(kind) {
+  const el = document.getElementById("tarifDetails-" + kind);
+  if (!el) return;
+  const isHidden = !el.style.display || el.style.display === "none";
+  el.style.display = isHidden ? "block" : "none";
+}
+
+function onTarifDescChange(textarea) {
+  const kind = textarea.dataset.kind;
+  const type = textarea.dataset.type;
+  if (!kind || !type) return;
+
+  const key = kind + "_" + (type === "syndic" ? "syndic" : "particulier");
+  const custom = getCustomDescriptions();
+  const value = textarea.value.trim();
+
+  if (value) custom[key] = value;
+  else delete custom[key];
+
+  saveCustomDescriptions(custom);
+}
+
 
 function resetTarifsPanel() {
   const panel = document.getElementById("tarifsPanel");
@@ -3425,11 +3645,13 @@ function openPrintable(id, previewOnly) {
 
 // ------- Init -------
 window.onload = function () {
+    initCustomTemplates();
     setTVA(0);
     switchListType("devis");
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
