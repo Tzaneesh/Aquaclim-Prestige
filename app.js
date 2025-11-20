@@ -663,6 +663,34 @@ function onDiscountPercentChange() {
 }
 
 // ================== PRESTATIONS ==================
+function addPassageDate(btn) {
+  // On part du bouton "➕ Ajouter une date"
+  // et on récupère le bloc .prestation-dates juste au-dessus
+  const container = btn.previousElementSibling;
+  if (!container || !container.classList.contains("prestation-dates")) {
+    return;
+  }
+
+  const row = document.createElement("div");
+  row.className = "prestation-date-row";
+
+  const input = document.createElement("input");
+  input.type = "date";
+  input.className = "prestation-date";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className =
+    "btn btn-danger btn-small date-remove-btn no-print";
+  removeBtn.textContent = "✖";
+  removeBtn.onclick = function () {
+    removePassageDate(removeBtn);
+  };
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
 
 function removePassageDate(btn) {
   const row = btn.closest(".prestation-date-row");
@@ -3002,6 +3030,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
