@@ -1455,17 +1455,17 @@ function loadDocument(id) {
   prestationCount = 0;
   const prestationsContainer = document.getElementById("prestationsContainer");
   prestationsContainer.innerHTML = "";
+
   doc.prestations.forEach((p) => {
     addPrestation();
     const lines = document.querySelectorAll(".prestation-line");
     const line = lines[lines.length - 1];
 
-        line.dataset.kind = p.kind || "";
+    line.dataset.kind = p.kind || "";
     line.dataset.detail = p.detail || "";
     line.dataset.basePrice = (p.price || 0).toFixed(2);
     updatePurchaseVisibility(line);
     updatePriceLayout(line);
-
 
     const descInput = line.querySelector(".prestation-desc");
     const qtyInput = line.querySelector(".prestation-qty");
@@ -1478,33 +1478,32 @@ function loadDocument(id) {
     if (unitInput) unitInput.value = p.unit || "";
 
     const datesContainer = line.querySelector(".prestation-dates");
-datesContainer.innerHTML = "";
+    datesContainer.innerHTML = "";
 
-const dates = (p.dates && p.dates.length) ? p.dates : [""];
+    const dates = (p.dates && p.dates.length) ? p.dates : [""];
 
-dates.forEach((dv) => {
-  const row = document.createElement("div");
-  row.className = "prestation-date-row";
+    dates.forEach((dv) => {
+      const row = document.createElement("div");
+      row.className = "prestation-date-row";
 
-  const inp = document.createElement("input");
-  inp.type = "date";
-  inp.className = "prestation-date";
-  if (dv) inp.value = dv; // dv doit être au format YYYY-MM-DD pour bien préremplir
+      const inp = document.createElement("input");
+      inp.type = "date";
+      inp.className = "prestation-date";
+      if (dv) inp.value = dv;
 
-  const removeBtn = document.createElement("button");
-  removeBtn.type = "button";
-  removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
-  removeBtn.textContent = "✖";
-  removeBtn.onclick = function () {
-    removePassageDate(removeBtn);
-  };
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
+      removeBtn.textContent = "✖";
+      removeBtn.onclick = function () {
+        removePassageDate(removeBtn);
+      };
 
-    row.appendChild(inp);
-    row.appendChild(removeBtn);
-    datesContainer.appendChild(row);
+      row.appendChild(inp);
+      row.appendChild(removeBtn);
+      datesContainer.appendChild(row);
+    });
   });
-});
-
 
   calculateTotals();
 
@@ -3003,5 +3002,6 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
