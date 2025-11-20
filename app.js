@@ -664,16 +664,37 @@ function onDiscountPercentChange() {
 
 // ================== PRESTATIONS ==================
 
-function addPassageDate(btn) {
-  const container =
-    btn.closest(".form-group").querySelector(".prestation-dates");
-  if (!container) return;
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "prestation-date";
-  input.placeholder = "JJ/MM/AAAA";
-  container.appendChild(input);
+function removePassageDate(btn) {
+  const row = btn.closest(".prestation-date-row");
+  if (!row) return;
+
+  const container = row.parentElement;
+  row.remove();
+
+  // On s'assure qu'il reste toujours au moins 1 ligne de date
+  if (container.querySelectorAll(".prestation-date-row").length === 0) {
+    const newRow = document.createElement("div");
+    newRow.className = "prestation-date-row";
+
+    const input = document.createElement("input");
+    input.type = "date";
+    input.className = "prestation-date";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className =
+      "btn btn-danger btn-small date-remove-btn no-print";
+    removeBtn.textContent = "✖";
+    removeBtn.onclick = function () {
+      removePassageDate(removeBtn);
+    };
+
+    newRow.appendChild(input);
+    newRow.appendChild(removeBtn);
+    container.appendChild(newRow);
+  }
 }
+
 
 function addPrestation() {
   prestationCount++;
@@ -705,19 +726,29 @@ function addPrestation() {
       />
       <label style="margin-top:6px;">Dates de passage</label>
       <div class="prestation-dates">
-        <input
-          type="text"
-          class="prestation-date"
-          placeholder="JJ/MM/AAAA"
-        />
-      </div>
-      <button
-        type="button"
-        class="btn btn-secondary btn-small dates-add-btn no-print"
-        onclick="addPassageDate(this)"
-      >
-        ➕ Ajouter une date
-      </button>
+  <div class="prestation-date-row">
+    <input
+      type="date"
+      class="prestation-date"
+    />
+    <button
+      type="button"
+      class="btn btn-danger btn-small date-remove-btn no-print"
+      onclick="removePassageDate(this)"
+      title="Supprimer cette date"
+    >
+      ✖
+    </button>
+  </div>
+</div>
+<button
+  type="button"
+  class="btn btn-secondary btn-small dates-add-btn no-print"
+  onclick="addPassageDate(this)"
+>
+  ➕ Ajouter une date
+</button>
+
     </div>
     <div class="form-group">
       <div class="qty-price-group">
@@ -2962,4 +2993,5 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
