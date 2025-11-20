@@ -2611,7 +2611,7 @@ function openPrintable(id) {
   gap:18px;
 }
 .client-col{
-  width:48%;
+  width:0%;
 }
 
 
@@ -2959,6 +2959,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
