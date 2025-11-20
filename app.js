@@ -2033,7 +2033,7 @@ const actionsHtml =
       `<button class="${printBtnClass}" type="button" onclick="openPrintable('${doc.id}')">Imprimer</button>` +
     `</div>` +
     `<div class="actions-btns-row">` +
-      `<button class="${previewBtnClass}" type="button" onclick="openPrintable('${doc.id}', true)">Aperçu PDF</button>` +
+      `<button class="${previewBtnClass}" type="button" onclick="openPrintable('${doc.id}', true)">Aperçu</button>` +
       `<button class="${deleteBtnClass}" type="button" onclick="deleteDocument('${doc.id}')">Supprimer</button>` +
     `</div>` +
   `</div>`;
@@ -3117,6 +3117,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
