@@ -1213,10 +1213,13 @@ function onClientTypeChange() {
     if (isNaN(index) || index <= 0 || index >= PRESTATION_TEMPLATES.length)
       return;
 
+    // 🔒 On mémorise la quantité actuelle
+    const prevQty = qtyInput ? qtyInput.value : null;
+
     const template = PRESTATION_TEMPLATES[index];
     line.dataset.kind = template.kind || "";
     updatePurchaseVisibility(line);
-updatePriceLayout(line);
+    updatePriceLayout(line);
 
     const detailHidden =
       clientType === "particulier"
@@ -1234,38 +1237,39 @@ updatePriceLayout(line);
       descInput.value = title;
     }
 
-    // Prix : on regarde d'abord si un tarif personnalisé existe
-if (priceInput) {
-  const custom = getCustomPrices(); 
-  let price = 0;
+    if (priceInput) {
+      const custom = getCustomPrices();
+      let price = 0;
 
-  if (template.kind) {
-    const key =
-      template.kind + "_" +
-      (clientType === "syndic" ? "syndic" : "particulier");
+      if (template.kind) {
+        const key =
+          template.kind + "_" +
+          (clientType === "syndic" ? "syndic" : "particulier");
 
-    // Si un prix modifié existe → on l'utilise
-    if (custom[key] != null) {
-      price = custom[key];
-    } else {
-      // Sinon → prix d'origine du template
-      price =
-        clientType === "syndic"
-          ? template.priceSyndic || 0
-          : template.priceParticulier || 0;
+        if (custom[key] != null) {
+          price = custom[key];
+        } else {
+          price =
+            clientType === "syndic"
+              ? template.priceSyndic || 0
+              : template.priceParticulier || 0;
+        }
+      }
+
+      priceInput.value = price.toFixed(2);
+      line.dataset.basePrice = price.toFixed(2);
+      line.dataset.autoPrice = "1";
     }
-  }
 
-  priceInput.value = price.toFixed(2);
-  line.dataset.basePrice = price.toFixed(2);
-  line.dataset.autoPrice = "1";
-}
-
-
+    // 🔒 On remet la quantité d’origine si on l’avait
+    if (qtyInput && prevQty !== null) {
+      qtyInput.value = prevQty;
+    }
   });
 
   calculateTotals();
 }
+
 
 function selectClientType(type) {
   const part = document.getElementById("clientParticulier");
@@ -3041,6 +3045,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
