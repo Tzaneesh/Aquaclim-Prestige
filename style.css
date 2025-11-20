@@ -250,7 +250,10 @@ body {
 }
 
 .prestation-date-row .prestation-date {
-  flex: 1;
+  width: 140px;            /* largeur parfaite pour jj/mm/aaaa */
+  min-width: 140px;
+  max-width: 140px;
+  padding: 7px;
 }
 
 .date-remove-btn {
@@ -897,6 +900,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
