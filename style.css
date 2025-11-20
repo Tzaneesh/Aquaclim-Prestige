@@ -202,17 +202,22 @@ body {
   color: #1a74d9;
   margin-bottom: 20px;
   font-size: 22px;
-}/* Mode impression : bloc Client + Site en 2 colonnes */
+/* Mode impression : bloc Client + Site en 2 colonnes */
 .print-client-block {
   display: flex;
-  justify-content: space-between;
   gap: 20px;
   width: 100%;
 }
 
-.print-client-left,
+/* Colonne gauche : prend la place dispo */
+.print-client-left {
+  flex: 1 1 auto;
+}
+
+/* Colonne droite : collée à droite */
 .print-client-right {
-  width: 48%;
+  flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .print-client-block h3 {
@@ -220,12 +225,15 @@ body {
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
-}.client-inner-row{
+}
+
+.client-inner-row{
   display:flex;
-  flex-wrap:wrap;        /* permet de repasser à la ligne si trop serré */
+  flex-wrap:wrap;
   gap:18px;
   width:100%;
 }
+
 
 /* Colonne gauche = prend toute la place dispo */
 .client-col.left{
@@ -727,4 +735,5 @@ textarea {
     border-radius: 0;
   }
 }
+
 
