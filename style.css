@@ -203,17 +203,7 @@ body {
   margin-bottom: 20px;
   font-size: 22px;
 }/* Mode impression : bloc Client + Site en 2 colonnes */
-.print-client-block {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  width: 100%;
-}
 
-.print-client-left,
-.print-client-right {
-  width: 48%;
-}
 
 .print-client-block h3 {
   margin-bottom: 6px;
@@ -736,4 +726,5 @@ textarea {
     border-radius: 0;
   }
 }
+
 
