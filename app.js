@@ -1801,6 +1801,35 @@ function deleteCurrent() {
   alert("Document supprimé");
   backToList();
 }
+function deleteDocument(id) {
+  const docs = getAllDocuments();
+  const doc = docs.find((d) => d.id === id);
+  if (!doc) return;
+
+  const typeLabel = doc.type === "devis" ? "devis" : "facture";
+
+  const ok = confirm(
+    "Voulez-vous vraiment supprimer ce " +
+      typeLabel +
+      " (" +
+      doc.number +
+      ") de façon définitive ?"
+  );
+  if (!ok) return;
+
+  const newDocs = docs.filter((d) => d.id !== id);
+  saveDocuments(newDocs);
+
+  if (db) {
+    db.collection("documents")
+      .doc(id)
+      .delete()
+      .catch((err) => console.error("Erreur Firestore delete :", err));
+  }
+
+  alert(typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1) + " supprimé.");
+  loadDocumentsList();
+}
 
 
 function duplicateDocument(id) {
@@ -1977,27 +2006,35 @@ if (doc.type === "devis") {
 
 let openBtnClass = "btn btn-primary btn-small";
 let printBtnClass = "btn btn-primary btn-small";
-let duplicateBtnClass = "btn btn-primary btn-small";
 
 if (doc.type === "facture") {
   if (doc.paid) {
     openBtnClass = "btn btn-success btn-small";
     printBtnClass = "btn btn-success btn-small";
-    duplicateBtnClass = "btn btn-success btn-small";
   } else {
     openBtnClass = "btn btn-danger btn-small";
     printBtnClass = "btn btn-danger btn-small";
-    duplicateBtnClass = "btn btn-danger btn-small";
   }
 }
 
+// Aperçu = même couleur que Imprimer
+const previewBtnClass = printBtnClass;
+// Supprimer = toujours rouge
+const deleteBtnClass = "btn btn-danger btn-small";
 
 const actionsHtml =
   `<div class="actions-btns">` +
-  `<button class="${openBtnClass}" type="button" onclick="loadDocument('${doc.id}')">Ouvrir</button>` +
-  `<button class="${printBtnClass}" type="button" onclick="openPrintable('${doc.id}')">Imprimer</button>` +
-  `<button class="${duplicateBtnClass}" type="button" onclick="duplicateDocument('${doc.id}')">Dupliquer</button>` +
+    `<div class="actions-btns-row">` +
+      `<button class="${openBtnClass}" type="button" onclick="loadDocument('${doc.id}')">Modifier</button>` +
+      `<button class="${printBtnClass}" type="button" onclick="openPrintable('${doc.id}')">Imprimer</button>` +
+    `</div>` +
+    `<div class="actions-btns-row">` +
+      `<button class="${previewBtnClass}" type="button" onclick="openPrintable('${doc.id}', true)">Aperçu PDF</button>` +
+      `<button class="${deleteBtnClass}" type="button" onclick="deleteDocument('${doc.id}')">Supprimer</button>` +
+    `</div>` +
   `</div>`;
+
+
 
 
     tr.innerHTML =
@@ -2294,12 +2331,13 @@ function resetTarifs() {
 
 // ================== IMPRESSION / PDF ==================
 
-function openPrintable(id) {
+function openPrintable(id, previewOnly) {
   const targetId = id || currentDocumentId;
   if (!targetId) {
     alert("Veuillez d'abord enregistrer le document");
     return;
   }
+
   const doc = getDocument(targetId);
   if (!doc) return;
 
@@ -3055,13 +3093,16 @@ function openPrintable(id) {
 </body>
 </html>`;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+  printWindow.document.write(html);
+  printWindow.document.close();
 
-    printWindow.onload = function () {
-        printWindow.focus();
-        printWindow.print();
-    };
+  printWindow.onload = function () {
+    printWindow.focus();
+    // 👇 si previewOnly est true → on n'imprime pas
+    if (!previewOnly) {
+      printWindow.print();
+    }
+  };
 }
 
 
@@ -3072,6 +3113,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
