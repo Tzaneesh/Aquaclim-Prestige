@@ -508,18 +508,27 @@ textarea {
 }
 
 .actions-btns {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: stretch;
+  margin-bottom: 4px;
+}
+
+.actions-btns-row {
+  display: flex;
   gap: 6px;
   width: 100%;
 }
 
-.actions-btns .btn {
-  padding: 4px 6px;
-  font-size: 11px;
+.actions-btns-row .btn {
+  flex: 1;
   text-align: center;
-  width: 100%;
+  padding: 2px 6px;
+  font-size: 11px;
 }
+
+
 
 .form-actions {
   display: flex;
@@ -732,6 +741,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
