@@ -1,4 +1,4 @@
-il n'y a pas une parenthse qui plante le script ? tout va bien // ================== CONSTANTES / MODÈLES ==================
+// ================== CONSTANTES / MODÈLES ==================
 
 // Modèles de prestations (Particulier / Syndic + descriptions + types)
 const PRESTATION_TEMPLATES = [
@@ -3002,6 +3002,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
