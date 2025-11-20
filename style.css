@@ -605,6 +605,10 @@ textarea {
   background: #ffebee;
   color: #c62828;
 }
+/* Bloc "Lieu d’intervention" + client : 2 colonnes pleine largeur */
+#siteBlock {
+  grid-template-columns: 1fr 1fr;   /* remplace le auto-fit */
+}
 
 
 /* Factures payées / non payées */
@@ -723,3 +727,4 @@ textarea {
     border-radius: 0;
   }
 }
+
