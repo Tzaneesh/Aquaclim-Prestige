@@ -202,8 +202,7 @@ body {
   color: #1a74d9;
   margin-bottom: 20px;
   font-size: 22px;
-/* Mode impression : bloc Client + Site en 2 colonnes */
-
+}/* Mode impression : bloc Client + Site en 2 colonnes */
 .print-client-block {
   display: flex;
   justify-content: space-between;
@@ -221,13 +220,24 @@ body {
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
-}
-
-.client-inner-row{
+}.client-inner-row{
   display:flex;
-  flex-wrap:wrap;
+  flex-wrap:wrap;        /* permet de repasser à la ligne si trop serré */
   gap:18px;
   width:100%;
+}
+
+/* Colonne gauche = prend toute la place dispo */
+.client-col.left{
+  flex:1 1 auto;
+  min-width:220px;       /* évite que ça s’écrase trop */
+}
+
+/* Colonne droite = collée à droite */
+.client-col.right{
+  flex:0 0 auto;         /* largeur = largeur du contenu */
+  margin-left:auto;      /* pousse la colonne à fond à droite */
+  min-width:220px;       /* si la largeur devient trop petite → wrap en dessous */
 }
 
 
@@ -595,10 +605,6 @@ textarea {
   background: #ffebee;
   color: #c62828;
 }
-/* Bloc "Lieu d’intervention" + client : 2 colonnes pleine largeur */
-#siteBlock {
-  grid-template-columns: 1fr 1fr;   /* remplace le auto-fit */
-}
 
 
 /* Factures payées / non payées */
@@ -717,6 +723,3 @@ textarea {
     border-radius: 0;
   }
 }
-
-
-
