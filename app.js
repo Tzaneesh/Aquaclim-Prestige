@@ -1801,38 +1801,65 @@ function deleteCurrent() {
   alert("Document supprimé");
   backToList();
 }
-function deleteDocument(id) {
-  const docs = getAllDocuments();
-  const doc = docs.find((d) => d.id === id);
-  if (!doc) return;
+function deleteCurrent() {
+  const typeSelect = document.getElementById("docType");
+  const type = typeSelect ? typeSelect.value : "devis";
+  const docNumber = document.getElementById("docNumber")?.value || "";
+  const subject = (document.getElementById("docSubject")?.value || "").trim() || "Sans objet";
 
-  const typeLabel = doc.type === "facture" ? "FACTURE" : "DEVIS";
-  const number = doc.number || "(numéro inconnu)";
-  const subject = doc.subject || "Sans objet";
+  // 1) Document pas encore enregistré
+  if (!currentDocumentId) {
+    const typeLabel = type === "devis" ? "DEVIS" : "FACTURE";
 
-  const ok = confirm(
-    `⚠️ Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${number} :\n` +
-    `« ${subject} » ?\n\n` +
-    `Cette action est définitive.`
-  );
+    const title = `Effacer le ${typeLabel} en cours`;
+    const message =
+      `Ce ${typeLabel} (${docNumber || "non numéroté"}) n'a pas encore été enregistré.\n\n` +
+      `Voulez-vous effacer tout le contenu et repartir sur un nouveau ${typeLabel.toLowerCase()} vierge ?`;
 
-  if (!ok) return;
+    showConfirmDialog({
+      title,
+      message,
+      confirmLabel: "Réinitialiser",
+      cancelLabel: "Annuler",
+      onConfirm: function () {
+        newDocument(type);
+      }
+    });
 
-  // Suppression en local
-  const newDocs = docs.filter((d) => d.id !== id);
-  saveDocuments(newDocs);
-
-  // Suppression Firestore si disponible
-  if (db) {
-    db.collection("documents")
-      .doc(id)
-      .delete()
-      .catch((err) => console.error("Erreur Firestore delete :", err));
+    return;
   }
 
-  alert(`${typeLabel} ${number} supprimé.`);
-  loadDocumentsList();
+  // 2) Document déjà enregistré -> vraie suppression
+  const typeLabel = type === "devis" ? "DEVIS" : "FACTURE";
+  const title = `Supprimer le ${typeLabel}`;
+  const message =
+    `Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${docNumber} :\n` +
+    `« ${subject} » ?\n\nCette action est définitive.`;
+
+  showConfirmDialog({
+    title,
+    message,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    onConfirm: function () {
+      const idToDelete = currentDocumentId;
+      const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
+      saveDocuments(docs);
+
+      if (db) {
+        db.collection("documents")
+          .doc(idToDelete)
+          .delete()
+          .catch((err) =>
+            console.error("Erreur Firestore delete :", err)
+          );
+      }
+
+      backToList();
+    }
+  });
 }
+
 
 
 
@@ -2331,6 +2358,44 @@ function resetTarifs() {
   saveCustomPrices({});
   alert("Tarifs réinitialisés.");
   openTarifsPanel();
+}
+// ================== MODAL DE CONFIRMATION ==================
+
+function showConfirmDialog({ title, message, confirmLabel = "OK", cancelLabel = "Annuler", onConfirm }) {
+  const overlay = document.getElementById("confirmOverlay");
+  const titleEl = document.getElementById("confirmTitle");
+  const msgEl = document.getElementById("confirmMessage");
+  const btnOk = document.getElementById("confirmOk");
+  const btnCancel = document.getElementById("confirmCancel");
+
+  if (!overlay || !titleEl || !msgEl || !btnOk || !btnCancel) {
+    // fallback sécurité : confirm natif si le HTML n'est pas là
+    if (confirm(message)) {
+      if (typeof onConfirm === "function") onConfirm();
+    }
+    return;
+  }
+
+  titleEl.textContent = title || "";
+  msgEl.textContent = message || "";
+
+  btnOk.textContent = confirmLabel || "OK";
+  btnCancel.textContent = cancelLabel || "Annuler";
+
+  // Nettoyage des anciens handlers
+  btnOk.onclick = null;
+  btnCancel.onclick = null;
+
+  btnCancel.onclick = function () {
+    overlay.classList.add("hidden");
+  };
+
+  btnOk.onclick = function () {
+    overlay.classList.add("hidden");
+    if (typeof onConfirm === "function") onConfirm();
+  };
+
+  overlay.classList.remove("hidden");
 }
 
 // ================== IMPRESSION / PDF ==================
@@ -3117,6 +3182,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
