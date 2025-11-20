@@ -203,21 +203,17 @@ body {
   margin-bottom: 20px;
   font-size: 22px;
 /* Mode impression : bloc Client + Site en 2 colonnes */
+
 .print-client-block {
   display: flex;
+  justify-content: space-between;
   gap: 20px;
   width: 100%;
 }
 
-/* Colonne gauche : prend la place dispo */
-.print-client-left {
-  flex: 1 1 auto;
-}
-
-/* Colonne droite : collée à droite */
+.print-client-left,
 .print-client-right {
-  flex: 0 0 auto;
-  margin-left: auto;
+  width: 48%;
 }
 
 .print-client-block h3 {
@@ -232,20 +228,6 @@ body {
   flex-wrap:wrap;
   gap:18px;
   width:100%;
-}
-
-
-/* Colonne gauche = prend toute la place dispo */
-.client-col.left{
-  flex:1 1 auto;
-  min-width:220px;       /* évite que ça s’écrase trop */
-}
-
-/* Colonne droite = collée à droite */
-.client-col.right{
-  flex:0 0 auto;         /* largeur = largeur du contenu */
-  margin-left:auto;      /* pousse la colonne à fond à droite */
-  min-width:220px;       /* si la largeur devient trop petite → wrap en dessous */
 }
 
 
@@ -735,5 +717,6 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
