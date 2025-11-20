@@ -719,6 +719,82 @@ textarea {
     width: 100%;
   }
 }
+/* ====== MODAL DE CONFIRMATION ====== */
+
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.confirm-overlay.hidden {
+  display: none;
+}
+
+.confirm-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  padding: 20px 22px;
+  width: min(420px, 90vw);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.25);
+  text-align: left;
+}
+
+.confirm-icon {
+  font-size: 26px;
+  margin-bottom: 8px;
+}
+
+.confirm-title {
+  font-size: 18px;
+  margin-bottom: 6px;
+  color: #1a74d9;
+}
+
+.confirm-message {
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 16px;
+  white-space: pre-line; /* pour garder les retours à la ligne */
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.confirm-actions .btn {
+  font-size: 13px;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+/* ====== BOUTONS "Modifier / Imprimer / Aperçu / Supprimer" PLUS GRANDS ====== */
+
+.actions-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.actions-btns-row {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.actions-btns-row .btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+}
 
 /* ========== IMPRESSION ========== */
 
@@ -741,6 +817,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
