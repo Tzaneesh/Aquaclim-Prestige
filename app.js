@@ -343,6 +343,15 @@ function formatEuro(value) {
     }) + " €"
   );
 }
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 function isDevisExpired(docType, validityDate) {
   if (docType !== "devis" || !validityDate) return false;
@@ -2173,16 +2182,28 @@ const actionsHtml =
 
 
 
-    tr.innerHTML =
-      `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
-      `<td>${doc.number}</td>` +
-      `<td>${doc.client?.name || ""}</td>` +
-      `<td>${
-        doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : ""
-      }</td>` +
-      `<td><strong>${formatEuro(doc.totalTTC)}</strong></td>` +
-      `<td class="status-cell">${statutHTML}</td>` +
-      `<td>${actionsHtml}</td>`;
+  const clientName = doc.client?.name || "";
+const subject = (doc.subject || "").trim();
+const safeClient = escapeHtml(clientName);
+const safeSubject = escapeHtml(subject);
+
+tr.innerHTML =
+  `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
+  `<td>${doc.number}</td>` +
+  `<td class="client-cell">` +
+    `<div class="client-main" title="${safeClient}">${safeClient || "-"}</div>` +
+    (subject
+      ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
+      : ""
+    ) +
+  `</td>` +
+  `<td>${
+    doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : ""
+  }</td>` +
+  `<td><strong>${formatEuro(doc.totalTTC)}</strong></td>` +
+  `<td class="status-cell">${statutHTML}</td>` +
+  `<td>${actionsHtml}</td>`;
+
 
     tbody.appendChild(tr);
   });
@@ -3409,6 +3430,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
