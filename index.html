@@ -577,6 +577,34 @@
 
   <!-- App JS -->
   <script src="app.js"></script>
+
+  <!-- Modal de confirmation personnalisé -->
+  <div id="confirmOverlay" class="confirm-overlay hidden">
+    <div class="confirm-modal">
+      <div class="confirm-icon">⚠️</div>
+      <h3 id="confirmTitle" class="confirm-title"></h3>
+      <p id="confirmMessage" class="confirm-message"></p>
+
+      <div class="confirm-actions">
+        <button
+          id="confirmCancel"
+          type="button"
+          class="btn btn-secondary"
+        >
+          Annuler
+        </button>
+        <button
+          id="confirmOk"
+          type="button"
+          class="btn btn-danger"
+        >
+          Supprimer
+        </button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
+
+
 
