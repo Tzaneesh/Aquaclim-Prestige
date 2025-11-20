@@ -750,12 +750,14 @@ textarea {
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(3px);
+
   display: flex;
   justify-content: center;
-  align-items: flex-start;
-  padding-top: 40px;
+  align-items: center;   /* CENTRÉ EXACTEMENT */
+
   z-index: 9999;
 }
+
 
 /* POPUP */
 #confirmOverlay .confirm-box {
@@ -765,10 +767,13 @@ textarea {
   padding: 28px 22px 22px 22px;
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+
   animation: popupSlideDown 0.25s ease-out;
-  border-top: 4px solid #1a74d9; /* par défaut info */
+
+  border-top: 4px solid #1a74d9;
   text-align: center;
 }
+
 
 /* variantes de couleur */
 .confirm-box.danger {
@@ -891,6 +896,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
