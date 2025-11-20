@@ -862,6 +862,38 @@ textarea {
 .confirm-box.info {
   border-top-color: #1a74d9;
 }
+/* Popup ajout prestation */
+.tpl-body {
+  margin: 10px 0 16px;
+  text-align: left;
+}
+
+.tpl-row {
+  margin-bottom: 10px;
+}
+
+.tpl-row label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: block;
+  color: #555;
+}
+
+.tpl-row input[type="text"],
+.tpl-row input[type="number"] {
+  width: 100%;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #d0d7e2;
+  font-size: 13px;
+}
+
+.tpl-row-2cols {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
 
 /* ICÔNE RONDE EN HAUT CENTRÉ */
 .confirm-icon {
@@ -973,6 +1005,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
