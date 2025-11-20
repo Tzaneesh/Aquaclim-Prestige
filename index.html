@@ -81,50 +81,101 @@
         </button>
       </div>
 
-      <!-- Panel Tarifs -->
-      <div
-        id="tarifsPanel"
-        class="card no-print hidden"
-      >
-        <h2>Tarifs des prestations</h2>
-        <p class="tarifs-intro">
-          Modifie ici les prix HT par défaut utilisés quand tu choisis un modèle.
-          Laisse un champ vide pour revenir au prix d’origine du code.
-        </p>
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th>Prestation</th>
-              <th>Prix Particulier</th>
-              <th>Prix Syndic / Agence</th>
-            </tr>
-          </thead>
-          <tbody id="tarifsTableBody"></tbody>
-        </table>
-        <div class="tarifs-actions">
-          <button
-            class="btn btn-primary"
-            type="button"
-            onclick="saveTarifsFromUI()"
-          >
-            💾 Enregistrer les tarifs
-          </button>
-          <button
-            class="btn btn-secondary"
-            type="button"
-            onclick="closeTarifsPanel()"
-          >
-            Fermer
-          </button>
-          <button
-            class="btn btn-danger"
-            type="button"
-            onclick="resetTarifs()"
-          >
-            Réinitialiser
-          </button>
-        </div>
-      </div>
+    <!-- Panel Tarifs -->
+<div
+  id="tarifsPanel"
+  class="card no-print hidden"
+>
+  <h2>Tarifs des prestations</h2>
+
+  <!-- Boutons TOP -->
+  <div class="tarifs-actions tarifs-actions-top">
+    <button
+      class="btn btn-primary"
+      type="button"
+      onclick="saveTarifsFromUI()"
+    >
+      💾 Enregistrer les tarifs
+    </button>
+
+    <button
+      class="btn btn-secondary"
+      type="button"
+      onclick="closeTarifsPanel()"
+    >
+      ← Retour
+    </button>
+
+    <button
+      class="btn btn-secondary btn-small"
+      type="button"
+      onclick="addCustomTemplate()"
+    >
+      ➕ Ajouter une prestation
+    </button>
+
+    <button
+      class="btn btn-danger"
+      type="button"
+      onclick="resetTarifs()"
+    >
+      Réinitialiser
+    </button>
+  </div>
+
+  <p class="tarifs-intro">
+    Modifie ici les prix HT par défaut utilisés quand tu choisis un modèle.
+    Tu peux aussi personnaliser le texte détaillé (Particulier / Syndic).
+  </p>
+
+  <table class="documents-table">
+    <thead>
+      <tr>
+        <th>Prestation</th>
+        <th>Prix Particulier</th>
+        <th>Prix Syndic / Agence</th>
+        <th style="width:70px;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tarifsTableBody"></tbody>
+  </table>
+
+  <!-- Boutons BOTTOM (mêmes actions) -->
+  <div class="tarifs-actions tarifs-actions-bottom">
+    <button
+      class="btn btn-primary"
+      type="button"
+      onclick="saveTarifsFromUI()"
+    >
+      💾 Enregistrer les tarifs
+    </button>
+
+    <button
+      class="btn btn-secondary"
+      type="button"
+      onclick="closeTarifsPanel()"
+    >
+      ← Retour
+    </button>
+
+    <button
+      class="btn btn-secondary btn-small"
+      type="button"
+      onclick="addCustomTemplate()"
+    >
+      ➕ Ajouter une prestation
+    </button>
+
+    <button
+      class="btn btn-danger"
+      type="button"
+      onclick="resetTarifs()"
+    >
+      Réinitialiser
+    </button>
+  </div>
+</div>
+
 
       <!-- Tableau documents -->
       <div class="card">
@@ -598,6 +649,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
