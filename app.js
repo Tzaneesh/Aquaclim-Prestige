@@ -1484,54 +1484,65 @@ function loadDocument(id) {
   const prestationsContainer = document.getElementById("prestationsContainer");
   prestationsContainer.innerHTML = "";
 
-  doc.prestations.forEach((p) => {
-    addPrestation();
-    const lines = document.querySelectorAll(".prestation-line");
-    const line = lines[lines.length - 1];
+doc.prestations.forEach((p) => {
+  addPrestation();
+  const lines = document.querySelectorAll(".prestation-line");
+  const line = lines[lines.length - 1];
 
-    line.dataset.kind = p.kind || "";
-    line.dataset.detail = p.detail || "";
-    line.dataset.basePrice = (p.price || 0).toFixed(2);
-    updatePurchaseVisibility(line);
-    updatePriceLayout(line);
+  line.dataset.kind = p.kind || "";
+  line.dataset.detail = p.detail || "";
+  line.dataset.basePrice = (p.price || 0).toFixed(2);
+  line.dataset.autoPrice = "1"; // ou "0" si tu veux figer le prix
+  updatePurchaseVisibility(line);
+  updatePriceLayout(line);
 
-    const descInput = line.querySelector(".prestation-desc");
-    const qtyInput = line.querySelector(".prestation-qty");
-    const priceInput = line.querySelector(".prestation-price");
-    const unitInput = line.querySelector(".prestation-unit");
+  const descInput = line.querySelector(".prestation-desc");
+  const qtyInput = line.querySelector(".prestation-qty");
+  const priceInput = line.querySelector(".prestation-price");
+  const unitInput = line.querySelector(".prestation-unit");
+  const templateSelect = line.querySelector(".prestation-template"); // 👈 ICI
 
-    if (descInput) descInput.value = p.desc;
-    if (qtyInput) qtyInput.value = p.qty;
-    if (priceInput) priceInput.value = p.price;
-    if (unitInput) unitInput.value = p.unit || "";
+  if (descInput) descInput.value = p.desc;
+  if (qtyInput) qtyInput.value = p.qty;
+  if (priceInput) priceInput.value = p.price;
+  if (unitInput) unitInput.value = p.unit || "";
 
-    const datesContainer = line.querySelector(".prestation-dates");
-    datesContainer.innerHTML = "";
+  // 🔙 On remet le BON modèle dans le select
+  if (templateSelect) {
+    const idx = PRESTATION_TEMPLATES.findIndex(
+      (t) => t.kind === p.kind
+    );
+    templateSelect.value = idx >= 0 ? String(idx) : "0";
+  }
 
-    const dates = (p.dates && p.dates.length) ? p.dates : [""];
+  const datesContainer = line.querySelector(".prestation-dates");
+  datesContainer.innerHTML = "";
 
-    dates.forEach((dv) => {
-      const row = document.createElement("div");
-      row.className = "prestation-date-row";
+  const dates = (p.dates && p.dates.length) ? p.dates : [""];
 
-      const inp = document.createElement("input");
-      inp.type = "date";
-      inp.className = "prestation-date";
-      if (dv) inp.value = dv;
+  dates.forEach((dv) => {
+    const row = document.createElement("div");
+    row.className = "prestation-date-row";
 
-      const removeBtn = document.createElement("button");
-      removeBtn.type = "button";
-      removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
-      removeBtn.textContent = "✖";
-      removeBtn.onclick = function () {
-        removePassageDate(removeBtn);
-      };
+    const inp = document.createElement("input");
+    inp.type = "date";
+    inp.className = "prestation-date";
+    if (dv) inp.value = dv;
 
-      row.appendChild(inp);
-      row.appendChild(removeBtn);
-      datesContainer.appendChild(row);
-    });
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
+    removeBtn.textContent = "✖";
+    removeBtn.onclick = function () {
+      removePassageDate(removeBtn);
+    };
+
+    row.appendChild(inp);
+    row.appendChild(removeBtn);
+    datesContainer.appendChild(row);
   });
+});
+
 
   calculateTotals();
 
@@ -3030,6 +3041,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
