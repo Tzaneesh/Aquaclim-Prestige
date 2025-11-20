@@ -2589,31 +2589,29 @@ function openPrintable(id) {
       flex:1;
     }
 
-.client-block{
-  margin-bottom:8px;
-  font-size:10px;
-  border:1px solid #000;
-  border-radius:6px;
-  padding:8px 10px;
-  background:#fff;
-}
-.client-title{
-  font-weight:bold;
-  font-size:10.5px;
-  margin-bottom:4px;
-  text-transform:none;
-  letter-spacing:0;
-}
-.client-line{margin:2px 0;}
-.client-inner-row{
-  display:flex;
-  justify-content:space-between;
-  gap:18px;
-}
-.client-col{
-  width:0%;
-}
-
+    .client-block{
+      margin-bottom:8px;
+      font-size:10px;
+      border:1px solid #000;
+      border-radius:6px;
+      padding:8px 10px;
+      background:#fff;
+    }
+    .client-title{
+      font-weight:bold;
+      font-size:10.5px;
+      margin-bottom:4px;
+      text-transform:none;
+      letter-spacing:0;
+    }
+    .client-line{margin:2px 0;}    .client-inner-row{
+      display:flex;
+      justify-content:space-between;
+      gap:18px;
+    }
+    .client-col{
+      width:48%;
+    }
 
 
     .site-block{
@@ -2959,7 +2957,3 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
-
-
-
-
