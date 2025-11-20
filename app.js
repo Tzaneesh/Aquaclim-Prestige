@@ -2525,26 +2525,26 @@ function showConfirmDialog({
   confirmLabel = "OK",
   cancelLabel = "Annuler",
   onConfirm,
-  variant = "default",   // "default" | "info" | "warning" | "danger" | "success"
-  icon                    // ex: "⚠️", "ℹ️", "✅", "🧾"
+  variant = "info",   // "default" | "info" | "warning" | "danger" | "success"
+  icon                 // ex: "⚠️", "ℹ️", "✅", "🧾"
 }) {
   const overlay = document.getElementById("confirmOverlay");
-  const modal = document.querySelector(".confirm-modal");
+  const box = overlay ? overlay.querySelector(".confirm-box") : null;
   const titleEl = document.getElementById("confirmTitle");
   const msgEl = document.getElementById("confirmMessage");
   const btnOk = document.getElementById("confirmOk");
   const btnCancel = document.getElementById("confirmCancel");
   const iconEl = document.getElementById("confirmIcon");
 
-  if (!overlay || !modal || !titleEl || !msgEl || !btnOk || !btnCancel) {
-    // fallback sécurité
-    if (confirm(message)) {
+  // Fallback : si jamais le HTML n'est pas là -> confirm() natif
+  if (!overlay || !box || !titleEl || !msgEl || !btnOk || !btnCancel) {
+    if (window.confirm(message)) {
       if (typeof onConfirm === "function") onConfirm();
     }
     return;
   }
 
-  // Texte
+  // Texte titre + message
   titleEl.textContent = title || "";
   msgEl.textContent = message || "";
 
@@ -2558,6 +2558,33 @@ function showConfirmDialog({
     btnCancel.textContent = cancelLabel;
   }
 
+  // Reset classes de variante
+  box.classList.remove("danger", "success", "info");
+  if (iconEl) {
+    iconEl.classList.remove("danger", "success", "info");
+  }
+
+  // Normalisation du variant ("warning" → "danger", "default" → "info")
+  let v = variant || "info";
+  if (v === "warning") v = "danger";
+  if (v === "default") v = "info";
+
+  // Appliquer la variante + icône par défaut si non fournie
+  if (v === "danger") {
+    box.classList.add("danger");
+    if (iconEl) iconEl.classList.add("danger");
+    if (!icon) icon = "⚠️";
+  } else if (v === "success") {
+    box.classList.add("success");
+    if (iconEl) iconEl.classList.add("success");
+    if (!icon) icon = "✅";
+  } else {
+    // info
+    box.classList.add("info");
+    if (iconEl) iconEl.classList.add("info");
+    if (!icon) icon = "ℹ️";
+  }
+
   // Icône
   if (iconEl) {
     if (icon) {
@@ -2568,26 +2595,25 @@ function showConfirmDialog({
     }
   }
 
-  // Variant couleur
-  const variants = ["variant-default", "variant-info", "variant-warning", "variant-danger", "variant-success"];
-  modal.classList.remove(...variants);
-  modal.classList.add("variant-" + variant);
-
-  // Nettoyage
+  // Nettoyage des anciens handlers
   btnOk.onclick = null;
   btnCancel.onclick = null;
 
+  // Cancel = fermer
   btnCancel.onclick = function () {
     overlay.classList.add("hidden");
   };
 
+  // OK = fermer + callback
   btnOk.onclick = function () {
     overlay.classList.add("hidden");
     if (typeof onConfirm === "function") onConfirm();
   };
 
+  // Afficher la popup
   overlay.classList.remove("hidden");
 }
+
 
 
 
@@ -3383,6 +3409,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
