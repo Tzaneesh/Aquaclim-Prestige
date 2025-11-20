@@ -241,6 +241,19 @@ body {
 }
 
 
+.prestation-date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prestation-date-row .prestation-date {
+  flex: 1;
+}
+
+.date-remove-btn {
+  padding-inline: 8px;
+}
 
 
 /* ========== FORM ========== */
@@ -723,3 +736,4 @@ textarea {
     border-radius: 0;
   }
 }
+
