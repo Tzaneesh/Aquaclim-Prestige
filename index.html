@@ -579,11 +579,18 @@
   <script src="app.js"></script>
 
   <!-- Modal de confirmation personnalisé -->
-  <div id="confirmOverlay" class="confirm-overlay hidden">
-    <div class="confirm-modal">
-      <div class="confirm-icon">⚠️</div>
-      <h3 id="confirmTitle" class="confirm-title"></h3>
-      <p id="confirmMessage" class="confirm-message"></p>
+<div id="confirmOverlay" class="hidden">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirmIcon">⚠️</div>
+    <h3 id="confirmTitle"></h3>
+    <p id="confirmMessage"></p>
+    <div class="confirm-buttons">
+      <button id="confirmCancel" type="button">Annuler</button>
+      <button id="confirmOk" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
 
       <div class="confirm-actions">
         <button
@@ -605,6 +612,7 @@
   </div>
 </body>
 </html>
+
 
 
 
