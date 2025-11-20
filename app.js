@@ -252,7 +252,8 @@ const PRESTATION_TEMPLATES = [
 ];
 
 const MARGIN_MULTIPLIER = 1.4;
-
+// Coefficient pour calculer le prix Syndic à partir du prix Particulier
+const SYNDIC_COEFF = 1.2; // adapte si tu veux 1.3, 1.4, etc
 // ================== VARIABLES GLOBALES ==================
 
 let currentDocumentId = null;
@@ -3651,6 +3652,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
