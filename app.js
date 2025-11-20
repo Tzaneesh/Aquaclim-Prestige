@@ -1759,51 +1759,6 @@ function saveDocument() {
 function deleteCurrent() {
   const typeSelect = document.getElementById("docType");
   const type = typeSelect ? typeSelect.value : "devis";
-
-  // 1) CAS : document PAS ENCORE ENREGISTRÉ
-  if (!currentDocumentId) {
-    const ok = confirm(
-      "Ce document n'a pas encore été enregistré.\n\n" +
-        "Voulez-vous effacer tout le contenu et repartir sur un nouveau " +
-        (type === "devis" ? "devis" : "facture") +
-        " vierge ?"
-    );
-    if (!ok) return;
-
-    // On réinitialise simplement le formulaire
-    newDocument(type);
-    return;
-  }
-
-  // 2) CAS : document DÉJÀ ENREGISTRÉ → vraie suppression
-  const okDelete = confirm(
-    "Ce document est déjà enregistré.\n\n" +
-      "Êtes-vous sûr de vouloir le SUPPRIMER définitivement " +
-      "de la liste des " +
-      (type === "devis" ? "devis" : "factures") +
-      " ?"
-  );
-  if (!okDelete) return;
-
-  const idToDelete = currentDocumentId;
-  const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
-  saveDocuments(docs);
-
-  if (db) {
-    db.collection("documents")
-      .doc(idToDelete)
-      .delete()
-      .catch((err) =>
-        console.error("Erreur Firestore delete :", err)
-      );
-  }
-
-  alert("Document supprimé");
-  backToList();
-}
-function deleteCurrent() {
-  const typeSelect = document.getElementById("docType");
-  const type = typeSelect ? typeSelect.value : "devis";
   const docNumber = document.getElementById("docNumber")?.value || "";
   const subject = (document.getElementById("docSubject")?.value || "").trim() || "Sans objet";
 
@@ -1859,6 +1814,107 @@ function deleteCurrent() {
     }
   });
 }
+// Supprimer depuis la LISTE (bouton "Supprimer" dans le tableau)
+function deleteDocument(id) {
+  const docs = getAllDocuments();
+  const doc = docs.find((d) => d.id === id);
+  if (!doc) return;
+
+  const typeLabel = doc.type === "devis" ? "DEVIS" : "FACTURE";
+  const subject =
+    (doc.subject && doc.subject.trim()) ? doc.subject.trim() : "Sans objet";
+
+  const title = `Supprimer le ${typeLabel}`;
+  const message =
+    `Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${doc.number} :\n` +
+    `« ${subject} » ?\n\n` +
+    `Cette action est définitive.`;
+
+  showConfirmDialog({
+    title,
+    message,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    onConfirm: function () {
+      const newDocs = docs.filter((d) => d.id !== id);
+      saveDocuments(newDocs);
+
+      if (db) {
+        db.collection("documents")
+          .doc(id)
+          .delete()
+          .catch((err) =>
+            console.error("Erreur Firestore delete :", err)
+          );
+      }
+
+      // On rafraîchit juste la liste
+      loadDocumentsList();
+    }
+  });
+}
+
+// Supprimer depuis le FORMULAIRE (bouton rouge en haut du devis/facture)
+function deleteCurrent() {
+  const typeSelect = document.getElementById("docType");
+  const type = typeSelect ? typeSelect.value : "devis";
+  const docNumber = document.getElementById("docNumber")?.value || "";
+  const subject =
+    (document.getElementById("docSubject")?.value || "").trim() || "Sans objet";
+
+  // 1) Document pas encore enregistré
+  if (!currentDocumentId) {
+    const typeLabel = type === "devis" ? "DEVIS" : "FACTURE";
+
+    const title = `Effacer le ${typeLabel} en cours`;
+    const message =
+      `Ce ${typeLabel} (${docNumber || "non numéroté"}) n'a pas encore été enregistré.\n\n` +
+      `Voulez-vous effacer tout le contenu et repartir sur un nouveau ${typeLabel.toLowerCase()} vierge ?`;
+
+    showConfirmDialog({
+      title,
+      message,
+      confirmLabel: "Réinitialiser",
+      cancelLabel: "Annuler",
+      onConfirm: function () {
+        newDocument(type);
+      }
+    });
+
+    return;
+  }
+
+  // 2) Document déjà enregistré -> vraie suppression
+  const typeLabel = type === "devis" ? "DEVIS" : "FACTURE";
+  const title = `Supprimer le ${typeLabel}`;
+  const message =
+    `Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${docNumber} :\n` +
+    `« ${subject} » ?\n\nCette action est définitive.`;
+
+  showConfirmDialog({
+    title,
+    message,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    onConfirm: function () {
+      const idToDelete = currentDocumentId;
+      const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
+      saveDocuments(docs);
+
+      if (db) {
+        db.collection("documents")
+          .doc(idToDelete)
+          .delete()
+          .catch((err) =>
+            console.error("Erreur Firestore delete :", err)
+          );
+      }
+
+      backToList();
+    }
+  });
+}
+
 
 
 
@@ -3182,6 +3238,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
