@@ -17,6 +17,18 @@ body {
   color: #333;
   line-height: 1.6;
 }
+.client-main {
+  font-weight: 600;
+}
+
+.client-subject {
+  font-size: 11px;
+  color: #666;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* ========== LAYOUT GLOBAL ========== */
 
@@ -896,6 +908,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
