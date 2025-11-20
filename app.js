@@ -1776,6 +1776,7 @@ function deleteCurrent() {
       message,
       confirmLabel: "Réinitialiser",
       cancelLabel: "Annuler",
+      variant: "danger",   // 👈 aussi en rouge + ⚠️ si tu veux
       onConfirm: function () {
         newDocument(type);
       }
@@ -2417,14 +2418,24 @@ function resetTarifs() {
 }
 // ================== MODAL DE CONFIRMATION ==================
 
-function showConfirmDialog({ title, message, confirmLabel = "OK", cancelLabel = "Annuler", onConfirm }) {
+function showConfirmDialog({
+  title,
+  message,
+  confirmLabel = "OK",
+  cancelLabel = "Annuler",
+  icon,
+  variant = "info", // "danger", "success", "info"
+  onConfirm
+}) {
   const overlay = document.getElementById("confirmOverlay");
   const titleEl = document.getElementById("confirmTitle");
   const msgEl = document.getElementById("confirmMessage");
   const btnOk = document.getElementById("confirmOk");
   const btnCancel = document.getElementById("confirmCancel");
+  const iconEl = document.getElementById("confirmIcon");
+  const box = overlay ? overlay.querySelector(".confirm-box") : null;
 
-  if (!overlay || !titleEl || !msgEl || !btnOk || !btnCancel) {
+  if (!overlay || !titleEl || !msgEl || !btnOk || !btnCancel || !box || !iconEl) {
     // fallback sécurité : confirm natif si le HTML n'est pas là
     if (confirm(message)) {
       if (typeof onConfirm === "function") onConfirm();
@@ -2437,6 +2448,30 @@ function showConfirmDialog({ title, message, confirmLabel = "OK", cancelLabel = 
 
   btnOk.textContent = confirmLabel || "OK";
   btnCancel.textContent = cancelLabel || "Annuler";
+
+  // reset classes
+  box.classList.remove("danger", "success", "info");
+  iconEl.classList.remove("danger", "success", "info");
+
+  // applique la variante
+  if (variant === "danger") {
+    box.classList.add("danger");
+    iconEl.classList.add("danger");
+  } else if (variant === "success") {
+    box.classList.add("success");
+    iconEl.classList.add("success");
+  } else {
+    box.classList.add("info");
+    iconEl.classList.add("info");
+  }
+
+  // icône par défaut si pas fournie
+  if (!icon) {
+    if (variant === "danger") icon = "⚠️";
+    else if (variant === "success") icon = "✔️";
+    else icon = "ℹ️";
+  }
+  iconEl.textContent = icon;
 
   // Nettoyage des anciens handlers
   btnOk.onclick = null;
@@ -2453,6 +2488,7 @@ function showConfirmDialog({ title, message, confirmLabel = "OK", cancelLabel = 
 
   overlay.classList.remove("hidden");
 }
+
 
 // ================== IMPRESSION / PDF ==================
 
@@ -3238,6 +3274,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
