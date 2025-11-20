@@ -1806,20 +1806,23 @@ function deleteDocument(id) {
   const doc = docs.find((d) => d.id === id);
   if (!doc) return;
 
-  const typeLabel = doc.type === "devis" ? "devis" : "facture";
+  const typeLabel = doc.type === "facture" ? "FACTURE" : "DEVIS";
+  const number = doc.number || "(numéro inconnu)";
+  const subject = doc.subject || "Sans objet";
 
   const ok = confirm(
-    "Voulez-vous vraiment supprimer ce " +
-      typeLabel +
-      " (" +
-      doc.number +
-      ") de façon définitive ?"
+    `⚠️ Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${number} :\n` +
+    `« ${subject} » ?\n\n` +
+    `Cette action est définitive.`
   );
+
   if (!ok) return;
 
+  // Suppression en local
   const newDocs = docs.filter((d) => d.id !== id);
   saveDocuments(newDocs);
 
+  // Suppression Firestore si disponible
   if (db) {
     db.collection("documents")
       .doc(id)
@@ -1827,9 +1830,10 @@ function deleteDocument(id) {
       .catch((err) => console.error("Erreur Firestore delete :", err));
   }
 
-  alert(typeLabel.charAt(0).toUpperCase() + typeLabel.slice(1) + " supprimé.");
+  alert(`${typeLabel} ${number} supprimé.`);
   loadDocumentsList();
 }
+
 
 
 function duplicateDocument(id) {
@@ -3113,6 +3117,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
