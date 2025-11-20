@@ -1834,6 +1834,13 @@ function duplicateDocument(id) {
   loadDocumentsList();
   loadDocument(copy.id);
 }
+function duplicateCurrent() {
+  if (!currentDocumentId) {
+    alert("Aucun document à dupliquer. Enregistre d'abord le devis ou la facture.");
+    return;
+  }
+  duplicateDocument(currentDocumentId);
+}
 
 function backToList() {
   document.getElementById("formView").classList.add("hidden");
@@ -3065,6 +3072,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
