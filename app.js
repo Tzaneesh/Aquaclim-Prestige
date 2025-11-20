@@ -1580,22 +1580,35 @@ function saveDocument() {
   const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
 
   if (!clientName || !clientAddress) {
-    alert("Veuillez renseigner au minimum le nom et l'adresse du client.");
+    showConfirmDialog({
+      title: "Informations client manquantes",
+      message: "Merci de renseigner au minimum le nom et l'adresse du client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
     return;
   }
 
   if (!docSubject) {
-    alert("Veuillez saisir l'objet du devis / de la facture.");
+    showConfirmDialog({
+      title: "Objet manquant",
+      message: "Veuillez saisir l'objet du devis ou de la facture.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
     return;
   }
 
   const prestations = [];
-  let missingPurchase = false; // ← pour détecter les produits/fournitures sans prix d'achat
+  let missingPurchase = false;
 
   document.querySelectorAll(".prestation-line").forEach((line) => {
     const kind = line.dataset.kind || "";
 
-    // ⚠️ Prix d'achat obligatoire pour Produits / Fournitures
     if (kind === "produits" || kind === "fournitures") {
       const purchaseInput = line.querySelector(".prestation-purchase");
       const purchaseVal = parseFloat(purchaseInput?.value || "0");
@@ -1634,14 +1647,29 @@ function saveDocument() {
       });
     }
   });
+
   if (missingPurchase) {
-    alert("Merci de renseigner le prix d'achat pour toutes les prestations Produits / Fournitures.");
+    showConfirmDialog({
+      title: "Prix d'achat manquant",
+      message:
+        "Merci de renseigner le prix d'achat pour toutes les prestations Produits / Fournitures.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
     return;
   }
 
-
   if (prestations.length === 0) {
-    alert("Ajoutez au moins une prestation");
+    showConfirmDialog({
+      title: "Aucune prestation",
+      message: "Ajoute au moins une prestation avant d'enregistrer le document.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
     return;
   }
 
@@ -1750,11 +1778,20 @@ function saveDocument() {
   saveDocuments(docs);
   saveSingleDocumentToFirestore(doc);
 
-  alert("Document enregistré avec succès !");
+  showConfirmDialog({
+    title: "Enregistrement réussi",
+    message: "Le document a été enregistré avec succès.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+
   currentDocumentId = doc.id;
   loadDocumentsList();
   updateTransformButtonVisibility();
 }
+
 
 function deleteCurrent() {
   const typeSelect = document.getElementById("docType");
@@ -1953,11 +1990,22 @@ function duplicateDocument(id) {
 }
 function duplicateCurrent() {
   if (!currentDocumentId) {
-    alert("Aucun document à dupliquer. Enregistre d'abord le devis ou la facture.");
+    showConfirmDialog({
+      title: "Impossible de dupliquer",
+      message:
+        "Tu dois d’abord enregistrer le devis ou la facture avant de pouvoir la dupliquer.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
     return;
   }
+
   duplicateDocument(currentDocumentId);
 }
+
+
 
 function backToList() {
   document.getElementById("formView").classList.add("hidden");
@@ -2180,12 +2228,26 @@ function setDevisStatus(id, status) {
 
 function transformToInvoice() {
   if (!currentDocumentId) {
-    alert("Ouvrez d'abord un devis pour le transformer.");
+    showConfirmDialog({
+      title: "Aucun devis ouvert",
+      message: "Ouvre d'abord un devis avant de le transformer en facture.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
     return;
   }
   const devis = getDocument(currentDocumentId);
   if (!devis || devis.type !== "devis") {
-    alert("Ce document n'est pas un devis.");
+    showConfirmDialog({
+      title: "Action impossible",
+      message: "Ce document n'est pas un devis, il ne peut pas être transformé en facture.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
     return;
   }
 
@@ -2207,16 +2269,32 @@ function transformToInvoice() {
   saveDocuments(docs);
   saveSingleDocumentToFirestore(facture);
 
-  alert("Devis transformé en facture : " + facture.number);
+  showConfirmDialog({
+    title: "Devis transformé",
+    message: "Le devis a été transformé en facture : " + facture.number,
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+
   loadDocument(facture.id);
 }
+
 
 // ================== EXPORT CSV FACTURES ==================
 
 function exportFacturesCSV() {
   const docs = getAllDocuments().filter((d) => d.type === "facture");
   if (docs.length === 0) {
-    alert("Aucune facture à exporter.");
+    showConfirmDialog({
+      title: "Aucune facture",
+      message: "Il n'y a aucune facture à exporter pour le moment.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
     return;
   }
 
@@ -2255,6 +2333,7 @@ function exportFacturesCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
+
 
 // ================== TARIFS PERSONNALISÉS ==================
 
@@ -2401,21 +2480,43 @@ function saveTarifsFromUI() {
     }
   });
 
-  saveCustomPrices(custom);
-  alert("Tarifs enregistrés. Ils seront utilisés pour les prochaines lignes ajoutées.");
+    saveCustomPrices(custom);
+
+  showConfirmDialog({
+    title: "Tarifs enregistrés",
+    message: "Les tarifs ont été sauvegardés et seront utilisés pour les prochaines prestations ajoutées.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
 }
 
+
 function resetTarifs() {
-  if (
-    !confirm(
-      "Réinitialiser tous les tarifs personnalisés et revenir aux valeurs par défaut ?"
-    )
-  )
-    return;
-  saveCustomPrices({});
-  alert("Tarifs réinitialisés.");
-  openTarifsPanel();
+  showConfirmDialog({
+    title: "Réinitialiser les tarifs",
+    message:
+      "Voulez-vous vraiment réinitialiser tous les tarifs personnalisés et revenir aux valeurs par défaut ?",
+    confirmLabel: "Réinitialiser",
+    cancelLabel: "Annuler",
+    variant: "warning",
+    icon: "⚠️",
+    onConfirm: function () {
+      saveCustomPrices({});
+      showConfirmDialog({
+        title: "Tarifs réinitialisés",
+        message: "Les tarifs ont été remis à zéro. Les valeurs par défaut seront utilisées.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "success",
+        icon: "✅"
+      });
+      openTarifsPanel();
+    }
+  });
 }
+
 // ================== MODAL DE CONFIRMATION ==================
 
 function showConfirmDialog({
@@ -2423,57 +2524,56 @@ function showConfirmDialog({
   message,
   confirmLabel = "OK",
   cancelLabel = "Annuler",
-  icon,
-  variant = "info", // "danger", "success", "info"
-  onConfirm
+  onConfirm,
+  variant = "default",   // "default" | "info" | "warning" | "danger" | "success"
+  icon                    // ex: "⚠️", "ℹ️", "✅", "🧾"
 }) {
   const overlay = document.getElementById("confirmOverlay");
+  const modal = document.querySelector(".confirm-modal");
   const titleEl = document.getElementById("confirmTitle");
   const msgEl = document.getElementById("confirmMessage");
   const btnOk = document.getElementById("confirmOk");
   const btnCancel = document.getElementById("confirmCancel");
   const iconEl = document.getElementById("confirmIcon");
-  const box = overlay ? overlay.querySelector(".confirm-box") : null;
 
-  if (!overlay || !titleEl || !msgEl || !btnOk || !btnCancel || !box || !iconEl) {
-    // fallback sécurité : confirm natif si le HTML n'est pas là
+  if (!overlay || !modal || !titleEl || !msgEl || !btnOk || !btnCancel) {
+    // fallback sécurité
     if (confirm(message)) {
       if (typeof onConfirm === "function") onConfirm();
     }
     return;
   }
 
+  // Texte
   titleEl.textContent = title || "";
   msgEl.textContent = message || "";
 
+  // Libellés des boutons
   btnOk.textContent = confirmLabel || "OK";
-  btnCancel.textContent = cancelLabel || "Annuler";
 
-  // reset classes
-  box.classList.remove("danger", "success", "info");
-  iconEl.classList.remove("danger", "success", "info");
-
-  // applique la variante
-  if (variant === "danger") {
-    box.classList.add("danger");
-    iconEl.classList.add("danger");
-  } else if (variant === "success") {
-    box.classList.add("success");
-    iconEl.classList.add("success");
+  if (cancelLabel === "" || cancelLabel == null) {
+    btnCancel.style.display = "none";
   } else {
-    box.classList.add("info");
-    iconEl.classList.add("info");
+    btnCancel.style.display = "inline-block";
+    btnCancel.textContent = cancelLabel;
   }
 
-  // icône par défaut si pas fournie
-  if (!icon) {
-    if (variant === "danger") icon = "⚠️";
-    else if (variant === "success") icon = "✔️";
-    else icon = "ℹ️";
+  // Icône
+  if (iconEl) {
+    if (icon) {
+      iconEl.textContent = icon;
+      iconEl.style.display = "flex";
+    } else {
+      iconEl.style.display = "none";
+    }
   }
-  iconEl.textContent = icon;
 
-  // Nettoyage des anciens handlers
+  // Variant couleur
+  const variants = ["variant-default", "variant-info", "variant-warning", "variant-danger", "variant-success"];
+  modal.classList.remove(...variants);
+  modal.classList.add("variant-" + variant);
+
+  // Nettoyage
   btnOk.onclick = null;
   btnCancel.onclick = null;
 
@@ -2490,14 +2590,23 @@ function showConfirmDialog({
 }
 
 
+
 // ================== IMPRESSION / PDF ==================
 
 function openPrintable(id, previewOnly) {
   const targetId = id || currentDocumentId;
   if (!targetId) {
-    alert("Veuillez d'abord enregistrer le document");
+    showConfirmDialog({
+      title: "Enregistrement requis",
+      message: "Veuillez d'abord enregistrer le devis ou la facture avant d'imprimer ou d'afficher l'aperçu.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
     return;
   }
+
 
   const doc = getDocument(targetId);
   if (!doc) return;
@@ -3274,6 +3383,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
