@@ -1,6 +1,5 @@
 // ================== CONSTANTES / MODÈLES ==================
 
-// Modèles de prestations (Particulier / Syndic + descriptions + types)
 const PRESTATION_TEMPLATES = [
   {
     label: "— Choisir un modèle —",
@@ -472,6 +471,7 @@ function switchListType(type) {
   loadYearFilter();
   loadDocumentsList();
 }
+
 function adjustPriceHTMargin(line) {
   const kind = line.dataset.kind || "";
   const price = line.querySelector(".prestation-price")?.closest("div");
@@ -695,6 +695,30 @@ function removePassageDate(btn) {
   }
 }
 
+function addPassageDate(btn) {
+  const container = btn.previousElementSibling;
+  if (!container || !container.classList.contains("prestation-dates")) return;
+
+  const row = document.createElement("div");
+  row.className = "prestation-date-row";
+
+  const input = document.createElement("input");
+  input.type = "date";
+  input.className = "prestation-date";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className =
+    "btn btn-danger btn-small date-remove-btn no-print";
+  removeBtn.textContent = "✖";
+  removeBtn.onclick = function () {
+    removePassageDate(removeBtn);
+  };
+
+  row.appendChild(input);
+  row.appendChild(removeBtn);
+  container.appendChild(row);
+}
 
 function addPrestation() {
   prestationCount++;
@@ -726,29 +750,28 @@ function addPrestation() {
       />
       <label style="margin-top:6px;">Dates de passage</label>
       <div class="prestation-dates">
-  <div class="prestation-date-row">
-    <input
-      type="date"
-      class="prestation-date"
-    />
-    <button
-      type="button"
-      class="btn btn-danger btn-small date-remove-btn no-print"
-      onclick="removePassageDate(this)"
-      title="Supprimer cette date"
-    >
-      ✖
-    </button>
-  </div>
-</div>
-<button
-  type="button"
-  class="btn btn-secondary btn-small dates-add-btn no-print"
-  onclick="addPassageDate(this)"
->
-  ➕ Ajouter une date
-</button>
-
+        <div class="prestation-date-row">
+          <input
+            type="date"
+            class="prestation-date"
+          />
+          <button
+            type="button"
+            class="btn btn-danger btn-small date-remove-btn no-print"
+            onclick="removePassageDate(this)"
+            title="Supprimer cette date"
+          >
+            ✖
+          </button>
+        </div>
+      </div>
+      <button
+        type="button"
+        class="btn btn-secondary btn-small dates-add-btn no-print"
+        onclick="addPassageDate(this)"
+      >
+        ➕ Ajouter une date
+      </button>
     </div>
     <div class="form-group">
       <div class="qty-price-group">
@@ -819,13 +842,13 @@ function addPrestation() {
   calculateTotals();
 }
 
-
 function removePrestation(id) {
   const line = document.getElementById("prestation-" + id);
   if (!line) return;
   line.remove();
   calculateTotals();
 }
+
 function reorderPriceFields(line) {
   const kind = line.dataset.kind || "";
   const purchase = line.querySelector(".purchase-wrapper");
@@ -844,25 +867,13 @@ function reorderPriceFields(line) {
 }
 
 function updatePriceLayout(line) {
-  const group = line.querySelector(".qty-price-group");
-  const priceWrapper = line.querySelector(".price-wrapper");
-  const purchaseWrapper = line.querySelector(".purchase-wrapper");
-  if (!group || !priceWrapper || !purchaseWrapper) return;
-
+  // fonction laissée pour compat, le layout est géré par reorderPriceFields()
   const kind = line.dataset.kind || "";
-
   if (kind === "produits" || kind === "fournitures") {
-    // Prix d'achat AVANT Prix HT
-    if (purchaseWrapper.nextSibling !== priceWrapper) {
-      group.insertBefore(purchaseWrapper, priceWrapper);
-    }
-  } else {
-    // Prix HT avant Prix d'achat (ordre normal)
-    if (priceWrapper.nextSibling !== purchaseWrapper) {
-      group.insertBefore(priceWrapper, purchaseWrapper);
-    }
+    reorderPriceFields(line);
   }
 }
+
 function updatePurchaseVisibility(line) {
   const kind = line.dataset.kind || "";
   const block = line.querySelector(".purchase-wrapper");
@@ -872,16 +883,12 @@ function updatePurchaseVisibility(line) {
   if (kind === "produits" || kind === "fournitures") {
     block.style.display = "block";
     reorderPriceFields(line);
-    adjustPriceHTMargin(line);   // ➜ AJOUT ICI
+    adjustPriceHTMargin(line);
   } else {
     block.style.display = "none";
-    adjustPriceHTMargin(line);   // retire la classe si besoin
+    adjustPriceHTMargin(line);
   }
 }
-
-
-
-
 
 function applyTemplate(selectEl) {
   const index = parseInt(selectEl.value, 10);
@@ -947,35 +954,33 @@ function applyTemplate(selectEl) {
     }
   }
 
-  
-// Prix (avec prise en compte des tarifs personnalisés)
-if (priceInput) {
-  const custom = getCustomPrices(); 
-  let price = 0;
+  // Prix (avec prise en compte des tarifs personnalisés)
+  if (priceInput) {
+    const custom = getCustomPrices();
+    let price = 0;
 
-  if (template.kind) {
-    const key =
-      template.kind + "_" +
-      (clientType === "syndic" ? "syndic" : "particulier");
+    if (template.kind) {
+      const key =
+        template.kind +
+        "_" +
+        (clientType === "syndic" ? "syndic" : "particulier");
 
-    // Si un prix modifié existe → on l'utilise
-    if (custom[key] != null) {
-      price = custom[key];
-    } else {
-      // Sinon → prix d'origine du template
-      price =
-        clientType === "syndic"
-          ? template.priceSyndic || 0
-          : template.priceParticulier || 0;
+      // Si un prix modifié existe → on l'utilise
+      if (custom[key] != null) {
+        price = custom[key];
+      } else {
+        // Sinon → prix d'origine du template
+        price =
+          clientType === "syndic"
+            ? template.priceSyndic || 0
+            : template.priceParticulier || 0;
+      }
     }
+
+    priceInput.value = price.toFixed(2);
+    line.dataset.basePrice = price.toFixed(2);
+    line.dataset.autoPrice = "1";
   }
-
-  priceInput.value = price.toFixed(2);
-  line.dataset.basePrice = price.toFixed(2);
-  line.dataset.autoPrice = "1";
-}
-
-
 
   if (qtyInput) qtyInput.value = 1;
 
@@ -995,20 +1000,16 @@ function onPriceChange(input) {
 
     if (kind === "entretien_clim") {
       if (qty <= 1) {
-        // Tu modifies le prix pour 1 clim → ça devient le nouveau "prix de base"
-        // et on laisse l'auto actif pour gérer la dégressivité
+        // prix manuel pour 1 clim -> base, on laisse auto pour gérer dégressif
         line.dataset.autoPrice = "1";
       } else {
-        // Si tu changes le prix alors que tu es déjà à 2 ou 3 clims,
-        // on considère que tu veux forcer un prix manuel
+        // changement de prix quand qty >=2 => mode manuel
         line.dataset.autoPrice = "0";
       }
     }
   }
   calculateTotals();
 }
-
-
 
 function onPurchaseChange(input) {
   const line = input.closest(".prestation-line");
@@ -1049,7 +1050,7 @@ function calculateTotals() {
     const kind = line.dataset.kind || "";
     const autoPrice = line.dataset.autoPrice !== "0";
 
-        // Entretien clim : gestion du tarif dégressif basé sur un pourcentage
+    // Entretien clim : tarif dégressif basé sur ton barème
     if (kind === "entretien_clim") {
       const n = qty <= 0 ? 1 : qty;
 
@@ -1062,39 +1063,35 @@ function calculateTotals() {
       const clientType = getCurrentClientType();
 
       if (autoPrice) {
-        // Prix de base = prix pour 1 clim (issu des tarifs persos ou de la saisie)
+        // Prix de base = prix pour 1 clim
         let base = parseFloat(line.dataset.basePrice) || 0;
 
-        // Sécurité : si base pas défini, on retombe sur tes anciens tarifs
+        // Sécurité : si base pas défini, fallback sur valeurs d’origine
         if (!base) {
-          base = (clientType === "syndic") ? 110 : 90;
+          base = clientType === "syndic" ? 110 : 90;
         }
-
-        // On garde TES réductions actuelles, mais exprimées en % :
-        // Particulier : 1 = 90 / 2 = 75 / 3+ = 65
-        //   → 2 = -16,67 %, 3+ = -27,78 %
-        // Syndic : 1 = 110 / 2 = 90 / 3+ = 80
-        //   → 2 = -18,18 %, 3+ = -27,27 %
 
         if (clientType === "particulier") {
+          // 1 = base / 2 = 75 / 3+ = 65 en pourcentage de 90
           if (n === 1) {
             price = base;
           } else if (n === 2) {
-            price = base * (1 - 15 / 90); // -16,67 %
+            price = base * (1 - 15 / 90);
           } else {
-            price = base * (1 - 25 / 90); // -27,78 %
+            price = base * (1 - 25 / 90);
           }
         } else {
+          // 1 = base / 2 = 90 / 3+ = 80 en pourcentage de 110
           if (n === 1) {
             price = base;
           } else if (n === 2) {
-            price = base * (1 - 20 / 110); // -18,18 %
+            price = base * (1 - 20 / 110);
           } else {
-            price = base * (1 - 30 / 110); // -27,27 %
+            price = base * (1 - 30 / 110);
           }
         }
 
-        // 🔥 Arrondi au multiple de 5 € supérieur
+        // Arrondi au multiple de 5 € supérieur
         price = Math.ceil(price / 5) * 5;
 
         priceInput.value = price.toFixed(2);
@@ -1103,9 +1100,6 @@ function calculateTotals() {
         price = parseFloat(priceInput.value) || 0;
       }
     }
-
-
-
 
     const total = qty * price;
     const totField = line.querySelector(".prestation-total");
@@ -1188,7 +1182,7 @@ function onClientTypeChange() {
     const template = PRESTATION_TEMPLATES[index];
     line.dataset.kind = template.kind || "";
     updatePurchaseVisibility(line);
-updatePriceLayout(line);
+    updatePriceLayout(line);
 
     const detailHidden =
       clientType === "particulier"
@@ -1207,33 +1201,30 @@ updatePriceLayout(line);
     }
 
     // Prix : on regarde d'abord si un tarif personnalisé existe
-if (priceInput) {
-  const custom = getCustomPrices(); 
-  let price = 0;
+    if (priceInput) {
+      const custom = getCustomPrices();
+      let price = 0;
 
-  if (template.kind) {
-    const key =
-      template.kind + "_" +
-      (clientType === "syndic" ? "syndic" : "particulier");
+      if (template.kind) {
+        const key =
+          template.kind +
+          "_" +
+          (clientType === "syndic" ? "syndic" : "particulier");
 
-    // Si un prix modifié existe → on l'utilise
-    if (custom[key] != null) {
-      price = custom[key];
-    } else {
-      // Sinon → prix d'origine du template
-      price =
-        clientType === "syndic"
-          ? template.priceSyndic || 0
-          : template.priceParticulier || 0;
+        if (custom[key] != null) {
+          price = custom[key];
+        } else {
+          price =
+            clientType === "syndic"
+              ? template.priceSyndic || 0
+              : template.priceParticulier || 0;
+        }
+      }
+
+      priceInput.value = price.toFixed(2);
+      line.dataset.basePrice = price.toFixed(2);
+      line.dataset.autoPrice = "1";
     }
-  }
-
-  priceInput.value = price.toFixed(2);
-  line.dataset.basePrice = price.toFixed(2);
-  line.dataset.autoPrice = "1";
-}
-
-
   });
 
   calculateTotals();
@@ -1460,12 +1451,11 @@ function loadDocument(id) {
     const lines = document.querySelectorAll(".prestation-line");
     const line = lines[lines.length - 1];
 
-        line.dataset.kind = p.kind || "";
+    line.dataset.kind = p.kind || "";
     line.dataset.detail = p.detail || "";
     line.dataset.basePrice = (p.price || 0).toFixed(2);
     updatePurchaseVisibility(line);
     updatePriceLayout(line);
-
 
     const descInput = line.querySelector(".prestation-desc");
     const qtyInput = line.querySelector(".prestation-qty");
@@ -1478,32 +1468,32 @@ function loadDocument(id) {
     if (unitInput) unitInput.value = p.unit || "";
 
     const datesContainer = line.querySelector(".prestation-dates");
-datesContainer.innerHTML = "";
+    datesContainer.innerHTML = "";
 
-const dates = (p.dates && p.dates.length) ? p.dates : [""];
+    const dates = p.dates && p.dates.length ? p.dates : [""];
+    dates.forEach((dv) => {
+      const row = document.createElement("div");
+      row.className = "prestation-date-row";
 
-dates.forEach((dv) => {
-  const row = document.createElement("div");
-  row.className = "prestation-date-row";
+      const inp = document.createElement("input");
+      inp.type = "date";
+      inp.className = "prestation-date";
+      if (dv) inp.value = dv;
 
-  const inp = document.createElement("input");
-  inp.type = "date";
-  inp.className = "prestation-date";
-  if (dv) inp.value = dv; // dv doit être au format YYYY-MM-DD pour bien préremplir
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className =
+        "btn btn-danger btn-small date-remove-btn no-print";
+      removeBtn.textContent = "✖";
+      removeBtn.onclick = function () {
+        removePassageDate(removeBtn);
+      };
 
-  const removeBtn = document.createElement("button");
-  removeBtn.type = "button";
-  removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
-  removeBtn.textContent = "✖";
-  removeBtn.onclick = function () {
-    removePassageDate(removeBtn);
-  };
-
-  row.appendChild(inp);
-  row.appendChild(removeBtn);
-  datesContainer.appendChild(row);
-});
-
+      row.appendChild(inp);
+      row.appendChild(removeBtn);
+      datesContainer.appendChild(row);
+    });
+  });
 
   calculateTotals();
 
@@ -1533,12 +1523,12 @@ function saveDocument() {
   }
 
   const prestations = [];
-  let missingPurchase = false; // ← pour détecter les produits/fournitures sans prix d'achat
+  let missingPurchase = false;
 
   document.querySelectorAll(".prestation-line").forEach((line) => {
     const kind = line.dataset.kind || "";
 
-    // ⚠️ Prix d'achat obligatoire pour Produits / Fournitures
+    // Prix d'achat obligatoire pour Produits / Fournitures
     if (kind === "produits" || kind === "fournitures") {
       const purchaseInput = line.querySelector(".prestation-purchase");
       const purchaseVal = parseFloat(purchaseInput?.value || "0");
@@ -1577,11 +1567,13 @@ function saveDocument() {
       });
     }
   });
+
   if (missingPurchase) {
-    alert("Merci de renseigner le prix d'achat pour toutes les prestations Produits / Fournitures.");
+    alert(
+      "Merci de renseigner le prix d'achat pour toutes les prestations Produits / Fournitures."
+    );
     return;
   }
-
 
   if (prestations.length === 0) {
     alert("Ajoutez au moins une prestation");
@@ -1713,7 +1705,6 @@ function deleteCurrent() {
     );
     if (!ok) return;
 
-    // On réinitialise simplement le formulaire
     newDocument(type);
     return;
   }
@@ -1744,7 +1735,6 @@ function deleteCurrent() {
   alert("Document supprimé");
   backToList();
 }
-
 
 function duplicateDocument(id) {
   const original = getDocument(id);
@@ -1817,16 +1807,15 @@ function loadDocumentsList() {
 
   filtered.forEach((doc) => {
     const tr = document.createElement("tr");
-const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
+    const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
 
-let badgeClass;
-if (doc.type === "devis") {
-  badgeClass = "badge-devis";
-} else {
-  // Facture : rouge si non payée, vert si payée
-  badgeClass = doc.paid ? "badge-facture-paid" : "badge-facture-unpaid";
-}
-
+    let badgeClass;
+    if (doc.type === "devis") {
+      badgeClass = "badge-devis";
+    } else {
+      // Facture : rouge si non payée, vert si payée
+      badgeClass = doc.paid ? "badge-facture-paid" : "badge-facture-unpaid";
+    }
 
     let statutHTML = "";
 
@@ -2089,8 +2078,7 @@ function syncTarifRow(input) {
   const kind = input.dataset.kind || "";
   const coef = 1.25;
 
-  // CAS SPÉCIAL : DÉPLACEMENT
-  // => Particulier = Syndic, aucun coefficient
+  // CAS SPÉCIAL : DÉPLACEMENT => même prix
   if (kind === "deplacement") {
     const v = parseFloat(input.value) || 0;
     const val = v > 0 ? v : 0;
@@ -2099,7 +2087,7 @@ function syncTarifRow(input) {
     return;
   }
 
-  // CAS GÉNÉRAL : on garde ton coefficient 1,25
+  // CAS GÉNÉRAL : 1,25 de coef syndic
   if (input.classList.contains("tarif-part")) {
     const p = parseFloat(part.value) || 0;
     let newSyn = p * coef;
@@ -2111,7 +2099,6 @@ function syncTarifRow(input) {
     part.value = Math.round(newPart * 100) / 100;
   }
 }
-
 
 function openTarifsPanel() {
   const panel = document.getElementById("tarifsPanel");
@@ -2129,39 +2116,32 @@ function openTarifsPanel() {
     const custom = getCustomPrices();
 
     PRESTATION_TEMPLATES.forEach((t) => {
-  // ⛔ On ignore Produits & Fournitures dans le tableau des tarifs
-  if (
-    !t.kind ||
-    t.kind === "produits" ||
-    t.kind === "fournitures"
-  ) {
-    return;
-  }
+      // On ignore Produits & Fournitures dans le tableau des tarifs
+      if (!t.kind || t.kind === "produits" || t.kind === "fournitures") {
+        return;
+      }
 
-  const keyPart = t.kind + "_particulier";
-  const keySyn = t.kind + "_syndic";
+      const keyPart = t.kind + "_particulier";
+      const keySyn = t.kind + "_syndic";
 
-  const valPart =
-    custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
-  const valSyn =
-    custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
+      const valPart =
+        custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
+      const valSyn =
+        custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
 
-  const tr = document.createElement("tr");
-  tr.innerHTML =
-    `<td>${t.label}</td>` +
-    `<td><input type="number" step="0.01" class="tarif-part" ` +
-    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
-    `<td><input type="number" step="0.01" class="tarif-syn" ` +
-    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>`;
-  tbody.appendChild(tr);
-});
-
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td>${t.label}</td>` +
+        `<td><input type="number" step="0.01" class="tarif-part" ` +
+        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
+        `<td><input type="number" step="0.01" class="tarif-syn" ` +
+        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>`;
+      tbody.appendChild(tr);
+    });
 
     document.querySelectorAll(".tarifs-button").forEach((btn) => {
       btn.textContent = "⬆️ Revenir aux prestations";
     });
-
- 
   } else {
     resetTarifsPanel();
     if (prestationsSection) {
@@ -2207,7 +2187,9 @@ function saveTarifsFromUI() {
   });
 
   saveCustomPrices(custom);
-  alert("Tarifs enregistrés. Ils seront utilisés pour les prochaines lignes ajoutées.");
+  alert(
+    "Tarifs enregistrés. Ils seront utilisés pour les prochaines lignes ajoutées."
+  );
 }
 
 function resetTarifs() {
@@ -2630,36 +2612,6 @@ function openPrintable(id) {
     }
 
     .client-block{
-  margin-bottom:8px;
-  font-size:10px;
-  border:1px solid #000;
-  border-radius:6px;
-  padding:8px 10px;
-  background:#fff;
-}
-.client-title{
-  font-weight:bold;
-  font-size:10.5px;
-  margin-bottom:4px;
-  text-transform:none;
-  letter-spacing:0;
-}
-.client-line{margin:2px 0;}
-.client-inner-row{
-  display:flex;
-  gap:18px;
-}
-.client-col{
-  flex:1 1 auto;
-}
-.client-col.right{
-  flex:0 0 auto;
-  margin-left:auto;
-}
-
-
-
-    .site-block{
       margin-bottom:8px;
       font-size:10px;
       border:1px solid #000;
@@ -2667,12 +2619,24 @@ function openPrintable(id) {
       padding:8px 10px;
       background:#fff;
     }
-    .site-title{
+    .client-title{
       font-weight:bold;
-      font-size:10px;
+      font-size:10.5px;
       margin-bottom:4px;
-      text-transform:uppercase;
-      letter-spacing:0.5px;
+      text-transform:none;
+      letter-spacing:0;
+    }
+    .client-line{margin:2px 0;}
+    .client-inner-row{
+      display:flex;
+      gap:18px;
+    }
+    .client-col{
+      flex:1 1 auto;
+    }
+    .client-col.right{
+      flex:0 0 auto;
+      margin-left:auto;
     }
 
     table{
@@ -2755,120 +2719,115 @@ function openPrintable(id) {
       font-size:11px;
       background:#f0f0f0;
     }
-        .tva-note{
-            margin-top:4px;
-            font-size:9px;
-            font-style:italic;
-            color:#555;
-        }
+    .tva-note{
+      margin-top:4px;
+      font-size:9px;
+      font-style:italic;
+      color:#555;
+    }
 
-        .reglement-block{
-            margin-top:6px;
-            font-size:10px;
-            border:1px solid #1b5e20;
-            padding:8px;
-            border-radius:6px;
-            background:#e8f5e9;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .reg-title{
-            font-weight:bold;
-            margin-bottom:3px;
-            color:#1b5e20;
-            font-size:10px;
-        }
+    .reglement-block{
+      margin-top:6px;
+      font-size:10px;
+      border:1px solid #1b5e20;
+      padding:8px;
+      border-radius:6px;
+      background:#e8f5e9;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    .reg-title{
+      font-weight:bold;
+      margin-bottom:3px;
+      color:#1b5e20;
+      font-size:10px;
+    }
 
-        .rib-block{
-            margin-top:6px;
-            font-size:10px;
-            border:1px solid #000;
-            padding:8px;
-            border-radius:6px;
-            background:#fff;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .rib-title{
-            font-weight:bold;
-            margin-bottom:3px;
-            font-size:10px;
-        }
+    .rib-block{
+      margin-top:6px;
+      font-size:10px;
+      border:1px solid #000;
+      padding:8px;
+      border-radius:6px;
+      background:#fff;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    .rib-title{
+      font-weight:bold;
+      margin-bottom:3px;
+      font-size:10px;
+    }
 
-        .important-block{
-            margin-top:8px;
-            font-size:10px;
-            border:1px solid #1a74d9;
-            padding:8px;
-            border-radius:6px;
-            background:#f3f7ff;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .important-title{
-            font-weight:bold;
-            margin-bottom:4px;
-            font-size:10px;
-            color:#1a74d9;
-        }
-        .important-block ul{
-            margin-left:14px;
-        }
-        .important-block li{
-            margin-bottom:3px;
-        }
+    .important-block{
+      margin-top:8px;
+      font-size:10px;
+      border:1px solid #1a74d9;
+      padding:8px;
+      border-radius:6px;
+      background:#f3f7ff;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    .important-title{
+      font-weight:bold;
+      margin-bottom:4px;
+      font-size:10px;
+      color:#1a74d9;
+    }
+    .important-block ul{
+      margin-left:14px;
+    }
+    .important-block li{
+      margin-bottom:3px;
+    }
 
-        .conditions-block{
-            margin-top:6px;
-            font-size:10px;
-            border:1px solid #000;
-            border-radius:6px;
-            padding:8px;
-            background:#fff;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .conditions-title{
-            font-weight:bold;
-            margin-bottom:3px;
-            font-size:10px;
-        }
+    .conditions-block{
+      margin-top:6px;
+      font-size:10px;
+      border:1px solid #000;
+      border-radius:6px;
+      padding:8px;
+      background:#fff;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    .conditions-title{
+      font-weight:bold;
+      margin-bottom:3px;
+      font-size:10px;
+    }
 
-        .signatures{
-            margin-top:10px;
-            display:flex;
-            justify-content:space-between;
-            gap:22px;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .signature-block{
-            flex:1;
-            border-top:1px solid #333;
-            padding-top:4px;
-            font-size:10px;
-            min-height:55px;
-        }
-        .signature-title{
-            font-weight:bold;
-            margin-bottom:3px;
-        }
-        img.sig{
-            max-height:38px;
-            margin-top:3px;
-        }
+    .signatures{
+      margin-top:10px;
+      display:flex;
+      justify-content:space-between;
+      gap:22px;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    .signature-block{
+      flex:1;
+      border-top:1px solid #333;
+      padding-top:4px;
+      font-size:10px;
+      min-height:55px;
+    }
+    .signature-title{
+      font-weight:bold;
+      margin-bottom:3px;
+    }
+    img.sig{
+      max-height:38px;
+      margin-top:3px;
+    }
 
-        @media print{
-            @page{margin:0;}
-            body{margin:0;padding:0;}
-            .page{min-height:100vh;}
-        }
-    </style>
+    @media print{
+      @page{margin:0;}
+      body{margin:0;padding:0;}
+      .page{min-height:100vh;}
+    }
+  </style>
 </head>
 <body>
 <div class="page">
@@ -2890,38 +2849,44 @@ function openPrintable(id) {
             </h2>
 
             ${topDatesHtml}
-            ${doc.subject ? `
-                <div class="doc-subject">Objet : ${doc.subject}</div>
-            ` : ``}
+            ${
+              doc.subject
+                ? `<div class="doc-subject">Objet : ${doc.subject}</div>`
+                : ``
+            }
         </div>
 
-  <div class="client-block">
-  <div class="client-inner-row">
+        <div class="client-block">
+          <div class="client-inner-row">
+            <div class="client-col">
+              <div class="client-title">Client</div>
+              ${doc.client?.name ? `<p class="client-line">${doc.client.name}</p>` : ""}
+              ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
+              ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
+              ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
+            </div>
 
-    <!-- COLONNE GAUCHE -->
-    <div class="client-col">
-      <div class="client-title">Client</div>
-
-      ${doc.client?.name ? `<p class="client-line">${doc.client.name}</p>` : ""}
-      ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
-      ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
-      ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
-    </div>
-
-    <!-- COLONNE DROITE (poussée complètement à droite) -->
-    ${(doc.siteName || doc.siteAddress) ? `
-    <div class="client-col right">
-      <div class="client-title">Lieu d’intervention</div>
-
-      ${doc.siteName ? `<p class="client-line">Client sur site : ${doc.siteName}</p>` : ""}
-      ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
-    </div>
-    ` : ""}
-
-  </div>
-</div>
-
-
+            ${
+              doc.siteName || doc.siteAddress
+                ? `
+            <div class="client-col right">
+              <div class="client-title">Lieu d’intervention</div>
+              ${
+                doc.siteName
+                  ? `<p class="client-line">Client sur site : ${doc.siteName}</p>`
+                  : ""
+              }
+              ${
+                doc.siteAddress
+                  ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>`
+                  : ""
+              }
+            </div>
+            `
+                : ""
+            }
+          </div>
+        </div>
 
         <table>
             <thead>
@@ -2952,8 +2917,8 @@ function openPrintable(id) {
 
     <div class="page-footer bottom-block">
         ${
-            isDevis
-                ? `
+          isDevis
+            ? `
                     ${notesHtml}
                     ${importantHtml}
                     <div class="signatures">
@@ -2970,14 +2935,12 @@ function openPrintable(id) {
                         </div>
                     </div>
                 `
-                : (
-                    isUnpaidInvoice
-                        ? `
+            : isUnpaidInvoice
+            ? `
                             ${ribHtml}
                             ${notesHtml}
                         `
-                        : ``
-                )
+            : ``
         }
     </div>
 
@@ -2985,23 +2948,53 @@ function openPrintable(id) {
 </body>
 </html>`;
 
-    printWindow.document.write(html);
-    printWindow.document.close();
+  printWindow.document.write(html);
+  printWindow.document.close();
 
-    printWindow.onload = function () {
-        printWindow.focus();
-        printWindow.print();
-    };
+  printWindow.onload = function () {
+    printWindow.focus();
+    printWindow.print();
+  };
 }
-
 
 // ------- Init -------
 window.onload = function () {
-    setTVA(0);
-    switchListType("devis");
-    initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
-    updateButtonColors();
+  setTVA(0);
+  switchListType("devis");
+  initFirebase();
+  updateButtonColors();
 };
 
+// ================== EXPOSE FONCTIONS POUR HTML (onclick, onchange) ==================
 
-
+window.switchListType = switchListType;
+window.newDocument = newDocument;
+window.openTarifsPanel = openTarifsPanel;
+window.closeTarifsPanel = closeTarifsPanel;
+window.resetTarifsPanel = resetTarifsPanel;
+window.saveTarifsFromUI = saveTarifsFromUI;
+window.resetTarifs = resetTarifs;
+window.exportFacturesCSV = exportFacturesCSV;
+window.loadDocumentsList = loadDocumentsList;
+window.addPrestation = addPrestation;
+window.removePrestation = removePrestation;
+window.applyTemplate = applyTemplate;
+window.onPriceChange = onPriceChange;
+window.onPurchaseChange = onPurchaseChange;
+window.onClientTypeChange = onClientTypeChange;
+window.selectClientType = selectClientType;
+window.saveDocument = saveDocument;
+window.deleteCurrent = deleteCurrent;
+window.openPrintable = openPrintable;
+window.transformToInvoice = transformToInvoice;
+window.backToList = backToList;
+window.setPaymentMode = setPaymentMode;
+window.setDevisStatus = setDevisStatus;
+window.onPayModeChange = onPayModeChange;
+window.setTVA = setTVA;
+window.addPassageDate = addPassageDate;
+window.removePassageDate = removePassageDate;
+window.updateDocType = updateDocType;
+window.updateTransformButtonVisibility = updateTransformButtonVisibility;
+window.onDocDateChange = onDocDateChange;
+window.onValidityChange = onValidityChange;
