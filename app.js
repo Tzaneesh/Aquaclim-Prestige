@@ -1968,24 +1968,30 @@ if (doc.type === "devis") {
         selectHtml;
     }
 
-    let openBtnClass = "btn btn-primary btn-small";
-    let printBtnClass = "btn btn-primary btn-small";
+let openBtnClass = "btn btn-primary btn-small";
+let printBtnClass = "btn btn-primary btn-small";
+let duplicateBtnClass = "btn btn-primary btn-small";
 
-    if (doc.type === "facture") {
-      if (doc.paid) {
-        openBtnClass = "btn btn-success btn-small";
-        printBtnClass = "btn btn-success btn-small";
-      } else {
-        openBtnClass = "btn btn-danger btn-small";
-        printBtnClass = "btn btn-danger btn-small";
-      }
-    }
+if (doc.type === "facture") {
+  if (doc.paid) {
+    openBtnClass = "btn btn-success btn-small";
+    printBtnClass = "btn btn-success btn-small";
+    duplicateBtnClass = "btn btn-success btn-small";
+  } else {
+    openBtnClass = "btn btn-danger btn-small";
+    printBtnClass = "btn btn-danger btn-small";
+    duplicateBtnClass = "btn btn-danger btn-small";
+  }
+}
 
-    const actionsHtml =
-      `<div class="actions-btns">` +
-      `<button class="${openBtnClass}" type="button" onclick="loadDocument('${doc.id}')">Ouvrir</button>` +
-      `<button class="${printBtnClass}" type="button" onclick="openPrintable('${doc.id}')">Imprimer</button>` +
-      `</div>`;
+
+const actionsHtml =
+  `<div class="actions-btns">` +
+  `<button class="${openBtnClass}" type="button" onclick="loadDocument('${doc.id}')">Ouvrir</button>` +
+  `<button class="${printBtnClass}" type="button" onclick="openPrintable('${doc.id}')">Imprimer</button>` +
+  `<button class="${duplicateBtnClass}" type="button" onclick="duplicateDocument('${doc.id}')">Dupliquer</button>` +
+  `</div>`;
+
 
     tr.innerHTML =
       `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
@@ -3059,6 +3065,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
