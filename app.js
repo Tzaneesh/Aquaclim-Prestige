@@ -2372,7 +2372,7 @@ function resetTarifsPanel() {
   panel.classList.add("hidden");
   panel.style.display = "";
   document.querySelectorAll(".tarifs-button").forEach((btn) => {
-    btn.textContent = "📋 Tarifs prestations";
+    btn.textContent = "📋 Prestations";
   });
 }
 
@@ -3274,6 +3274,7 @@ window.onload = function () {
     initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
     updateButtonColors();
 };
+
 
 
 
