@@ -1,4 +1,6 @@
-/* ========== RESET & BASE ========== */
+/* =========================================================
+   RESET & BASE
+========================================================= */
 
 * {
   margin: 0;
@@ -12,12 +14,13 @@ body {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: "Poppins", sans-serif;
   background: #f5f7fa;
   color: #333;
   line-height: 1.6;
 }
 
+/* Petits helpers texte */
 .client-main {
   font-weight: 600;
 }
@@ -31,20 +34,21 @@ body {
   text-overflow: ellipsis;
 }
 
-/* ========== LAYOUT GLOBAL ========== */
-
+/* Layout global */
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
 
-/* ========== EN-TÊTE ========== */
+/* =========================================================
+   EN-TÊTE (HEADER)
+========================================================= */
 
 .header {
   background: linear-gradient(135deg, #1a74d9 0%, #0d5ab8 100%);
   color: #fff;
-  padding: 28px;                    /* plus d'espace */
+  padding: 28px;
   border-radius: 14px;
   margin-bottom: 26px;
   box-shadow: 0 4px 10px rgba(26, 116, 217, 0.25);
@@ -53,25 +57,25 @@ body {
 .header-inner {
   display: flex;
   align-items: center;
-  gap: 20px;                         /* un peu plus d’air */
+  gap: 20px;
   flex-wrap: wrap;
 }
 
 .header-logo {
-  height: 90px;                      /* logo + gros */
+  height: 90px;
   width: auto;
 }
 
 .header h1 {
-  font-size: 38px;                   /* NOM + visible */
+  font-size: 38px;
   margin-bottom: 6px;
-  font-weight: 800;                  /* plus pro */
-  letter-spacing: 0.5px;             /* léger effet premium */
+  font-weight: 800;
+  letter-spacing: 0.5px;
 }
 
 .header p {
   opacity: 0.98;
-  font-size: 16px;                   /* lisibilité ++ */
+  font-size: 16px;
   line-height: 1.45;
 }
 
@@ -86,8 +90,9 @@ body {
   font-weight: 600;
 }
 
-
-/* ========== BOUTONS & NAV ========== */
+/* =========================================================
+   BOUTONS & NAV
+========================================================= */
 
 .top-nav {
   display: flex;
@@ -113,6 +118,7 @@ body {
   cursor: not-allowed;
 }
 
+/* Couleurs principales boutons */
 .btn-primary {
   background: #1a74d9;
   color: #fff;
@@ -156,7 +162,7 @@ body {
   font-size: 13px;
 }
 
-/* Couleur contextuelle pour Devis / Factures (action-button) */
+/* Boutons d’action (en haut/bas du formulaire) */
 .action-button {
   min-width: 140px;
 }
@@ -205,7 +211,9 @@ body {
   cursor: not-allowed;
 }
 
-/* ========== BLOCS / CARTES ========== */
+/* =========================================================
+   CARTES / BLOCS
+========================================================= */
 
 .card {
   background: #fff;
@@ -221,7 +229,9 @@ body {
   font-size: 22px;
 }
 
-/* Bloc client (impression / mise en forme) */
+/* =========================================================
+   CLIENT / BLOC CLIENT
+========================================================= */
 
 .print-client-block h3 {
   margin-bottom: 6px;
@@ -248,7 +258,9 @@ body {
   min-width: 220px;
 }
 
-/* Dates prestation */
+/* =========================================================
+   DATES DE PRESTATION
+========================================================= */
 
 .prestation-date-row {
   display: flex;
@@ -267,7 +279,9 @@ body {
   padding-inline: 8px;
 }
 
-/* ========== FORM ========== */
+/* =========================================================
+   FORMULAIRES
+========================================================= */
 
 .form-group {
   margin-bottom: 16px;
@@ -313,13 +327,14 @@ textarea {
   resize: vertical;
 }
 
+/* Grille responsive */
 .row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 20px;
 }
 
-/* Rendre les boutons radio du type client bien ronds comme la TVA */
+/* Radio type client (ronds) */
 .client-type-option input[type="radio"] {
   appearance: auto !important;
   width: 16px;
@@ -328,7 +343,9 @@ textarea {
   cursor: pointer;
 }
 
-/* ========== SECTIONS ========== */
+/* =========================================================
+   SECTIONS
+========================================================= */
 
 .section-title {
   color: #1a74d9;
@@ -336,7 +353,6 @@ textarea {
 }
 
 /* Type client */
-
 .client-type-row {
   display: flex;
   gap: 10px;
@@ -352,7 +368,9 @@ textarea {
   gap: 5px;
 }
 
-/* Prestations */
+/* =========================================================
+   PRESTATIONS
+========================================================= */
 
 .prestations-section {
   margin-top: 25px;
@@ -418,15 +436,16 @@ textarea {
 }
 
 /* Bouton supprimer prestation */
-
 .prestation-remove-wrapper {
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;
-  margin-right: 10px; /* décalage léger vers la gauche */
+  margin-right: 10px;
 }
 
-/* ========== TOTAUX / TVA / RÉDUCTION ========== */
+/* =========================================================
+   TOTAUX / TVA / RÉDUCTION
+========================================================= */
 
 .totals {
   background: #f0f3f7;
@@ -496,14 +515,16 @@ textarea {
   color: #555;
 }
 
-/* Bloc TVA / réduction côte à côte */
+/* TVA / réduction côte à côte */
 .totals-grid {
   display: grid;
   grid-template-columns: 2fr 1fr;
   gap: 16px;
 }
 
-/* Paiement */
+/* =========================================================
+   PAIEMENT / STATUTS
+========================================================= */
 
 .pay-line {
   font-size: 12px;
@@ -524,7 +545,6 @@ textarea {
 }
 
 /* Infos devis expiré */
-
 .devis-status-info {
   font-size: 12px;
   color: #c62828;
@@ -532,7 +552,9 @@ textarea {
   display: none;
 }
 
-/* ========== ACTIONS FORMULAIRE ========== */
+/* =========================================================
+   ACTIONS FORMULAIRE
+========================================================= */
 
 .actions {
   display: flex;
@@ -550,7 +572,9 @@ textarea {
   flex-wrap: wrap;
 }
 
-/* ========== TABLE DOCUMENTS / TARIFS ========== */
+/* =========================================================
+   TABLE DOCUMENTS / TARIFS
+========================================================= */
 
 .documents-table {
   width: 100%;
@@ -588,8 +612,7 @@ textarea {
   color: #999;
 }
 
-/* Tarifs panel */
-
+/* Panel tarifs */
 #tarifsPanel table.documents-table th,
 #tarifsPanel table.documents-table td {
   font-size: 12px;
@@ -612,7 +635,9 @@ textarea {
   margin-bottom: 10px;
 }
 
-/* ========== BADGES ========== */
+/* =========================================================
+   BADGES
+========================================================= */
 
 .badge {
   display: inline-block;
@@ -628,19 +653,17 @@ textarea {
   color: #1976d2;
 }
 
-/* Facture payée = vert */
+/* Facture payée / non payée */
 .badge-facture-paid {
   background: #e8f5e9;
   color: #388e3c;
 }
 
-/* Facture non payée = rouge */
 .badge-facture-unpaid {
   background: #ffebee;
   color: #c62828;
 }
 
-/* Factures payées / non payées */
 .badge-paid {
   background: #e8f5e9;
   color: #1b5e20;
@@ -672,7 +695,9 @@ textarea {
   color: #ef6c00;
 }
 
-/* ========== FILTRES LISTE ========== */
+/* =========================================================
+   FILTRES LISTE
+========================================================= */
 
 .filters-row {
   display: flex;
@@ -709,17 +734,21 @@ textarea {
   font-size: 12px;
 }
 
-/* ========== VISIBILITÉ ========== */
+/* =========================================================
+   VISIBILITÉ
+========================================================= */
 
 .hidden {
   display: none !important;
 }
 
 .no-print {
-  /* masqué uniquement pour impression avec @media print */
+  /* masqué uniquement à l'impression via @media print */
 }
 
-/* ========== RESPONSIVE ========== */
+/* =========================================================
+   RESPONSIVE
+========================================================= */
 
 @media (max-width: 768px) {
   .prestation-line {
@@ -736,7 +765,9 @@ textarea {
   }
 }
 
-/* ====== BOUTONS "Modifier / Imprimer / Aperçu / Supprimer" ====== */
+/* =========================================================
+   BOUTONS "MODIFIER / IMPRIMER / APERÇU / SUPPRIMER"
+========================================================= */
 
 .actions-btns {
   display: flex;
@@ -758,7 +789,9 @@ textarea {
   border-radius: 999px;
 }
 
-/* Effet transition douce */
+/* =========================================================
+   ANIMATIONS
+========================================================= */
 
 @keyframes slideDown {
   from {
@@ -771,7 +804,9 @@ textarea {
   }
 }
 
-/* OVERLAY CONFIRM */
+/* =========================================================
+   POPUP CONFIRMATION
+========================================================= */
 
 #confirmOverlay {
   position: fixed;
@@ -783,8 +818,6 @@ textarea {
   align-items: center;
   z-index: 9999;
 }
-
-/* POPUP CONFIRM */
 
 #confirmOverlay .confirm-box {
   position: relative;
@@ -809,8 +842,7 @@ textarea {
   border-top-color: #1a74d9;
 }
 
-/* ICÔNE RONDE EN HAUT CENTRÉ */
-
+/* Icône */
 .confirm-icon {
   width: 52px;
   height: 52px;
@@ -837,8 +869,7 @@ textarea {
   color: #1a74d9;
 }
 
-/* TITRE + MESSAGE */
-
+/* Titre + message */
 #confirmTitle {
   font-weight: 700;
   font-size: 18px;
@@ -854,8 +885,7 @@ textarea {
   white-space: pre-line;
 }
 
-/* BOUTONS CONFIRM */
-
+/* Boutons confirm */
 .confirm-buttons {
   display: flex;
   justify-content: center;
@@ -888,18 +918,9 @@ textarea {
   background: #bdbdbd;
 }
 
-@keyframes popupSlideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* ===== POPUP PRESTATION (centrée) ===== */
+/* =========================================================
+   POPUP PRESTATION
+========================================================= */
 
 .popup-overlay {
   position: fixed;
@@ -924,17 +945,6 @@ textarea {
   animation: popIn 0.2s ease-out;
 }
 
-@keyframes popIn {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
 .popup h3 {
   margin-bottom: 15px;
   color: #1a74d9;
@@ -955,7 +965,20 @@ textarea {
   justify-content: flex-end;
 }
 
-/* ===== Icônes / interactions dans le tableau des tarifs ===== */
+@keyframes popIn {
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* =========================================================
+   TABLE TARIFS / ICONES
+========================================================= */
 
 .tarif-label-cell {
   cursor: pointer;
@@ -995,44 +1018,9 @@ textarea {
   color: #ff0000;
 }
 
-/* ===== Mini éditeur de texte détaillé ===== */
-
-.desc-editor {
-  margin-top: 16px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: #f5f7fb;
-  border: 1px solid #dde4ee;
-}
-
-.desc-editor.hidden {
-  display: none;
-}
-
-.desc-editor h4 {
-  margin: 0 0 10px;
-  font-size: 14px;
-  color: #1a74d9;
-}
-
-.desc-editor textarea {
-  width: 100%;
-  min-height: 60px;
-  resize: vertical;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid #ccd3e0;
-  font-size: 13px;
-  margin-bottom: 8px;
-}
-
-.desc-editor-buttons {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-/* ===== Signature ===== */
+/* =========================================================
+   SIGNATURE (VUE APPLICATION)
+========================================================= */
 
 .signature-block {
   margin-top: 30px;
@@ -1044,7 +1032,9 @@ textarea {
   height: auto;
 }
 
-/* ========== IMPRESSION ========== */
+/* =========================================================
+   IMPRESSION (VUE APPLICATION)
+========================================================= */
 
 @media print {
   .no-print {
@@ -1089,7 +1079,7 @@ textarea {
     font-size: 14px !important;
   }
 
-  /* Titre principal du devis (DEVIS N° ...) */
+  /* Titre principal du devis (si utilisé dans la page) */
   .print-doc-title {
     font-size: 26px;
     font-weight: 800;
@@ -1124,7 +1114,7 @@ textarea {
     margin-bottom: 2px;
   }
 
-  /* Zébrage léger sur les tableaux de prestations / docs */
+  /* Zébrage léger sur tableaux */
   .documents-table tbody tr:nth-child(odd),
   .print-prestations-table tbody tr:nth-child(odd) {
     background: #f8f9fc;
@@ -1145,7 +1135,7 @@ textarea {
     border-bottom: 1px solid #e1e8ed;
   }
 
-  /* Totaux plus premium sur le devis imprimé */
+  /* Totaux plus premium à l’impression */
   .totals {
     background: #f3f6fc;
     border: 1px solid #cbd3e1;
@@ -1174,7 +1164,6 @@ textarea {
     font-size: 19px;
   }
 
-  /* Titres de sections à l'impression */
   .section-title {
     color: #1a74d9;
     border-bottom: 1px solid #dde4ee;

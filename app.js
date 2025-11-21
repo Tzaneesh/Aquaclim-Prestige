@@ -3448,27 +3448,36 @@ function openPrintable(id, previewOnly) {
 
     /* ===== TITRE DEVIS / FACTURE ===== */
 
-    .doc-header-center {
-      margin: 8px 0 12px 0;
-    }
+  .doc-header-center {
+  margin: 8px 0 12px 0;
+}
 
-    .doc-header-center h2 {
-      font-size: 20px;
-      margin-top: 10px;
-      margin-bottom: 8px;
-      text-align: left;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      border-bottom: 2px solid #dde4ee;
-      padding-bottom: 4px;
-    }
+/* Titre Devis / Facture premium */
+.doc-title-main {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-weight: 600;
+  opacity: 0.9;
+}
 
-    .doc-subject {
-      margin-top: 6px;
-      font-size: 11px;
-      font-weight: bold;
-    }
+.doc-title-number {
+  display: block;
+  margin-top: 2px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: inherit;
+}
+
+/* Objet */
+.doc-subject {
+  margin-top: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
 
     /* ===== INFOS DATES (CADRE À DROITE) ===== */
 
@@ -3777,10 +3786,12 @@ function openPrintable(id, previewOnly) {
       margin-bottom: 3px;
     }
 
-    img.sig {
-      max-height: 38px;
-      margin-top: 3px;
-    }
+img.sig {
+  height: 100px;
+  width: auto;
+  margin-top: 3px;
+}
+
 
     @media print {
       @page {
@@ -3810,18 +3821,24 @@ function openPrintable(id, previewOnly) {
       </p>
     </div>
 
-    <div class="doc-header-center">
-      <h2 style="color:${titleColor};">
-        ${isDevis ? "DEVIS N° : " : "FACTURE N° : "}${doc.number}
-      </h2>
+<div class="doc-header-center">
+  <h2 style="color:${titleColor};">
+    <span class="doc-title-main">
+      ${isDevis ? "DEVIS" : "FACTURE"}
+    </span>
+    <span class="doc-title-number">
+      N° ${doc.number}
+    </span>
+  </h2>
 
-      ${topDatesHtml}
-      ${
-        doc.subject
-          ? `<div class="doc-subject">Objet : ${doc.subject}</div>`
-          : ``
-      }
-    </div>
+  ${topDatesHtml}
+  ${
+    doc.subject
+      ? `<div class="doc-subject">Objet : ${doc.subject}</div>`
+      : ``
+  }
+</div>
+
 
     <div class="client-block">
       <div class="client-inner-row">
