@@ -2537,9 +2537,19 @@ function openTarifsPanel() {
 
       const isCustom = t.kind.indexOf("custom_") === 0;
 
-      const deleteCellHtml = isCustom
-        ? `<td><span class="tarif-delete-btn" onclick="deleteCustomPrestation('${t.kind}')">✖</span></td>`
-        : `<td></td>`;
+     const deleteCellHtml = isCustom
+  ? `<td class="tarif-delete-cell">
+       <button
+         type="button"
+         class="btn btn-danger btn-small date-remove-btn no-print"
+         onclick="deleteCustomPrestation('${t.kind}')"
+         title="Supprimer cette prestation"
+       >
+         ✖
+       </button>
+     </td>`
+  : `<td></td>`;
+
 
 const tr = document.createElement("tr");
 tr.innerHTML =
@@ -2762,7 +2772,17 @@ tr.innerHTML =
   `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="particulier" value="${pricePart.toFixed(2)}"></td>` +
   `<td><input type="number" step="0.01" class="tarif-syn" ` +
   `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="syndic" value="${finalSyn.toFixed(2)}"></td>` +
-  `<td><span class="tarif-delete-btn" onclick="deleteCustomPrestation('${kind}')">✖</span></td>`;
+`<td class="tarif-delete-cell">
+   <button
+     type="button"
+     class="btn btn-danger btn-small date-remove-btn no-print"
+     onclick="deleteCustomPrestation('${kind}')"
+     title="Supprimer cette prestation"
+   >
+     ✖
+   </button>
+ </td>`;
+
 
     tbody.appendChild(tr);
   }
@@ -3810,6 +3830,7 @@ window.onload = function () {
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
