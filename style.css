@@ -878,6 +878,165 @@ textarea {
     transform: translateY(0);
   }
 }
+/* ===== POPUP PRESTATION (centrée) ===== */
+
+.popup-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+}
+
+.popup-overlay.hidden {
+  display: none;
+}
+
+.popup {
+  background: #fff;
+  padding: 25px;
+  border-radius: 14px;
+  width: 340px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  animation: popIn 0.2s ease-out;
+}
+
+@keyframes popIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.popup h3 {
+  margin-bottom: 15px;
+  color: #1a74d9;
+}
+
+.popup input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 14px;
+  border: 2px solid #e1e8ed;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+/* ===== Zone boutons Tarifs ===== */
+
+.tarifs-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.tarifs-actions-top {
+  margin-bottom: 10px;
+}
+
+/* ===== Icônes / interactions dans le tableau des tarifs ===== */
+
+.tarif-label-cell {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tarif-label-text {
+  text-decoration: none;
+}
+
+.tarif-label-cell:hover .tarif-label-text {
+  text-decoration: underline;
+}
+
+.tarif-desc-icon {
+  font-size: 14px;
+  opacity: 0.7;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.tarif-label-cell:hover .tarif-desc-icon {
+  opacity: 1;
+  transform: translateY(-1px) rotate(-5deg);
+}
+
+.tarif-delete-btn {
+  cursor: pointer;
+  color: #c62828;
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-block;
+}
+
+.tarif-delete-btn:hover {
+  color: #ff0000;
+}
+
+
+.tarif-delete-btn {
+  cursor: pointer;
+  color: #c62828;
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-block;
+}
+
+.tarif-delete-btn:hover {
+  color: #ff0000;
+}
+
+/* ===== Mini éditeur de texte détaillé ===== */
+
+.desc-editor {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f5f7fb;
+  border: 1px solid #dde4ee;
+}
+
+.desc-editor.hidden {
+  display: none;
+}
+
+.desc-editor h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #1a74d9;
+}
+
+.desc-editor textarea {
+  width: 100%;
+  min-height: 60px;
+  resize: vertical;
+  padding: 8px;
+  border-radius: 8px;
+  border: 1px solid #ccd3e0;
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.desc-editor-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}  /* Alignement du bouton supprimer prestation */
+.prestation-remove-wrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+}
+
 
 /* ========== IMPRESSION ========== */
 

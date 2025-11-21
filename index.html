@@ -81,50 +81,113 @@
         </button>
       </div>
 
-      <!-- Panel Tarifs -->
-      <div
-        id="tarifsPanel"
-        class="card no-print hidden"
-      >
-        <h2>Tarifs des prestations</h2>
-        <p class="tarifs-intro">
-          Modifie ici les prix HT par défaut utilisés quand tu choisis un modèle.
-          Laisse un champ vide pour revenir au prix d’origine du code.
-        </p>
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th>Prestation</th>
-              <th>Prix Particulier</th>
-              <th>Prix Syndic / Agence</th>
-            </tr>
-          </thead>
-          <tbody id="tarifsTableBody"></tbody>
-        </table>
-        <div class="tarifs-actions">
-          <button
-            class="btn btn-primary"
-            type="button"
-            onclick="saveTarifsFromUI()"
-          >
-            💾 Enregistrer les tarifs
-          </button>
-          <button
-            class="btn btn-secondary"
-            type="button"
-            onclick="closeTarifsPanel()"
-          >
-            Fermer
-          </button>
-          <button
-            class="btn btn-danger"
-            type="button"
-            onclick="resetTarifs()"
-          >
-            Réinitialiser
-          </button>
-        </div>
-      </div>
+ <!-- Panel Tarifs -->
+<div id="tarifsPanel" class="card no-print hidden">
+  <h2>Tarifs des prestations</h2>
+
+  <!-- Boutons EN HAUT du panneau -->
+<div class="tarifs-actions tarifs-actions-top">
+  <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
+    ← Retour
+  </button>
+
+  <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
+    💾 Enregistrer les tarifs
+  </button>
+
+  <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
+    ➕ Ajouter une prestation
+  </button>
+
+  <button class="btn btn-danger" type="button" onclick="resetTarifs()">
+    🧹 Réinitialiser
+  </button>
+</div>
+
+
+  <table class="documents-table">
+    <thead>
+      <tr>
+        <th>Prestation</th>
+        <th>Prix Particulier</th>
+        <th>Prix Syndic</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tarifsTableBody"></tbody>
+  </table>
+
+  <!-- Mini bloc pour éditer les textes détaillés -->
+  <div id="descEditor" class="desc-editor hidden">
+    <h4>Texte détaillé du modèle</h4>
+
+    <label>Texte Particulier</label>
+    <textarea id="descPartInput"></textarea>
+
+    <label>Texte Syndic / Agence</label>
+    <textarea id="descSynInput"></textarea>
+
+    <div class="desc-editor-buttons">
+      <button class="btn btn-primary btn-small" type="button" onclick="saveDescEditor()">
+        Enregistrer
+      </button>
+      <button class="btn btn-secondary btn-small" type="button" onclick="closeDescEditor()">
+        Fermer
+      </button>
+    </div>
+  </div>
+
+  <!-- Boutons EN BAS du panneau -->
+<div class="tarifs-actions tarifs-actions-bottom">
+  <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
+    ← Retour
+  </button>
+
+  <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
+    💾 Enregistrer les tarifs
+  </button>
+
+  <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
+    ➕ Ajouter une prestation
+  </button>
+
+  <button class="btn btn-danger" type="button" onclick="resetTarifs()">
+    🧹 Réinitialiser
+  </button>
+</div>
+
+</div>
+
+<!-- POPUP — Ajouter une prestation modèle -->
+<div id="prestationPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3 id="popupTitle">Nouvelle prestation</h3>
+
+    <label>Nom de la prestation</label>
+    <input type="text" id="popupName" />
+
+    <label>Prix Particulier</label>
+    <input
+      type="number"
+      id="popupPricePart"
+      step="0.01"
+      oninput="onPopupPricePartChange()"
+    />
+
+    <label>Prix Syndic</label>
+    <input type="number" id="popupPriceSyn" step="0.01" />
+
+    <div class="popup-buttons">
+      <button class="btn btn-primary" type="button" onclick="confirmPrestationPopup()">
+        Valider
+      </button>
+      <button class="btn btn-secondary" type="button" onclick="closePrestationPopup()">
+        Annuler
+      </button>
+    </div>
+  </div>
+</div>
+
 
       <!-- Tableau documents -->
       <div class="card">

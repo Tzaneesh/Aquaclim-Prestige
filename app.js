@@ -744,9 +744,10 @@ function addPrestation() {
   line.dataset.basePrice = "0";
   line.dataset.autoPrice = "1"; // prix auto actif par défaut
 
-  const optionsHtml = PRESTATION_TEMPLATES.map(
-    (t, idx) => `<option value="${idx}">${t.label}</option>`
-  ).join("");
+  const optionsHtml = PRESTATION_TEMPLATES.map((t, idx) => {
+    if (!t || t._deleted) return "";
+    return `<option value="${idx}">${t.label}</option>`;
+  }).join("");
 
   line.innerHTML = `
     <div class="form-group">
@@ -763,29 +764,28 @@ function addPrestation() {
       />
       <label style="margin-top:6px;">Dates de passage</label>
       <div class="prestation-dates">
-  <div class="prestation-date-row">
-    <input
-      type="date"
-      class="prestation-date"
-    />
-    <button
-      type="button"
-      class="btn btn-danger btn-small date-remove-btn no-print"
-      onclick="removePassageDate(this)"
-      title="Supprimer cette date"
-    >
-      ✖
-    </button>
-  </div>
-</div>
-<button
+        <div class="prestation-date-row">
+          <input
+            type="date"
+            class="prestation-date"
+          />
+        <button
   type="button"
-  class="btn btn-secondary btn-small dates-add-btn no-print"
-  onclick="addPassageDate(this)"
+  class="btn btn-danger btn-small date-remove-btn no-print"
+  onclick="removePrestation(${prestationCount})"
+  title="Supprimer cette prestation"
 >
-  ➕ Ajouter une date
+  ✖
 </button>
-
+        </div>
+      </div>
+      <button
+        type="button"
+        class="btn btn-secondary btn-small dates-add-btn no-print"
+        onclick="addPassageDate(this)"
+      >
+        ➕ Ajouter une date
+      </button>
     </div>
     <div class="form-group">
       <div class="qty-price-group">
@@ -840,21 +840,23 @@ function addPrestation() {
         readonly
       />
     </div>
-    <div class="form-group no-print">
-      <label>&nbsp;</label>
+    <div class="form-group no-print prestation-remove-wrapper">
       <button
         type="button"
-        class="btn btn-danger btn-small"
+        class="btn btn-danger btn-small date-remove-btn no-print"
         onclick="removePrestation(${prestationCount})"
+        title="Supprimer cette prestation"
       >
-        🗑️
+        ✖
       </button>
     </div>
   `;
 
+
   container.appendChild(line);
   calculateTotals();
 }
+
 
 
 function removePrestation(id) {
@@ -2376,6 +2378,96 @@ function saveCustomPrices(obj) {
     console.error("Erreur sauvegarde customTarifs :", e);
   }
 }
+// ================== MODÈLES PERSONNALISÉS DE PRESTATIONS ==================
+
+function getCustomTemplates() {
+  try {
+    const raw = localStorage.getItem("customTemplates");
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) {
+    console.error("Erreur lecture customTemplates :", e);
+    return [];
+  }
+}
+
+function saveCustomTemplates(arr) {
+  try {
+    localStorage.setItem("customTemplates", JSON.stringify(arr || []));
+  } catch (e) {
+    console.error("Erreur sauvegarde customTemplates :", e);
+  }
+}
+
+// Textes détaillés personnalisés (Particulier / Syndic)
+function getCustomTexts() {
+  try {
+    const raw = localStorage.getItem("customDescTemplates");
+    if (!raw) return {};
+    const obj = JSON.parse(raw);
+    return obj && typeof obj === "object" ? obj : {};
+  } catch (e) {
+    console.error("Erreur lecture customDescTemplates :", e);
+    return {};
+  }
+}
+
+function saveCustomTexts(obj) {
+  try {
+    localStorage.setItem("customDescTemplates", JSON.stringify(obj || {}));
+  } catch (e) {
+    console.error("Erreur sauvegarde customDescTemplates :", e);
+  }
+}
+
+/**
+ * Charge les modèles personnalisés depuis le localStorage
+ * et les ajoute dans PRESTATION_TEMPLATES.
+ */
+function loadCustomTemplates() {
+  const list = getCustomTemplates();
+  if (!Array.isArray(list) || !list.length) return;
+
+  list.forEach((tpl) => {
+    if (!tpl || !tpl.kind || !tpl.label) return;
+    PRESTATION_TEMPLATES.push({
+      label: tpl.label,
+      kind: tpl.kind,
+      title: tpl.title || tpl.label,
+      priceParticulier: tpl.priceParticulier || 0,
+      priceSyndic: tpl.priceSyndic || 0,
+      descParticulier: tpl.descParticulier || "",
+      descSyndic: tpl.descSyndic || ""
+    });
+  });
+}
+
+/**
+ * Applique les textes détaillés personnalisés (Particulier / Syndic)
+ * aux modèles existants (y compris ceux du code).
+ */
+function loadCustomTexts() {
+  const map = getCustomTexts();
+  const keys = Object.keys(map || {});
+  if (!keys.length) return;
+
+  keys.forEach((kind) => {
+    const tpl = PRESTATION_TEMPLATES.find((t) => t.kind === kind);
+    if (!tpl) return;
+    const data = map[kind] || {};
+    if (typeof data.descParticulier === "string") {
+      tpl.descParticulier = data.descParticulier;
+    }
+    if (typeof data.descSyndic === "string") {
+      tpl.descSyndic = data.descSyndic;
+    }
+  });
+}
+
+// Variables pour les éditeurs de prestations
+let currentPrestationPopupKind = null; // null = ajout
+let currentDescKind = null;
 
 function syncTarifRow(input) {
   const row = input.closest("tr");
@@ -2423,40 +2515,50 @@ function openTarifsPanel() {
     tbody.innerHTML = "";
     const custom = getCustomPrices();
 
-    PRESTATION_TEMPLATES.forEach((t) => {
-  // ⛔ On ignore Produits & Fournitures dans le tableau des tarifs
-  if (
-    !t.kind ||
-    t.kind === "produits" ||
-    t.kind === "fournitures"
-  ) {
-    return;
-  }
+    PRESTATION_TEMPLATES.forEach((t, idx) => {
+      // ⛔ On ignore Produits & Fournitures dans le tableau des tarifs
+      if (
+        !t ||
+        t._deleted ||
+        !t.kind ||
+        t.kind === "produits" ||
+        t.kind === "fournitures"
+      ) {
+        return;
+      }
 
-  const keyPart = t.kind + "_particulier";
-  const keySyn = t.kind + "_syndic";
+      const keyPart = t.kind + "_particulier";
+      const keySyn = t.kind + "_syndic";
 
-  const valPart =
-    custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
-  const valSyn =
-    custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
+      const valPart =
+        custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
+      const valSyn =
+        custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
 
-  const tr = document.createElement("tr");
-  tr.innerHTML =
-    `<td>${t.label}</td>` +
-    `<td><input type="number" step="0.01" class="tarif-part" ` +
-    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
-    `<td><input type="number" step="0.01" class="tarif-syn" ` +
-    `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>`;
-  tbody.appendChild(tr);
-});
+      const isCustom = t.kind.indexOf("custom_") === 0;
 
+      const deleteCellHtml = isCustom
+        ? `<td><span class="tarif-delete-btn" onclick="deleteCustomPrestation('${t.kind}')">✖</span></td>`
+        : `<td></td>`;
+
+const tr = document.createElement("tr");
+tr.innerHTML =
+  `<td class="tarif-label-cell" onclick="toggleDescEditor('${t.kind}')">` +
+    `<span class="tarif-label-text">${t.label}</span>` +
+    `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
+  `</td>` +
+  `<td><input type="number" step="0.01" class="tarif-part" ` +
+  `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
+  `<td><input type="number" step="0.01" class="tarif-syn" ` +
+  `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>` +
+  deleteCellHtml;
+
+      tbody.appendChild(tr);
+    });
 
     document.querySelectorAll(".tarifs-button").forEach((btn) => {
       btn.textContent = "⬆️ Revenir aux prestations";
     });
-
- 
   } else {
     resetTarifsPanel();
     if (prestationsSection) {
@@ -2464,6 +2566,7 @@ function openTarifsPanel() {
     }
   }
 }
+
 
 function resetTarifsPanel() {
   const panel = document.getElementById("tarifsPanel");
@@ -2534,6 +2637,281 @@ function resetTarifs() {
         icon: "✅"
       });
       openTarifsPanel();
+    }
+  });
+}
+// ================== POPUP AJOUT DE PRESTATION (TARIFS) ==================
+
+function openAddPrestationPopup() {
+  currentPrestationPopupKind = null;
+
+  const overlay = document.getElementById("prestationPopup");
+  if (!overlay) return;
+
+  const titleEl = document.getElementById("popupTitle");
+  const nameInput = document.getElementById("popupName");
+  const partInput = document.getElementById("popupPricePart");
+  const synInput = document.getElementById("popupPriceSyn");
+
+  if (titleEl) titleEl.textContent = "Nouvelle prestation";
+  if (nameInput) nameInput.value = "";
+  if (partInput) partInput.value = "";
+  if (synInput) synInput.value = "";
+
+  overlay.classList.remove("hidden");
+}
+
+function closePrestationPopup() {
+  const overlay = document.getElementById("prestationPopup");
+  if (!overlay) return;
+  overlay.classList.add("hidden");
+}
+
+/**
+ * Quand on saisit le prix Particulier dans la popup,
+ * on calcule automatiquement le prix Syndic avec le coef 1,25
+ * et arrondi au 10 € supérieur.
+ */
+function onPopupPricePartChange() {
+  const partInput = document.getElementById("popupPricePart");
+  const synInput = document.getElementById("popupPriceSyn");
+  if (!partInput || !synInput) return;
+
+  const coef = 1.25;
+  const p = parseFloat(partInput.value) || 0;
+  let syn = p * coef;
+  syn = Math.ceil(syn / 10) * 10;
+  synInput.value = syn ? syn.toFixed(2) : "";
+}
+
+/**
+ * Validation de la popup : crée un nouveau modèle de prestation.
+ * La fenêtre NE se ferme pas tant que tout n'est pas correct.
+ */
+function confirmPrestationPopup() {
+  const overlay = document.getElementById("prestationPopup");
+  const nameInput = document.getElementById("popupName");
+  const partInput = document.getElementById("popupPricePart");
+  const synInput = document.getElementById("popupPriceSyn");
+
+  if (!overlay || !nameInput || !partInput || !synInput) return;
+
+  const label = nameInput.value.trim();
+  const pricePart = parseFloat(partInput.value || "0");
+  const priceSyn = parseFloat(synInput.value || "0");
+
+  if (!label) {
+    showConfirmDialog({
+      title: "Nom manquant",
+      message: "Merci de saisir un nom de prestation.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  if (!pricePart || pricePart <= 0) {
+    showConfirmDialog({
+      title: "Prix Particulier manquant",
+      message: "Merci de saisir un prix Particulier supérieur à 0.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  let finalSyn = priceSyn;
+  if (!finalSyn || finalSyn <= 0) {
+    const coef = 1.25;
+    let syn = pricePart * coef;
+    syn = Math.ceil(syn / 10) * 10;
+    finalSyn = syn;
+  }
+
+  const kind = "custom_" + Date.now();
+
+  const newTemplate = {
+    label: label,
+    kind: kind,
+    title: label,
+    priceParticulier: pricePart,
+    priceSyndic: finalSyn,
+    descParticulier: "",
+    descSyndic: ""
+  };
+  PRESTATION_TEMPLATES.push(newTemplate);
+
+  const existing = getCustomTemplates();
+  existing.push(newTemplate);
+  saveCustomTemplates(existing);
+
+  // Ajout de la ligne dans le tableau des tarifs
+  const tbody = document.getElementById("tarifsTableBody");
+  if (tbody) {
+    const tr = document.createElement("tr");
+tr.innerHTML =
+  `<td class="tarif-label-cell" onclick="toggleDescEditor('${kind}')">` +
+    `<span class="tarif-label-text">${label}</span>` +
+    `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
+  `</td>` +
+  `<td><input type="number" step="0.01" class="tarif-part" ` +
+  `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="particulier" value="${pricePart.toFixed(2)}"></td>` +
+  `<td><input type="number" step="0.01" class="tarif-syn" ` +
+  `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="syndic" value="${finalSyn.toFixed(2)}"></td>` +
+  `<td><span class="tarif-delete-btn" onclick="deleteCustomPrestation('${kind}')">✖</span></td>`;
+
+    tbody.appendChild(tr);
+  }
+
+  // Ajout dans tous les menus "Modèle"
+  const newIndex = PRESTATION_TEMPLATES.length - 1;
+  document.querySelectorAll(".prestation-template").forEach((select) => {
+    const opt = document.createElement("option");
+    opt.value = String(newIndex);
+    opt.textContent = label;
+    select.appendChild(opt);
+  });
+
+  overlay.classList.add("hidden");
+}
+function toggleDescEditor(kind) {
+  const editor = document.getElementById("descEditor");
+  if (!editor) return;
+
+  const isVisible = !editor.classList.contains("hidden");
+
+  // Si on clique à nouveau sur la même prestation → on referme
+  if (isVisible && currentDescKind === kind) {
+    closeDescEditor();
+  } else {
+    openDescEditor(kind);
+  }
+}
+
+// ================== ÉDITION DES TEXTES DÉTAILLÉS ==================
+
+function openDescEditor(kind) {
+  if (!kind) return;
+  const editor = document.getElementById("descEditor");
+  const partInput = document.getElementById("descPartInput");
+  const synInput = document.getElementById("descSynInput");
+  if (!editor || !partInput || !synInput) return;
+
+  currentDescKind = kind;
+
+  const tpl = PRESTATION_TEMPLATES.find((t) => t.kind === kind);
+  let descPart = "";
+  let descSyn = "";
+
+  if (tpl) {
+    descPart = tpl.descParticulier || "";
+    descSyn = tpl.descSyndic || "";
+  }
+
+  partInput.value = descPart;
+  synInput.value = descSyn;
+
+  editor.classList.remove("hidden");
+}
+
+function closeDescEditor() {
+  const editor = document.getElementById("descEditor");
+  if (!editor) return;
+  editor.classList.add("hidden");
+  currentDescKind = null;
+}
+
+function saveDescEditor() {
+  if (!currentDescKind) {
+    closeDescEditor();
+    return;
+  }
+
+  const partInput = document.getElementById("descPartInput");
+  const synInput = document.getElementById("descSynInput");
+  if (!partInput || !synInput) return;
+
+  const partText = partInput.value.trim();
+  const synText = synInput.value.trim();
+
+  const tpl = PRESTATION_TEMPLATES.find((t) => t.kind === currentDescKind);
+  if (tpl) {
+    tpl.descParticulier = partText;
+    tpl.descSyndic = synText;
+  }
+
+  // on mémorise dans le localStorage séparé
+  const map = getCustomTexts();
+  map[currentDescKind] = {
+    descParticulier: partText,
+    descSyndic: synText
+  };
+  saveCustomTexts(map);
+
+  showConfirmDialog({
+    title: "Texte détaillé mis à jour",
+    message: "Ces textes seront utilisés dans les prochains devis et factures.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+
+  closeDescEditor();
+}
+
+// ================== SUPPRESSION DES MODÈLES PERSONNALISÉS ==================
+
+function deleteCustomPrestation(kind) {
+  if (!kind || kind.indexOf("custom_") !== 0) return;
+
+  showConfirmDialog({
+    title: "Supprimer la prestation",
+    message: "Voulez-vous vraiment supprimer cette prestation personnalisée ?",
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: function () {
+      // 1) marquer le modèle comme supprimé
+      const tpl = PRESTATION_TEMPLATES.find((t) => t.kind === kind);
+      if (tpl) {
+        tpl._deleted = true;
+      }
+
+      // 2) mettre à jour la liste des modèles personnalisés
+      let list = getCustomTemplates();
+      list = list.filter((item) => item.kind !== kind);
+      saveCustomTemplates(list);
+
+      // 3) retirer la ligne du tableau des tarifs
+      const tbody = document.getElementById("tarifsTableBody");
+      if (tbody) {
+        const rows = Array.from(tbody.querySelectorAll("tr"));
+        rows.forEach((tr) => {
+          const partInput = tr.querySelector(".tarif-part");
+          if (partInput && partInput.dataset.kind === kind) {
+            tr.remove();
+          }
+        });
+      }
+
+      // 4) retirer l'option des menus "Modèle"
+      document.querySelectorAll(".prestation-template").forEach((select) => {
+        const opts = Array.from(select.options);
+        opts.forEach((opt) => {
+          const idx = parseInt(opt.value, 10);
+          if (isNaN(idx)) return;
+          const t = PRESTATION_TEMPLATES[idx];
+          if (t && t.kind === kind) {
+            opt.remove();
+          }
+        });
+      });
     }
   });
 }
@@ -3425,11 +3803,14 @@ function openPrintable(id, previewOnly) {
 
 // ------- Init -------
 window.onload = function () {
-    setTVA(0);
-    switchListType("devis");
-    initFirebase(); // 🔥 synchronisation avec Firestore au démarrage
-    updateButtonColors();
+  loadCustomTemplates();   // charge les prestations perso (Option A)
+  loadCustomTexts();       // applique les textes détaillés personnalisés
+  setTVA(0);
+  switchListType("devis");
+  initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
+  updateButtonColors();
 };
+
 
 
 
