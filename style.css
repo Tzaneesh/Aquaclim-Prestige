@@ -17,6 +17,7 @@ body {
   color: #333;
   line-height: 1.6;
 }
+
 .client-main {
   font-weight: 600;
 }
@@ -43,44 +44,48 @@ body {
 .header {
   background: linear-gradient(135deg, #1a74d9 0%, #0d5ab8 100%);
   color: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 30px;
-  box-shadow: 0 4px 6px rgba(26, 116, 217, 0.2);
+  padding: 28px;                    /* plus d'espace */
+  border-radius: 14px;
+  margin-bottom: 26px;
+  box-shadow: 0 4px 10px rgba(26, 116, 217, 0.25);
 }
 
 .header-inner {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 20px;                         /* un peu plus d’air */
   flex-wrap: wrap;
 }
 
 .header-logo {
-  height: 70px;
+  height: 90px;                      /* logo + gros */
   width: auto;
 }
 
 .header h1 {
-  font-size: 32px;
-  margin-bottom: 4px;
+  font-size: 38px;                   /* NOM + visible */
+  margin-bottom: 6px;
+  font-weight: 800;                  /* plus pro */
+  letter-spacing: 0.5px;             /* léger effet premium */
 }
 
 .header p {
-  opacity: 0.95;
-  font-size: 15px;
+  opacity: 0.98;
+  font-size: 16px;                   /* lisibilité ++ */
+  line-height: 1.45;
 }
 
 .header p.subtitle {
-  font-size: 15px;
-  font-weight: 600;
+  font-size: 17px;
+  font-weight: 700;
 }
 
 .header p.contact {
-  font-size: 14px;
-  margin-top: 6px;
+  font-size: 15px;
+  margin-top: 8px;
   font-weight: 600;
 }
+
 
 /* ========== BOUTONS & NAV ========== */
 
@@ -214,34 +219,36 @@ body {
   color: #1a74d9;
   margin-bottom: 20px;
   font-size: 22px;
-}/* Mode impression : bloc Client + Site en 2 colonnes */
+}
 
+/* Bloc client (impression / mise en forme) */
 
 .print-client-block h3 {
   margin-bottom: 6px;
   font-size: 14px;
   font-weight: bold;
   text-transform: uppercase;
-}.client-inner-row{
-  display:flex;
-  flex-wrap:wrap;        /* permet de repasser à la ligne si trop serré */
-  gap:18px;
-  width:100%;
 }
 
-/* Colonne gauche = prend toute la place dispo */
-.client-col.left{
-  flex:1 1 auto;
-  min-width:220px;       /* évite que ça s’écrase trop */
+.client-inner-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  width: 100%;
 }
 
-/* Colonne droite = collée à droite */
-.client-col.right{
-  flex:0 0 auto;         /* largeur = largeur du contenu */
-  margin-left:auto;      /* pousse la colonne à fond à droite */
-  min-width:220px;       /* si la largeur devient trop petite → wrap en dessous */
+.client-col.left {
+  flex: 1 1 auto;
+  min-width: 220px;
 }
 
+.client-col.right {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-width: 220px;
+}
+
+/* Dates prestation */
 
 .prestation-date-row {
   display: flex;
@@ -250,7 +257,7 @@ body {
 }
 
 .prestation-date-row .prestation-date {
-  width: 140px;            /* largeur parfaite pour jj/mm/aaaa */
+  width: 140px;
   min-width: 140px;
   max-width: 140px;
   padding: 7px;
@@ -259,7 +266,6 @@ body {
 .date-remove-btn {
   padding-inline: 8px;
 }
-
 
 /* ========== FORM ========== */
 
@@ -312,6 +318,7 @@ textarea {
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
   gap: 20px;
 }
+
 /* Rendre les boutons radio du type client bien ronds comme la TVA */
 .client-type-option input[type="radio"] {
   appearance: auto !important;
@@ -329,6 +336,7 @@ textarea {
 }
 
 /* Type client */
+
 .client-type-row {
   display: flex;
   gap: 10px;
@@ -345,6 +353,7 @@ textarea {
 }
 
 /* Prestations */
+
 .prestations-section {
   margin-top: 25px;
 }
@@ -398,27 +407,35 @@ textarea {
   margin-top: 4px;
 }
 
+/* Alignement du prix d'achat au même niveau que Prix HT */
+.prestation-line .purchase-wrapper {
+  margin-top: 0 !important;
+  align-self: flex-start;
+}
+
 .prestation-total {
   font-weight: 600;
 }
-/* Alignement du prix d'achat au même niveau que Prix HT */
-.prestation-line .purchase-wrapper {
-    margin-top: 0 !important;
-    align-self: flex-start; /* force l'alignement en haut */
+
+/* Bouton supprimer prestation */
+
+.prestation-remove-wrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-right: 10px; /* décalage léger vers la gauche */
 }
 
 /* ========== TOTAUX / TVA / RÉDUCTION ========== */
 
-/* Bloc totaux : style carte plus propre */
 .totals {
-  background: #f0f3f7;           /* un peu plus contrasté */
+  background: #f0f3f7;
   padding: 18px 16px;
   border-radius: 10px;
   margin-top: 20px;
-  border: 1px solid #dde4ee;     /* petite bordure légère */
+  border: 1px solid #dde4ee;
 }
 
-/* Lignes de sous-total / TVA / total */
 .total-line {
   display: flex;
   justify-content: space-between;
@@ -427,7 +444,6 @@ textarea {
   font-size: 14px;
 }
 
-/* Total final mis en avant */
 .total-line.grand-total {
   font-size: 18px;
   font-weight: 700;
@@ -437,21 +453,20 @@ textarea {
   margin-top: 12px;
 }
 
-
 .tva-note {
   margin-top: 8px;
   font-size: 12px;
   font-style: italic;
   color: #555;
 }
+
 #tvaRate {
-  width: 60px !important;   /* petit rectangle */
+  width: 60px !important;
   min-width: 60px !important;
   height: 36px;
   border-radius: 8px;
   text-align: center;
 }
-
 
 .discount-group {
   margin: 8px 0;
@@ -464,7 +479,6 @@ textarea {
   flex-wrap: wrap;
 }
 
-/* petit carré arrondi pour le pourcentage de réduction */
 .discount-row input[type="number"] {
   width: 50px;
   min-width: 50px;
@@ -482,7 +496,12 @@ textarea {
   color: #555;
 }
 
-
+/* Bloc TVA / réduction côte à côte */
+.totals-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
 
 /* Paiement */
 
@@ -566,7 +585,7 @@ textarea {
 
 .no-docs-cell {
   text-align: center;
-  color: #999;	
+  color: #999;
 }
 
 /* Tarifs panel */
@@ -582,10 +601,15 @@ textarea {
 }
 
 .tarifs-actions {
-  margin-top: 10px;
   display: flex;
   gap: 10px;
+  justify-content: flex-start;
   flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.tarifs-actions-top {
+  margin-bottom: 10px;
 }
 
 /* ========== BADGES ========== */
@@ -615,7 +639,6 @@ textarea {
   background: #ffebee;
   color: #c62828;
 }
-
 
 /* Factures payées / non payées */
 .badge-paid {
@@ -667,6 +690,7 @@ textarea {
   font-weight: 600;
   color: #1a74d9;
 }
+
 .tva-rate-wrapper {
   display: flex;
   align-items: center;
@@ -712,8 +736,7 @@ textarea {
   }
 }
 
-
-/* ====== BOUTONS "Modifier / Imprimer / Aperçu / Supprimer" PLUS GRANDS ====== */
+/* ====== BOUTONS "Modifier / Imprimer / Aperçu / Supprimer" ====== */
 
 .actions-btns {
   display: flex;
@@ -735,9 +758,8 @@ textarea {
   border-radius: 999px;
 }
 
-
-
 /* Effet transition douce */
+
 @keyframes slideDown {
   from {
     opacity: 0;
@@ -748,22 +770,22 @@ textarea {
     transform: translateX(-50%) translateY(0);
   }
 }
-/* OVERLAY */
+
+/* OVERLAY CONFIRM */
+
 #confirmOverlay {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.35);
   backdrop-filter: blur(3px);
-
   display: flex;
   justify-content: center;
-  align-items: center;   /* CENTRÉ EXACTEMENT */
-
+  align-items: center;
   z-index: 9999;
 }
 
+/* POPUP CONFIRM */
 
-/* POPUP */
 #confirmOverlay .confirm-box {
   position: relative;
   background: #fff;
@@ -771,13 +793,10 @@ textarea {
   padding: 28px 22px 22px 22px;
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
-
   animation: popupSlideDown 0.25s ease-out;
-
   border-top: 4px solid #1a74d9;
   text-align: center;
 }
-
 
 /* variantes de couleur */
 .confirm-box.danger {
@@ -791,6 +810,7 @@ textarea {
 }
 
 /* ICÔNE RONDE EN HAUT CENTRÉ */
+
 .confirm-icon {
   width: 52px;
   height: 52px;
@@ -804,7 +824,6 @@ textarea {
   color: #1a74d9;
 }
 
-/* variantes icône */
 .confirm-icon.danger {
   background: #ffebee;
   color: #d32f2f;
@@ -819,6 +838,7 @@ textarea {
 }
 
 /* TITRE + MESSAGE */
+
 #confirmTitle {
   font-weight: 700;
   font-size: 18px;
@@ -831,10 +851,11 @@ textarea {
   color: #444;
   line-height: 1.45;
   margin-bottom: 18px;
-  white-space: pre-line; /* garde les \n */
+  white-space: pre-line;
 }
 
-/* BOUTONS */
+/* BOUTONS CONFIRM */
+
 .confirm-buttons {
   display: flex;
   justify-content: center;
@@ -853,7 +874,7 @@ textarea {
 
 #confirmOk {
   background: #d32f2f;
-  color: white;
+  color: #fff;
 }
 #confirmOk:hover {
   background: #b71c1c;
@@ -867,7 +888,6 @@ textarea {
   background: #bdbdbd;
 }
 
-/* ANIM */
 @keyframes popupSlideDown {
   from {
     opacity: 0;
@@ -878,12 +898,13 @@ textarea {
     transform: translateY(0);
   }
 }
+
 /* ===== POPUP PRESTATION (centrée) ===== */
 
 .popup-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.45);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -899,13 +920,19 @@ textarea {
   padding: 25px;
   border-radius: 14px;
   width: 340px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   animation: popIn 0.2s ease-out;
 }
 
 @keyframes popIn {
-  from { transform: scale(0.8); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 .popup h3 {
@@ -926,20 +953,6 @@ textarea {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-}
-
-/* ===== Zone boutons Tarifs ===== */
-
-.tarifs-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  margin-top: 10px;
-}
-
-.tarifs-actions-top {
-  margin-bottom: 10px;
 }
 
 /* ===== Icônes / interactions dans le tableau des tarifs ===== */
@@ -982,22 +995,6 @@ textarea {
   color: #ff0000;
 }
 
-
-.tarif-delete-btn {
-  cursor: pointer;
-  color: #c62828;
-  font-weight: bold;
-  font-size: 18px;
-  display: inline-block;
-}
-
-.tarif-delete-btn:hover {
-  color: #ff0000;
-}
-.tarif-delete-cell {
-  text-align: center;
-}
-
 /* ===== Mini éditeur de texte détaillé ===== */
 
 .desc-editor {
@@ -1033,13 +1030,19 @@ textarea {
   display: flex;
   gap: 8px;
   justify-content: flex-end;
-}  /* Alignement du bouton supprimer prestation */
-.prestation-remove-wrapper {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
 }
 
+/* ===== Signature ===== */
+
+.signature-block {
+  margin-top: 30px;
+  text-align: right;
+}
+
+.signature-block .signature-img {
+  width: 160px;
+  height: auto;
+}
 
 /* ========== IMPRESSION ========== */
 
@@ -1054,25 +1057,129 @@ textarea {
 
   .container {
     max-width: none;
-    padding: 0;
+    padding: 10mm;
   }
 
   .card {
     box-shadow: none;
     border-radius: 0;
   }
+
+  /* En-tête plus compact à l’impression */
+  .header {
+    padding: 18px 22px;
+    margin-bottom: 12px;
+  }
+
+  .header-logo {
+    height: 90px !important;
+    width: auto !important;
+  }
+
+  .header h1 {
+    font-size: 38px !important;
+    margin-bottom: 6px;
+  }
+
+  .header p.subtitle {
+    font-size: 18px !important;
+  }
+
+  .header p.contact {
+    font-size: 14px !important;
+  }
+
+  /* Titre principal du devis (DEVIS N° ...) */
+  .print-doc-title {
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin: 8px 0 16px;
+    color: #1a74d9;
+    border-bottom: 2px solid #dde4ee;
+    padding-bottom: 6px;
+  }
+
+  /* Bloc client plus visible */
+  .print-client-block {
+    background: #f5f7fb;
+    border-radius: 8px;
+    border: 1px solid #dde4ee;
+    padding: 10px 12px;
+    margin: 6px 0 16px;
+  }
+
+  .print-client-block h3 {
+    margin-bottom: 4px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #1a74d9;
+  }
+
+  .print-client-block p {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  /* Zébrage léger sur les tableaux de prestations / docs */
+  .documents-table tbody tr:nth-child(odd),
+  .print-prestations-table tbody tr:nth-child(odd) {
+    background: #f8f9fc;
+  }
+
+  .documents-table tbody tr:nth-child(even),
+  .print-prestations-table tbody tr:nth-child(even) {
+    background: #ffffff;
+  }
+
+  .documents-table th,
+  .print-prestations-table th {
+    border-bottom: 2px solid #cbd3e1;
+  }
+
+  .documents-table td,
+  .print-prestations-table td {
+    border-bottom: 1px solid #e1e8ed;
+  }
+
+  /* Totaux plus premium sur le devis imprimé */
+  .totals {
+    background: #f3f6fc;
+    border: 1px solid #cbd3e1;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 18px;
+  }
+
+  .totals .total-line {
+    font-size: 12px;
+  }
+
+  .totals .grand-total {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0d3b66;
+    background: #e3edff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-top: 10px;
+    border-top: none;
+    justify-content: space-between;
+  }
+
+  .totals .grand-total span:last-child {
+    font-size: 19px;
+  }
+
+  /* Titres de sections à l'impression */
+  .section-title {
+    color: #1a74d9;
+    border-bottom: 1px solid #dde4ee;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+    font-size: 15px;
+  }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-

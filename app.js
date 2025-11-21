@@ -3038,6 +3038,7 @@ function showConfirmDialog({
 
 // ================== IMPRESSION / PDF ==================
 
+
 function openPrintable(id, previewOnly) {
   const targetId = id || currentDocumentId;
   if (!targetId) {
@@ -3051,7 +3052,6 @@ function openPrintable(id, previewOnly) {
     });
     return;
   }
-
 
   const doc = getDocument(targetId);
   if (!doc) return;
@@ -3369,441 +3369,542 @@ function openPrintable(id, previewOnly) {
   <meta charset="UTF-8" />
   <title>${isDevis ? "Devis " : "Facture "}${doc.number}</title>
   <style>
-    *{margin:0;padding:0;box-sizing:border-box;}
-    body{
-      margin:0;
-      padding:0;
-      font-family:Arial,sans-serif;
-      color:#333;
-      font-size:10.5px;
-    }
-    .page{
-      display:flex;
-      flex-direction:column;
-      min-height:100vh;
-      padding:10mm 12mm 14mm 12mm;
-      box-sizing:border-box;
-    }
-    .page-main{flex:1 0 auto;}
-    .page-footer{flex-shrink:0;margin-top:8mm;}
-    .bottom-block{page-break-inside:avoid;break-inside:avoid;}
-
-    .header{
-      text-align:center;
-      margin-bottom:8px;
-      border-bottom:1.3px solid #1a74d9;
-      padding-bottom:7px;
-    }
-    img.logo{height:55px;margin-bottom:4px;}
-    .header h1{
-      color:#1a74d9;
-      font-size:21px;
-      margin-bottom:3px;
-      font-weight:700;
-    }
-    .header p{
-      color:#444;
-      font-size:10.5px;
-      line-height:1.25;
-    }
-    .subtitle{
-      font-weight:600;
-      font-size:11px;
-    }
-    .contact{
-      font-size:10.5px;
-      font-weight:500;
-    }
-    .contact strong{font-weight:700;}
-
-    .doc-header-center{
-      margin:10px 0 12px 0;
-    }
-    .doc-header-center h2{
-      font-size:18px;
-      margin-top:10px;
-      margin-bottom:4px;
-      text-align:left;
-    }
-    .doc-subject{
-      margin-top:6px;
-      font-size:11px;
-      font-weight:bold;
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
 
-    .doc-info-block{
-      display:inline-block;
-      border:1px solid #000;
-      border-radius:6px;
-      padding:6px 8px;
-      font-size:10px;
-      background:#fafafa;
-    }
-    .doc-info-row{
-      display:flex;
-      gap:4px;
-      margin:1px 0;
-    }
-    .doc-info-label{
-      min-width:95px;
-      font-weight:bold;
-    }
-    .doc-info-value{
-      flex:1;
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+      color: #333;
+      font-size: 10.5px;
     }
 
-    .client-block{
-  margin-bottom:8px;
-  font-size:10px;
-  border:1px solid #000;
-  border-radius:6px;
-  padding:8px 10px;
-  background:#fff;
-}
-.client-title{
-  font-weight:bold;
-  font-size:10.5px;
-  margin-bottom:4px;
-  text-transform:none;
-  letter-spacing:0;
-}
-.client-line{margin:2px 0;}
-.client-inner-row{
-  display:flex;
-  gap:18px;
-}
-.client-col{
-  flex:1 1 auto;
-}
-.client-col.right{
-  flex:0 0 auto;
-  margin-left:auto;
-}
-
-
-
-    .site-block{
-      margin-bottom:8px;
-      font-size:10px;
-      border:1px solid #000;
-      border-radius:6px;
-      padding:8px 10px;
-      background:#fff;
-    }
-    .site-title{
-      font-weight:bold;
-      font-size:10px;
-      margin-bottom:4px;
-      text-transform:uppercase;
-      letter-spacing:0.5px;
+    .page {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 10mm 12mm 14mm 12mm;
+      box-sizing: border-box;
     }
 
-    table{
-      width:100%;
-      border-collapse:collapse;
-      margin:10px 0;
+    .page-main {
+      flex: 1 0 auto;
     }
-    th{
-      background:#1a74d9;
-      color:#fff;
-      padding:6px 6px;
-      text-align:left;
-      font-weight:600;
-      font-size:11px;
-      border-bottom:2px solid #000;
+
+    .page-footer {
+      flex-shrink: 0;
+      margin-top: 8mm;
     }
-    td{
-      padding:4px 6px;
-      border-bottom:1px solid #000;
-      font-size:10px;
-      vertical-align:top;
+
+    .bottom-block {
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+
+    /* ===== HEADER ===== */
+
+    .header {
+      text-align: center;
+      margin-bottom: 6px; /* un peu plus compact */
+      border-bottom: 1.5px solid #1a74d9;
+      padding-bottom: 7px;
+    }
+
+    img.logo {
+      height: 55px;
+      margin-bottom: 4px;
+    }
+
+    .header h1 {
+      color: #1a74d9;
+      font-size: 21px;
+      margin-bottom: 3px;
+      font-weight: 700;
+    }
+
+    .header p {
+      color: #444;
+      font-size: 10.5px;
+      line-height: 1.25;
+    }
+
+    .subtitle {
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .contact {
+      font-size: 10.5px;
+      font-weight: 500;
+    }
+
+    .contact strong {
+      font-weight: 700;
+    }
+
+    /* ===== TITRE DEVIS / FACTURE ===== */
+
+    .doc-header-center {
+      margin: 8px 0 12px 0;
+    }
+
+    .doc-header-center h2 {
+      font-size: 20px;
+      margin-top: 10px;
+      margin-bottom: 8px;
+      text-align: left;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      border-bottom: 2px solid #dde4ee;
+      padding-bottom: 4px;
+    }
+
+    .doc-subject {
+      margin-top: 6px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    /* ===== INFOS DATES (CADRE À DROITE) ===== */
+
+    .doc-info-block {
+      display: inline-block;
+      border: 1px solid #cbd3e1;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 10px;
+      background: #f6f8fc;
+      margin-top: 4px;
+    }
+
+    .doc-info-row {
+      display: flex;
+      gap: 4px;
+      margin: 1px 0;
+    }
+
+    .doc-info-label {
+      min-width: 95px;
+      font-weight: bold;
+    }
+
+    .doc-info-value {
+      flex: 1;
+    }
+
+    /* ===== BLOC CLIENT / SITE ===== */
+
+    .client-block {
+      margin-bottom: 8px;
+      font-size: 10px;
+      border: 1px solid #dde4ee;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #f5f7fb; /* léger fond gris/bleu */
+    }
+
+    .client-title {
+      font-weight: 700;
+      font-size: 10.5px;
+      margin-bottom: 4px;
+      text-transform: none;
+      letter-spacing: 0;
+      color: #1a74d9;
+    }
+
+    .client-line {
+      margin: 2px 0;
+    }
+
+    .client-inner-row {
+      display: flex;
+      gap: 18px;
+    }
+
+    .client-col {
+      flex: 1 1 auto;
+    }
+
+    .client-col.right {
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
+
+    .site-block {
+      margin-bottom: 8px;
+      font-size: 10px;
+      border: 1px solid #000;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+
+    .site-title {
+      font-weight: bold;
+      font-size: 10px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ===== TABLE PRESTATIONS ===== */
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+
+    thead th {
+      background: #1a74d9;
+      color: #fff;
+      padding: 6px 6px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      border-bottom: 2px solid #cbd3e1;
+    }
+
+    tbody td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #dde4ee;
+      font-size: 10px;
+      vertical-align: top;
+    }
+
+    /* zébrage léger */
+    tbody tr:nth-child(odd) {
+      background: #f9fbff;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #ffffff;
     }
 
     th:first-child,
-    td:first-child{
-      width:55%;
+    td:first-child {
+      width: 55%;
     }
 
-    .text-right{text-align:right;}
+    .text-right {
+      text-align: right;
+    }
+
     .qty-col,
-    .unit-col{
-      text-align:center;
-      white-space:nowrap;
+    .unit-col {
+      text-align: center;
+      white-space: nowrap;
     }
+
     .price-col,
-    .total-col{
-      white-space:nowrap;
-      text-align:right;
+    .total-col {
+      white-space: nowrap;
+      text-align: right;
     }
 
-    .desc-main{
-      font-size:11px;
-      font-weight:600;
-      margin-bottom:2px;
+    .desc-main {
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 2px;
     }
-    .desc-detail{
-      font-size:10px;
-      color:#555;
-      margin-top:2px;
+
+    .desc-detail {
+      font-size: 10px;
+      color: #555;
+      margin-top: 2px;
     }
-    .sub-info{
-      margin-top:3px;
-      font-size:9.5px;
-      color:#555;
+
+    .sub-info {
+      margin-top: 3px;
+      font-size: 9.5px;
+      color: #555;
     }
-    .sub-info-line{margin-top:1px;}
 
-    .totals{
-      margin-left:auto;
-      width:230px;
-      margin-top:6px;
-      border:1px solid #000;
-      border-radius:6px;
-      padding:6px 8px;
-      background:#fff;
+    .sub-info-line {
+      margin-top: 1px;
     }
-    .totals table{
-      width:100%;
-      border-collapse:collapse;
-      margin:0;
+
+    /* ===== TOTAUX ===== */
+
+    .totals {
+      margin-left: auto;
+      width: 230px;
+      margin-top: 6px;
+      border: 1px solid #cbd3e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #f3f6fc;
     }
-    .totals td{
-      padding:3px 0;
-      font-size:10px;
+
+    .totals table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
     }
-    .totals .grand-total td{
-      padding-top:5px;
-      border-top:1px solid #000;
-      font-weight:bold;
-      font-size:11px;
-      background:#f0f0f0;
+
+    .totals td {
+      padding: 3px 0;
+      font-size: 10px;
     }
-        .tva-note{
-            margin-top:4px;
-            font-size:9px;
-            font-style:italic;
-            color:#555;
-        }
 
-        .reglement-block{
-            margin-top:6px;
-            font-size:10px;
-            border:1px solid #1b5e20;
-            padding:8px;
-            border-radius:6px;
-            background:#e8f5e9;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .reg-title{
-            font-weight:bold;
-            margin-bottom:3px;
-            color:#1b5e20;
-            font-size:10px;
-        }
+    .totals .grand-total td {
+      padding-top: 6px;
+      border-top: 1px solid #cbd3e1;
+      font-weight: 800;
+      font-size: 11px;
+      background: #e3edff;
+      color: #0d3b66;
+    }
 
-        .rib-block{
-            margin-top:6px;
-            font-size:10px;
-            border:1px solid #000;
-            padding:8px;
-            border-radius:6px;
-            background:#fff;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .rib-title{
-            font-weight:bold;
-            margin-bottom:3px;
-            font-size:10px;
-        }
+    .tva-note {
+      margin-top: 4px;
+      font-size: 9px;
+      font-style: italic;
+      color: #555;
+    }
 
-        .important-block{
-            margin-top:8px;
-            font-size:10px;
-            border:1px solid #1a74d9;
-            padding:8px;
-            border-radius:6px;
-            background:#f3f7ff;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .important-title{
-            font-weight:bold;
-            margin-bottom:4px;
-            font-size:10px;
-            color:#1a74d9;
-        }
-        .important-block ul{
-            margin-left:14px;
-        }
-        .important-block li{
-            margin-bottom:3px;
-        }
+    /* ===== BLOCS ANNEXES ===== */
 
-        .conditions-block{
-            margin-top:6px;
-            font-size:10px;
-            border:1px solid #000;
-            border-radius:6px;
-            padding:8px;
-            background:#fff;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .conditions-title{
-            font-weight:bold;
-            margin-bottom:3px;
-            font-size:10px;
-        }
+    .reglement-block {
+      margin-top: 6px;
+      font-size: 10px;
+      border: 1px solid #1b5e20;
+      padding: 8px;
+      border-radius: 6px;
+      background: #e8f5e9;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+    }
 
-        .signatures{
-            margin-top:10px;
-            display:flex;
-            justify-content:space-between;
-            gap:22px;
-            page-break-inside:avoid;
-            break-inside:avoid;
-            -webkit-column-break-inside:avoid;
-        }
-        .signature-block{
-            flex:1;
-            border-top:1px solid #333;
-            padding-top:4px;
-            font-size:10px;
-            min-height:55px;
-        }
-        .signature-title{
-            font-weight:bold;
-            margin-bottom:3px;
-        }
-        img.sig{
-            max-height:38px;
-            margin-top:3px;
-        }
+    .reg-title {
+      font-weight: bold;
+      margin-bottom: 3px;
+      color: #1b5e20;
+      font-size: 10px;
+    }
 
-        @media print{
-            @page{margin:0;}
-            body{margin:0;padding:0;}
-            .page{min-height:100vh;}
-        }
-    </style>
+    .rib-block {
+      margin-top: 6px;
+      font-size: 10px;
+      border: 1px solid #cbd3e1;
+      padding: 8px;
+      border-radius: 6px;
+      background: #ffffff;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+    }
+
+    .rib-title {
+      font-weight: bold;
+      margin-bottom: 3px;
+      font-size: 10px;
+    }
+
+    .important-block {
+      margin-top: 8px;
+      font-size: 10px;
+      border: 1px solid #1a74d9;
+      padding: 8px;
+      border-radius: 6px;
+      background: #f3f7ff;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+    }
+
+    .important-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+      font-size: 10px;
+      color: #1a74d9;
+    }
+
+    .important-block ul {
+      margin-left: 14px;
+    }
+
+    .important-block li {
+      margin-bottom: 3px;
+    }
+
+    .conditions-block {
+      margin-top: 6px;
+      font-size: 10px;
+      border: 1px solid #cbd3e1;
+      border-radius: 6px;
+      padding: 8px;
+      background: #ffffff;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+    }
+
+    .conditions-title {
+      font-weight: bold;
+      margin-bottom: 3px;
+      font-size: 10px;
+    }
+
+    /* ===== SIGNATURES ===== */
+
+    .signatures {
+      margin-top: 10px;
+      display: flex;
+      justify-content: space-between;
+      gap: 22px;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+    }
+
+    .signature-block {
+      flex: 1;
+      border-top: 1px solid #333;
+      padding-top: 4px;
+      font-size: 10px;
+      min-height: 55px;
+    }
+
+    .signature-title {
+      font-weight: bold;
+      margin-bottom: 3px;
+    }
+
+    img.sig {
+      max-height: 38px;
+      margin-top: 3px;
+    }
+
+    @media print {
+      @page {
+        margin: 0;
+      }
+      body {
+        margin: 0;
+        padding: 0;
+      }
+      .page {
+        min-height: 100vh;
+      }
+    }
+  </style>
 </head>
 <body>
 <div class="page">
-    <div class="page-main">
-        <div class="header">
-            <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
-            <h1>AquaClim Prestige</h1>
-            <p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>
-            <p class="contact">
-                Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
-                Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
-                SIRET : <strong>XXXXXXXXXXXXX</strong>
-            </p>
-        </div>
-
-        <div class="doc-header-center">
-            <h2 style="color:${titleColor};">
-                ${isDevis ? "DEVIS N° : " : "FACTURE N° : "}${doc.number}
-            </h2>
-
-            ${topDatesHtml}
-            ${doc.subject ? `
-                <div class="doc-subject">Objet : ${doc.subject}</div>
-            ` : ``}
-        </div>
-
-  <div class="client-block">
-  <div class="client-inner-row">
-
-    <!-- COLONNE GAUCHE -->
-    <div class="client-col">
-      <div class="client-title">Client</div>
-
-      ${doc.client?.name ? `<p class="client-line">${doc.client.name}</p>` : ""}
-      ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
-      ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
-      ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
+  <div class="page-main">
+    <div class="header">
+      <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
+      <h1>AquaClim Prestige</h1>
+      <p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>
+      <p class="contact">
+        Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
+        Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
+        SIRET : <strong>XXXXXXXXXXXXX</strong>
+      </p>
     </div>
 
-    <!-- COLONNE DROITE (poussée complètement à droite) -->
-    ${(doc.siteName || doc.siteAddress) ? `
-    <div class="client-col right">
-      <div class="client-title">Lieu d’intervention</div>
+    <div class="doc-header-center">
+      <h2 style="color:${titleColor};">
+        ${isDevis ? "DEVIS N° : " : "FACTURE N° : "}${doc.number}
+      </h2>
 
-      ${doc.siteName ? `<p class="client-line">Client sur site : ${doc.siteName}</p>` : ""}
-      ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
+      ${topDatesHtml}
+      ${
+        doc.subject
+          ? `<div class="doc-subject">Objet : ${doc.subject}</div>`
+          : ``
+      }
     </div>
-    ` : ""}
+
+    <div class="client-block">
+      <div class="client-inner-row">
+        <!-- COLONNE GAUCHE -->
+        <div class="client-col">
+          <div class="client-title">Client</div>
+          ${doc.client?.name ? `<p class="client-line">${doc.client.name}</p>` : ""}
+          ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
+          ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
+          ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
+        </div>
+
+        <!-- COLONNE DROITE (Lieu d’intervention) -->
+        ${
+          doc.siteName || doc.siteAddress
+            ? `
+        <div class="client-col right">
+          <div class="client-title">Lieu d’intervention</div>
+          ${doc.siteName ? `<p class="client-line">Client sur site : ${doc.siteName}</p>` : ""}
+          ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
+        </div>`
+            : ""
+        }
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th class="qty-col">Quantité</th>
+          <th class="unit-col">Unité</th>
+          <th class="price-col text-right">Prix HT</th>
+          <th class="total-col text-right">Total HT</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${prestationsHTML}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <table>
+        ${totalsRows}
+      </table>
+      ${tvaNoteHtml}
+    </div>
+
+    ${isPaidInvoice ? reglementHtml : ""}
+    ${isPaidInvoice ? notesHtml : ""}
 
   </div>
-</div>
 
-
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th class="qty-col">Quantité</th>
-                    <th class="unit-col">Unité</th>
-                    <th class="price-col text-right">Prix HT</th>
-                    <th class="total-col text-right">Total HT</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${prestationsHTML}
-            </tbody>
-        </table>
-
-        <div class="totals">
-            <table>
-                ${totalsRows}
-            </table>
-            ${tvaNoteHtml}
-        </div>
-
-        ${isPaidInvoice ? reglementHtml : ""}
-        ${isPaidInvoice ? notesHtml : ""}
-
-    </div>
-
-    <div class="page-footer bottom-block">
-        ${
-            isDevis
-                ? `
-                    ${notesHtml}
-                    ${importantHtml}
-                    <div class="signatures">
-                        <div class="signature-block">
-                            <div class="signature-title">${signatureClientTitle}</div>
-                            <p>${signatureClientText}</p>
-                            <p style="margin-top:6px;">Date :</p>
-                            <p>Signature du client :</p>
-                        </div>
-                        <div class="signature-block">
-                            <div class="signature-title">AquaClim Prestige</div>
-                            <p>Signature et cachet de l’entreprise</p>
-                            <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-                        </div>
-                    </div>
-                `
-                : (
-                    isUnpaidInvoice
-                        ? `
-                            ${ribHtml}
-                            ${notesHtml}
-                        `
-                        : ``
-                )
-        }
-    </div>
-
+  <div class="page-footer bottom-block">
+    ${
+      isDevis
+        ? `
+          ${notesHtml}
+          ${importantHtml}
+          <div class="signatures">
+            <div class="signature-block">
+              <div class="signature-title">${signatureClientTitle}</div>
+              <p>${signatureClientText}</p>
+            <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
+              <p>Signature du client :</p>
+            </div>
+            <div class="signature-block">
+              <div class="signature-title">AquaClim Prestige</div>
+              <p>Signature et cachet de l’entreprise</p>
+              <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+            </div>
+          </div>
+        `
+        : (
+          isUnpaidInvoice
+            ? `
+              ${ribHtml}
+              ${notesHtml}
+            `
+            : ``
+        )
+    }
+  </div>
 </div>
 </body>
 </html>`;
@@ -3813,7 +3914,6 @@ function openPrintable(id, previewOnly) {
 
   printWindow.onload = function () {
     printWindow.focus();
-    // 👇 si previewOnly est true → on n'imprime pas
     if (!previewOnly) {
       printWindow.print();
     }

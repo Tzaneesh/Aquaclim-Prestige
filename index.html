@@ -81,113 +81,110 @@
         </button>
       </div>
 
- <!-- Panel Tarifs -->
-<div id="tarifsPanel" class="card no-print hidden">
-  <h2>Tarifs des prestations</h2>
+      <!-- Panel Tarifs -->
+      <div id="tarifsPanel" class="card no-print hidden">
+        <h2>Tarifs des prestations</h2>
 
-  <!-- Boutons EN HAUT du panneau -->
-<div class="tarifs-actions tarifs-actions-top">
-  <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
-    ← Retour
-  </button>
+        <!-- Boutons EN HAUT du panneau -->
+        <div class="tarifs-actions tarifs-actions-top">
+          <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
+            ← Retour
+          </button>
 
-  <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
-    💾 Enregistrer les tarifs
-  </button>
+          <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
+            💾 Enregistrer les tarifs
+          </button>
 
-  <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
-    ➕ Ajouter une prestation
-  </button>
+          <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
+            ➕ Ajouter une prestation
+          </button>
 
-  <button class="btn btn-danger" type="button" onclick="resetTarifs()">
-    🧹 Réinitialiser
-  </button>
-</div>
+          <button class="btn btn-danger" type="button" onclick="resetTarifs()">
+            🧹 Réinitialiser
+          </button>
+        </div>
 
+        <table class="documents-table">
+          <thead>
+            <tr>
+              <th>Prestation</th>
+              <th>Prix Particulier</th>
+              <th>Prix Syndic</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tarifsTableBody"></tbody>
+        </table>
 
-  <table class="documents-table">
-    <thead>
-      <tr>
-        <th>Prestation</th>
-        <th>Prix Particulier</th>
-        <th>Prix Syndic</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody id="tarifsTableBody"></tbody>
-  </table>
+        <!-- Mini bloc pour éditer les textes détaillés -->
+        <div id="descEditor" class="desc-editor hidden">
+          <h4>Texte détaillé du modèle</h4>
 
-  <!-- Mini bloc pour éditer les textes détaillés -->
-  <div id="descEditor" class="desc-editor hidden">
-    <h4>Texte détaillé du modèle</h4>
+          <label for="descPartInput">Texte Particulier</label>
+          <textarea id="descPartInput"></textarea>
 
-    <label>Texte Particulier</label>
-    <textarea id="descPartInput"></textarea>
+          <label for="descSynInput">Texte Syndic / Agence</label>
+          <textarea id="descSynInput"></textarea>
 
-    <label>Texte Syndic / Agence</label>
-    <textarea id="descSynInput"></textarea>
+          <div class="desc-editor-buttons">
+            <button class="btn btn-primary btn-small" type="button" onclick="saveDescEditor()">
+              Enregistrer
+            </button>
+            <button class="btn btn-secondary btn-small" type="button" onclick="closeDescEditor()">
+              Fermer
+            </button>
+          </div>
+        </div>
 
-    <div class="desc-editor-buttons">
-      <button class="btn btn-primary btn-small" type="button" onclick="saveDescEditor()">
-        Enregistrer
-      </button>
-      <button class="btn btn-secondary btn-small" type="button" onclick="closeDescEditor()">
-        Fermer
-      </button>
-    </div>
-  </div>
+        <!-- Boutons EN BAS du panneau -->
+        <div class="tarifs-actions tarifs-actions-bottom">
+          <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
+            ← Retour
+          </button>
 
-  <!-- Boutons EN BAS du panneau -->
-<div class="tarifs-actions tarifs-actions-bottom">
-  <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
-    ← Retour
-  </button>
+          <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
+            💾 Enregistrer les tarifs
+          </button>
 
-  <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
-    💾 Enregistrer les tarifs
-  </button>
+          <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
+            ➕ Ajouter une prestation
+          </button>
 
-  <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
-    ➕ Ajouter une prestation
-  </button>
+          <button class="btn btn-danger" type="button" onclick="resetTarifs()">
+            🧹 Réinitialiser
+          </button>
+        </div>
+      </div>
 
-  <button class="btn btn-danger" type="button" onclick="resetTarifs()">
-    🧹 Réinitialiser
-  </button>
-</div>
+      <!-- POPUP — Ajouter une prestation modèle -->
+      <div id="prestationPopup" class="popup-overlay hidden">
+        <div class="popup">
+          <h3 id="popupTitle">Nouvelle prestation</h3>
 
-</div>
+          <label for="popupName">Nom de la prestation</label>
+          <input type="text" id="popupName" />
 
-<!-- POPUP — Ajouter une prestation modèle -->
-<div id="prestationPopup" class="popup-overlay hidden">
-  <div class="popup">
-    <h3 id="popupTitle">Nouvelle prestation</h3>
+          <label for="popupPricePart">Prix Particulier</label>
+          <input
+            type="number"
+            id="popupPricePart"
+            step="0.01"
+            oninput="onPopupPricePartChange()"
+          />
 
-    <label>Nom de la prestation</label>
-    <input type="text" id="popupName" />
+          <label for="popupPriceSyn">Prix Syndic</label>
+          <input type="number" id="popupPriceSyn" step="0.01" />
 
-    <label>Prix Particulier</label>
-    <input
-      type="number"
-      id="popupPricePart"
-      step="0.01"
-      oninput="onPopupPricePartChange()"
-    />
-
-    <label>Prix Syndic</label>
-    <input type="number" id="popupPriceSyn" step="0.01" />
-
-    <div class="popup-buttons">
-      <button class="btn btn-primary" type="button" onclick="confirmPrestationPopup()">
-        Valider
-      </button>
-      <button class="btn btn-secondary" type="button" onclick="closePrestationPopup()">
-        Annuler
-      </button>
-    </div>
-  </div>
-</div>
-
+          <div class="popup-buttons">
+            <button class="btn btn-primary" type="button" onclick="confirmPrestationPopup()">
+              Valider
+            </button>
+            <button class="btn btn-secondary" type="button" onclick="closePrestationPopup()">
+              Annuler
+            </button>
+          </div>
+        </div>
+      </div>
 
       <!-- Tableau documents -->
       <div class="card">
@@ -262,17 +259,15 @@
           onclick="openPrintable()"
         >
           🖨️ Imprimer / PDF
-         </button>
+        </button>
 
-  <button
-    class="btn action-button"
-    type="button"
-    onclick="duplicateCurrent()"
-  >
-    🧾 Dupliquer
-  </button>
-
-        <!-- Bouton tarifs (formulaire) -->
+        <button
+          class="btn action-button"
+          type="button"
+          onclick="duplicateCurrent()"
+        >
+          🧾 Dupliquer
+        </button>
 
         <button
           id="transformButton"
@@ -299,7 +294,7 @@
         <!-- Type / numéro / dates -->
         <div class="row">
           <div class="form-group">
-            <label>Type de document *</label>
+            <label for="docType">Type de document *</label>
             <select
               id="docType"
               onchange="updateDocType(); updateTransformButtonVisibility();"
@@ -310,12 +305,12 @@
           </div>
 
           <div class="form-group">
-            <label>Numéro</label>
+            <label for="docNumber">Numéro</label>
             <input type="text" id="docNumber" readonly />
           </div>
 
           <div class="form-group">
-            <label>Date du document</label>
+            <label for="docDate">Date du document</label>
             <input
               type="date"
               id="docDate"
@@ -324,7 +319,7 @@
           </div>
 
           <div class="form-group" id="validityDateGroup">
-            <label>Valable jusqu'au</label>
+            <label for="validityDate">Valable jusqu'au</label>
             <input
               type="date"
               id="validityDate"
@@ -339,7 +334,7 @@
 
         <!-- Objet -->
         <div class="form-group">
-          <label>Objet du devis / de la facture *</label>
+          <label for="docSubject">Objet du devis / de la facture *</label>
           <input
             type="text"
             id="docSubject"
@@ -348,78 +343,75 @@
           />
         </div>
 
-   <!-- Type client -->
-<div class="form-group">
-  <label>Type de client *</label>
-  <div class="client-type-row">
+        <!-- Type client -->
+        <div class="form-group">
+          <label>Type de client *</label>
+          <div class="client-type-row">
+            <label class="client-type-option">
+              <input
+                type="radio"
+                name="clientType"
+                id="clientParticulier"
+                value="particulier"
+                onchange="selectClientType('particulier')"
+              />
+              Particulier
+            </label>
 
-    <label class="client-type-option">
-      <input
-        type="radio"
-        name="clientType"
-        id="clientParticulier"
-        value="particulier"
-        onchange="selectClientType('particulier')"
-      />
-      Particulier
-    </label>
+            <label class="client-type-option">
+              <input
+                type="radio"
+                name="clientType"
+                id="clientSyndic"
+                value="syndic"
+                onchange="selectClientType('syndic')"
+              />
+              Syndic / Agence
+            </label>
+          </div>
+        </div>
 
-    <label class="client-type-option">
-      <input
-        type="radio"
-        name="clientType"
-        id="clientSyndic"
-        value="syndic"
-        onchange="selectClientType('syndic')"
-      />
-      Syndic / Agence
-    </label>
+        <!-- Infos client -->
+        <h3 class="section-title">Informations client</h3>
+        <div class="row">
+          <div class="form-group">
+            <label for="clientName">Nom ou Société *</label>
+            <input type="text" id="clientName" required />
+          </div>
+          <div class="form-group">
+            <label for="clientAddress">Adresse *</label>
+            <input type="text" id="clientAddress" required />
+          </div>
+          <div class="form-group">
+            <label for="clientPhone">Téléphone</label>
+            <input type="tel" id="clientPhone" />
+          </div>
+          <div class="form-group">
+            <label for="clientEmail">Email</label>
+            <input type="email" id="clientEmail" />
+          </div>
+        </div>
 
-  </div>
-</div>
+        <!-- Lieu d’intervention (visible uniquement si SYNDIC) -->
+        <div id="siteBlock" class="row" style="display: none;">
+          <div class="form-group">
+            <label for="siteName">Nom du client sur site *</label>
+            <input
+              type="text"
+              id="siteName"
+              placeholder="Ex : Mme Dupont Élise"
+            />
+          </div>
 
-<!-- Infos client -->
-<h3 class="section-title">Informations client</h3>
-<div class="row">
-  <div class="form-group">
-    <label>Nom ou Société *</label>
-    <input type="text" id="clientName" required />
-  </div>
-  <div class="form-group">
-    <label>Adresse *</label>
-    <input type="text" id="clientAddress" required />
-  </div>
-  <div class="form-group">
-    <label>Téléphone</label>
-    <input type="tel" id="clientPhone" />
-  </div>
-  <div class="form-group">
-    <label>Email</label>
-    <input type="email" id="clientEmail" />
-  </div>
-</div>
-
-<!-- Lieu d’intervention (visible uniquement si SYNDIC) -->
-<div id="siteBlock" class="row" style="display:none;">
-  <div class="form-group">
-    <label>Nom du client sur site *</label>
-    <input
-      type="text"
-      id="siteName"
-      placeholder="Ex : Mme Dupont Élise"
-    />
-  </div>
-
-  <div class="form-group">
-    <label>Adresse du lieu d’intervention *</label>
-    <input
-      type="text"
-      id="siteAddress"
-      placeholder="Ex : Résidence Le Parc, Bât A, 14 rue de la Liberté, 06000 Nice"
-    />
-  </div>
-</div>
-
+          <div class="form-group">
+            <label for="siteAddress">Adresse du lieu d’intervention *</label>
+            <input
+              type="text"
+              id="siteAddress"
+              placeholder="Ex : Résidence Le Parc, Bât A, 14 rue de la Liberté, 06000 Nice"
+            />
+          </div>
+        </div>
 
         <!-- Prestations -->
         <div class="prestations-section">
@@ -437,99 +429,98 @@
         </div>
 
         <!-- Totaux / TVA / Réduction -->
-     <div class="totals">
-  <div class="total-line">
-    <span>Sous-total HT :</span>
-    <span id="subtotalHT">0,00 €</span>
-  </div>
+        <div class="totals">
+          <div class="total-line">
+            <span>Sous-total HT :</span>
+            <span id="subtotalHT">0,00 €</span>
+          </div>
 
-  <!-- Réduction + TVA côte à côte -->
-  <div class="totals-grid">
-    <div class="form-group discount-group">
-      <label>Réduction</label>
-      <div class="discount-row">
-        <label class="discount-toggle">
-          <input
-            type="checkbox"
-            id="discountEnabled"
-            onchange="onDiscountToggle()"
-          />
-          Appliquer une réduction
-        </label>
-        <input
-          type="number"
-          id="discountPercentInput"
-          value="0"
-          min="0"
-          max="100"
-          step="0.01"
-          oninput="onDiscountPercentChange()"
-          disabled
-        />
-        <span class="discount-percent-symbol">%</span>
-      </div>
-    </div>
+          <!-- Réduction + TVA côte à côte -->
+          <div class="totals-grid">
+            <div class="form-group discount-group">
+              <label>Réduction</label>
+              <div class="discount-row">
+                <label class="discount-toggle">
+                  <input
+                    type="checkbox"
+                    id="discountEnabled"
+                    onchange="onDiscountToggle()"
+                  />
+                  Appliquer une réduction
+                </label>
+                <input
+                  type="number"
+                  id="discountPercentInput"
+                  value="0"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  oninput="onDiscountPercentChange()"
+                  disabled
+                />
+                <span class="discount-percent-symbol">%</span>
+              </div>
+            </div>
 
-    <div class="form-group tva-group">
-      <label>TVA</label>
-      <div class="tva-options">
-        <label>
-          <input
-            type="radio"
-            name="tvaRadio"
-            id="tva0"
-            onchange="setTVA(0)"
-            checked
-          />
-          0 %
-        </label>
-        <label>
-          <input
-            type="radio"
-            name="tvaRadio"
-            id="tva20"
-            onchange="setTVA(20)"
-          />
-          20 %
-        </label>
-      </div>
-  <div class="tva-rate-wrapper">
-  <input
-    type="number"
-    id="tvaRate"
-    value="0"
-    step="0.01"
-    readonly
-  />
-  <span class="tva-percent-symbol">%</span>
-</div>
+            <div class="form-group tva-group">
+              <label>TVA</label>
+              <div class="tva-options">
+                <label>
+                  <input
+                    type="radio"
+                    name="tvaRadio"
+                    id="tva0"
+                    onchange="setTVA(0)"
+                    checked
+                  />
+                  0 %
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="tvaRadio"
+                    id="tva20"
+                    onchange="setTVA(20)"
+                  />
+                  20 %
+                </label>
+              </div>
+              <div class="tva-rate-wrapper">
+                <input
+                  type="number"
+                  id="tvaRate"
+                  value="0"
+                  step="0.01"
+                  readonly
+                />
+                <span class="tva-percent-symbol">%</span>
+              </div>
+            </div>
+          </div>
 
-  </div>
+          <div
+            class="total-line"
+            id="discountLine"
+            style="display: none;"
+          >
+            <span id="discountLabel">Réduction :</span>
+            <span id="discountAmount">0,00 €</span>
+          </div>
 
-  <div
-    class="total-line"
-    id="discountLine"
-    style="display: none;"
-  >
-    <span id="discountLabel">Réduction :</span>
-    <span id="discountAmount">0,00 €</span>
-  </div>
+          <div class="total-line">
+            <span>TVA :</span>
+            <span id="tvaAmount">0,00 €</span>
+          </div>
 
-  <div class="total-line">
-    <span>TVA :</span>
-    <span id="tvaAmount">0,00 €</span>
-  </div>
+          <div class="total-line grand-total">
+            <span id="totalLabel">NET À PAYER :</span>
+            <span id="totalTTC">0,00 €</span>
+          </div>
 
-  <div class="total-line grand-total">
-    <span id="totalLabel">NET À PAYER :</span>
-    <span id="totalTTC">0,00 €</span>
-  </div>
-
-  <div class="tva-note" id="tvaNote">
-    TVA non applicable, article 293 B du CGI.
-  </div>
-</div>
-
+          <div class="tva-note" id="tvaNote">
+            TVA non applicable, article 293 B du CGI.
+          </div>
+        </div>
 
         <!-- Paiement (factures) -->
         <div
@@ -596,14 +587,14 @@
             id="paymentDateWrapper"
             class="payment-date-wrapper"
           >
-            <label>Date de règlement</label>
+            <label for="paymentDate">Date de règlement</label>
             <input type="date" id="paymentDate" />
           </div>
         </div>
 
         <!-- Notes -->
         <div class="form-group">
-          <label>Notes / Conditions</label>
+          <label for="notes">Notes / Conditions</label>
           <textarea
             id="notes"
             placeholder="Conditions de paiement, garanties, notes diverses..."
@@ -638,32 +629,24 @@
     </section>
   </div>
 
-<!-- ================= POPUP CONFIRM CUSTOM ================= -->
-<div id="confirmOverlay" class="confirm-overlay hidden">
-  <div class="confirm-box">
+  <!-- ================= POPUP CONFIRM CUSTOM ================= -->
+  <div id="confirmOverlay" class="confirm-overlay hidden">
+    <div class="confirm-box">
+      <div class="confirm-icon" id="confirmIcon">⚠️</div>
 
-    <div class="confirm-icon" id="confirmIcon">⚠️</div>
+      <h3 class="confirm-title" id="confirmTitle"></h3>
 
-    <h3 class="confirm-title" id="confirmTitle"></h3>
+      <p class="confirm-message" id="confirmMessage"></p>
 
-    <p class="confirm-message" id="confirmMessage"></p>
-
-    <div class="confirm-buttons">
-      <button id="confirmCancel" class="btn btn-secondary" type="button">Annuler</button>
-      <button id="confirmOk" class="btn btn-danger" type="button">OK</button>
+      <div class="confirm-buttons">
+        <button id="confirmCancel" class="btn btn-secondary" type="button">Annuler</button>
+        <button id="confirmOk" class="btn btn-danger" type="button">OK</button>
+      </div>
     </div>
-
   </div>
-</div>
-<!-- ========================================================= -->
+  <!-- ========================================================= -->
 
-<!-- App JS -->
-<script src="app.js"></script>
+  <!-- App JS -->
+  <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
