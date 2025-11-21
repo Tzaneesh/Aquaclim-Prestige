@@ -994,6 +994,9 @@ textarea {
 .tarif-delete-btn:hover {
   color: #ff0000;
 }
+.tarif-delete-cell {
+  text-align: center;
+}
 
 /* ===== Mini éditeur de texte détaillé ===== */
 
@@ -1059,6 +1062,7 @@ textarea {
     border-radius: 0;
   }
 }
+
 
 
 
