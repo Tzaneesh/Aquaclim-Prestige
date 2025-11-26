@@ -4,639 +4,463 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AquaClim Prestige - Devis & Factures</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-
-  <!-- Styles -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Firebase (compat) -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
+
 <body>
-  <div class="container">
-    <!-- En-tête -->
-    <header class="header">
-      <div class="header-inner">
-        <img src="logo.png" alt="AquaClim Prestige" class="header-logo" />
-        <div>
-          <h1>AquaClim Prestige</h1>
-          <p class="subtitle">Entretien & Dépannage - Climatisation & Piscine</p>
-          <p class="contact">
-            Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br />
-            Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br />
-            SIRET : <strong>XXXXXXXXXXXXX</strong>
-          </p>
-        </div>
-      </div>
-    </header>
+<div class="container">
 
-    <!-- Onglets -->
-    <div class="top-nav no-print">
-      <button
-        id="tabDevis"
-        class="btn tab-btn active"
-        type="button"
-        onclick="switchListType('devis')"
-      >
-        📄 Devis
-      </button>
-      <button
-        id="tabFactures"
-        class="btn tab-btn"
-        type="button"
-        onclick="switchListType('facture')"
-      >
-        💰 Factures
-      </button>
+  <!-- EN-TÊTE -->
+  <header class="header">
+    <div class="header-inner">
+      <img src="logo.png" alt="AquaClim Prestige" class="header-logo" />
+      <div>
+        <h1>AquaClim Prestige</h1>
+        <p class="subtitle">Entretien & Dépannage - Climatisation & Piscine</p>
+        <p class="contact">
+          Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
+          Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
+          SIRET : <strong>XXXXXXXXXXXXX</strong>
+        </p>
+      </div>
     </div>
+  </header>
 
-    <!-- VUE LISTE -->
-    <section id="listView">
-      <div class="actions no-print">
-        <button
-          id="createDevis"
-          class="btn btn-primary"
-          type="button"
-          onclick="newDocument('devis')"
-        >
-          ➕ Nouveau devis
-        </button>
-
-        <button
-          id="createFacture"
-          class="btn btn-success"
-          type="button"
-          onclick="newDocument('facture')"
-        >
-          ➕ Nouvelle facture
-        </button>
-
-        <!-- Bouton tarifs (liste) -->
-        <button
-          class="btn btn-devis tarifs-button"
-          type="button"
-          onclick="openTarifsPanel()"
-        >
-          📋 Tarifs prestations
-        </button>
-      </div>
-
-      <!-- Panel Tarifs -->
-      <div id="tarifsPanel" class="card no-print hidden">
-        <h2>Tarifs des prestations</h2>
-
-        <!-- Boutons EN HAUT du panneau -->
-        <div class="tarifs-actions tarifs-actions-top">
-          <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
-            ← Retour
-          </button>
-
-          <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
-            💾 Enregistrer les tarifs
-          </button>
-
-          <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
-            ➕ Ajouter une prestation
-          </button>
-
-          <button class="btn btn-danger" type="button" onclick="resetTarifs()">
-            🧹 Réinitialiser
-          </button>
-        </div>
-
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th>Prestation</th>
-              <th>Prix Particulier</th>
-              <th>Prix Syndic</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="tarifsTableBody"></tbody>
-        </table>
-
-        <!-- Mini bloc pour éditer les textes détaillés -->
-        <div id="descEditor" class="desc-editor hidden">
-          <h4>Texte détaillé du modèle</h4>
-
-          <label for="descPartInput">Texte Particulier</label>
-          <textarea id="descPartInput"></textarea>
-
-          <label for="descSynInput">Texte Syndic / Agence</label>
-          <textarea id="descSynInput"></textarea>
-
-          <div class="desc-editor-buttons">
-            <button class="btn btn-primary btn-small" type="button" onclick="saveDescEditor()">
-              Enregistrer
-            </button>
-            <button class="btn btn-secondary btn-small" type="button" onclick="closeDescEditor()">
-              Fermer
-            </button>
-          </div>
-        </div>
-
-        <!-- Boutons EN BAS du panneau -->
-        <div class="tarifs-actions tarifs-actions-bottom">
-          <button class="btn btn-secondary" type="button" onclick="closeTarifsPanel()">
-            ← Retour
-          </button>
-
-          <button class="btn btn-primary" type="button" onclick="saveTarifsFromUI()">
-            💾 Enregistrer les tarifs
-          </button>
-
-          <button class="btn btn-devis" type="button" onclick="openAddPrestationPopup()">
-            ➕ Ajouter une prestation
-          </button>
-
-          <button class="btn btn-danger" type="button" onclick="resetTarifs()">
-            🧹 Réinitialiser
-          </button>
-        </div>
-      </div>
-
-      <!-- POPUP — Ajouter une prestation modèle -->
-      <div id="prestationPopup" class="popup-overlay hidden">
-        <div class="popup">
-          <h3 id="popupTitle">Nouvelle prestation</h3>
-
-          <label for="popupName">Nom de la prestation</label>
-          <input type="text" id="popupName" />
-
-          <label for="popupPricePart">Prix Particulier</label>
-          <input
-            type="number"
-            id="popupPricePart"
-            step="0.01"
-            oninput="onPopupPricePartChange()"
-          />
-
-          <label for="popupPriceSyn">Prix Syndic</label>
-          <input type="number" id="popupPriceSyn" step="0.01" />
-
-          <div class="popup-buttons">
-            <button class="btn btn-primary" type="button" onclick="confirmPrestationPopup()">
-              Valider
-            </button>
-            <button class="btn btn-secondary" type="button" onclick="closePrestationPopup()">
-              Annuler
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tableau documents -->
-      <div class="card">
-        <div class="filters-row no-print">
-          <span id="listTitle" class="list-title">Liste des devis</span>
-
-          <div id="yearFilterContainer" class="hidden">
-            <label for="yearFilter" class="filter-label">Année factures</label>
-            <select id="yearFilter" onchange="loadDocumentsList()">
-              <option value="all">Toutes</option>
-            </select>
-          </div>
-
-          <div id="exportContainer" class="hidden">
-            <button
-              class="btn btn-secondary btn-small"
-              type="button"
-              onclick="exportFacturesCSV()"
-            >
-              📥 Exporter factures (CSV)
-            </button>
-          </div>
-        </div>
-
-        <table class="documents-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Numéro</th>
-              <th>Client</th>
-              <th>Date</th>
-              <th>Montant</th>
-              <th>Statut</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="documentsTableBody">
-            <tr>
-              <td colspan="7" class="no-docs-cell">
-                Aucun document pour le moment
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- VUE FORMULAIRE -->
-    <section id="formView" class="hidden">
-      <!-- Actions haut -->
-      <div class="actions no-print">
-        <button
-          class="btn btn-secondary"
-          type="button"
-          onclick="backToList()"
-        >
-          ← Retour
-        </button>
-
-        <!-- Boutons liés au document -->
-        <button
-          class="btn action-button"
-          type="button"
-          onclick="saveDocument()"
-        >
-          💾 Enregistrer
-        </button>
-
-        <button
-          class="btn action-button"
-          type="button"
-          onclick="openPrintable()"
-        >
-          🖨️ Imprimer / PDF
-        </button>
-
-        <button
-          class="btn action-button"
-          type="button"
-          onclick="duplicateCurrent()"
-        >
-          🧾 Dupliquer
-        </button>
-
-        <button
-          id="transformButton"
-          class="btn action-button"
-          type="button"
-          onclick="transformToInvoice()"
-          style="display: none;"
-        >
-          🔁 Transformer en facture
-        </button>
-
-        <button
-          class="btn btn-danger"
-          type="button"
-          onclick="deleteCurrent()"
-        >
-          🗑️ Supprimer
-        </button>
-      </div>
-
-      <div class="card">
-        <h2 id="formTitle">Nouveau document</h2>
-
-        <!-- Type / numéro / dates -->
-        <div class="row">
-          <div class="form-group">
-            <label for="docType">Type de document *</label>
-            <select
-              id="docType"
-              onchange="updateDocType(); updateTransformButtonVisibility();"
-            >
-              <option value="devis">Devis</option>
-              <option value="facture">Facture</option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="docNumber">Numéro</label>
-            <input type="text" id="docNumber" readonly />
-          </div>
-
-          <div class="form-group">
-            <label for="docDate">Date du document</label>
-            <input
-              type="date"
-              id="docDate"
-              onchange="onDocDateChange()"
-            />
-          </div>
-
-          <div class="form-group" id="validityDateGroup">
-            <label for="validityDate">Valable jusqu'au</label>
-            <input
-              type="date"
-              id="validityDate"
-              onchange="onValidityChange()"
-            />
-            <div
-              id="devisStatusInfo"
-              class="devis-status-info"
-            ></div>
-          </div>
-        </div>
-
-        <!-- Objet -->
-        <div class="form-group">
-          <label for="docSubject">Objet du devis / de la facture *</label>
-          <input
-            type="text"
-            id="docSubject"
-            required
-            placeholder="Ex : Entretien piscine + clim – Villa Martin"
-          />
-        </div>
-
-        <!-- Type client -->
-        <div class="form-group">
-          <label>Type de client *</label>
-          <div class="client-type-row">
-            <label class="client-type-option">
-              <input
-                type="radio"
-                name="clientType"
-                id="clientParticulier"
-                value="particulier"
-                onchange="selectClientType('particulier')"
-              />
-              Particulier
-            </label>
-
-            <label class="client-type-option">
-              <input
-                type="radio"
-                name="clientType"
-                id="clientSyndic"
-                value="syndic"
-                onchange="selectClientType('syndic')"
-              />
-              Syndic / Agence
-            </label>
-          </div>
-        </div>
-
-        <!-- Infos client -->
-        <h3 class="section-title">Informations client</h3>
-        <div class="row">
-          <div class="form-group">
-            <label for="clientName">Nom ou Société *</label>
-            <input type="text" id="clientName" required />
-          </div>
-          <div class="form-group">
-            <label for="clientAddress">Adresse *</label>
-            <input type="text" id="clientAddress" required />
-          </div>
-          <div class="form-group">
-            <label for="clientPhone">Téléphone</label>
-            <input type="tel" id="clientPhone" />
-          </div>
-          <div class="form-group">
-            <label for="clientEmail">Email</label>
-            <input type="email" id="clientEmail" />
-          </div>
-        </div>
-
-        <!-- Lieu d’intervention (visible uniquement si SYNDIC) -->
-        <div id="siteBlock" class="row" style="display: none;">
-          <div class="form-group">
-            <label for="siteName">Nom du client sur site *</label>
-            <input
-              type="text"
-              id="siteName"
-              placeholder="Ex : Mme Dupont Élise"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="siteAddress">Adresse du lieu d’intervention *</label>
-            <input
-              type="text"
-              id="siteAddress"
-              placeholder="Ex : Résidence Le Parc, Bât A, 14 rue de la Liberté, 06000 Nice"
-            />
-          </div>
-        </div>
-
-        <!-- Prestations -->
-        <div class="prestations-section">
-          <h3 class="section-title">Prestations</h3>
-          <div id="prestationsContainer"></div>
-
-          <button
-            id="addPrestationBtn"
-            class="btn action-button no-print"
-            type="button"
-            onclick="addPrestation()"
-          >
-            ➕ Ajouter une prestation
-          </button>
-        </div>
-
-        <!-- Totaux / TVA / Réduction -->
-        <div class="totals">
-          <div class="total-line">
-            <span>Sous-total HT :</span>
-            <span id="subtotalHT">0,00 €</span>
-          </div>
-
-          <!-- Réduction + TVA côte à côte -->
-          <div class="totals-grid">
-            <div class="form-group discount-group">
-              <label>Réduction</label>
-              <div class="discount-row">
-                <label class="discount-toggle">
-                  <input
-                    type="checkbox"
-                    id="discountEnabled"
-                    onchange="onDiscountToggle()"
-                  />
-                  Appliquer une réduction
-                </label>
-                <input
-                  type="number"
-                  id="discountPercentInput"
-                  value="0"
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  oninput="onDiscountPercentChange()"
-                  disabled
-                />
-                <span class="discount-percent-symbol">%</span>
-              </div>
-            </div>
-
-            <div class="form-group tva-group">
-              <label>TVA</label>
-              <div class="tva-options">
-                <label>
-                  <input
-                    type="radio"
-                    name="tvaRadio"
-                    id="tva0"
-                    onchange="setTVA(0)"
-                    checked
-                  />
-                  0 %
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    name="tvaRadio"
-                    id="tva20"
-                    onchange="setTVA(20)"
-                  />
-                  20 %
-                </label>
-              </div>
-              <div class="tva-rate-wrapper">
-                <input
-                  type="number"
-                  id="tvaRate"
-                  value="0"
-                  step="0.01"
-                  readonly
-                />
-                <span class="tva-percent-symbol">%</span>
-              </div>
-            </div>
-          </div>
-
-          <div
-            class="total-line"
-            id="discountLine"
-            style="display: none;"
-          >
-            <span id="discountLabel">Réduction :</span>
-            <span id="discountAmount">0,00 €</span>
-          </div>
-
-          <div class="total-line">
-            <span>TVA :</span>
-            <span id="tvaAmount">0,00 €</span>
-          </div>
-
-          <div class="total-line grand-total">
-            <span id="totalLabel">NET À PAYER :</span>
-            <span id="totalTTC">0,00 €</span>
-          </div>
-
-          <div class="tva-note" id="tvaNote">
-            TVA non applicable, article 293 B du CGI.
-          </div>
-        </div>
-
-        <!-- Paiement (factures) -->
-        <div
-          class="form-group no-print"
-          id="paymentSection"
-        >
-          <label>Règlement</label>
-          <div class="pay-line">
-            <label>
-              <input
-                type="radio"
-                name="payMode"
-                value=""
-                id="payNone"
-                onchange="onPayModeChange()"
-                checked
-              />
-              Facture non réglée
-            </label>
-          </div>
-          <div class="pay-line">
-            <label>
-              <input
-                type="radio"
-                name="payMode"
-                value="especes"
-                id="payEspeces"
-                onchange="onPayModeChange()"
-              />
-              Espèces
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="payMode"
-                value="cb"
-                id="payCB"
-                onchange="onPayModeChange()"
-              />
-              Carte bancaire
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="payMode"
-                value="virement"
-                id="payVirement"
-                onchange="onPayModeChange()"
-              />
-              Virement
-            </label>
-            <label>
-              <input
-                type="radio"
-                name="payMode"
-                value="cheque"
-                id="payCheque"
-                onchange="onPayModeChange()"
-              />
-              Chèque
-            </label>
-          </div>
-          <div
-            id="paymentDateWrapper"
-            class="payment-date-wrapper"
-          >
-            <label for="paymentDate">Date de règlement</label>
-            <input type="date" id="paymentDate" />
-          </div>
-        </div>
-
-        <!-- Notes -->
-        <div class="form-group">
-          <label for="notes">Notes / Conditions</label>
-          <textarea
-            id="notes"
-            placeholder="Conditions de paiement, garanties, notes diverses..."
-          ></textarea>
-        </div>
-
-        <!-- Actions bas -->
-        <div class="form-actions no-print">
-          <button
-            class="btn action-button"
-            type="button"
-            onclick="saveDocument()"
-          >
-            💾 Enregistrer
-          </button>
-          <button
-            class="btn action-button"
-            type="button"
-            onclick="openPrintable()"
-          >
-            🖨️ Imprimer / PDF
-          </button>
-          <button
-            class="btn btn-secondary"
-            type="button"
-            onclick="backToList()"
-          >
-            ← Retour
-          </button>
-        </div>
-      </div>
-    </section>
+  <!-- ONGLET DEVIS / FACTURES -->
+  <div class="top-nav no-print">
+    <button id="tabDevis" class="btn tab-btn active" onclick="switchListType('devis')">📄 Devis</button>
+    <button id="tabFactures" class="btn tab-btn" onclick="switchListType('facture')">💰 Factures</button>
   </div>
 
+  <!-- LISTE DES DOCUMENTS -->
+  <section id="listView">
+
+    <div class="actions no-print">
+      <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
+      <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
+
+      <button class="btn btn-devis tarifs-button" onclick="openTarifsPanel()">📋 Tarifs prestations</button>
+<button
+  class="btn btn-primary"
+  type="button"
+  onclick="openClientsListPopup()"
+>
+  👥 Clients
+</button>
+    </div>
+
+    <!-- PANEL TARIFS -->
+    <div id="tarifsPanel" class="card no-print hidden">
+      <h2>Tarifs des prestations</h2>
+
+      <!-- actions top -->
+      <div class="tarifs-actions tarifs-actions-top">
+        <button class="btn btn-secondary" onclick="closeTarifsPanel()">← Retour</button>
+        <button class="btn btn-primary" onclick="saveTarifsFromUI()">💾 Enregistrer</button>
+        <button class="btn btn-devis" onclick="openAddPrestationPopup()">➕ Ajouter</button>
+        <button class="btn btn-danger" onclick="resetTarifs()">🧹 Réinitialiser</button>
+      </div>
+
+      <table class="documents-table">
+        <thead>
+          <tr>
+            <th>Prestation</th>
+            <th>Prix Particulier</th>
+            <th>Prix Syndic</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tarifsTableBody"></tbody>
+      </table>
+
+      <div id="descEditor" class="desc-editor hidden">
+        <h4>Texte détaillé du modèle</h4>
+        <label>Texte Particulier</label>
+        <textarea id="descPartInput"></textarea>
+
+        <label>Texte Syndic / Agence</label>
+        <textarea id="descSynInput"></textarea>
+
+        <div class="desc-editor-buttons">
+          <button class="btn btn-primary btn-small" onclick="saveDescEditor()">Enregistrer</button>
+          <button class="btn btn-secondary btn-small" onclick="closeDescEditor()">Fermer</button>
+        </div>
+      </div>
+
+      <div class="tarifs-actions tarifs-actions-bottom">
+        <button class="btn btn-secondary" onclick="closeTarifsPanel()">← Retour</button>
+        <button class="btn btn-primary" onclick="saveTarifsFromUI()">💾 Enregistrer</button>
+        <button class="btn btn-devis" onclick="openAddPrestationPopup()">➕ Ajouter</button>
+        <button class="btn btn-danger" onclick="resetTarifs()">🧹 Réinitialiser</button>
+      </div>
+    </div>
+
+    <!-- POPUP Ajouter prestation -->
+    <div id="prestationPopup" class="popup-overlay hidden">
+      <div class="popup">
+        <h3 id="popupTitle">Nouvelle prestation</h3>
+
+        <label>Nom de la prestation</label>
+        <input type="text" id="popupName">
+
+        <label>Prix Particulier</label>
+        <input type="number" id="popupPricePart" step="0.01" oninput="onPopupPricePartChange()">
+
+        <label>Prix Syndic</label>
+        <input type="number" id="popupPriceSyn" step="0.01">
+
+        <div class="popup-buttons">
+          <button class="btn btn-primary" onclick="confirmPrestationPopup()">Valider</button>
+          <button class="btn btn-secondary" onclick="closePrestationPopup()">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+  <!-- TABLEAU DES DOCUMENTS -->
+<div class="card">
+  <div class="filters-row no-print">
+    <span id="listTitle" class="list-title">Liste des devis</span>
+
+    <!-- 🔍 Recherche devis / factures -->
+    <div class="doc-search-wrapper">
+      <input
+        type="text"
+        id="docSearchInput"
+        placeholder="Rechercher (n°, client, objet...)"
+        oninput="onDocumentsSearchChange()"
+      />
+    </div>
+
+    <div id="yearFilterContainer" class="hidden">
+      <label>Année</label>
+      <select id="yearFilter" onchange="loadDocumentsList()">
+        <option value="all">Toutes</option>
+      </select>
+    </div>
+
+    <div id="exportContainer" class="hidden">
+      <button class="btn btn-secondary btn-small" onclick="exportFacturesCSV()">📥 Exporter (CSV)</button>
+    </div>
+  </div>
+
+
+      <table class="documents-table">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Numéro</th>
+            <th>Client</th>
+            <th>Date</th>
+            <th>Montant</th>
+            <th>Statut</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody id="documentsTableBody">
+          <tr><td colspan="7" class="no-docs-cell">Aucun document pour le moment</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </section>
+
+  <!-- FORMULAIRE DOCUMENT -->
+  <section id="formView" class="hidden">
+
+    <div class="actions no-print">
+      <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
+      <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
+      <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+      <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
+      <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+      <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
+    </div>
+
+    <div class="card">
+      <h2 id="formTitle">Nouveau document</h2>
+
+      <!-- type document -->
+      <div class="row">
+        <div class="form-group">
+          <label>Type *</label>
+          <select id="docType" onchange="updateDocType(); updateTransformButtonVisibility();">
+            <option value="devis">Devis</option>
+            <option value="facture">Facture</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Numéro</label>
+          <input type="text" id="docNumber" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="docDate" onchange="onDocDateChange()">
+        </div>
+
+        <div class="form-group" id="validityDateGroup">
+          <label>Valable jusqu’au</label>
+          <input type="date" id="validityDate" onchange="onValidityChange()">
+          <div id="devisStatusInfo" class="devis-status-info"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Objet *</label>
+        <input type="text" id="docSubject" placeholder="Ex : Entretien piscine + clim – Villa Martin">
+      </div>
+
+      <!-- type client -->
+      <div class="form-group">
+        <label>Type client *</label>
+        <div class="client-type-row">
+
+          <label class="client-type-option">
+            <input type="radio" name="clientType" value="particulier" id="clientParticulier" onchange="selectClientType('particulier')">
+            Particulier
+          </label>
+
+          <label class="client-type-option">
+            <input type="radio" name="clientType" value="syndic" id="clientSyndic" onchange="selectClientType('syndic')">
+            Syndic / Agence
+          </label>
+
+        </div>
+      </div>
+
+      <!-- INFORMATIONS CLIENT -->
+<h3 class="section-title">Informations client</h3>
+
+<div class="row">
+  <div class="form-group" style="max-width: 140px;">
+    <label>Civilité</label>
+    <select id="clientCivility">
+      <option value="">—</option>
+      <option value="Monsieur">Monsieur</option>
+      <option value="Madame">Madame</option>
+      <option value="Monsieur et Madame">Monsieur et Madame</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>Nom ou Société *</label>
+    <input
+      type="text"
+      id="clientName"
+      list="clientsList"
+      autocomplete="off"
+      required
+      onchange="onClientNameChange()"
+      onblur="onClientNameChange()"
+    />
+    <datalist id="clientsList"></datalist>
+  </div>
+
+  <!-- (le reste de tes champs Adresse / Téléphone / Email ne bouge pas) -->
+</div>
+
+
+        <div class="form-group">
+          <label>Adresse *</label>
+          <input type="text" id="clientAddress">
+        </div>
+
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" id="clientPhone">
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="clientEmail">
+        </div>
+      </div>
+
+      <!-- boutons clients -->
+     <div class="row no-print" style="gap:10px; display:flex;">
+
+  <!-- Ajouter client -->
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="addCurrentClient()"
+  >
+    <span class="btn-icon-emoji">➕</span>
+    <span>Ajouter ce client</span>
+  </button>
+
+  <!-- Voir liste clients -->
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="openClientsListPopup()"
+  >
+    <span class="btn-icon-emoji">📋</span>
+    <span>Voir liste clients</span>
+  </button>
+
+  <!-- Supprimer client -->
+  <button
+    type="button"
+    class="btn btn-danger btn-small btn-icon"
+    onclick="deleteCurrentClient()"
+  >
+    <span class="btn-icon-emoji">🗑️</span>
+    <span>Supprimer ce client</span>
+  </button>
+
+</div>
+
+      <!-- Lieu d’intervention (si syndic/agence) -->
+    <div id="siteBlock" class="row" style="display:none;">
+
+  <div class="form-group" style="max-width: 150px;">
+    <label>Civilité lieu</label>
+    <select id="siteCivility" style="min-width: 250px;">
+
+      <option value="">—</option>
+      <option value="Chez Monsieur">Chez Monsieur</option>
+      <option value="Chez Madame">Chez Madame</option>
+      <option value="Appartement Monsieur">Appartement Monsieur</option>
+      <option value="Appartement Madame">Appartement Madame</option>
+      <option value="Villa Monsieur">Villa Monsieur</option>
+      <option value="Villa Madame">Villa Madame</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label>Nom du client sur site *</label>
+    <input type="text" id="siteName" placeholder="Ex : Mme Dupont Élise">
+  </div>
+
+  <div class="form-group">
+    <label>Adresse du lieu d’intervention *</label>
+    <input type="text" id="siteAddress" placeholder="Ex : Résidence Le Parc, Bât A, 14 rue ...">
+  </div>
+
+</div>
+
+
+      <!-- PRESTATIONS -->
+      <div class="prestations-section">
+        <h3 class="section-title">Prestations</h3>
+
+        <div id="prestationsContainer"></div>
+
+        <button id="addPrestationBtn" class="btn action-button no-print" onclick="addPrestation()">
+          ➕ Ajouter une prestation
+        </button>
+      </div>
+
+      <!-- TOTAUX -->
+      <div class="totals">
+
+        <div class="total-line">
+          <span>Sous-total HT :</span>
+          <span id="subtotalHT">0,00 €</span>
+        </div>
+
+        <div class="totals-grid">
+
+          <!-- Réduction -->
+          <div class="form-group discount-group">
+            <label>Réduction</label>
+            <div class="discount-row">
+              <label class="discount-toggle">
+                <input type="checkbox" id="discountEnabled" onchange="onDiscountToggle()">
+                Appliquer une réduction
+              </label>
+
+              <input type="number" id="discountPercentInput" min="0" max="100" value="0"
+                     step="0.01" oninput="onDiscountPercentChange()" disabled>
+              <span class="discount-percent-symbol">%</span>
+            </div>
+          </div>
+
+          <!-- TVA -->
+          <div class="form-group tva-group">
+            <label>TVA</label>
+
+            <div class="tva-options">
+              <label><input type="radio" name="tvaRadio" id="tva0" checked onchange="setTVA(0)"> 0 %</label>
+              <label><input type="radio" name="tvaRadio" id="tva20" onchange="setTVA(20)"> 20 %</label>
+            </div>
+
+            <div class="tva-rate-wrapper">
+              <input type="number" id="tvaRate" value="0" step="0.01" readonly>
+              <span class="tva-percent-symbol">%</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div id="discountLine" class="total-line" style="display:none;">
+          <span id="discountLabel">Réduction :</span>
+          <span id="discountAmount">0,00 €</span>
+        </div>
+
+        <div class="total-line">
+          <span>TVA :</span>
+          <span id="tvaAmount">0,00 €</span>
+        </div>
+
+        <div class="total-line grand-total">
+          <span id="totalLabel">NET À PAYER :</span>
+          <span id="totalTTC">0,00 €</span>
+        </div>
+
+        <div class="tva-note" id="tvaNote">TVA non applicable, article 293 B du CGI.</div>
+      </div>
+
+      <!-- SECTION PAIEMENT (factures) -->
+      <div class="form-group no-print" id="paymentSection">
+        <label>Règlement</label>
+
+        <div class="pay-line">
+          <label><input type="radio" name="payMode" id="payNone" value="" checked onchange="onPayModeChange()"> Facture non réglée</label>
+        </div>
+
+        <div class="pay-line">
+          <label><input type="radio" name="payMode" value="especes" id="payEspeces" onchange="onPayModeChange()"> Espèces</label>
+          <label><input type="radio" name="payMode" value="cb" id="payCB" onchange="onPayModeChange()"> Carte bancaire</label>
+          <label><input type="radio" name="payMode" value="virement" id="payVirement" onchange="onPayModeChange()"> Virement</label>
+          <label><input type="radio" name="payMode" value="cheque" id="payCheque" onchange="onPayModeChange()"> Chèque</label>
+        </div>
+
+        <div id="paymentDateWrapper" class="payment-date-wrapper">
+          <label>Date de règlement</label>
+          <input type="date" id="paymentDate">
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="form-group">
+        <label>Notes / Conditions</label>
+        <textarea id="notes" placeholder="Conditions de paiement, garanties, etc."></textarea>
+      </div>
+
+      <!-- ACTIONS BAS -->
+      <div class="form-actions no-print">
+        <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
+        <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+        <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
+      </div>
+
+    </div>
+  </section>
   <!-- ================= POPUP CONFIRM CUSTOM ================= -->
   <div id="confirmOverlay" class="confirm-overlay hidden">
     <div class="confirm-box">
+
       <div class="confirm-icon" id="confirmIcon">⚠️</div>
-
       <h3 class="confirm-title" id="confirmTitle"></h3>
-
       <p class="confirm-message" id="confirmMessage"></p>
 
       <div class="confirm-buttons">
@@ -645,9 +469,79 @@
       </div>
     </div>
   </div>
-  <!-- ========================================================= -->
 
-  <!-- App JS -->
-  <script src="app.js"></script>
+  <!-- ================= POPUP LISTE CLIENTS ================= -->
+  <div id="clientsPopup" class="popup-overlay hidden">
+    <div class="popup">
+
+      <h3>Liste des clients</h3>
+
+      <!-- 🔍 Barre de recherche -->
+      <input
+        type="text"
+        id="clientSearchInput"
+        placeholder="Rechercher un client..."
+        oninput="filterClientsList()"
+        style="width:100%; padding:8px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc;"
+      />
+
+      <!-- 📋 Liste clients -->
+      <div id="clientsListContainer" class="client-list-box"></div>
+<!-- Pagination -->
+<div id="clientsPagination" class="clients-pagination">
+  <button class="btn btn-secondary btn-small" type="button" onclick="prevClientsPage()">◀</button>
+  <span id="clientsPageInfo">Page 1 / 1</span>
+  <button class="btn btn-secondary btn-small" type="button" onclick="nextClientsPage()">▶</button>
+</div>
+      <!-- ✏️ Formulaire d’édition -->
+      <div id="editClientForm" class="hidden" style="margin-top:15px;">
+        <h4>Modifier le client</h4>
+
+        <label>Nom</label>
+        <input type="text" id="editClientName">
+
+        <label>Adresse</label>
+        <input type="text" id="editClientAddress">
+
+        <label>Téléphone</label>
+        <input type="text" id="editClientPhone">
+
+        <label>Email</label>
+        <input type="text" id="editClientEmail">
+
+        <div style="margin-top:10px; display:flex; gap:10px;">
+          <button class="btn btn-primary btn-small" onclick="saveEditedClient()">💾 Enregistrer</button>
+          <button class="btn btn-secondary btn-small" onclick="cancelEditClient()">Annuler</button>
+        </div>
+      </div>
+
+<!-- 📤 Export CSV + Fermer -->
+<div class="popup-buttons clients-footer">
+  <div class="clients-footer-left">
+    <button class="btn btn-primary btn-small btn-icon" type="button" onclick="openAddClientFromList()">
+  <span class="btn-icon-emoji">➕</span>
+  <span>Ajouter un client</span>
+</button>
+
+  </div>
+  <div class="clients-footer-right">
+    <button class="btn btn-primary btn-small" type="button" onclick="exportClientsCSV()">
+      📤 Export CSV
+    </button>
+    <button class="btn btn-secondary btn-small" type="button" onclick="closeClientsListPopup()">
+      Fermer
+    </button>
+  </div>
+</div>
+
+
+  </div> <!-- .popup -->
+</div> <!-- #clientsPopup -->
+
+</div> <!-- FIN container -->
+
+<!-- App JS -->
+<script src="app.js"></script>
 </body>
 </html>
+

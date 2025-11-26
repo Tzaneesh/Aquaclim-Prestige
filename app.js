@@ -315,6 +315,437 @@ async function initFirebase() {
   }
 }
 
+// ================== GESTION CLIENTS ==================
+
+function getClients() {
+  try {
+    return JSON.parse(localStorage.getItem("clients") || "[]");
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveClients(list) {
+  try {
+    localStorage.setItem("clients", JSON.stringify(list || []));
+  } catch (e) {}
+}
+
+// Met à jour la datalist
+function refreshClientDatalist() {
+  const clients = getClients();
+
+  // 🔥 Tri alphabétique A → Z
+  clients.sort((a, b) => a.name.localeCompare(b.name));
+
+  const list = document.getElementById("clientsList");
+  if (!list) return;
+  list.innerHTML = "";
+
+  clients.forEach(c => {
+    const opt = document.createElement("option");
+    opt.value = c.name;
+    list.appendChild(opt);
+  });
+}
+
+
+// Auto-remplissage quand on choisit un client existant
+function onClientNameChange() {
+  const name = document.getElementById("clientName").value.trim().toLowerCase();
+  if (!name) return;
+  const client = getClients().find((c) => c.name.toLowerCase() === name);
+  if (!client) return;
+
+  document.getElementById("clientAddress").value = client.address || "";
+  document.getElementById("clientPhone").value = client.phone || "";
+  document.getElementById("clientEmail").value = client.email || "";
+const civilitySelect = document.getElementById("clientCivility");
+if (civilitySelect) {
+  civilitySelect.value = client.civility || "";
+}
+
+}
+
+// Supprimer un client
+function deleteClientByName(name) {
+  if (!name) return;
+
+  const clients = getClients().filter(
+    (c) => c.name.toLowerCase() !== name.toLowerCase()
+  );
+
+  saveClients(clients);
+  refreshClientDatalist();
+}
+
+// Fonction pour supprimer un client depuis le formulaire
+function deleteCurrentClient() {
+  const name = document.getElementById("clientName").value.trim();
+  if (!name) {
+    showConfirmDialog({
+      title: "Suppression impossible",
+      message: "Aucun client sélectionné.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  showConfirmDialog({
+    title: "Supprimer ce client ?",
+    message: `Êtes-vous sûr de vouloir supprimer '${name}' de la base clients ?`,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "🗑️",
+    onConfirm: () => {
+      deleteClientByName(name);
+      document.getElementById("clientName").value = "";
+      document.getElementById("clientAddress").value = "";
+      document.getElementById("clientPhone").value = "";
+      document.getElementById("clientEmail").value = "";
+
+      showConfirmDialog({
+        title: "Client supprimé",
+        message: "Le client a été supprimé avec succès.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "success",
+        icon: "✅"
+      });
+    }
+  });
+}
+
+
+// Ajouter le client actuel à la base
+function addCurrentClient() {
+  const name = document.getElementById("clientName").value.trim();
+  const address = document.getElementById("clientAddress").value.trim();
+  const phone = document.getElementById("clientPhone").value.trim();
+  const email = document.getElementById("clientEmail").value.trim();
+
+  if (!name) {
+    // popup jolie au lieu d'alert
+    showConfirmDialog({
+      title: "Nom obligatoire",
+      message: "Merci de renseigner au minimum le nom du client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const clients = getClients();
+  const existingIndex = clients.findIndex(
+    c => (c.name || "").toLowerCase() === name.toLowerCase()
+  );
+
+const newClient = { civility, name, address, phone, email };
+
+
+  let title;
+  let message;
+
+  if (existingIndex === -1) {
+    // ➕ AJOUT
+    clients.push(newClient);
+    title = "Client ajouté";
+    message = "Le client a été ajouté à la base.";
+  } else {
+    // ✏️ MISE À JOUR
+    clients[existingIndex] = newClient;
+    title = "Client mis à jour";
+    message = "Les informations du client ont été mises à jour.";
+  }
+
+  saveClients(clients);
+  refreshClientDatalist();
+
+  showConfirmDialog({
+    title,
+    message,
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+}
+
+
+function rebuildClientsPopupList(searchQuery) {
+  const base = getClients();
+  let list = base.map((c, index) => ({ client: c, index }));
+
+  const q = (searchQuery || "").toLowerCase().trim();
+  if (q) {
+    list = list.filter(({ client }) =>
+      (client.name || "").toLowerCase().includes(q) ||
+      (client.address || "").toLowerCase().includes(q) ||
+      (client.phone || "").toLowerCase().includes(q) ||
+      (client.email || "").toLowerCase().includes(q)
+    );
+  }
+
+  // tri alphabétique A->Z sur le nom
+  list.sort((a, b) =>
+    (a.client.name || "").toLowerCase()
+      .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
+  );
+
+  clientsPopupList = list;
+}
+function rebuildClientsPopupList(searchText = "") {
+  const all = getClients();
+
+  // On garde l'index d'origine pour chaque client
+  const mapped = all.map((client, index) => ({ client, index }));
+
+  // On trie seulement pour l'affichage, sans casser les index d'origine
+  const sorted = mapped.sort((a, b) =>
+    (a.client.name || "").toLowerCase()
+      .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
+  );
+
+  if (searchText && searchText.trim() !== "") {
+    const q = searchText.toLowerCase();
+    clientsPopupList = sorted.filter(item =>
+      (item.client.name || "").toLowerCase().includes(q) ||
+      (item.client.address && item.client.address.toLowerCase().includes(q)) ||
+      (item.client.phone && item.client.phone.toLowerCase().includes(q))
+    );
+  } else {
+    // Pas de filtre : on garde toute la liste triée
+    clientsPopupList = sorted;
+  }
+}
+
+
+function openClientsListPopup() {
+  const searchInput = document.getElementById("clientSearchInput");
+  if (searchInput) searchInput.value = "";
+
+  currentClientPage = 1;
+  rebuildClientsPopupList("");
+
+  document.getElementById("editClientForm").classList.add("hidden");
+  document.getElementById("clientsPopup").classList.remove("hidden");
+
+  renderClientsList();
+}
+
+function filterClientsList() {
+  const searchInput = document.getElementById("clientSearchInput");
+  const q = searchInput ? searchInput.value : "";
+  currentClientPage = 1;
+  rebuildClientsPopupList(q);
+  renderClientsList();
+}
+
+function renderClientsList() {
+  const container = document.getElementById("clientsListContainer");
+  const pageInfoEl = document.getElementById("clientsPageInfo");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const total = clientsPopupList.length;
+  if (total === 0) {
+    container.innerHTML = "<p>Aucun client trouvé.</p>";
+    if (pageInfoEl) pageInfoEl.textContent = "Page 0 / 0";
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / CLIENTS_PER_PAGE));
+  if (currentClientPage > totalPages) currentClientPage = totalPages;
+
+  const start = (currentClientPage - 1) * CLIENTS_PER_PAGE;
+  const pageItems = clientsPopupList.slice(start, start + CLIENTS_PER_PAGE);
+
+  pageItems.forEach(({ client, index }) => {
+    const item = document.createElement("div");
+    item.className = "client-item";
+    item.innerHTML = `
+      <strong>${client.name}</strong><br>
+      ${client.address || ""}<br>
+      Tel : ${client.phone || "—"}<br>
+      Mail : ${client.email || "—"}<br>
+      <div style="margin-top:6px; display:flex; gap:10px;">
+        <button class="modify-btn" onclick="editClient(${index})">✏️ Modifier</button>
+        <button class="delete-btn" onclick="deleteClientFromList(${index})">🗑️ Supprimer</button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  if (pageInfoEl) {
+    pageInfoEl.textContent = `Page ${currentClientPage} / ${totalPages}`;
+  }
+}
+function prevClientsPage() {
+  if (currentClientPage > 1) {
+    currentClientPage--;
+    renderClientsList();
+  }
+}
+
+function nextClientsPage() {
+  const total = clientsPopupList.length;
+  const totalPages = Math.max(1, Math.ceil(total / CLIENTS_PER_PAGE));
+  if (currentClientPage < totalPages) {
+    currentClientPage++;
+    renderClientsList();
+  }
+}
+
+
+function deleteClientFromList(index) {
+  const clients = getClients();
+  const c = clients[index];
+  if (!c) return;
+
+  showConfirmDialog({
+    title: "Supprimer ce client ?",
+    message: `Voulez-vous vraiment supprimer '${c.name}' ?`,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "🗑️",
+    onConfirm: () => {
+      clients.splice(index, 1);
+      saveClients(clients);
+      refreshClientDatalist();
+      filterClientsList(); // pour recharger la liste avec tri + pagination
+
+      showConfirmDialog({
+        title: "Client supprimé",
+        message: "Le client a bien été supprimé.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "success",
+        icon: "✅"
+      });
+    }
+  });
+}
+
+
+function exportClientsCSV() {
+  const clients = getClients();
+  let csv = "Nom;Adresse;Téléphone;Email\n";
+
+  clients.forEach(c => {
+    csv += `${c.name};${c.address};${c.phone || ""};${c.email || ""}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+
+  a.href = url;
+  a.download = "clients.csv";
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+
+let editingClientIndex = null;
+
+function editClient(index) {
+  const clients = getClients();
+  const c = clients[index];
+  editingClientIndex = index;
+
+  document.getElementById("editClientName").value = c.name;
+  document.getElementById("editClientAddress").value = c.address;
+  document.getElementById("editClientPhone").value = c.phone;
+  document.getElementById("editClientEmail").value = c.email;
+
+  document.getElementById("editClientForm").classList.remove("hidden");
+}
+function openAddClientFromList() {
+  // Vide les champs
+  document.getElementById("editClientName").value = "";
+  document.getElementById("editClientAddress").value = "";
+  document.getElementById("editClientPhone").value = "";
+  document.getElementById("editClientEmail").value = "";
+
+  editingClientIndex = null; // mode création
+
+  // Affiche le formulaire d'édition
+  document.getElementById("editClientForm").classList.remove("hidden");
+}
+
+function cancelEditClient() {
+  document.getElementById("editClientForm").classList.add("hidden");
+}
+
+function saveEditedClient() {
+  const clients = getClients();
+
+  const newClient = {
+    name: document.getElementById("editClientName").value.trim(),
+    address: document.getElementById("editClientAddress").value.trim(),
+    phone: document.getElementById("editClientPhone").value.trim(),
+    email: document.getElementById("editClientEmail").value.trim()
+  };
+
+  // Nom obligatoire
+  if (!newClient.name) {
+    showConfirmDialog({
+      title: "Nom obligatoire",
+      message: "Merci de renseigner au minimum le nom du client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  let title;
+  let message;
+
+  if (editingClientIndex === null || typeof editingClientIndex === "undefined") {
+    // ➕ AJOUT NOUVEAU CLIENT
+    clients.push(newClient);
+    title = "Client ajouté";
+    message = "Le client a été ajouté à la base.";
+  } else {
+    // ✏️ MODIFICATION CLIENT EXISTANT
+    clients[editingClientIndex] = newClient;
+    title = "Client modifié";
+    message = "Les informations du client ont été mises à jour.";
+  }
+
+  saveClients(clients);
+  refreshClientDatalist();
+  openClientsListPopup(); // recharge la liste triée / paginée
+
+  // Popup de succès
+  showConfirmDialog({
+    title,
+    message,
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+}
+
+
+
+function closeClientsListPopup() {
+  document.getElementById("clientsPopup").classList.add("hidden");
+}
+
+
+
 function saveSingleDocumentToFirestore(doc) {
   if (!db) {
     console.warn("Firestore non initialisé, pas d'envoi cloud.");
@@ -332,6 +763,10 @@ function saveSingleDocumentToFirestore(doc) {
       console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err)
     );
 }
+// ================== LISTE CLIENTS (popup) ==================
+let clientsPopupList = [];      // liste courante affichée dans le popup
+let currentClientPage = 1;
+const CLIENTS_PER_PAGE = 10;
 
 // ================== HELPERS GÉNÉRAUX ==================
 
@@ -481,6 +916,10 @@ function switchListType(type) {
   loadYearFilter();
   loadDocumentsList();
 }
+function onDocumentsSearchChange() {
+  loadDocumentsList();
+}
+
 function adjustPriceHTMargin(line) {
   const kind = line.dataset.kind || "";
   const price = line.querySelector(".prestation-price")?.closest("div");
@@ -1360,12 +1799,20 @@ function newDocument(type) {
   document.getElementById("clientEmail").value = "";
   document.getElementById("notes").value = "";
 
+  // 🔥 Reset civilité client
+  const clientCivilityEl = document.getElementById("clientCivility");
+  if (clientCivilityEl) clientCivilityEl.value = "";
+
   const siteBlock = document.getElementById("siteBlock");
   const siteNameInp = document.getElementById("siteName");
   const siteAddrInp = document.getElementById("siteAddress");
   if (siteNameInp) siteNameInp.value = "";
   if (siteAddrInp) siteAddrInp.value = "";
   if (siteBlock) siteBlock.style.display = "none";
+
+  // 🔥 Reset civilité lieu d’intervention
+  const siteCivilityEl = document.getElementById("siteCivility");
+  if (siteCivilityEl) siteCivilityEl.value = "";
 
   const subjectInput = document.getElementById("docSubject");
   if (subjectInput) subjectInput.value = "";
@@ -1422,6 +1869,13 @@ function loadDocument(id) {
   document.getElementById("clientAddress").value = doc.client.address;
   document.getElementById("clientPhone").value = doc.client.phone;
   document.getElementById("clientEmail").value = doc.client.email;
+const civilitySelect = document.getElementById("clientCivility");
+if (civilitySelect) {
+  civilitySelect.value = doc.client.civility || "";
+}
+const siteCivilityEl = document.getElementById("siteCivility");
+if (siteCivilityEl) siteCivilityEl.value = doc.siteCivility || "";
+
   document.getElementById("notes").value = doc.notes || "";
 
   const subjectInput = document.getElementById("docSubject");
@@ -1580,13 +2034,17 @@ calculateTotals(); // et on laisse faire la logique dégressive normale
 }
 
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
-
 function saveDocument() {
   const clientName = document.getElementById("clientName").value.trim();
   const clientAddress = document.getElementById("clientAddress").value.trim();
+  const clientCivility = (document.getElementById("clientCivility")?.value || "").trim();
+
   const clientPhone = document.getElementById("clientPhone").value.trim();
   const clientEmail = document.getElementById("clientEmail").value.trim();
   const docSubject = (document.getElementById("docSubject")?.value || "").trim();
+
+  // 🔥 Civilité du lieu d’intervention
+  const siteCivility = (document.getElementById("siteCivility")?.value || "").trim();
   const siteName = (document.getElementById("siteName")?.value || "").trim();
   const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
 
@@ -1629,12 +2087,8 @@ function saveDocument() {
     }
 
     const desc = (line.querySelector(".prestation-desc")?.value || "").trim();
-    const qty = parseFloat(
-      line.querySelector(".prestation-qty")?.value || "0"
-    );
-    const price = parseFloat(
-      line.querySelector(".prestation-price")?.value || "0"
-    );
+    const qty = parseFloat(line.querySelector(".prestation-qty")?.value || "0");
+    const price = parseFloat(line.querySelector(".prestation-price")?.value || "0");
     const unit = (line.querySelector(".prestation-unit")?.value || "").trim();
     const detail = line.dataset.detail || "";
 
@@ -1757,14 +2211,20 @@ function saveDocument() {
     date: docDate,
     validityDate,
     subject: docSubject,
+
     client: {
+      civility: clientCivility,
       name: clientName,
       address: clientAddress,
       phone: clientPhone,
       email: clientEmail
     },
+
+    // 🔥 on stocke aussi la civilité du lieu
+    siteCivility,
     siteName,
     siteAddress,
+
     prestations,
     tvaRate,
     subtotal,
@@ -1789,9 +2249,18 @@ function saveDocument() {
   saveDocuments(docs);
   saveSingleDocumentToFirestore(doc);
 
+  // Mise à jour client SI la fonction existe (évite une erreur JS)
+  if (typeof updateClientsFromDocument === "function") {
+    updateClientsFromDocument(doc);
+  }
+
+  // Pop-up intelligente selon le type de document
+  const typeLabel = doc.type === "facture" ? "facture" : "devis";
+  const numero = doc.number ? ` ${doc.number}` : "";
+
   showConfirmDialog({
     title: "Enregistrement réussi",
-    message: "Le document a été enregistré avec succès.",
+    message: `Le document ${typeLabel}${numero} a été enregistré avec succès.`,
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
@@ -2034,6 +2503,7 @@ function loadDocumentsList() {
   const docs = getAllDocuments();
   let filtered = docs.filter((d) => d.type === currentListType);
 
+  // Filtre année (factures uniquement)
   if (currentListType === "facture") {
     const yearSel = document.getElementById("yearFilter");
     if (yearSel && yearSel.value !== "all") {
@@ -2043,6 +2513,32 @@ function loadDocumentsList() {
       );
     }
   }
+
+  // 🔍 Filtre recherche (numéro, client, objet, statut, montant)
+  const searchInput = document.getElementById("docSearchInput");
+  const q = (searchInput ? searchInput.value : "").trim().toLowerCase();
+
+  if (q) {
+    filtered = filtered.filter((d) => {
+      const number = (d.number || "").toLowerCase();
+      const clientName = (d.client?.name || "").toLowerCase();
+      const subject = (d.subject || "").toLowerCase();
+      const status = (d.status || "").toLowerCase();
+      const totalStr =
+        d.totalTTC != null
+          ? d.totalTTC.toFixed(2).replace(".", ",")
+          : "";
+
+      return (
+        number.includes(q) ||
+        clientName.includes(q) ||
+        subject.includes(q) ||
+        status.includes(q) ||
+        totalStr.includes(q)
+      );
+    });
+  }
+
 
   filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
@@ -3088,6 +3584,7 @@ function openPrintable(id, previewOnly) {
     : doc.paid
     ? "#1b5e20"
     : "#1a74d9";
+  const conditionsType = doc.conditionsType || "particulier";
 
   const formatEuroFR = (value) =>
     (Number(value) || 0).toLocaleString("fr-FR", {
@@ -3146,42 +3643,84 @@ function openPrintable(id, previewOnly) {
     `;
   });
 
-  // Informations importantes devis
+    // Informations importantes devis
   let importantHtml = "";
   if (isDevis) {
     const items = [];
 
-    if (hasPiscine && !hasProduitsOuFournitures) {
+    // 👉 VERSION COURTE = PARTICULIER
+    if (conditionsType === "particulier") {
+      if (hasPiscine && !hasProduitsOuFournitures) {
+        items.push(
+          "Les produits de traitement piscine (chlore choc, sel, stabilisant, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire et seront facturés en supplément si nécessaires."
+        );
+      }
+
+      if (hasPiscine && hasClim) {
+        items.push(
+          "Les tarifs des pièces détachées de piscine et de climatisation peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final sera validé avec vous avant tout remplacement."
+        );
+      } else if (hasPiscine) {
+        items.push(
+          "Les tarifs des pièces détachées de piscine peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final sera validé avec vous avant intervention."
+        );
+      } else if (hasClim) {
+        items.push(
+          "Les tarifs des pièces détachées de climatisation peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final sera validé avec vous avant remplacement."
+        );
+      }
+
       items.push(
-        "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant."
+        "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
+      );
+
+      items.push(
+        "L’entreprise est couverte par une assurance responsabilité civile professionnelle."
       );
     }
 
-    if (hasPiscine && hasClim) {
+    // 👉 VERSION COMPLÈTE = SYNDIC / AGENCE
+    else if (conditionsType === "agence") {
+      if (hasPiscine && !hasProduitsOuFournitures) {
+        items.push(
+          "Les produits de traitement piscine (chlore choc, sel, stabilisant, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire et seront facturés en supplément si nécessaires."
+        );
+      }
+
+      if (hasPiscine && hasClim) {
+        items.push(
+          "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, ventilateurs, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Toute variation sera confirmée pour accord avant remplacement."
+        );
+      } else if (hasPiscine) {
+        items.push(
+          "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, sondes, etc.) peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après accord."
+        );
+      } else if (hasClim) {
+        items.push(
+          "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, sondes, etc.) peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après accord."
+        );
+      }
+
       items.push(
-        "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
       );
-    } else if (hasPiscine) {
+
       items.push(
-        "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        "Le devis est établi sous réserve d’une accessibilité normale et conforme des installations. Tout accès complexe, installation non conforme, matériel obstrué ou emplacement encombré pourra entraîner une adaptation du devis après validation du client."
       );
-    } else if (hasClim) {
+
       items.push(
-        "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation."
+      );
+
+      items.push(
+        "L’entreprise est couverte par une assurance responsabilité civile professionnelle."
+      );
+
+      items.push(
+        "Le devis vaut facture après réalisation complète des prestations en l’absence d’émission d’une facture distincte."
       );
     }
-
-    items.push(
-      "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
-    );
-
-    items.push(
-      "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation."
-    );
-
-    items.push(
-      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
-    );
 
     importantHtml = `
       <div class="important-block">
@@ -3192,6 +3731,8 @@ function openPrintable(id, previewOnly) {
       </div>
     `;
   }
+
+
 
   const tvaRate = doc.tvaRate || 0;
   const discountAmountDoc = doc.discountAmount || 0;
@@ -3294,8 +3835,8 @@ function openPrintable(id, previewOnly) {
   let notesHtml = "";
   if (isDevis) {
     const devisConditions =
-      "Paiement à réception de facture.\n" +
-      "Aucun acompte demandé sauf mention contraire.";
+      "Paiement à réception de facture. Aucun acompte demandé sauf mention contraire.\n" +
+      "Toute somme non réglée à échéance pourra donner lieu à une pénalité légale conformément à l’article L441-10 du Code de commerce.";
     notesHtml = `
       <div class="conditions-block">
         <div class="conditions-title">Conditions de règlement</div>
@@ -3845,7 +4386,10 @@ img.sig {
         <!-- COLONNE GAUCHE -->
         <div class="client-col">
           <div class="client-title">Client</div>
-          ${doc.client?.name ? `<p class="client-line">${doc.client.name}</p>` : ""}
+         ${(doc.client?.name || doc.client?.civility)
+  ? `<p class="client-line">${[doc.client?.civility, doc.client?.name].filter(Boolean).join(" ")}</p>`
+  : ""}
+
           ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
           ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
           ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
@@ -3857,7 +4401,10 @@ img.sig {
             ? `
         <div class="client-col right">
           <div class="client-title">Lieu d’intervention</div>
-          ${doc.siteName ? `<p class="client-line">Client sur site : ${doc.siteName}</p>` : ""}
+         ${(doc.siteCivility || doc.siteName)
+  ? `<p class="client-line">${[doc.siteCivility, doc.siteName].filter(Boolean).join(" ")}</p>`
+  : ""}
+
           ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
         </div>`
             : ""
@@ -3943,6 +4490,8 @@ window.onload = function () {
   loadCustomTemplates();   // charge les prestations perso (Option A)
   loadCustomTexts();       // applique les textes détaillés personnalisés
   setTVA(0);
+refreshClientDatalist();
+
   switchListType("devis");
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
