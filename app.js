@@ -5353,6 +5353,30 @@ function onContractAutoChange() {
     contractAmountInput.value = totalAmount ? totalAmount.toFixed(2) : "";
   }
 }
+function onContractVisitsModeChange() {
+  const mode = document.getElementById("contractVisitsMode")?.value || "standard";
+  const winInput = document.getElementById("contractCalcVisitsWinter");
+  const sumInput = document.getElementById("contractCalcVisitsSummer");
+  const customBlock = document.getElementById("customVisitsBlock");
+
+  if (!winInput || !sumInput || !customBlock) return;
+
+  if (mode === "standard") {
+    winInput.value = 1;  // hiver
+    sumInput.value = 2;  // été
+    customBlock.style.display = "none";
+  } else if (mode === "intensif") {
+    winInput.value = 2;
+    sumInput.value = 4;
+    customBlock.style.display = "none";
+  } else { // perso
+    if (!winInput.value) winInput.value = 1;
+    if (!sumInput.value) sumInput.value = 2;
+    customBlock.style.display = "block";
+  }
+
+  onContractAutoChange();
+}
 
 
 // ------- Init -------
@@ -5366,6 +5390,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
