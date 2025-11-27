@@ -256,6 +256,7 @@ const MARGIN_MULTIPLIER = 1.4;
 // ================== VARIABLES GLOBALES ==================
 
 let currentDocumentId = null;
+let currentContractId = null; // ID Firestore du contrat en cours (collection "contracts")
 let prestationCount = 0;
 let currentListType = "devis"; // "devis" ou "facture"
 
@@ -4606,6 +4607,9 @@ img.sig {
 // ================== PAGE CONTRAT ==================
 
 function openContractView() {
+  // on ouvre un NOUVEAU contrat (pas encore lié à un doc Firestore)
+  currentContractId = null;
+
   // Onglets visuels
   const tabDevis = document.getElementById("tabDevis");
   const tabFactures = document.getElementById("tabFactures");
@@ -4624,7 +4628,24 @@ function openContractView() {
   if (formView) formView.classList.add("hidden");
   if (contractView) contractView.classList.remove("hidden");
 
-  // Optionnel : si un devis est ouvert, pré-remplir quelques champs
+  // On vide/réinitialise les champs du contrat
+  const idsToReset = [
+    "contractClientCivility", "contractClientName", "contractClientAddress",
+    "contractClientPhone", "contractClientEmail", "contractReference",
+    "contractSiteCivility", "contractSiteName", "contractSiteAddress",
+    "contractPoolType", "contractTreatment", "contractVolume", "contractSpecificities",
+    "contractFrequency", "contractSeasonStart", "contractSeasonEnd",
+    "contractPreferredDay", "contractBillingMode", "contractAmount",
+    "contractPaymentDetails", "contractNotes"
+  ];
+  idsToReset.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName === "SELECT" || el.tagName === "INPUT") el.value = "";
+    if (el.tagName === "TEXTAREA") el.value = "";
+  });
+
+  // Si un devis est ouvert → on pré-remplit les infos client / site
   if (currentDocumentId) {
     const doc = getDocument(currentDocumentId);
     if (doc && doc.client) {
@@ -4653,6 +4674,7 @@ function openContractView() {
   }
 }
 
+
 // Retour à la liste devis/factures
 function backToListFromContract() {
   const contractView = document.getElementById("contractView");
@@ -4672,9 +4694,21 @@ function backToListFromContract() {
 
   switchListType("devis");
 }
+// Enregistrer le contrat dans Firestore (collection "contracts")
+async function saveContract(showToast = true) {
+  if (typeof db === "undefined" || !db) {
+    console.error("Firestore non initialisé");
+    showConfirmDialog({
+      title: "Erreur",
+      message: "Firestore n’est pas initialisé. Vérifie initFirebase().",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "danger",
+      icon: "⚠️"
+    });
+    return;
+  }
 
-// Impression du contrat (PDF)
-function printContract(previewOnly) {
   const val = (id) => {
     const el = document.getElementById(id);
     return el ? el.value.trim() : "";
@@ -4691,7 +4725,7 @@ function printContract(previewOnly) {
   const siteName = val("contractSiteName");
   const siteAddress = val("contractSiteAddress");
 
-  const poolType = val("contractPoolType") || "piscine / spa";
+  const poolType = val("contractPoolType");
   const treatment = val("contractTreatment");
   const volume = val("contractVolume");
   const specificities = val("contractSpecificities");
@@ -4706,11 +4740,14 @@ function printContract(previewOnly) {
   const paymentDetails = val("contractPaymentDetails");
   const notes = val("contractNotes");
 
-  // Petit contrôle minimum
-  if (!clientName || !clientAddress || !siteName || !siteAddress || !poolType || !frequency || !seasonStart || !seasonEnd || !billingMode || !amount) {
+  // contrôle minimum avant enregistrement
+  if (!clientName || !clientAddress || !siteName || !siteAddress ||
+      !poolType || !frequency || !seasonStart || !seasonEnd ||
+      !billingMode || !amount) {
+
     showConfirmDialog({
       title: "Informations manquantes",
-      message: "Merci de compléter au minimum le client, le lieu, le type de bassin, la fréquence, la période, le mode de facturation et le montant.",
+      message: "Merci de compléter au minimum : client, adresse client, lieu, type de bassin, fréquence, période, mode de facturation et montant.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
@@ -4719,29 +4756,160 @@ function printContract(previewOnly) {
     return;
   }
 
-  const todayStr = new Date().toLocaleDateString("fr-FR");
+  const now = new Date();
+
+  const contractData = {
+    type: "contrat_piscine_spa",
+    reference: contractRef || null,
+    createdLocal: now.toISOString(),
+    client: {
+      civility: clientCivility || null,
+      name: clientName,
+      address: clientAddress,
+      phone: clientPhone || null,
+      email: clientEmail || null
+    },
+    site: {
+      civility: siteCivility || null,
+      name: siteName,
+      address: siteAddress
+    },
+    pool: {
+      type: poolType,
+      treatment: treatment || null,
+      volume: volume || null,
+      specificities: specificities || null
+    },
+    frequency: {
+      label: frequency,
+      preferredDay: preferredDay || null,
+      seasonStart,
+      seasonEnd
+    },
+    billing: {
+      mode: billingMode,
+      amountTTC: Number(amount),
+      paymentDetails: paymentDetails || null,
+      tvaApplicable: false, // micro-entreprise
+      tvaArticle: "TVA non applicable, article 293 B du CGI."
+    },
+    notes: notes || null,
+    linkedDocumentId: currentDocumentId || null,
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  };
+
+  if (!currentContractId) {
+    // nouveau contrat
+    contractData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+  }
+
+  try {
+    let docRef;
+    if (currentContractId) {
+      docRef = db.collection("contracts").doc(currentContractId);
+      await docRef.set(contractData, { merge: true });
+    } else {
+      docRef = await db.collection("contracts").add(contractData);
+      currentContractId = docRef.id;
+    }
+
+    if (showToast) {
+      showConfirmDialog({
+        title: "Contrat enregistré",
+        message: `Le contrat a bien été enregistré dans Firestore.${contractRef ? "\n\nRéf. : " + contractRef : ""}`,
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "success",
+        icon: "✅"
+      });
+    }
+
+  } catch (e) {
+    console.error("Erreur enregistrement contrat", e);
+    showConfirmDialog({
+      title: "Erreur",
+      message: "Une erreur est survenue lors de l’enregistrement du contrat.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "danger",
+      icon: "⚠️"
+    });
+  }
+}
+
+// Impression du contrat (PDF)
+function printContract(previewOnly) {
+  const val = (id) => {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : "";
+  };
+
+  // Récup des champs
+  const clientCivility = val("contractClientCivility");
+  const clientName = val("contractClientName");
+  const clientAddress = val("contractClientAddress");
+  const clientPhone = val("contractClientPhone");
+  const clientEmail = val("contractClientEmail");
+  const contractRef = val("contractReference");
+
+  const siteCivility = val("contractSiteCivility");
+  const siteName = val("contractSiteName");
+  const siteAddress = val("contractSiteAddress");
+
+  const poolType = val("contractPoolType");
+  const treatment = val("contractTreatment");
+  const volume = val("contractVolume");
+  const specificities = val("contractSpecificities");
+
+  const frequency = val("contractFrequency");
+  const seasonStart = val("contractSeasonStart");
+  const seasonEnd = val("contractSeasonEnd");
+  const preferredDay = val("contractPreferredDay");
+
+  const billingMode = val("contractBillingMode");
+  const amount = val("contractAmount");
+  const paymentDetails = val("contractPaymentDetails");
+  const notes = val("contractNotes");
+
+  // Vérif minimum avant impression
+  if (
+    !clientName ||
+    !clientAddress ||
+    !siteName ||
+    !siteAddress ||
+    !poolType ||
+    !frequency ||
+    !seasonStart ||
+    !seasonEnd ||
+    !billingMode ||
+    !amount
+  ) {
+    showConfirmDialog({
+      title: "Informations manquantes",
+      message:
+        "Merci de compléter au minimum : client, adresse client, lieu d’intervention, type de bassin, fréquence, période, mode de facturation et montant avant l’impression du contrat.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️",
+    });
+    return;
+  }
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString("fr-FR");
   const logoSrc =
     "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
   const signSrc =
     "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
 
-  const fullClientName = [clientCivility, clientName].filter(Boolean).join(" ");
-  const fullSiteName = [siteCivility, siteName].filter(Boolean).join(" ");
-
-  const seasonLabel = seasonStart && seasonEnd
-    ? `du ${seasonStart.slice(5,7)}/${seasonStart.slice(0,4)} au ${seasonEnd.slice(5,7)}/${seasonEnd.slice(0,4)}`
-    : "pour la saison définie au contrat";
-
-  const amountLabel = Number(amount || 0).toLocaleString("fr-FR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + " € TTC";
+  const printWindow = window.open("", "_blank");
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>Contrat d’entretien piscine / spa</title>
+  <title>Contrat d’entretien${contractRef ? " - " + contractRef : ""}</title>
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
     body {
@@ -4766,20 +4934,23 @@ function printContract(previewOnly) {
       border-bottom:1.5px solid #1a74d9;
       padding-bottom:7px;
     }
-    img.logo { height:55px; margin-bottom:4px; }
+    .header img.logo { height:55px; margin-bottom:4px; }
     .header h1 {
       color:#1a74d9;
       font-size:21px;
       margin-bottom:3px;
       font-weight:700;
     }
-    .header p { font-size:10.5px; line-height:1.3; }
-
+    .header p {
+      color:#444;
+      font-size:10.5px;
+      line-height:1.25;
+    }
     .subtitle { font-weight:600; font-size:11px; }
-    .contact { font-weight:500; }
+    .contact { font-size:10.5px; font-weight:500; }
     .contact strong { font-weight:700; }
 
-    .doc-title {
+    .doc-header-center {
       text-align:center;
       margin:10px 0 12px 0;
     }
@@ -4789,77 +4960,127 @@ function printContract(previewOnly) {
       text-transform:uppercase;
       letter-spacing:0.18em;
       font-weight:600;
+      opacity:0.9;
     }
-    .doc-title-sub {
+    .doc-title-number {
       display:block;
-      margin-top:3px;
-      font-size:15px;
-      font-weight:700;
+      margin-top:2px;
+      font-size:20px;
+      font-weight:800;
+      letter-spacing:0.04em;
+      color:#0d47a1;
     }
-    .doc-meta {
-      text-align:right;
-      font-size:10px;
-      margin-bottom:8px;
+    .doc-subject {
+      margin-top:6px;
+      font-size:11.5px;
+      font-weight:600;
     }
 
-    .block {
+    .doc-info-block {
+      display:inline-block;
+      border:1px solid #cbd3e1;
+      border-radius:6px;
+      padding:6px 8px;
+      font-size:10px;
+      background:#f6f8fc;
+      margin-top:4px;
+    }
+    .doc-info-row { display:flex; gap:4px; margin:1px 0; }
+    .doc-info-label { min-width:95px; font-weight:bold; }
+    .doc-info-value { flex:1; }
+
+    .client-block {
+      margin-top:8px;
+      margin-bottom:10px;
+      font-size:10px;
       border:1px solid #dde4ee;
       border-radius:8px;
       padding:8px 10px;
-      margin-bottom:8px;
       background:#f5f7fb;
-      font-size:10px;
     }
-    .block h3 {
-      font-size:11px;
-      color:#1a74d9;
+    .client-inner-row { display:flex; gap:18px; }
+    .client-col { flex:1 1 auto; }
+    .client-col.right { flex:0 0 auto; margin-left:auto; }
+    .client-title {
+      font-weight:700;
+      font-size:10.5px;
       margin-bottom:4px;
+      color:#1a74d9;
     }
-    .block p { margin:2px 0; }
+    .client-line { margin:2px 0; }
 
     .contract-section {
-      margin-top:6px;
+      margin-top:8px;
+      font-size:10.5px;
+    }
+    .contract-section h3 {
+      font-size:11.5px;
       margin-bottom:4px;
+      color:#0d47a1;
     }
     .contract-section h4 {
       font-size:10.5px;
-      margin-bottom:2px;
+      margin-top:8px;
+      margin-bottom:3px;
       color:#1a74d9;
     }
     .contract-section p {
-      font-size:10px;
-      margin-bottom:3px;
+      margin-bottom:4px;
       text-align:justify;
     }
     .contract-section ul {
-      margin-left:14px;
-      margin-bottom:3px;
-      font-size:10px;
+      margin-left:16px;
+      margin-bottom:4px;
     }
     .contract-section li {
       margin-bottom:2px;
     }
 
+    .info-table {
+      width:100%;
+      border-collapse:collapse;
+      margin:6px 0 10px;
+    }
+    .info-table th,
+    .info-table td {
+      border:1px solid #dde4ee;
+      padding:4px 6px;
+      font-size:10px;
+      vertical-align:top;
+    }
+    .info-table th {
+      background:#f3f6fc;
+      font-weight:600;
+    }
+
+    .highlight-box {
+      border:1px solid #1a74d9;
+      background:#f3f7ff;
+      border-radius:6px;
+      padding:6px 8px;
+      font-size:10px;
+      margin-top:6px;
+    }
+
     .signatures {
-      margin-top:10px;
+      margin-top:14px;
       display:flex;
       justify-content:space-between;
       gap:22px;
-      page-break-inside:avoid;
     }
-    .signature-col {
+    .signature-block {
       flex:1;
-      font-size:10px;
-    }
-    .signature-col strong { display:block; margin-bottom:4px; }
-    .signature-frame {
-      margin-top:6px;
       border-top:1px solid #333;
       padding-top:4px;
+      font-size:10px;
       min-height:55px;
     }
+    .signature-title {
+      font-weight:bold;
+      margin-bottom:3px;
+    }
     img.sig {
-      height:100px;
+      height:90px;
       width:auto;
       margin-top:5px;
     }
@@ -4874,7 +5095,6 @@ function printContract(previewOnly) {
 <body>
 <div class="page">
   <div class="page-main">
-
     <div class="header">
       <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
       <h1>AquaClim Prestige</h1>
@@ -4886,138 +5106,157 @@ function printContract(previewOnly) {
       </p>
     </div>
 
-    <div class="doc-title">
-      <span class="doc-title-main">CONTRAT D’ENTRETIEN</span>
-      <span class="doc-title-sub">Piscine / Spa</span>
+    <div class="doc-header-center">
+      <span class="doc-title-main">CONTRAT D’ENTRETIEN PISCINE / SPA</span>
+      <span class="doc-title-number">
+        ${contractRef ? "Réf. " + contractRef : "Sans référence"}
+      </span>
+      <div class="doc-info-block">
+        <div class="doc-info-row">
+          <span class="doc-info-label">Date :</span>
+          <span class="doc-info-value">${dateStr}</span>
+        </div>
+        <div class="doc-info-row">
+          <span class="doc-info-label">Lieu :</span>
+          <span class="doc-info-value">Nice</span>
+        </div>
+      </div>
     </div>
 
-    <div class="doc-meta">
-      <div>Date : ${todayStr}</div>
-      ${contractRef ? `<div>Référence contrat : ${contractRef}</div>` : ``}
-      <div>Lieu : Nice</div>
+    <div class="client-block">
+      <div class="client-inner-row">
+        <div class="client-col">
+          <div class="client-title">Client</div>
+          <p class="client-line">${[clientCivility, clientName].filter(Boolean).join(" ")}</p>
+          <p class="client-line">${clientAddress}</p>
+          ${clientPhone ? `<p class="client-line">Tél : ${clientPhone}</p>` : ""}
+          ${clientEmail ? `<p class="client-line">Email : ${clientEmail}</p>` : ""}
+        </div>
+        <div class="client-col right">
+          <div class="client-title">Lieu d’intervention</div>
+          <p class="client-line">${[siteCivility, siteName].filter(Boolean).join(" ")}</p>
+          <p class="client-line">${siteAddress}</p>
+        </div>
+      </div>
     </div>
 
-    <div class="block">
-      <h3>Parties au contrat</h3>
-      <p><strong>Prestataire :</strong> AquaClim Prestige – Le Blevennec Loïc, 2 avenue Cauvin, 06100 Nice.</p>
-      <p><strong>Client :</strong> ${fullClientName || "__________________________"}</p>
-      <p>${clientAddress || ""}</p>
-      ${clientPhone ? `<p>Tél : ${clientPhone}</p>` : ``}
-      ${clientEmail ? `<p>Email : ${clientEmail}</p>` : ``}
-      <p style="margin-top:4px;"><strong>Lieu d’intervention :</strong> ${fullSiteName || "__________________________"}</p>
-      <p>${siteAddress || ""}</p>
-    </div>
+    <table class="info-table">
+      <tr>
+        <th style="width:35%;">Type de bassin</th>
+        <td>${poolType}${treatment ? " – Traitement : " + treatment : ""}${volume ? " – Volume : " + volume + " m³" : ""}</td>
+      </tr>
+      <tr>
+        <th>Fréquence d’intervention</th>
+        <td>
+          ${frequency}${
+            preferredDay ? " – Jour privilégié : " + preferredDay : ""
+          }<br>
+          Période : du ${seasonStart} au ${seasonEnd}
+        </td>
+      </tr>
+      <tr>
+        <th>Facturation</th>
+        <td>
+          Mode : ${billingMode}<br>
+          Montant TTC : ${amount} €<br>
+          ${
+            paymentDetails
+              ? "Modalités : " + paymentDetails + "<br>"
+              : ""
+          }
+          TVA non applicable, article 293 B du CGI.
+        </td>
+      </tr>
+      ${
+        specificities
+          ? `<tr>
+        <th>Spécificités / accès</th>
+        <td>${specificities}</td>
+      </tr>`
+          : ""
+      }
+    </table>
 
     <div class="contract-section">
-      <h4>1. Objet du contrat</h4>
-      <p>Le présent contrat a pour objet l’entretien régulier, la surveillance et le contrôle du bon fonctionnement de la ${poolType} située au lieu d’intervention ci-dessus, ainsi que, le cas échéant, du spa ou jacuzzi associé.</p>
-    </div>
+      <h3>1. Objet du contrat</h3>
+      <p>Le présent contrat a pour objet l’entretien régulier, la surveillance et le contrôle du bassin (piscine, spa ou jacuzzi) situé au lieu d’intervention ci-dessus désigné.</p>
 
-    <div class="contract-section">
-      <h4>2. Caractéristiques du bassin</h4>
-      <p>Type de bassin : ${poolType}${volume ? ` – Volume estimé : ${volume}` : ""}.</p>
-      ${treatment ? `<p>Traitement / équipement principal : ${treatment}.</p>` : ``}
-      ${specificities ? `<p>Particularités signalées : ${specificities}.</p>` : ``}
-    </div>
-
-    <div class="contract-section">
-      <h4>3. Prestations incluses</h4>
+      <h4>2. Prestations incluses</h4>
+      <p>Dans le cadre des passages prévus au contrat, le prestataire réalise notamment&nbsp;:</p>
       <ul>
-        <li>Nettoyage et contrôle des paniers de skimmer et du préfiltre de pompe.</li>
-        <li>Nettoyage de la ligne d’eau (dans la limite d’un encrassement normal).</li>
-        <li>Analyse et contrôle de l’équilibre de l’eau (pH, TAC, TH, désinfectant / redox).</li>
-        <li>Contrôle visuel de la filtration, des pompes, vannes et canalisations apparentes.</li>
-        <li>Contrôle de la cellule d’électrolyse (pour piscine au sel) et des équipements de régulation lorsqu’ils sont présents.</li>
-        <li>Adaptation des réglages de filtration et conseils d’utilisation au client.</li>
+        <li>Nettoyage des paniers de skimmer et du préfiltre de pompe.</li>
+        <li>Contrôle et nettoyage de la ligne d’eau si accessible.</li>
+        <li>Contrôle du système de filtration (pompe, filtre, manomètre, vannes, etc.).</li>
+        <li>Analyse de l’eau (pH, TAC, TH, chlore libre / redox selon installation).</li>
+        <li>Ajustement des réglages de filtration si nécessaire.</li>
+        <li>Contrôle visuel du local technique et des équipements de sécurité.</li>
+        ${
+          treatment && treatment.toLowerCase().includes("sel")
+            ? "<li>Contrôle et nettoyage de la cellule d’électrolyse (si l’installation le permet).</li>"
+            : ""
+        }
       </ul>
-    </div>
 
-    <div class="contract-section">
-      <h4>4. Prestations hors forfait</h4>
-      <p>Ne sont pas inclus dans le présent contrat et feront l’objet d’un devis ou d’une facturation spécifique :</p>
+      <h4>3. Prestations hors forfait</h4>
+      <p>Ne sont pas inclus dans le présent contrat et feront l’objet d’un devis ou d’une facturation complémentaire&nbsp;:</p>
       <ul>
-        <li>Toute opération de dépannage, réparation, recherche de fuite ou remplacement de pièces (pompes, filtres, cellules, cartes électroniques, moteurs, vannes, etc.).</li>
-        <li>Les traitements chocs liés à une eau verte, fortement trouble ou à un déséquilibre majeur de l’eau.</li>
-        <li>Les nettoyages exceptionnels après intempéries, inondations, dépôts massifs de feuilles ou sable saharien, ou tout événement assimilé.</li>
-        <li>Les interventions rendues nécessaires par un mauvais usage manifeste des installations ou des produits.</li>
+        <li>Dépannages, réparations, recherche et traitement de fuites.</li>
+        <li>Remplacement de pièces (pompes, filtres, cellules, cartes électroniques, vannes, etc.).</li>
+        <li>Traitement choc et remise en état après eau verte, forte pollution ou défaut prolongé de traitement.</li>
+        <li>Nettoyage exceptionnel après intempéries importantes (tempête, grêle, sable du Sahara, inondation, etc.).</li>
+        <li>Toute intervention demandée en dehors du planning habituel de passages.</li>
       </ul>
-    </div>
 
-    <div class="contract-section">
-      <h4>5. Produits de traitement</h4>
-      <p>Les produits de traitement (chlore choc, galets, sel, stabilisant, correcteurs de pH, anti-algues, floculants, etc.) ne sont pas inclus sauf accord écrit contraire. Ils sont facturés selon les tarifs en vigueur au jour de l’intervention, après information du client.</p>
-    </div>
+      <h4>4. Produits de traitement</h4>
+      <p>Les produits de traitement (chlore choc, galets de chlore, sel, stabilisant, correcteurs de pH, anti-algues, floculants, etc.) ne sont pas inclus sauf mention contraire et sont facturés selon les tarifs en vigueur. Aucun produit n’est utilisé sans accord préalable du client ou de son représentant.</p>
 
-    <div class="contract-section">
-      <h4>6. Fréquence et période d’intervention</h4>
-      <p>Le prestataire interviendra à raison de : <strong>${frequency}</strong>, ${preferredDay ? `en priorité ${preferredDay},` : ""} sur la période <strong>${seasonLabel}</strong>.</p>
-      <p>En cas de jours fériés, conditions météorologiques extrêmes ou impossibilité d’accès, les passages pourront être reportés, sans que cela n’ouvre droit à indemnisation.</p>
-    </div>
+      <h4>5. Conditions d’accès</h4>
+      <p>Le client s’engage à garantir un accès libre, sécurisé et non encombré au bassin et au local technique (portes déverrouillées, animaux éventuellement isolés, absence d’obstacles majeurs). En cas d’accès impossible lors d’un passage prévu, le déplacement reste dû.</p>
 
-    <div class="contract-section">
-      <h4>7. Conditions d’accès et installations non conformes</h4>
-      <p>Le client s’engage à garantir un accès libre, sécurisé et non encombré au bassin et au local technique (portails, portes, clés, codes, animaux, véhicules, etc.). En cas d’accès impossible lors du passage, le déplacement pourra être facturé.</p>
-      <p>En présence d’installations dangereuses, vétustes, non conformes ou présentant un risque (local technique inondé, équipements électriques dégradés, fuites importantes, pièces cassées…), le prestataire pourra suspendre tout ou partie des prestations jusqu’à mise en conformité, sans responsabilité de sa part.</p>
-    </div>
+      <h4>6. Installations non conformes ou dangereuses</h4>
+      <p>En cas d’installation dangereuse, vétuste, non conforme ou présentant un risque (défaut électrique, fuite importante, structure fragilisée, matériel très dégradé), le prestataire pourra suspendre tout ou partie des prestations jusqu’à mise en conformité, après information du client.</p>
 
-    <div class="contract-section">
-      <h4>8. Responsabilités</h4>
-      <p>Le prestataire intervient selon les règles de l’art, avec du matériel adapté, et dispose d’une assurance Responsabilité Civile Professionnelle couvrant son activité. La responsabilité du prestataire ne saurait être engagée en cas :</p>
-      <ul>
-        <li>de mauvais usage des installations ou des produits par le client ou un tiers ;</li>
-        <li>d’interventions d’un tiers non mandaté par le prestataire ;</li>
-        <li>de défaut structurel du bassin, des canalisations enterrées ou des équipements existants antérieurement au contrat.</li>
-      </ul>
-    </div>
+      <h4>7. Responsabilités du client</h4>
+      <p>Le client s’engage à maintenir les installations en bon état, à signaler sans délai tout dysfonctionnement constaté et à ne pas modifier les réglages (filtration, horloges, vannes, coffrets électriques, etc.) sans concertation avec le prestataire. Il informe également le prestataire de toute intervention d’un tiers.</p>
 
-    <div class="contract-section">
-      <h4>9. Durée et résiliation</h4>
-      <p>Le présent contrat est conclu pour la saison ${seasonLabel}. Il pourra être renouvelé d’un commun accord pour les saisons suivantes.</p>
-      <p>Chaque partie pourra y mettre fin par lettre simple (ou mail) en respectant un préavis de 30 jours, sans indemnité, sous réserve du règlement des prestations déjà réalisées.</p>
-    </div>
+      <h4>8. Responsabilités du prestataire</h4>
+      <p>Le prestataire intervient selon les règles de l’art, avec du matériel adapté, et dispose d’une assurance Responsabilité Civile Professionnelle couvrant ses interventions dans le cadre du présent contrat.</p>
 
-    <div class="contract-section">
-      <h4>10. Montant du contrat et conditions de règlement</h4>
-      <p>Le montant du contrat d’entretien, pour la période considérée, est fixé à <strong>${amountLabel}</strong>, TVA non applicable (micro-entreprise, article 293 B du CGI).</p>
-      <p>Le mode de facturation retenu est : <strong>${billingMode}</strong>. ${paymentDetails ? `Modalités : ${paymentDetails}.` : ""}</p>
-      <p>Toute somme non réglée à échéance pourra donner lieu à l’application des pénalités légales de retard ainsi qu’à l’indemnité forfaitaire de 40 € pour frais de recouvrement, conformément à l’article L441-10 du Code de commerce.</p>
-    </div>
+      <h4>9. Durée et renouvellement</h4>
+      <p>Le présent contrat est conclu pour la période suivante&nbsp;: du ${seasonStart} au ${seasonEnd}. Sauf accord contraire, il est reconductible tacitement d’une année sur l’autre aux mêmes conditions, hors évolution de tarifs dûment notifiée au client au préalable.</p>
 
-    <div class="contract-section">
+      <h4>10. Conditions de règlement</h4>
+      <p>Le règlement des prestations s’effectue selon le mode défini ci-dessus (${billingMode}). Toute somme non réglée à échéance pourra donner lieu à l’application des pénalités légales de retard et, pour les professionnels, à l’indemnité forfaitaire de 40 € pour frais de recouvrement, conformément à l’article L441-10 du Code de commerce.</p>
+
       <h4>11. Force majeure</h4>
-      <p>En cas d’événements de force majeure (tempêtes, grêle, inondations, coupures de courant prolongées, interdictions administratives, etc.), les prestations pourront être suspendues ou reportées sans responsabilité du prestataire, les parties se rapprochant pour adapter le contrat si nécessaire.</p>
-    </div>
+      <p>En cas de force majeure (intempéries exceptionnelles, catastrophes naturelles, coupures de courant prolongées, interdictions administratives, etc.), les prestations pourront être suspendues ou reportées sans que la responsabilité du prestataire ne puisse être engagée.</p>
 
-    <div class="contract-section">
       <h4>12. Données personnelles</h4>
-      <p>Les informations collectées sont utilisées uniquement pour la gestion du présent contrat (devis, factures, planification). Elles ne sont en aucun cas cédées à des tiers à des fins commerciales. Conformément à la réglementation en vigueur, le client dispose d’un droit d’accès, de rectification et de suppression de ses données sur simple demande adressée au prestataire.</p>
-    </div>
+      <p>Les données du client sont utilisées uniquement pour la gestion du présent contrat (interventions, facturation, suivi) et ne sont pas transmises à des tiers à des fins commerciales. Conformément à la réglementation en vigueur, le client dispose d’un droit d’accès, de rectification et de suppression sur simple demande.</p>
 
-    ${notes ? `
-    <div class="contract-section">
-      <h4>13. Clauses particulières / observations</h4>
-      <p>${notes.replace(/\n/g, "<br>")}</p>
+      ${
+        notes
+          ? `<h4>13. Particularités / remarques</h4>
+             <p>${notes.replace(/\n/g, "<br>")}</p>`
+          : ""
+      }
     </div>
-    ` : ""}
-
   </div>
 
   <div class="page-footer">
     <div class="signatures">
-      <div class="signature-col">
-        <strong>Le client</strong>
-        <div class="signature-frame">
-          <p>Précédé de la mention manuscrite :</p>
-          <p>« Lu et approuvé, bon pour accord »</p>
-          <p style="margin-top:16px;">Signature :</p>
-        </div>
+      <div class="signature-block">
+        <div class="signature-title">Le client</div>
+        <p>Signature précédée de la mention manuscrite&nbsp;:</p>
+        <p><em>« Lu et approuvé, bon pour accord »</em></p>
+        <p style="margin-top:10px;">Date : __________________</p>
+        <p style="margin-top:8px;">Signature :</p>
       </div>
-      <div class="signature-col" style="text-align:right;">
-        <strong>AquaClim Prestige</strong>
-        <div class="signature-frame">
-          <p>Signature et cachet de l’entreprise :</p>
-          <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-        </div>
+      <div class="signature-block" style="text-align:right;">
+        <div class="signature-title">AquaClim Prestige</div>
+        <p>Le Blevennec Loïc</p>
+        <p>Signature et cachet de l’entreprise :</p>
+        <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
       </div>
     </div>
   </div>
@@ -5025,16 +5264,17 @@ function printContract(previewOnly) {
 </body>
 </html>`;
 
-  const w = window.open("", "_blank");
-  w.document.write(html);
-  w.document.close();
-  w.onload = function () {
-    w.focus();
+  printWindow.document.write(html);
+  printWindow.document.close();
+
+  printWindow.onload = function () {
+    printWindow.focus();
     if (!previewOnly) {
-      w.print();
+      printWindow.print();
     }
   };
 }
+
 
 
 // ------- Init -------
@@ -5048,6 +5288,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
