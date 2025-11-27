@@ -17,8 +17,8 @@ const PRESTATION_TEMPLATES = [
     label: "Entretien climatisation",
     kind: "entretien_clim",
     title: "Entretien climatisation",
-    priceParticulier: 90,
-    priceSyndic: 110,
+    priceParticulier: 100,
+    priceSyndic: 120,
     descParticulier:
       "Nettoyage filtres, turbine, évaporateur et bac à condensats. Contrôle évacuation et nettoyage groupe extérieur.",
     descSyndic:
@@ -1573,11 +1573,11 @@ function calculateTotals() {
 
         // Sécurité : si base pas défini, on retombe sur tes anciens tarifs
         if (!base) {
-          base = (clientType === "syndic") ? 110 : 90;
+          base = (clientType === "syndic") ? 120 : 100;
         }
 
         // On garde TES réductions actuelles, mais exprimées en % :
-        // Particulier : 1 = 90 / 2 = 75 / 3+ = 65
+        // Particulier : 1 = 100 / 2 = 85 / 3+ = 65
         //   → 2 = -16,67 %, 3+ = -27,78 %
         // Syndic : 1 = 110 / 2 = 90 / 3+ = 80
         //   → 2 = -18,18 %, 3+ = -27,27 %
@@ -1586,17 +1586,17 @@ function calculateTotals() {
           if (n === 1) {
             price = base;
           } else if (n === 2) {
-            price = base * (1 - 15 / 90); // -16,67 %
+            price = base * (1 - 15 / 100); // -15 %
           } else {
-            price = base * (1 - 25 / 90); // -27,78 %
+            price = base * (1 - 25 / 100); // -25 %
           }
         } else {
           if (n === 1) {
             price = base;
           } else if (n === 2) {
-            price = base * (1 - 20 / 110); // -18,18 %
+            price = base * (1 - 20 / 120); // -20 %
           } else {
-            price = base * (1 - 30 / 110); // -27,27 %
+            price = base * (1 - 30 / 120); // -30 %
           }
         }
 
@@ -4654,6 +4654,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
