@@ -479,51 +479,41 @@ const newClient = { civility, name, address, phone, email };
 }
 
 
-function rebuildClientsPopupList(searchQuery) {
-  const base = getClients();
-  let list = base.map((c, index) => ({ client: c, index }));
-
-  const q = (searchQuery || "").toLowerCase().trim();
-  if (q) {
-    list = list.filter(({ client }) =>
-      (client.name || "").toLowerCase().includes(q) ||
-      (client.address || "").toLowerCase().includes(q) ||
-      (client.phone || "").toLowerCase().includes(q) ||
-      (client.email || "").toLowerCase().includes(q)
-    );
-  }
-
-  // tri alphabétique A->Z sur le nom
-  list.sort((a, b) =>
-    (a.client.name || "").toLowerCase()
-      .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
-  );
-
-  clientsPopupList = list;
-}
 function rebuildClientsPopupList(searchText = "") {
+  // 1. Récupérer tous les clients (supposons que getClients() renvoie la liste complète)
   const all = getClients();
 
-  // On garde l'index d'origine pour chaque client
+  // 2. Mapper les clients en conservant leur index d'origine
+  // Ceci est important si l'index dans la liste originale a un rôle (ex: stockage local)
   const mapped = all.map((client, index) => ({ client, index }));
 
-  // On trie seulement pour l'affichage, sans casser les index d'origine
+  // 3. Trier la liste par ordre alphabétique sur le nom (A -> Z)
   const sorted = mapped.sort((a, b) =>
     (a.client.name || "").toLowerCase()
       .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
   );
 
+  // 4. Filtrer la liste si un texte de recherche est fourni
   if (searchText && searchText.trim() !== "") {
     const q = searchText.toLowerCase();
-    clientsPopupList = sorted.filter(item =>
-      (item.client.name || "").toLowerCase().includes(q) ||
-      (item.client.address && item.client.address.toLowerCase().includes(q)) ||
-      (item.client.phone && item.client.phone.toLowerCase().includes(q))
-    );
+
+    // Filtrer sur le nom, l'adresse, le téléphone ou l'email
+    clientsPopupList = sorted.filter(item => {
+      const client = item.client;
+      return (
+        (client.name || "").toLowerCase().includes(q) ||
+        (client.address && client.address.toLowerCase().includes(q)) ||
+        (client.phone && client.phone.toLowerCase().includes(q)) ||
+        (client.email && client.email.toLowerCase().includes(q))
+      );
+    });
+
   } else {
-    // Pas de filtre : on garde toute la liste triée
+    // Si aucun filtre, on garde la liste complète triée
     clientsPopupList = sorted;
   }
+
+  // NOTE : clientsPopupList doit être une variable globale ou accessible à la fonction d'affichage
 }
 
 
@@ -5275,6 +5265,89 @@ function printContract(previewOnly) {
   };
 }
 
+// =========================================
+// Aide : ajouter des mois à une date (YYYY-MM-DD)
+// =========================================
+function addMonthsToDate(dateStr, months) {
+  if (!dateStr) return "";
+  const d = new Date(dateStr);
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + Number(months));
+  // Ajustement fin de mois (ex : 31 → 30)
+  if (d.getDate() < day) d.setDate(0);
+  return d.toISOString().split("T")[0]; // format "YYYY-MM-DD"
+}
+
+// Été / hiver pour le calcul (ici : mai à septembre = été)
+function isSummerMonthIndex(m) {
+  // m = 0 (janvier) ... 11 (décembre)
+  return m >= 4 && m <= 8; // 4=mai, 8=septembre – tu peux ajuster si tu veux
+}
+
+// =========================================
+// CALCUL AUTOMATIQUE CONTRAT
+// =========================================
+function onContractAutoChange() {
+  const start = document.getElementById("contractCalcStart")?.value;
+  const duration = Number(document.getElementById("contractCalcDuration")?.value || 0);
+  const visitsWinter = Number(document.getElementById("contractCalcVisitsWinter")?.value || 0);
+  const visitsSummer = Number(document.getElementById("contractCalcVisitsSummer")?.value || 0);
+  const pricePerVisit = Number(document.getElementById("contractCalcPricePerVisit")?.value || 0);
+
+  const totalVisitsSpan = document.getElementById("contractCalcTotalVisits");
+  const totalAmountSpan = document.getElementById("contractCalcTotalAmount");
+  const seasonStartInput = document.getElementById("contractSeasonStart");
+  const seasonEndInput = document.getElementById("contractSeasonEnd");
+  const contractAmountInput = document.getElementById("contractAmount");
+
+  if (!start || !duration) {
+    if (totalVisitsSpan) totalVisitsSpan.textContent = "0";
+    if (totalAmountSpan) totalAmountSpan.textContent = "0,00 €";
+    return;
+  }
+
+  // 1) Calcul de la date de fin
+  const endDateStr = addMonthsToDate(start, duration);
+
+  // 2) Période Saison (champs type="month")
+  if (seasonStartInput) seasonStartInput.value = start.slice(0, 7);      // YYYY-MM
+  if (seasonEndInput) seasonEndInput.value = endDateStr.slice(0, 7);    // YYYY-MM
+
+  // 3) Calcul du nombre de passages (en fonction des mois été/hiver)
+  let totalVisits = 0;
+  let current = new Date(start);
+  const endDate = new Date(endDateStr);
+
+  // On se place au 1er du mois pour la boucle
+  current.setDate(1);
+  endDate.setDate(1);
+
+  while (current <= endDate) {
+    const m = current.getMonth(); // 0..11
+    totalVisits += isSummerMonthIndex(m) ? visitsSummer : visitsWinter;
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  if (totalVisitsSpan) {
+    totalVisitsSpan.textContent = totalVisits.toString();
+  }
+
+  // 4) Calcul du montant
+  const totalAmount = totalVisits * pricePerVisit;
+  const totalAmountText = totalAmount.toLocaleString("fr-FR", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }) + " €";
+
+  if (totalAmountSpan) {
+    totalAmountSpan.textContent = totalAmountText;
+  }
+
+  // 5) On remplit aussi le champ "Montant TTC de la période"
+  if (contractAmountInput) {
+    contractAmountInput.value = totalAmount ? totalAmount.toFixed(2) : "";
+  }
+}
 
 
 // ------- Init -------
@@ -5288,6 +5361,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
