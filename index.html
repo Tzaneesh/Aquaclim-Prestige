@@ -32,10 +32,34 @@
   </header>
 
   <!-- ONGLET DEVIS / FACTURES -->
-  <div class="top-nav no-print">
-    <button id="tabDevis" class="btn tab-btn active" onclick="switchListType('devis')">📄 Devis</button>
-    <button id="tabFactures" class="btn tab-btn" onclick="switchListType('facture')">💰 Factures</button>
-  </div>
+<div class="top-nav no-print">
+  <button
+    id="tabDevis"
+    class="btn tab-btn active"
+    onclick="switchListType('devis')"
+  >
+    📄 Devis
+  </button>
+
+  <!-- 👉 Nouveau bouton contrat ICI -->
+  <button
+    id="tabContrat"
+    class="btn tab-btn"
+    type="button"
+    onclick="openContractView()"
+  >
+    📘 Contrat Piscine / Spa
+  </button>
+
+  <button
+    id="tabFactures"
+    class="btn tab-btn"
+    onclick="switchListType('facture')"
+  >
+    💰 Factures
+  </button>
+</div>
+
 
   <!-- LISTE DES DOCUMENTS -->
   <section id="listView">
@@ -43,8 +67,6 @@
     <div class="actions no-print">
       <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
       <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
-      <button class="btn btn-primary" onclick="createPoolContract()">
-  📘 Contrat Piscine / Spa
 </button>
 
 
@@ -548,5 +570,6 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
