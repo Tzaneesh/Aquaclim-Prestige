@@ -1,5 +1,5 @@
 /* =========================================================
-   RESET & BASE
+   1. RESET & BASE
 ========================================================= */
 
 * {
@@ -20,7 +20,10 @@ body {
   line-height: 1.6;
 }
 
-/* Petits helpers texte */
+/* =========================================================
+   2. TYPOGRAPHIE & PETITS HELPERS TEXTE
+========================================================= */
+
 .client-main {
   font-weight: 600;
 }
@@ -34,41 +37,50 @@ body {
   text-overflow: ellipsis;
 }
 
-/* Layout global */
+.list-title {
+  font-weight: 600;
+  color: #1a74d9;
+}
+
+.tva-note {
+  margin-top: 8px;
+  font-size: 12px;
+  font-style: italic;
+  color: #555;
+}
+
+.tva-percent-symbol {
+  font-size: 14px;
+  color: #555;
+  font-weight: 600;
+}
+
+/* =========================================================
+   3. LAYOUT GLOBAL & CONTENEURS
+========================================================= */
+
 .container {
   max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
-.client-list-box {
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
+
+.row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 20px;
 }
 
-.client-item {
-  padding: 8px;
-  border-bottom: 1px solid #eee;
+.hidden {
+  display: none !important;
 }
 
-.client-item:last-child {
-  border-bottom: none;
-}
-
-.btn-info {
-  background-color: #17a2b8;
-  color: white;
-}
-
-.btn-info:hover {
-  background-color: #117a8b;
+.no-print {
+  /* masqué uniquement à l'impression via @media print */
 }
 
 /* =========================================================
-   EN-TÊTE (HEADER)
+   4. EN-TÊTE (HEADER)
 ========================================================= */
 
 .header {
@@ -117,7 +129,7 @@ body {
 }
 
 /* =========================================================
-   BOUTONS & NAV
+   5. BOUTONS & NAVIGATION
 ========================================================= */
 
 .top-nav {
@@ -138,6 +150,17 @@ body {
   display: inline-block;
   text-decoration: none;
   white-space: nowrap;
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-icon-emoji {
+  font-size: 15px;
+  transform: translateY(0.5px);
 }
 
 .btn:disabled {
@@ -182,6 +205,7 @@ body {
 .btn-danger:hover:not(:disabled) {
   background: #c82333;
 }
+/* Déclinaison danger (utilisée pour les suppressions) */
 .btn-danger {
   background-color: #d9534f;
   color: white;
@@ -200,17 +224,28 @@ body {
   background-color: #a92320;
 }
 
+.btn-info {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.btn-info:hover {
+  background-color: #117a8b;
+}
+
 .btn-small {
   padding: 6px 12px;
   font-size: 13px;
+  /* On rend les btn-small un peu plus élégants */
+  padding: 6px 14px;
+  border-radius: 999px;
 }
 
-/* Boutons d’action (en haut/bas du formulaire) */
+/* Boutons d’action spécifiques (devis/facture) */
 .action-button {
   min-width: 140px;
 }
 
-/* Devis = bleu */
 .btn-devis {
   background: #1a74d9;
   color: #fff;
@@ -220,7 +255,6 @@ body {
   background: #0d5ab8;
 }
 
-/* Facture = vert */
 .btn-facture {
   background: #2e7d32;
   color: #fff;
@@ -228,6 +262,26 @@ body {
 
 .btn-facture:hover:not(:disabled) {
   background: #1b5e20;
+}
+
+/* Boutons outline (Popup clients) */
+.btn-outline-primary {
+  background: #fff;
+  color: #0d6efd;
+  border: 1px solid #0d6efd;
+}
+.btn-outline-primary:hover {
+  background: #0d6efd;
+  color: #fff;
+}
+
+.btn-light {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #ddd;
+}
+.btn-light:hover {
+  background: #e4e4e4;
 }
 
 /* Onglets */
@@ -253,17 +307,50 @@ body {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.clients-pagination {
-  margin: 8px 0;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
+
+/* Boutons de modification/suppression */
+.modify-btn {
+  background: #0275d8;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.modify-btn:hover {
+  background: #025aa5;
+}
+
+.delete-btn {
+  background: #d9534f;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+}
+.delete-btn:hover {
+  background: #b52b27;
+}
+
+.date-remove-btn {
+  padding-inline: 8px;
+}
+
+.tarif-delete-btn {
+  cursor: pointer;
+  color: #c62828;
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-block;
+}
+
+.tarif-delete-btn:hover {
+  color: #ff0000;
 }
 
 /* =========================================================
-   CARTES / BLOCS
+   6. CARTES / BLOCS
 ========================================================= */
 
 .card {
@@ -279,110 +366,14 @@ body {
   margin-bottom: 20px;
   font-size: 22px;
 }
-.badge-contract {
-  background:#e3f2fd;
-  color:#0d47a1;
-}
-#editClientForm input {
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
 
-.modify-btn {
-  background: #0275d8;
-  color: white;
-  border: none;
-  padding: 5px 10px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-
-.modify-btn:hover {
-  background: #025aa5;
-}
-.client-item {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
-}
-.client-item:last-child {
-  border-bottom: none;
-}
-
-.modify-btn {
-  background: #0275d8;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.modify-btn:hover { background:#025aa5; }
-
-.delete-btn {
-  background: #d9534f;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.delete-btn:hover { background:#b52b27; }
-
-/* =========================================================
-   CLIENT / BLOC CLIENT
-========================================================= */
-
-.print-client-block h3 {
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
-}
-
-.client-inner-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  width: 100%;
-}
-
-.client-col.left {
-  flex: 1 1 auto;
-  min-width: 220px;
-}
-
-.client-col.right {
-  flex: 0 0 auto;
-  margin-left: auto;
-  min-width: 220px;
+.section-title {
+  color: #1a74d9;
+  margin: 25px 0 15px;
 }
 
 /* =========================================================
-   DATES DE PRESTATION
-========================================================= */
-
-.prestation-date-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.prestation-date-row .prestation-date {
-  width: 140px;
-  min-width: 140px;
-  max-width: 140px;
-  padding: 7px;
-}
-
-.date-remove-btn {
-  padding-inline: 8px;
-}
-
-/* =========================================================
-   FORMULAIRES
+   7. FORMULAIRES & INPUTS
 ========================================================= */
 
 .form-group {
@@ -429,11 +420,37 @@ textarea {
   resize: vertical;
 }
 
-/* Grille responsive */
-.row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
+/* Inputs spécifiques */
+#editClientForm input {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 6px 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+}
+
+#tvaRate {
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 36px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.discount-row input[type="number"] {
+  width: 50px;
+  min-width: 50px;
+  height: 36px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+#clientCivility,
+#siteCivility {
+  width: 260px;
+  max-width: 100%;
+  box-sizing: border-box;
+  margin-right: 12px;
 }
 
 /* Radio type client (ronds) */
@@ -445,16 +462,6 @@ textarea {
   cursor: pointer;
 }
 
-/* =========================================================
-   SECTIONS
-========================================================= */
-
-.section-title {
-  color: #1a74d9;
-  margin: 25px 0 15px;
-}
-
-/* Type client */
 .client-type-row {
   display: flex;
   gap: 10px;
@@ -468,10 +475,109 @@ textarea {
   display: flex;
   align-items: center;
   gap: 5px;
+  white-space: nowrap;   
+}
+
+
+/* =========================================================
+   8. ACTIONS FORMULAIRE
+========================================================= */
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #e1e8ed;
+  flex-wrap: wrap;
+}
+
+.actions-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  margin-bottom: 4px;
+}
+
+.actions-btns-row {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.actions-btns-row .btn {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
 }
 
 /* =========================================================
-   PRESTATIONS
+   9. CLIENT / BLOC CLIENT
+========================================================= */
+
+.client-list-box {
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.client-item {
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.client-item:last-child {
+  border-bottom: none;
+}
+
+.clients-pagination {
+  margin: 8px 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+/* Bloc client pour l'impression */
+.print-client-block h3 {
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.client-inner-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  width: 100%;
+}
+
+.client-col.left {
+  flex: 1 1 auto;
+  min-width: 220px;
+}
+
+.client-col.right {
+  flex: 0 0 auto;
+  margin-left: auto;
+  min-width: 220px;
+}
+
+/* =========================================================
+   10. PRESTATIONS & DATES
 ========================================================= */
 
 .prestations-section {
@@ -513,6 +619,18 @@ textarea {
   font-size: 11px;
 }
 
+.prestation-total {
+  font-weight: 600;
+}
+
+.prestation-remove-wrapper {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  margin-right: 10px;
+}
+
+/* Groupes dans Prestations */
 .qty-price-group {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -527,26 +645,26 @@ textarea {
   margin-top: 4px;
 }
 
-/* Alignement du prix d'achat au même niveau que Prix HT */
 .prestation-line .purchase-wrapper {
   margin-top: 0 !important;
   align-self: flex-start;
 }
 
-.prestation-total {
-  font-weight: 600;
+.prestation-date-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Bouton supprimer prestation */
-.prestation-remove-wrapper {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  margin-right: 10px;
+.prestation-date-row .prestation-date {
+  width: 140px;
+  min-width: 140px;
+  max-width: 140px;
+  padding: 7px;
 }
 
 /* =========================================================
-   TOTAUX / TVA / RÉDUCTION
+   11. TOTAUX / TVA / RÉDUCTION
 ========================================================= */
 
 .totals {
@@ -555,6 +673,12 @@ textarea {
   border-radius: 10px;
   margin-top: 20px;
   border: 1px solid #dde4ee;
+}
+
+.totals-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
 }
 
 .total-line {
@@ -574,19 +698,10 @@ textarea {
   margin-top: 12px;
 }
 
-.tva-note {
-  margin-top: 8px;
-  font-size: 12px;
-  font-style: italic;
-  color: #555;
-}
-
-#tvaRate {
-  width: 60px !important;
-  min-width: 60px !important;
-  height: 36px;
-  border-radius: 8px;
-  text-align: center;
+.tva-rate-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .discount-group {
@@ -600,14 +715,6 @@ textarea {
   flex-wrap: wrap;
 }
 
-.discount-row input[type="number"] {
-  width: 50px;
-  min-width: 50px;
-  height: 36px;
-  border-radius: 8px;
-  text-align: center;
-}
-
 .discount-toggle {
   font-size: 12px;
 }
@@ -617,15 +724,8 @@ textarea {
   color: #555;
 }
 
-/* TVA / réduction côte à côte */
-.totals-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
-}
-
 /* =========================================================
-   PAIEMENT / STATUTS
+   12. PAIEMENT / STATUTS
 ========================================================= */
 
 .pay-line {
@@ -646,7 +746,6 @@ textarea {
   margin-bottom: 2px;
 }
 
-/* Infos devis expiré */
 .devis-status-info {
   font-size: 12px;
   color: #c62828;
@@ -655,27 +754,67 @@ textarea {
 }
 
 /* =========================================================
-   ACTIONS FORMULAIRE
+   13. BADGES
 ========================================================= */
 
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid #e1e8ed;
-  flex-wrap: wrap;
+/* Type document */
+.badge-devis {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+/* Facture payée / non payée */
+.badge-facture-paid {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.badge-facture-unpaid {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.badge-paid {
+  background: #e8f5e9;
+  color: #1b5e20;
+}
+
+.badge-unpaid {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Statuts devis */
+.badge-devis-en-attente {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.badge-devis-accepte {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-devis-refuse {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.badge-devis-expire {
+  background: #ffe0b2;
+  color: #ef6c00;
 }
 
 /* =========================================================
-   TABLE DOCUMENTS / TARIFS
+   14. TABLE DOCUMENTS / TARIFS
 ========================================================= */
 
 .documents-table {
@@ -737,68 +876,34 @@ textarea {
   margin-bottom: 10px;
 }
 
-/* =========================================================
-   BADGES
-========================================================= */
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
+.tarif-label-cell {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-/* Type document */
-.badge-devis {
-  background: #e3f2fd;
-  color: #1976d2;
+.tarif-label-text {
+  text-decoration: none;
 }
 
-/* Facture payée / non payée */
-.badge-facture-paid {
-  background: #e8f5e9;
-  color: #388e3c;
+.tarif-label-cell:hover .tarif-label-text {
+  text-decoration: underline;
 }
 
-.badge-facture-unpaid {
-  background: #ffebee;
-  color: #c62828;
+.tarif-desc-icon {
+  font-size: 14px;
+  opacity: 0.7;
+  transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
-.badge-paid {
-  background: #e8f5e9;
-  color: #1b5e20;
-}
-
-.badge-unpaid {
-  background: #ffebee;
-  color: #c62828;
-}
-
-/* Statuts devis */
-.badge-devis-en-attente {
-  background: #fff3cd;
-  color: #856404;
-}
-
-.badge-devis-accepte {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-
-.badge-devis-refuse {
-  background: #ffebee;
-  color: #c62828;
-}
-
-.badge-devis-expire {
-  background: #ffe0b2;
-  color: #ef6c00;
+.tarif-label-cell:hover .tarif-desc-icon {
+  opacity: 1;
+  transform: translateY(-1px) rotate(-5deg);
 }
 
 /* =========================================================
-   FILTRES LISTE
+   15. FILTRES LISTE
 ========================================================= */
 
 .filters-row {
@@ -813,217 +918,184 @@ textarea {
   max-width: 160px;
 }
 
-.list-title {
-  font-weight: 600;
-  color: #1a74d9;
-}
-
-.tva-rate-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tva-percent-symbol {
-  font-size: 14px;
-  color: #555;
-  font-weight: 600;
-}
-
 .filter-label {
   margin-bottom: 0;
   font-weight: 500;
   font-size: 12px;
 }
 
-/* =========================================================
-   VISIBILITÉ
-========================================================= */
-
-.hidden {
-  display: none !important;
+.doc-search-wrapper {
+  margin-left: auto;
+  margin-right: 16px;
 }
 
-.no-print {
-  /* masqué uniquement à l'impression via @media print */
+.doc-search-wrapper input {
+  min-width: 230px;
 }
 
 /* =========================================================
-   RESPONSIVE
+   16. CONTRATS PISCINE / SPA
 ========================================================= */
-
-@media (max-width: 768px) {
-  .prestation-line {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
-
-  .header h1 {
-    font-size: 26px;
-  }
-
-  .btn {
-    width: 100%;
-  }
+#contractView {
+  background: #eef3ff !important;
+  border-radius: 15px;
+  padding: 25px;
 }
 
-/* =========================================================
-   BOUTONS "MODIFIER / IMPRIMER / APERÇU / SUPPRIMER"
-========================================================= */
-
-.actions-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  margin-bottom: 4px;
-}
-
-.actions-btns-row {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-start;
-}
-
-.actions-btns-row .btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: 999px;
-}
-
-/* =========================================================
-   ANIMATIONS
-========================================================= */
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-}
-
-/* =========================================================
-   POPUP CONFIRMATION
-========================================================= */
-
-#confirmOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(3px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 11000 !important;
-}
-
-#confirmOverlay .confirm-box {
-  position: relative;
+#contractView .card {
   background: #fff;
-  width: 360px;
-  padding: 28px 22px 22px 22px;
+  padding: 25px;
   border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
-  animation: popupSlideDown 0.25s ease-out;
-  border-top: 4px solid #1a74d9;
-  text-align: center;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+  margin-bottom: 25px;
 }
 
-/* variantes de couleur */
-.confirm-box.danger {
-  border-top-color: #d32f2f;
-}
-.confirm-box.success {
-  border-top-color: #2e7d32;
-}
-.confirm-box.info {
-  border-top-color: #1a74d9;
+/* Titre des sections du contrat */
+#contractView h3.section-title {
+  margin-top: 25px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #0d47a1;
 }
 
-/* Icône */
-.confirm-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  margin: 0 auto 10px auto;
+/* Labels des champs */
+#contractView .form-group label {
+  font-weight: 500;
+  color: #333;
+}
+
+/* Inputs / selects / textarea du contrat */
+#contractView .form-group input,
+#contractView .form-group select,
+#contractView .form-group textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Layout des lignes dans le contrat (on reste en flex dédié contrat) */
+#contractView .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+/* Chaque form-group prend une largeur mini pour rester propre */
+#contractView .form-group {
+  flex: 1 1 220px;
+}
+
+#contractView .form-group textarea {
+  min-height: 70px;
+}
+
+/* Encadré récapitulatif */
+.contract-summary {
+  margin-top: 20px;
+  padding: 16px;
+  border-radius: 10px;
+  background: #f3f7ff;
+  border: 1px solid #d4e0f5;
+  font-size: 14px;
+}
+
+.contract-summary h4 {
+  margin-bottom: 8px;
+  color: #1a74d9;
+}
+
+.contract-summary p {
+  margin: 4px 0;
+}
+
+.contract-summary strong {
+  font-weight: 600;
+}
+
+/* Options forfaitaires (remise en route / hivernage) */
+.contract-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 13px;
+}
+.contract-options label {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  background: #e3f2fd;
-  color: #1a74d9;
-}
-
-.confirm-icon.danger {
-  background: #ffebee;
-  color: #d32f2f;
-}
-.confirm-icon.success {
-  background: #e8f5e9;
-  color: #2e7d32;
-}
-.confirm-icon.info {
-  background: #e3f2fd;
-  color: #1a74d9;
-}
-
-/* Titre + message */
-#confirmTitle {
-  font-weight: 700;
-  font-size: 18px;
-  color: #333;
-  margin-bottom: 8px;
-}
-
-#confirmMessage {
-  font-size: 14px;
-  color: #444;
-  line-height: 1.45;
-  margin-bottom: 18px;
-  white-space: pre-line;
-}
-
-/* Boutons confirm */
-.confirm-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
-}
-
-#confirmOk,
-#confirmCancel {
-  padding: 6px 14px;
-  font-size: 14px;
+  gap: 6px;
+  background: #f5f7ff;
   border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  border: none;
+  padding: 6px 10px;
+  border: 1px solid #dce4ff;
 }
 
-#confirmOk {
-  background: #d32f2f;
-  color: #fff;
-}
-#confirmOk:hover {
-  background: #b71c1c;
+/* ---- OPTIONS FORFAITAIRES – STYLE PROPRE ---- */
+/* --- STYLE PROPRE ET FORCÉ POUR LES OPTIONS FORFAITAIRES --- */
+
+/* --- OPTIONS COMPACTES --- */
+
+.options-box {
+  display: flex !important;
+  gap: 12px !important;
+  margin-top: 8px !important;
 }
 
-#confirmCancel {
-  background: #e0e0e0;
-  color: #333;
+.option-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+
+  background: #f8faff !important;
+  border: 1px solid #d8e2ff !important;
+  padding: 8px 12px !important;
+  border-radius: 10px !important;
+
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
+  cursor: pointer !important;
+
+  transition: 0.15s ease !important;
 }
-#confirmCancel:hover {
-  background: #bdbdbd;
+
+.option-item:hover {
+  background: #eef3ff !important;
+  border-color: #c2d1ff !important;
+}
+
+.option-item input[type="checkbox"] {
+  width: 16px !important;
+  height: 16px !important;
+  accent-color: #4a68ff !important;
+}
+
+.option-item span {
+  font-size: 13px !important;
+  color: #334 !important;
+  font-weight: 500 !important;
+}
+
+
+/* =========================================================
+   17. SIGNATURE (VUE APPLICATION)
+========================================================= */
+
+.signature-block {
+  margin-top: 30px;
+  text-align: right;
+}
+
+.signature-block .signature-img {
+  width: 160px;
+  height: auto;
 }
 
 /* =========================================================
-   POPUP PRESTATION
+   18. POPUP / CONFIRMATION
 ========================================================= */
 
+/* Overlay général */
 .popup-overlay {
   position: fixed;
   inset: 0;
@@ -1031,7 +1103,7 @@ textarea {
   display: flex;
   justify-content: center;
   align-items: center;
-    z-index: 10000 !important;
+  z-index: 10000 !important;
 }
 
 .popup-overlay.hidden {
@@ -1067,6 +1139,153 @@ textarea {
   justify-content: flex-end;
 }
 
+/* Confirmation Modal */
+#confirmOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 11000 !important;
+}
+
+#confirmOverlay .confirm-box {
+  position: relative;
+  background: #fff;
+  width: 360px;
+  padding: 28px 22px 22px 22px;
+  border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  animation: popupSlideDown 0.25s ease-out;
+  border-top: 4px solid #1a74d9;
+  text-align: center;
+}
+
+.confirm-box.danger {
+  border-top-color: #d32f2f;
+}
+.confirm-box.success {
+  border-top-color: #2e7d32;
+}
+.confirm-box.info {
+  border-top-color: #1a74d9;
+}
+
+.confirm-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  margin: 0 auto 10px auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  background: #e3f2fd;
+  color: #1a74d9;
+}
+
+.confirm-icon.danger {
+  background: #ffebee;
+  color: #d32f2f;
+}
+.confirm-icon.success {
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+.confirm-icon.info {
+  background: #e3f2fd;
+  color: #1a74d9;
+}
+
+#confirmTitle {
+  font-weight: 700;
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+#confirmMessage {
+  font-size: 14px;
+  color: #444;
+  line-height: 1.45;
+  margin-bottom: 18px;
+  white-space: pre-line;
+}
+
+.confirm-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+#confirmOk,
+#confirmCancel {
+  padding: 6px 14px;
+  font-size: 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  border: none;
+}
+
+#confirmOk {
+  background: #d32f2f;
+  color: #fff;
+}
+#confirmOk:hover {
+  background: #b71c1c;
+}
+
+#confirmCancel {
+  background: #e0e0e0;
+  color: #333;
+}
+#confirmCancel:hover {
+  background: #bdbdbd;
+}
+
+/* Footer du popup clients */
+#clientsPopup .clients-footer {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+#clientsPopup .clients-footer-left,
+#clientsPopup .clients-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#clientsPopup .clients-footer .btn {
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 999px;
+}
+
+
+/* =========================================================
+   19. ANIMATIONS
+========================================================= */
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 @keyframes popIn {
   from {
     transform: scale(0.8);
@@ -1079,63 +1298,26 @@ textarea {
 }
 
 /* =========================================================
-   TABLE TARIFS / ICONES
+   20. RESPONSIVE
 ========================================================= */
 
-.tarif-label-cell {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+@media (max-width: 768px) {
+  .prestation-line {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 
-.tarif-label-text {
-  text-decoration: none;
-}
+  .header h1 {
+    font-size: 26px;
+  }
 
-.tarif-label-cell:hover .tarif-label-text {
-  text-decoration: underline;
-}
-
-.tarif-desc-icon {
-  font-size: 14px;
-  opacity: 0.7;
-  transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.tarif-label-cell:hover .tarif-desc-icon {
-  opacity: 1;
-  transform: translateY(-1px) rotate(-5deg);
-}
-
-.tarif-delete-btn {
-  cursor: pointer;
-  color: #c62828;
-  font-weight: bold;
-  font-size: 18px;
-  display: inline-block;
-}
-
-.tarif-delete-btn:hover {
-  color: #ff0000;
+  .btn {
+    width: 100%;
+  }
 }
 
 /* =========================================================
-   SIGNATURE (VUE APPLICATION)
-========================================================= */
-
-.signature-block {
-  margin-top: 30px;
-  text-align: right;
-}
-
-.signature-block .signature-img {
-  width: 160px;
-  height: auto;
-}
-
-/* =========================================================
-   IMPRESSION (VUE APPLICATION)
+   21. IMPRESSION (VUE APPLICATION)
 ========================================================= */
 
 @media print {
@@ -1181,7 +1363,6 @@ textarea {
     font-size: 14px !important;
   }
 
-  /* Titre principal du devis (si utilisé dans la page) */
   .print-doc-title {
     font-size: 26px;
     font-weight: 800;
@@ -1193,7 +1374,6 @@ textarea {
     padding-bottom: 6px;
   }
 
-  /* Bloc client plus visible */
   .print-client-block {
     background: #f5f7fb;
     border-radius: 8px;
@@ -1236,51 +1416,6 @@ textarea {
   .print-prestations-table td {
     border-bottom: 1px solid #e1e8ed;
   }
-/* Footer du popup clients */
-#clientsPopup .clients-footer {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
-}
-
-#clientsPopup .clients-footer-left,
-#clientsPopup .clients-footer-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Boutons plus petits et arrondis */
-#clientsPopup .clients-footer .btn {
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 999px;
-}
-
-/* Bouton outline bleu (Ajouter un client) */
-.btn-outline-primary {
-  background: #fff;
-  color: #0d6efd;
-  border: 1px solid #0d6efd;
-}
-.btn-outline-primary:hover {
-  background: #0d6efd;
-  color: #fff;
-}
-
-/* Bouton clair pour Fermer */
-.btn-light {
-  background: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
-}
-.btn-light:hover {
-  background: #e4e4e4;
-}
 
   /* Totaux plus premium à l’impression */
   .totals {
@@ -1319,42 +1454,12 @@ textarea {
     font-size: 15px;
   }
 }
-/* Boutons avec icône (Ajouter client, etc.) */
-.btn-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
 
-.btn-icon-emoji {
-  font-size: 15px;
-  transform: translateY(0.5px);
-}
-.doc-search-wrapper {
-  margin-left: auto;
-  margin-right: 16px;
-}
-
-.doc-search-wrapper input {
-  min-width: 230px;
-}
-#clientCivility,
-#siteCivility {
-  width: 260px;       /* 👈 tu peux mettre 240 / 260 / 300 selon ton goût */
-  max-width: 100%;    
-  box-sizing: border-box;
-}
-#clientCivility,
-#siteCivility {
-  width: 260px;
-  margin-right: 12px;
+/* FOND BLEU POUR LA PAGE CONTRAT */
+#tabContrats.tab-btn.active {
+  background: #1a74d9 !important; /* même bleu que le bouton Devis */
+  color: #fff !important;
 }
 
 
-/* On rend les btn-small un peu plus élégants */
-.btn-small {
-  font-size: 13px;
-  padding: 6px 14px;
-  border-radius: 999px;
-}
 

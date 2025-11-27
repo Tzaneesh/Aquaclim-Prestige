@@ -27,11 +27,11 @@ const PRESTATION_TEMPLATES = [
 
   // 2. Entretien piscine chlore
   {
-    label: "Entretien piscine chlore",
-    kind: "piscine_chlore",
-    title: "Entretien piscine chlore",
-    priceParticulier: 80,
-    priceSyndic: 100,
+     label: "Entretien piscine chlore",
+  kind: "piscine_chlore",
+  title: "Entretien piscine chlore",
+  priceParticulier: 80,
+  priceSyndic: 100,
     descParticulier:
       "Analyse de l’eau, nettoyage bassin, contrôle filtration, rinçage et ajustement traitement.",
     descSyndic:
@@ -40,11 +40,11 @@ const PRESTATION_TEMPLATES = [
 
   // 3. Entretien piscine sel
   {
-    label: "Entretien piscine sel",
-    kind: "piscine_sel",
-    title: "Entretien piscine sel",
-    priceParticulier: 80,
-    priceSyndic: 100,
+     label: "Entretien piscine sel",
+  kind: "piscine_sel",
+  title: "Entretien piscine sel",
+  priceParticulier: 80,
+  priceSyndic: 100,
     descParticulier:
       "Analyse eau, nettoyage bassin, contrôle cellule électrolyse, pompe et filtration. Réglage production de sel.",
     descSyndic:
@@ -53,11 +53,11 @@ const PRESTATION_TEMPLATES = [
 
   // 4. Entretien jacuzzi
   {
-    label: "Entretien jacuzzi",
-    kind: "entretien_jacuzzi",
-    title: "Entretien jacuzzi / spa",
-    priceParticulier: 70,
-    priceSyndic: 90,
+     label: "Entretien jacuzzi / spa",
+  kind: "entretien_jacuzzi",
+  title: "Entretien jacuzzi / spa",
+  priceParticulier: 80,
+  priceSyndic: 100,
     descParticulier:
       "Nettoyage spa, filtres, contrôle eau, désinfection buses et vérification pompe/chauffage.",
     descSyndic:
@@ -256,7 +256,6 @@ const MARGIN_MULTIPLIER = 1.4;
 // ================== VARIABLES GLOBALES ==================
 
 let currentDocumentId = null;
-let currentContractId = null; // ID Firestore du contrat en cours (collection "contracts")
 let prestationCount = 0;
 let currentListType = "devis"; // "devis" ou "facture"
 
@@ -429,9 +428,6 @@ function addCurrentClient() {
   const phone = document.getElementById("clientPhone").value.trim();
   const email = document.getElementById("clientEmail").value.trim();
 
-  // 💡 CORRECTION : Ajout de la déclaration de 'civility'
-  const civility = document.getElementById("clientCivility")?.value || "";
-
   if (!name) {
     // popup jolie au lieu d'alert
     showConfirmDialog({
@@ -450,7 +446,8 @@ function addCurrentClient() {
     c => (c.name || "").toLowerCase() === name.toLowerCase()
   );
 
-  const newClient = { civility, name, address, phone, email }; // Maintenant 'civility' est bien définie
+const newClient = { civility, name, address, phone, email };
+
 
   let title;
   let message;
@@ -481,41 +478,51 @@ function addCurrentClient() {
 }
 
 
+function rebuildClientsPopupList(searchQuery) {
+  const base = getClients();
+  let list = base.map((c, index) => ({ client: c, index }));
+
+  const q = (searchQuery || "").toLowerCase().trim();
+  if (q) {
+    list = list.filter(({ client }) =>
+      (client.name || "").toLowerCase().includes(q) ||
+      (client.address || "").toLowerCase().includes(q) ||
+      (client.phone || "").toLowerCase().includes(q) ||
+      (client.email || "").toLowerCase().includes(q)
+    );
+  }
+
+  // tri alphabétique A->Z sur le nom
+  list.sort((a, b) =>
+    (a.client.name || "").toLowerCase()
+      .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
+  );
+
+  clientsPopupList = list;
+}
 function rebuildClientsPopupList(searchText = "") {
-  // 1. Récupérer tous les clients (supposons que getClients() renvoie la liste complète)
   const all = getClients();
 
-  // 2. Mapper les clients en conservant leur index d'origine
-  // Ceci est important si l'index dans la liste originale a un rôle (ex: stockage local)
+  // On garde l'index d'origine pour chaque client
   const mapped = all.map((client, index) => ({ client, index }));
 
-  // 3. Trier la liste par ordre alphabétique sur le nom (A -> Z)
+  // On trie seulement pour l'affichage, sans casser les index d'origine
   const sorted = mapped.sort((a, b) =>
     (a.client.name || "").toLowerCase()
       .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
   );
 
-  // 4. Filtrer la liste si un texte de recherche est fourni
   if (searchText && searchText.trim() !== "") {
     const q = searchText.toLowerCase();
-
-    // Filtrer sur le nom, l'adresse, le téléphone ou l'email
-    clientsPopupList = sorted.filter(item => {
-      const client = item.client;
-      return (
-        (client.name || "").toLowerCase().includes(q) ||
-        (client.address && client.address.toLowerCase().includes(q)) ||
-        (client.phone && client.phone.toLowerCase().includes(q)) ||
-        (client.email && client.email.toLowerCase().includes(q))
-      );
-    });
-
+    clientsPopupList = sorted.filter(item =>
+      (item.client.name || "").toLowerCase().includes(q) ||
+      (item.client.address && item.client.address.toLowerCase().includes(q)) ||
+      (item.client.phone && item.client.phone.toLowerCase().includes(q))
+    );
   } else {
-    // Si aucun filtre, on garde la liste complète triée
+    // Pas de filtre : on garde toute la liste triée
     clientsPopupList = sorted;
   }
-
-  // NOTE : clientsPopupList doit être une variable globale ou accessible à la fonction d'affichage
 }
 
 
@@ -661,34 +668,6 @@ function editClient(index) {
 
   document.getElementById("editClientForm").classList.remove("hidden");
 }
-function createPoolContract() {
-  const newId = "CT-" + Date.now();
-
-  const contract = {
-    id: newId,
-    type: "contrat",
-    number: "CTR-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*999)).padStart(3,"0"),
-    date: new Date().toISOString().split("T")[0],
-    client: {
-      civility: "",
-      name: "",
-      address: "",
-      phone: "",
-      email: ""
-    },
-    siteName: "",
-    siteCivility: "",
-    siteAddress: "",
-    prestations: [],
-    notes: "",
-    validityDate: "",
-    paid: false
-  };
-
-  saveDocument(contract);
-  loadDocument(contract.id);
-}
-
 function openAddClientFromList() {
   // Vide les champs
   document.getElementById("editClientName").value = "";
@@ -889,54 +868,127 @@ function getNextNumber(type) {
   }
   return prefix + "-" + year + "-" + String(next).padStart(3, "0");
 }
+function getNextContractReference() {
+  const year = new Date().getFullYear();
+  const prefix = "CTR"; // comme DEV / FAC mais pour les contrats
 
-// ================== TABS DEVIS / FACTURES ==================
+  const contracts = getAllContracts();
+  const used = [];
+
+  contracts.forEach((c) => {
+    const ref = c?.client?.reference;
+    if (typeof ref !== "string") return;
+
+    const m = ref.match(/^([A-Z]{3})-(\d{4})-(\d{3})$/);
+    if (!m) return;
+    if (m[1] !== prefix) return;
+
+    const refYear = parseInt(m[2], 10);
+    const num = parseInt(m[3], 10);
+    if (refYear === year && !isNaN(num)) used.push(num);
+  });
+
+  used.sort((a, b) => a - b);
+
+  let next = 1;
+  for (let i = 0; i < used.length; i++) {
+    if (used[i] === next) next++;
+    else if (used[i] > next) break;
+  }
+
+  return prefix + "-" + year + "-" + String(next).padStart(3, "0");
+}
+
+// ================== TABS DEVIS / FACTURES / CONTRATS ==================
 
 function switchListType(type) {
   currentListType = type;
 
-  document
-    .getElementById("tabDevis")
-    .classList.toggle("active", type === "devis");
-  document
-    .getElementById("tabFactures")
-    .classList.toggle("active", type === "facture");
+  const tabDevis = document.getElementById("tabDevis");
+  const tabFactures = document.getElementById("tabFactures");
+  const tabContrats = document.getElementById("tabContrats");
 
-  document.getElementById("listTitle").textContent =
-    type === "devis" ? "Liste des devis" : "Liste des factures";
+  if (tabDevis) tabDevis.classList.toggle("active", type === "devis");
+  if (tabFactures) tabFactures.classList.toggle("active", type === "facture");
+  if (tabContrats) tabContrats.classList.toggle("active", type === "contrat");
 
-  document
-    .getElementById("yearFilterContainer")
-    .classList.toggle("hidden", type !== "facture");
-  document
-    .getElementById("exportContainer")
-    .classList.toggle("hidden", type !== "facture");
+  const listView = document.getElementById("listView");
+  const formView = document.getElementById("formView");
+  const contractView = document.getElementById("contractView");
 
-  // Activation / désactivation des boutons "Nouveau devis / facture"
+  const yearFilterContainer = document.getElementById("yearFilterContainer");
+  const exportContainer = document.getElementById("exportContainer");
+
   const btnDevis = document.getElementById("createDevis");
   const btnFacture = document.getElementById("createFacture");
 
-  if (type === "devis") {
-    btnDevis.disabled = false;
-    btnDevis.classList.remove("disabled-btn");
-    btnFacture.disabled = true;
-    btnFacture.classList.add("disabled-btn");
-  } else {
-    btnFacture.disabled = false;
-    btnFacture.classList.remove("disabled-btn");
-    btnDevis.disabled = true;
-    btnDevis.classList.add("disabled-btn");
+  // 🔵 MODE CONTRATS : on affiche uniquement la page contrat
+  if (type === "contrat") {
+    if (listView) listView.classList.add("hidden");
+    if (formView) formView.classList.add("hidden");
+    if (contractView) contractView.classList.remove("hidden");
+
+    if (yearFilterContainer) yearFilterContainer.classList.add("hidden");
+    if (exportContainer) exportContainer.classList.add("hidden");
+
+    if (btnDevis) {
+      btnDevis.disabled = true;
+      btnDevis.classList.add("disabled-btn");
+    }
+    if (btnFacture) {
+      btnFacture.disabled = true;
+      btnFacture.classList.add("disabled-btn");
+    }
+
+    // 🔢 Numéro auto pour un NOUVEAU contrat
+    const ctRef = document.getElementById("ctReference");
+    if (ctRef && (!ctRef.value || !currentContractId)) {
+      ctRef.value = getNextContractReference();
+    }
+
+    currentDocumentId = null;
+    return;
+  }
+
+
+  // 🟡 MODE DEVIS / FACTURES (comportement existant)
+  if (contractView) contractView.classList.add("hidden");
+  if (listView) listView.classList.remove("hidden");
+  if (formView) formView.classList.add("hidden");
+
+  if (document.getElementById("listTitle")) {
+    document.getElementById("listTitle").textContent =
+      type === "devis" ? "Liste des devis" : "Liste des factures";
+  }
+
+  if (yearFilterContainer) {
+    yearFilterContainer.classList.toggle("hidden", type !== "facture");
+  }
+  if (exportContainer) {
+    exportContainer.classList.toggle("hidden", type !== "facture");
+  }
+
+  if (btnDevis && btnFacture) {
+    if (type === "devis") {
+      btnDevis.disabled = false;
+      btnDevis.classList.remove("disabled-btn");
+      btnFacture.disabled = true;
+      btnFacture.classList.add("disabled-btn");
+    } else {
+      btnFacture.disabled = false;
+      btnFacture.classList.remove("disabled-btn");
+      btnDevis.disabled = true;
+      btnDevis.classList.add("disabled-btn");
+    }
   }
 
   resetTarifsPanel();
-
-  document.getElementById("formView").classList.add("hidden");
-  document.getElementById("listView").classList.remove("hidden");
   currentDocumentId = null;
 
   loadYearFilter();
   loadDocumentsList();
 }
+
 function onDocumentsSearchChange() {
   loadDocumentsList();
 }
@@ -1104,13 +1156,10 @@ function onPayModeChange() {
   wrapper.style.display = "block";
 
   if (!dateInput.value) {
-    // 💡 CODE CORRIGÉ
-    const docDate = document.getElementById("docDate").value;
-    if (docDate) {
-      dateInput.value = docDate;
-    }
+    const docDate = document.getElementById("docDate")?.value;
+    dateInput.value = docDate || new Date().toISOString().split("T")[0];
   }
-} // La fonction DOIT se terminer par une accolade fermante.
+}
 
 // ================== RÉDUCTION ==================
 
@@ -1551,56 +1600,57 @@ function calculateTotals() {
     const kind = line.dataset.kind || "";
     const autoPrice = line.dataset.autoPrice !== "0";
 
-    // Entretien clim : gestion du tarif dégressif 100 / 85 / 70
-    if (kind === "entretien_clim") {
-      const n = qty <= 0 ? 1 : qty;
+// Entretien clim : gestion du tarif dégressif 100 / 85 / 70
+if (kind === "entretien_clim") {
+  const n = qty <= 0 ? 1 : qty;
 
-      // Libellé au pluriel
-      if (descInput) {
-        const plural = n >= 2 ? "s" : "";
-        descInput.value = "Entretien climatisation" + plural;
-      }
+  // Libellé au pluriel
+  if (descInput) {
+    const plural = n >= 2 ? "s" : "";
+    descInput.value = "Entretien climatisation" + plural;
+  }
 
-      const clientType = getCurrentClientType();
+  const clientType = getCurrentClientType();
 
-      if (autoPrice) {
-        // Prix de base = prix pour 1 clim (issu des tarifs persos ou de la saisie)
-        let base = parseFloat(line.dataset.basePrice) || 0;
+  if (autoPrice) {
+    // Prix de base = prix pour 1 clim (issu des tarifs persos ou de la saisie)
+    let base = parseFloat(line.dataset.basePrice) || 0;
 
-        // Sécurité : si base pas défini, on met un défaut logique
-        if (!base) {
-          base = clientType === "syndic" ? 120 : 100;
-        }
+    // Sécurité : si base pas défini, on met un défaut logique
+    if (!base) {
+      base = (clientType === "syndic") ? 120 : 100;
+    }
 
-        if (clientType === "particulier") {
-          // 💰 Grille particulier : 1 = 100 %, 2 = 85 %, 3+ = 70 %
-          if (n === 1) {
-            price = base;          // 1 clim → 100 €
-          } else if (n === 2) {
-            price = base * 0.85;   // 2 clims → ~85 €/u si base = 100
-          } else {
-            price = base * 0.70;   // 3+ clims → ~70 €/u si base = 100
-          }
-        } else {
-          // Grille syndic (à ajuster si besoin)
-          if (n === 1) {
-            price = base;
-          } else if (n === 2) {
-            price = base * 0.85;
-          } else {
-            price = base * 0.75;
-          }
-        }
-
-        // 🔥 Arrondi au multiple de 5 € supérieur
-        price = Math.ceil(price / 5) * 5;
-
-        priceInput.value = price.toFixed(2);
+    // 💰 Nouvelle grille : 1 = 100 %, 2 = 85 %, 3+ = 70 %
+    if (clientType === "particulier") {
+      if (n === 1) {
+        price = base;          // 1 clim → 100 %
+      } else if (n === 2) {
+        price = base * 0.85;   // 2 clims → 85 %
       } else {
-        // Mode manuel : on respecte ce que tu as tapé
-        price = parseFloat(priceInput.value) || 0;
+        price = base * 0.70;   // 3+ clims → 70 %
+      }
+    } else {
+      // Grille syndic
+      if (n === 1) {
+        price = base;
+      } else if (n === 2) {
+        price = base * 0.85;
+      } else {
+        price = base * 0.75;
       }
     }
+
+    // 🔥 Arrondi au multiple de 5 € supérieur
+    price = Math.ceil(price / 5) * 5;
+
+    priceInput.value = price.toFixed(2);
+  } else {
+    // Mode manuel
+    price = parseFloat(priceInput.value) || 0;
+  }
+}
+
 
     const total = qty * price;
     const totField = line.querySelector(".prestation-total");
@@ -1662,6 +1712,7 @@ function calculateTotals() {
     }
   }
 }
+
 
 // ================== TYPE CLIENT / CONDITIONS ==================
 
@@ -2512,6 +2563,10 @@ function backToList() {
   loadYearFilter();
   loadDocumentsList();
   updateTransformButtonVisibility();
+}
+function backToContracts() {
+  // Pour l’instant : retour à la liste Devis/Factures
+  switchListType("devis");
 }
 
 // ================== LISTE DOCUMENTS & STATUTS ==================
@@ -3592,21 +3647,15 @@ function openPrintable(id, previewOnly) {
     (p) => p.kind === "produits" || p.kind === "fournitures"
   );
 
-const isDevis = doc.type === "devis";
-const isContrat = doc.type === "contrat";
-const isPaidInvoice = !isDevis && !isContrat && doc.paid;
-const isUnpaidInvoice = !isDevis && !isContrat && !doc.paid;
+  const isDevis = doc.type === "devis";
+  const isPaidInvoice = !isDevis && doc.paid;
+  const isUnpaidInvoice = !isDevis && !doc.paid;
 
-const titleColor = isContrat
-  ? "#0d47a1" // bleu plus sérieux pour les contrats
-  : isDevis
-  ? "#1a74d9"
-  : doc.paid
-  ? "#1b5e20"
-  : "#1a74d9";
-
-const conditionsType = doc.conditionsType || "particulier";
-
+  const titleColor = isDevis
+    ? "#1a74d9"
+    : doc.paid
+    ? "#1b5e20"
+    : "#1a74d9";
 
   const formatEuroFR = (value) =>
     (Number(value) || 0).toLocaleString("fr-FR", {
@@ -3665,84 +3714,42 @@ const conditionsType = doc.conditionsType || "particulier";
     `;
   });
 
-    // Informations importantes devis
+  // Informations importantes devis
   let importantHtml = "";
   if (isDevis) {
     const items = [];
 
-    // 👉 VERSION COURTE = PARTICULIER
-    if (conditionsType === "particulier") {
-      if (hasPiscine && !hasProduitsOuFournitures) {
-        items.push(
-          "Les produits de traitement piscine (chlore choc, sel, stabilisant, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire et seront facturés en supplément si nécessaires."
-        );
-      }
-
-      if (hasPiscine && hasClim) {
-        items.push(
-          "Les tarifs des pièces détachées de piscine et de climatisation peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final sera validé avec vous avant tout remplacement."
-        );
-      } else if (hasPiscine) {
-        items.push(
-          "Les tarifs des pièces détachées de piscine peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final sera validé avec vous avant intervention."
-        );
-      } else if (hasClim) {
-        items.push(
-          "Les tarifs des pièces détachées de climatisation peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final sera validé avec vous avant remplacement."
-        );
-      }
-
+    if (hasPiscine && !hasProduitsOuFournitures) {
       items.push(
-        "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
-      );
-
-      items.push(
-        "L’entreprise est couverte par une assurance responsabilité civile professionnelle."
+        "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant."
       );
     }
 
-    // 👉 VERSION COMPLÈTE = SYNDIC / AGENCE
-    else if (conditionsType === "agence") {
-      if (hasPiscine && !hasProduitsOuFournitures) {
-        items.push(
-          "Les produits de traitement piscine (chlore choc, sel, stabilisant, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire et seront facturés en supplément si nécessaires."
-        );
-      }
-
-      if (hasPiscine && hasClim) {
-        items.push(
-          "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, ventilateurs, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Toute variation sera confirmée pour accord avant remplacement."
-        );
-      } else if (hasPiscine) {
-        items.push(
-          "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, sondes, etc.) peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après accord."
-        );
-      } else if (hasClim) {
-        items.push(
-          "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, sondes, etc.) peuvent évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après accord."
-        );
-      }
-
+    if (hasPiscine && hasClim) {
       items.push(
-        "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
+        "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
       );
-
+    } else if (hasPiscine) {
       items.push(
-        "Le devis est établi sous réserve d’une accessibilité normale et conforme des installations. Tout accès complexe, installation non conforme, matériel obstrué ou emplacement encombré pourra entraîner une adaptation du devis après validation du client."
+        "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
       );
-
+    } else if (hasClim) {
       items.push(
-        "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation."
-      );
-
-      items.push(
-        "L’entreprise est couverte par une assurance responsabilité civile professionnelle."
-      );
-
-      items.push(
-        "Le devis vaut facture après réalisation complète des prestations en l’absence d’émission d’une facture distincte."
+        "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
       );
     }
+
+    items.push(
+      "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
+    );
+
+    items.push(
+      "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation."
+    );
+
+    items.push(
+      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
+    );
 
     importantHtml = `
       <div class="important-block">
@@ -3753,8 +3760,6 @@ const conditionsType = doc.conditionsType || "particulier";
       </div>
     `;
   }
-
-
 
   const tvaRate = doc.tvaRate || 0;
   const discountAmountDoc = doc.discountAmount || 0;
@@ -3857,8 +3862,8 @@ const conditionsType = doc.conditionsType || "particulier";
   let notesHtml = "";
   if (isDevis) {
     const devisConditions =
-      "Paiement à réception de facture. Aucun acompte demandé sauf mention contraire.\n" +
-      "Toute somme non réglée à échéance pourra donner lieu à une pénalité légale conformément à l’article L441-10 du Code de commerce.";
+      "Paiement à réception de facture.\n" +
+      "Aucun acompte demandé sauf mention contraire.";
     notesHtml = `
       <div class="conditions-block">
         <div class="conditions-title">Conditions de règlement</div>
@@ -3925,95 +3930,12 @@ const conditionsType = doc.conditionsType || "particulier";
     : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
 
   const printWindow = window.open("", "_blank");
-  // ========= BLOC CONTRAT PISCINE / SPA IMPRIMÉ =========
-  let contratHtml = "";
-  if (isContrat) {
-    contratHtml = `
-      <div class="contract-block">
-
-        <h3>Contrat d’entretien piscine / spa</h3>
-
-        <p><strong>Prestataire :</strong> AquaClim Prestige – Le Blevennec Loïc<br>
-        2 avenue Cauvin, 06100 Nice – 06 03 53 77 73 – aquaclimprestige@gmail.com<br>
-        SIRET : XXXXXXXXXXXXX – RC Pro : disponible sur demande</p>
-
-        <h4>1. Objet du contrat</h4>
-        <p>Le présent contrat a pour objet l’entretien, la surveillance et le contrôle de la piscine, du spa ou du jacuzzi situés au lieu d’intervention indiqué.</p>
-
-        <h4>2. Prestations incluses</h4>
-        <ul>
-          <li>Nettoyage paniers skimmer</li>
-          <li>Nettoyage préfiltre pompe</li>
-          <li>Nettoyage ligne d’eau</li>
-          <li>Analyse complète de l’eau (pH, TAC, TH, chlore / redox)</li>
-          <li>Contrôle système de filtration</li>
-          <li>Contrôle cellule d’électrolyse (si piscine au sel)</li>
-          <li>Vérification des pompes, vannes, canalisation, local technique</li>
-        </ul>
-
-        <h4>3. Prestations hors forfait</h4>
-        <ul>
-          <li>Dépannages, réparations, fuites</li>
-          <li>Remplacement de pièces (pompes, filtres, cellules, cartes, etc.)</li>
-          <li>Traitement choc en cas d’algues ou d’eau verte</li>
-          <li>Nettoyage spécifique après intempéries (tempête, sable du Sahara, etc.).</li>
-        </ul>
-
-        <h4>4. Produits</h4>
-        <p>Les produits de traitement (chlore choc, sel, stabilisant, correcteurs pH, anti-algues, etc.) ne sont pas inclus sauf mention contraire et sont facturés au tarif en vigueur.</p>
-
-        <h4>5. Conditions d’accès</h4>
-        <p>Le client s’engage à garantir un accès libre, sécurisé et non encombré au bassin et au local technique. En cas d’accès impossible lors du passage prévu, le déplacement reste dû.</p>
-
-        <h4>6. Installations non conformes</h4>
-        <p>En cas d’installation dangereuse, vétuste, non conforme ou présentant un risque (fuites importantes, défaut électrique, matériel très dégradé), le prestataire pourra suspendre les prestations jusqu’à mise en conformité.</p>
-
-        <h4>7. Responsabilités du client</h4>
-        <p>Le client s’engage à maintenir les installations en bon état, à informer le prestataire de toute intervention d’un tiers et à respecter les consignes d’utilisation communiquées.</p>
-
-        <h4>8. Responsabilités du prestataire</h4>
-        <p>Le prestataire intervient selon les règles de l’art, avec du matériel adapté, et dispose d’une assurance Responsabilité Civile Professionnelle.</p>
-
-        <h4>9. Durée et renouvellement</h4>
-        <p>Le présent contrat est conclu pour une durée d’un an, du ____ / ____ / ____ au ____ / ____ / ____, avec reconduction tacite sauf résiliation 30 jours avant l’échéance.</p>
-
-        <h4>10. Conditions de règlement</h4>
-        <p>Paiement à réception de facture (mensuelle / trimestrielle / annuelle selon accord). Toute somme non réglée donne lieu à l’application des pénalités légales et de l’indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).</p>
-
-        <h4>11. Force majeure</h4>
-        <p>En cas de force majeure (tempêtes, grêle, inondations, coupures de courant prolongées, interdiction administrative), les prestations pourront être suspendues ou reportées sans responsabilité du prestataire.</p>
-
-        <h4>12. Données personnelles</h4>
-        <p>Les données du client sont utilisées uniquement pour la gestion du présent contrat et ne sont pas transmises à des tiers à des fins commerciales. Le client dispose d’un droit d’accès, de rectification et de suppression sur simple demande.</p>
-
-        <h4>13. Signatures</h4>
-
-        <table style="width:100%; margin-top:15px;">
-          <tr>
-            <td style="width:50%; vertical-align:top;">
-              <strong>Client / Syndic :</strong><br>
-              (Signature précédée de “Lu et approuvé, bon pour accord”)<br><br>
-              Signature : __________________________
-            </td>
-
-            <td style="width:50%; vertical-align:top; text-align:right;">
-              <strong>AquaClim Prestige</strong><br>
-              Signature et cachet de l’entreprise :<br>
-              <img src="${signSrc}" style="height:90px; margin-top:5px;">
-            </td>
-          </tr>
-        </table>
-
-      </div>
-    `;
-  }
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>${isContrat ? "Contrat " : isDevis ? "Devis " : "Facture "}${doc.number}</title>
-
+  <title>${isDevis ? "Devis " : "Facture "}${doc.number}</title>
   <style>
     * {
       margin: 0;
@@ -4470,11 +4392,7 @@ img.sig {
 <div class="doc-header-center">
   <h2 style="color:${titleColor};">
     <span class="doc-title-main">
-      ${
-        isContrat
-          ? "CONTRAT D’ENTRETIEN"
-          : (isDevis ? "DEVIS" : "FACTURE")
-      }
+      ${isDevis ? "DEVIS" : "FACTURE"}
     </span>
     <span class="doc-title-number">
       N° ${doc.number}
@@ -4488,8 +4406,6 @@ img.sig {
       : ``
   }
 </div>
-
-
 
 
     <div class="client-block">
@@ -4552,39 +4468,34 @@ img.sig {
 
   <div class="page-footer bottom-block">
     ${
-      isContrat
-        ? contratHtml
+      isDevis
+        ? `
+          ${notesHtml}
+          ${importantHtml}
+          <div class="signatures">
+            <div class="signature-block">
+              <div class="signature-title">${signatureClientTitle}</div>
+              <p>${signatureClientText}</p>
+            <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
+              <p>Signature du client :</p>
+            </div>
+            <div class="signature-block">
+              <div class="signature-title">AquaClim Prestige</div>
+              <p>Signature et cachet de l’entreprise</p>
+              <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+            </div>
+          </div>
+        `
         : (
-          isDevis
+          isUnpaidInvoice
             ? `
+              ${ribHtml}
               ${notesHtml}
-              ${importantHtml}
-              <div class="signatures">
-                <div class="signature-block">
-                  <div class="signature-title">${signatureClientTitle}</div>
-                  <p>${signatureClientText}</p>
-                  <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
-                  <p>Signature du client :</p>
-                </div>
-                <div class="signature-block">
-                  <div class="signature-title">AquaClim Prestige</div>
-                  <p>Signature et cachet de l’entreprise</p>
-                  <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-                </div>
-              </div>
             `
-            : (
-              isUnpaidInvoice
-                ? `
-                  ${ribHtml}
-                  ${notesHtml}
-                `
-                : ``
-            )
+            : ``
         )
     }
   </div>
-
 </div>
 </body>
 </html>`;
@@ -4599,188 +4510,551 @@ img.sig {
     }
   };
 }
-// ================== PAGE CONTRAT ==================
+// ================== CONTRATS PISCINE / SPA ==================
 
-function openContractView() {
-  // on ouvre un NOUVEAU contrat (pas encore lié à un doc Firestore)
-  currentContractId = null;
+let currentContractId = null;
 
-  // ===== Onglets visuels =====
-  const tabDevis = document.getElementById("tabDevis");
-  const tabFactures = document.getElementById("tabFactures");
-  const tabContrat = document.getElementById("tabContrat");
+// ----- LocalStorage contrats -----
 
-  if (tabDevis) tabDevis.classList.remove("active");
-  if (tabFactures) tabFactures.classList.remove("active");
-  if (tabContrat) tabContrat.classList.add("active");
+function getAllContracts() {
+  const raw = localStorage.getItem("contracts");
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    console.error("Données 'contracts' corrompues, reset.", e);
+    localStorage.removeItem("contracts");
+    return [];
+  }
+}
 
-  // ===== Affichage / masquage des vues =====
-  const listView = document.getElementById("listView");
-  const formView = document.getElementById("formView");
-  const contractView = document.getElementById("contractView");
+function getContract(id) {
+  return getAllContracts().find((c) => c.id === id) || null;
+}
 
-  if (listView) listView.classList.add("hidden");
-  if (formView) formView.classList.add("hidden");
-  if (contractView) contractView.classList.remove("hidden");
+function saveContracts(list) {
+  localStorage.setItem("contracts", JSON.stringify(list));
+}
 
-  // ===== Réinitialisation des champs "simples" du contrat =====
-  const idsToReset = [
-    "contractClientCivility", "contractClientName", "contractClientAddress",
-    "contractClientPhone", "contractClientEmail", "contractReference",
-    "contractSiteCivility", "contractSiteName", "contractSiteAddress",
-    "contractPoolType", "contractTreatment", "contractVolume", "contractSpecificities",
-    "contractPreferredDay", "contractBillingMode", "contractAmount",
-    "contractPaymentDetails", "contractNotes"
-  ];
+// ----- Firestore contrats -----
 
-  idsToReset.forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (el.tagName === "SELECT" || el.tagName === "INPUT") el.value = "";
-    if (el.tagName === "TEXTAREA") el.value = "";
-  });
+async function saveSingleContractToFirestore(contract) {
+  try {
+    if (!db) return;
+    await db.collection("contracts").doc(contract.id).set(contract, { merge: true });
+  } catch (e) {
+    console.error("Erreur Firestore (save contract)", e);
+  }
+}
 
-  // ===== Réinitialisation / valeurs par défaut des champs "auto-calcul" =====
-  const calcStart      = document.getElementById("contractCalcStart");
-  const calcDuration   = document.getElementById("contractCalcDuration");
-  const visitsMode     = document.getElementById("contractVisitsMode");
-  const visitsWinter   = document.getElementById("contractCalcVisitsWinter");
-  const visitsSummer   = document.getElementById("contractCalcVisitsSummer");
-  const seasonStart    = document.getElementById("contractSeasonStart");
-  const seasonEnd      = document.getElementById("contractSeasonEnd");
+async function deleteContractFromFirestore(id) {
+  try {
+    if (!db) return;
+    await db.collection("contracts").doc(id).delete();
+  } catch (e) {
+    console.error("Erreur Firestore (delete contract)", e);
+  }
+}
+// ----- Récupération d'un tarif dans PRESTATION_TEMPLATES -----
 
-  // Date de début = aujourd’hui par défaut
-  if (calcStart) {
-    const today = new Date();
-    calcStart.valueAsDate = today;
+function getTarifFromTemplates(kind, clientType) {
+  if (!kind) return 0;
+
+  const tpl = PRESTATION_TEMPLATES.find((t) => t.kind === kind);
+  if (!tpl) return 0;
+
+  const custom =
+    typeof getCustomPrices === "function" ? getCustomPrices() : {};
+  const key =
+    kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
+
+  if (custom && custom[key] != null) {
+    return Number(custom[key]) || 0;
   }
 
-  // Durée par défaut = 6 mois
-  if (calcDuration) calcDuration.value = "6";
+  return clientType === "syndic"
+    ? tpl.priceSyndic || 0
+    : tpl.priceParticulier || 0;
+}
 
-  // Mode de passages = "standard" (1 hiver / 2 été)
-  if (visitsMode) visitsMode.value = "standard";
-  if (visitsWinter) visitsWinter.value = 1;
-  if (visitsSummer) visitsSummer.value = 2;
+// ----- Prix unitaire pour le contrat (entretien régulier) -----
 
-  // On nettoie la période affichée
-  if (seasonStart) seasonStart.value = "";
-  if (seasonEnd) seasonEnd.value = "";
+function getContractUnitPrice() {
+  const clientType =
+    document.getElementById("ctClientType")?.value || "particulier";
+  const mainService =
+    document.getElementById("ctMainService")?.value || "piscine_chlore";
 
-  // Applique le preset + calcule période / totaux si les fonctions existent
-  if (typeof onContractVisitsModeChange === "function") {
-    onContractVisitsModeChange();
-  } else if (typeof onContractAutoChange === "function") {
-    onContractAutoChange();
+  return getTarifFromTemplates(mainService, clientType);
+}
+
+
+// ----- Prix unitaire pour le contrat (entretien régulier) -----
+
+function getContractUnitPrice() {
+  const clientType =
+    document.getElementById("ctClientType")?.value || "particulier";
+  const mainService =
+    document.getElementById("ctMainService")?.value || "piscine_chlore";
+
+  return getTarifFromTemplates(mainService, clientType);
+}
+
+
+// ----- Compte des mois été / hiver sur la période du contrat -----
+
+function computeContractMonths(startDateStr, durationMonths) {
+  if (!startDateStr || !durationMonths) {
+    return { monthsEte: 0, monthsHiver: 0 };
   }
 
-  // ===== Pré-remplissage depuis le document courant (si un devis est ouvert) =====
-  if (currentDocumentId) {
-    const doc = getDocument(currentDocumentId);
+  const start = new Date(startDateStr + "T00:00:00");
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + durationMonths);
+  end.setDate(end.getDate() - 1); // fin inclusive
 
-    // Infos client
-    if (doc && doc.client) {
-      const civ   = document.getElementById("contractClientCivility");
-      const name  = document.getElementById("contractClientName");
-      const addr  = document.getElementById("contractClientAddress");
-      const phone = document.getElementById("contractClientPhone");
-      const email = document.getElementById("contractClientEmail");
+  let y = start.getFullYear();
+  let m = start.getMonth(); // 0-11
 
-      if (civ   && doc.client.civility) civ.value   = doc.client.civility;
-      if (name  && doc.client.name)     name.value  = doc.client.name;
-      if (addr  && doc.client.address)  addr.value  = doc.client.address;
-      if (phone && doc.client.phone)    phone.value = doc.client.phone;
-      if (email && doc.client.email)    email.value = doc.client.email;
+  let monthsEte = 0;
+  let monthsHiver = 0;
+
+  while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
+    // Mai (4) à Septembre (8) = été, le reste = hiver
+    if (m >= 4 && m <= 8) monthsEte++;
+    else monthsHiver++;
+
+    m++;
+    if (m > 11) {
+      m = 0;
+      y++;
+    }
+  }
+
+  return { monthsEte, monthsHiver };
+}
+
+
+// ----- Recalcul global du contrat -----
+
+function recomputeContract() {
+  const mode = document.getElementById("ctMode")?.value || "standard";
+  const passHiverInput = document.getElementById("ctPassHiver");
+  const passEteInput = document.getElementById("ctPassEte");
+
+  // 1) Mode standard / intensif si pas "personnalisé"
+  if (mode === "standard") {
+    if (passHiverInput) passHiverInput.value = "1";
+    if (passEteInput) passEteInput.value = "2";
+  } else if (mode === "intensif") {
+    if (passHiverInput) passHiverInput.value = "2";
+    if (passEteInput) passEteInput.value = "4";
+  }
+
+  const startDateStr = document.getElementById("ctStartDate")?.value || "";
+  const duration =
+    parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
+
+  const endDateInput = document.getElementById("ctEndDate");
+  const periodInput = document.getElementById("ctPeriod");
+  const totalPassInput = document.getElementById("ctTotalPassages");
+
+  let totalPassages = 0;
+
+  if (startDateStr && duration > 0) {
+    const start = new Date(startDateStr + "T00:00:00");
+    const end = new Date(start);
+    end.setMonth(end.getMonth() + duration);
+    end.setDate(end.getDate() - 1);
+
+    if (endDateInput) {
+      endDateInput.value = end.toLocaleDateString("fr-FR");
     }
 
-    // Lieu d’intervention
-    if (doc && (doc.siteName || doc.siteAddress)) {
-      const siteCiv  = document.getElementById("contractSiteCivility");
-      const siteName = document.getElementById("contractSiteName");
-      const siteAddr = document.getElementById("contractSiteAddress");
+    const startYM = startDateStr.slice(0, 7); // YYYY-MM
+    const endYM =
+      end.getFullYear() +
+      "-" +
+      String(end.getMonth() + 1).padStart(2, "0");
 
-      if (siteCiv  && doc.siteCivility) siteCiv.value  = doc.siteCivility;
-      if (siteName && doc.siteName)     siteName.value = doc.siteName;
-      if (siteAddr && doc.siteAddress)  siteAddr.value = doc.siteAddress;
+    if (periodInput) {
+      periodInput.value = `${startYM} → ${endYM}`;
     }
+
+    const { monthsEte, monthsHiver } = computeContractMonths(
+      startDateStr,
+      duration
+    );
+
+    const passHiver = parseInt(passHiverInput?.value || "0", 10) || 0;
+    const passEte = parseInt(passEteInput?.value || "0", 10) || 0;
+
+    totalPassages = monthsEte * passEte + monthsHiver * passHiver;
+  } else {
+    if (endDateInput) endDateInput.value = "";
+    if (periodInput) periodInput.value = "";
   }
+
+  if (totalPassInput) {
+    totalPassInput.value = totalPassages.toString();
+  }
+
+  // 2) Prix unitaire + options
+  const clientType =
+    document.getElementById("ctClientType")?.value || "particulier";
+  const mainService =
+    document.getElementById("ctMainService")?.value || "piscine_chlore";
+
+  const unitPrice = getTarifFromTemplates(mainService, clientType);
+
+  // Options forfaitaires
+  const includeOpening =
+    document.getElementById("ctIncludeOpening")?.checked || false;
+  const includeWinter =
+    document.getElementById("ctIncludeWinter")?.checked || false;
+
+  let extra = 0;
+
+  if (includeOpening) {
+    const kindOpening =
+      mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
+        ? "vidange_jacuzzi"
+        : "remise_service_piscine"; // adapte aux noms réels de tes templates
+    extra += getTarifFromTemplates(kindOpening, clientType);
+  }
+
+  if (includeWinter) {
+    extra += getTarifFromTemplates("hivernage_piscine", clientType);
+  }
+
+  const totalHT = totalPassages * unitPrice + extra;
+
+  // 3) TVA (même logique que devis/factures)
+  const tvaRateInput = document.getElementById("tvaRate");
+  const tvaRate = tvaRateInput ? parseFloat(tvaRateInput.value) || 0 : 0;
+  const tvaAmount = totalHT * (tvaRate / 100);
+  const totalTTC = totalHT + tvaAmount;
+
+  // 4) Mise à jour UI
+  const unitInput = document.getElementById("ctUnitPrice");
+  const totalHTInput = document.getElementById("ctTotalHT");
+
+  const recapPass = document.getElementById("ctRecapPassages");
+  const recapPrice = document.getElementById("ctRecapPrice");
+  const recapTotal = document.getElementById("ctRecapTotal");
+
+  const format =
+    typeof formatEuro === "function"
+      ? formatEuro
+      : (v) => (v.toFixed ? v.toFixed(2) + " €" : v + " €");
+
+  if (unitInput) unitInput.value = unitPrice ? format(unitPrice) : "0,00 €";
+  if (totalHTInput) totalHTInput.value = format(totalHT);
+
+  if (recapPass) recapPass.textContent = totalPassages.toString();
+  if (recapPrice)
+    recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
+
+  // 5) Récap montant : Net à payer / HT / TTC
+  let labelAmount = "";
+  let displayAmount = 0;
+
+  if (tvaRate === 0) {
+    displayAmount = totalHT;
+    labelAmount =
+      clientType === "syndic"
+        ? "Montant HT estimatif"
+        : "Net à payer estimatif";
+  } else {
+    displayAmount = totalTTC;
+    labelAmount = "Montant TTC estimatif";
+  }
+
+  if (recapTotal) {
+    recapTotal.textContent = labelAmount + " : " + format(displayAmount);
+  }
+
+  // (le détail exact HT/TVA/TTC est ressaisi dans buildContractFromForm)
 }
 
 
 
-// Retour à la liste devis/factures
-function backToListFromContract() {
-  const contractView = document.getElementById("contractView");
-  const listView = document.getElementById("listView");
+// ----- Construction d'un objet contrat depuis le formulaire -----
 
-  if (contractView) contractView.classList.add("hidden");
-  if (listView) listView.classList.remove("hidden");
+function buildContractFromForm(showErrors) {
+  const clientName = (document.getElementById("ctClientName")?.value || "").trim();
+  const clientAddress = (document.getElementById("ctClientAddress")?.value || "").trim();
 
-  // Onglets : on revient par défaut sur Devis
-  const tabDevis = document.getElementById("tabDevis");
-  const tabFactures = document.getElementById("tabFactures");
-  const tabContrat = document.getElementById("tabContrat");
-
-  if (tabContrat) tabContrat.classList.remove("active");
-  if (tabFactures) tabFactures.classList.remove("active");
-  if (tabDevis) tabDevis.classList.add("active");
-
-  switchListType("devis");
-}
-// Enregistrer le contrat dans Firestore (collection "contracts")
-async function saveContract(showToast = true) {
-  if (typeof db === "undefined" || !db) {
-    console.error("Firestore non initialisé");
+  if (showErrors && (!clientName || !clientAddress)) {
     showConfirmDialog({
-      title: "Erreur",
-      message: "Firestore n’est pas initialisé. Vérifie initFirebase().",
+      title: "Infos client manquantes",
+      message: "Merci de renseigner au minimum le nom et l'adresse du client.",
       confirmLabel: "OK",
       cancelLabel: "",
-      variant: "danger",
+      variant: "warning",
       icon: "⚠️"
     });
-    return;
+    return null;
   }
 
-  const val = (id) => {
-    const el = document.getElementById(id);
-    return el ? el.value.trim() : "";
+  const client = {
+    civility: (document.getElementById("ctClientCivility")?.value || "").trim(),
+    name: clientName,
+    address: clientAddress,
+    phone: (document.getElementById("ctClientPhone")?.value || "").trim(),
+    email: (document.getElementById("ctClientEmail")?.value || "").trim(),
+    reference: (document.getElementById("ctReference")?.value || "").trim()
   };
 
-  const clientCivility = val("contractClientCivility");
-  const clientName = val("contractClientName");
-  const clientAddress = val("contractClientAddress");
-  const clientPhone = val("contractClientPhone");
-  const clientEmail = val("contractClientEmail");
-  const contractRef = val("contractReference");
+  const site = {
+    civility: (document.getElementById("ctSiteCivility")?.value || "").trim(),
+    name: (document.getElementById("ctSiteName")?.value || "").trim(),
+    address: (document.getElementById("ctSiteAddress")?.value || "").trim()
+  };
 
-  const siteCivility = val("contractSiteCivility");
-  const siteName = val("contractSiteName");
-  const siteAddress = val("contractSiteAddress");
+  const pool = {
+    type: (document.getElementById("ctPoolType")?.value || "").trim(),
+    equipment: (document.getElementById("ctEquipment")?.value || "").trim(),
+    volume: (document.getElementById("ctVolume")?.value || "").trim(),
+    notes: (document.getElementById("ctNotes")?.value || "").trim()
+  };
 
-  const poolType = val("contractPoolType");
-  const treatment = val("contractTreatment");
-  const volume = val("contractVolume");
-  const specificities = val("contractSpecificities");
+  const startDate = (document.getElementById("ctStartDate")?.value || "").trim();
+  const duration = parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
 
-  const frequency = val("contractFrequency");
-  const seasonStart = val("contractSeasonStart");
-  const seasonEnd = val("contractSeasonEnd");
-  const preferredDay = val("contractPreferredDay");
+  const totalPassagesStr = (document.getElementById("ctTotalPassages")?.value || "0").trim();
+  const totalPassages = parseInt(totalPassagesStr || "0", 10) || 0;
 
-  const billingMode = val("contractBillingMode");
-  const amount = val("contractAmount");
-  const paymentDetails = val("contractPaymentDetails");
-  const notes = val("contractNotes");
+  // Reprendre les valeurs numériques des champs formatés
+  const unitPriceStr = (document.getElementById("ctUnitPrice")?.value || "0")
+    .replace(/\s|€|€/g, "")
+    .replace(",", ".");
+  const totalHTStr = (document.getElementById("ctTotalHT")?.value || "0")
+    .replace(/\s|€|€/g, "")
+    .replace(",", ".");
 
-  // contrôle minimum avant enregistrement
-  if (!clientName || !clientAddress || !siteName || !siteAddress ||
-      !poolType || !frequency || !seasonStart || !seasonEnd ||
-      !billingMode || !amount) {
+  const pricing = {
+    clientType: (document.getElementById("ctClientType")?.value || "particulier").trim(),
+    mainService: (document.getElementById("ctMainService")?.value || "piscine_chlore").trim(),
+    mode: (document.getElementById("ctMode")?.value || "standard").trim(),
+    passHiver: parseInt(document.getElementById("ctPassHiver")?.value || "0", 10) || 0,
+    passEte: parseInt(document.getElementById("ctPassEte")?.value || "0", 10) || 0,
+    startDate,
+    durationMonths: duration,
+    endDateLabel: (document.getElementById("ctEndDate")?.value || "").trim(),
+    periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
+    totalPassages,
+    unitPrice: parseFloat(unitPriceStr) || 0,
+    totalHT: parseFloat(totalHTStr) || 0
+  };
 
+  const contract = {
+    id: currentContractId || Date.now().toString(),
+    client,
+    site,
+    pool,
+    pricing,
+    createdAt: new Date().toISOString()
+  };
+
+  return contract;
+}
+
+// ----- Remplir le formulaire depuis un contrat -----
+
+function fillContractForm(contract) {
+  if (!contract) return;
+
+  currentContractId = contract.id;
+
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+  const p  = contract.pool    || {};
+  const pr = contract.pricing || {};
+
+  // ---------- 1. CLIENT ----------
+  const ctClientCiv = document.getElementById("ctClientCivility");
+  if (ctClientCiv) ctClientCiv.value = c.civility || "";
+
+  const ctClientName = document.getElementById("ctClientName");
+  if (ctClientName) ctClientName.value = c.name || "";
+
+  const ctClientAddress = document.getElementById("ctClientAddress");
+  if (ctClientAddress) ctClientAddress.value = c.address || "";
+
+  const ctClientPhone = document.getElementById("ctClientPhone");
+  if (ctClientPhone) ctClientPhone.value = c.phone || "";
+
+  const ctClientEmail = document.getElementById("ctClientEmail");
+  if (ctClientEmail) ctClientEmail.value = c.email || "";
+
+  const ctRef = document.getElementById("ctReference");
+  if (ctRef) ctRef.value = c.reference || "";
+
+  // ---------- 2. LIEU ----------
+  const ctSiteCiv = document.getElementById("ctSiteCivility");
+  if (ctSiteCiv) ctSiteCiv.value = s.civility || "";
+
+  const ctSiteName = document.getElementById("ctSiteName");
+  if (ctSiteName) ctSiteName.value = s.name || "";
+
+  const ctSiteAddress = document.getElementById("ctSiteAddress");
+  if (ctSiteAddress) ctSiteAddress.value = s.address || "";
+
+  // ---------- 3. BASSIN ----------
+  const ctPoolType = document.getElementById("ctPoolType");
+  if (ctPoolType) ctPoolType.value = p.type || "piscine_chlore";
+
+  const ctEquip = document.getElementById("ctEquipment");
+  if (ctEquip) ctEquip.value = p.equipment || "";
+
+  const ctVolume = document.getElementById("ctVolume");
+  if (ctVolume) ctVolume.value = p.volume || "";
+
+  const ctNotes = document.getElementById("ctNotes");
+  if (ctNotes) ctNotes.value = p.notes || "";
+
+  // ---------- 4. TYPE CLIENT (radio + hidden) ----------
+  const ctHiddenType = document.getElementById("ctClientType");
+  const ctPartRadio  = document.getElementById("ctClientParticulier");
+  const ctSynRadio   = document.getElementById("ctClientSyndic");
+
+  const type = pr.clientType === "syndic" ? "syndic" : "particulier";
+
+  if (ctHiddenType) ctHiddenType.value = type;
+  if (type === "syndic" && ctSynRadio) {
+    ctSynRadio.checked = true;
+  } else if (ctPartRadio) {
+    ctPartRadio.checked = true;
+  }
+
+  // on applique le type (affiche/masque le bloc lieu + prix syndic/particulier)
+  updateContractClientType(type);
+
+  // ---------- 5. FRÉQUENCE & DATES ----------
+  const ctMode = document.getElementById("ctMode");
+  if (ctMode) ctMode.value = pr.mode || "standard";
+
+  const ctPassHiver = document.getElementById("ctPassHiver");
+  if (ctPassHiver) {
+    const valH = pr.passHiver != null ? pr.passHiver : 1;
+    ctPassHiver.value = String(valH);
+    if (!ctPassHiver.value) ctPassHiver.value = "1";
+  }
+
+  const ctPassEte = document.getElementById("ctPassEte");
+  if (ctPassEte) {
+    const valE = pr.passEte != null ? pr.passEte : 2;
+    ctPassEte.value = String(valE);
+    if (!ctPassEte.value) ctPassEte.value = "2";
+  }
+
+  const ctStartDate = document.getElementById("ctStartDate");
+  if (ctStartDate) ctStartDate.value = pr.startDate || "";
+
+  const ctDuration = document.getElementById("ctDuration");
+  if (ctDuration) {
+    const dur = pr.durationMonths || 12;
+    ctDuration.value = String(dur);
+    if (!ctDuration.value) ctDuration.value = "12";
+  }
+
+  const ctEndDate = document.getElementById("ctEndDate");
+  if (ctEndDate) ctEndDate.value = pr.endDateLabel || "";
+
+  const ctPeriod = document.getElementById("ctPeriod");
+  if (ctPeriod) ctPeriod.value = pr.periodLabel || "";
+
+  const ctTotalPass = document.getElementById("ctTotalPassages");
+  if (ctTotalPass) {
+    ctTotalPass.value =
+      pr.totalPassages != null ? String(pr.totalPassages) : "0";
+  }
+
+  // ---------- 6. OPTIONS FORFAITAIRES ----------
+  const openingEl = document.getElementById("ctIncludeOpening");
+  if (openingEl) openingEl.checked = !!pr.includeOpening;
+
+  const winterEl = document.getElementById("ctIncludeWinter");
+  if (winterEl) winterEl.checked = !!pr.includeWinter;
+
+  // ---------- 7. TVA ----------
+  if (typeof pr.tvaRate === "number") {
+    const tvaRateInput = document.getElementById("tvaRate");
+    if (tvaRateInput) tvaRateInput.value = pr.tvaRate;
+
+    const tva0  = document.getElementById("tva0");
+    const tva20 = document.getElementById("tva20");
+    if (tva0 && tva20) {
+      if (pr.tvaRate === 0) {
+        tva0.checked = true;
+        tva20.checked = false;
+      } else {
+        tva20.checked = true;
+        tva0.checked = false;
+      }
+    }
+  }
+
+  // ---------- 8. PRIX UNITAIRE / TOTAL (on remet les valeurs brutes) ----------
+  const unitInput  = document.getElementById("ctUnitPrice");
+  const totalHTInp = document.getElementById("ctTotalHT");
+
+  if (unitInput) {
+    unitInput.value = pr.unitPrice != null ? pr.unitPrice : "";
+  }
+  if (totalHTInp) {
+    totalHTInp.value = pr.totalHT != null ? pr.totalHT : "";
+  }
+
+  // ---------- 9. Type de bassin -> prestation principale ----------
+  const ctMainService = document.getElementById("ctMainService");
+  if (ctPoolType && ctMainService) {
+    // on laisse la logique centralisée dans l'event "change"
+    ctPoolType.dispatchEvent(new Event("change"));
+  }
+
+  // ---------- 10. Recalcul complet ----------
+  recomputeContract();
+}
+
+
+
+// ----- Sauvegarde -----
+
+function saveContract() {
+  recomputeContract(); // pour être sûr que tout est à jour
+
+  const contract = buildContractFromForm(true);
+  if (!contract) return;
+
+  const list = getAllContracts();
+  const idx = list.findIndex((c) => c.id === contract.id);
+  if (idx >= 0) list[idx] = contract;
+  else list.push(contract);
+
+  saveContracts(list);
+  saveSingleContractToFirestore(contract);
+
+  currentContractId = contract.id;
+
+  showConfirmDialog({
+    title: "Contrat enregistré",
+    message: "Le contrat d'entretien a été enregistré avec succès.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+}
+
+// ----- Suppression -----
+
+function deleteCurrentContract() {
+  if (!currentContractId) {
     showConfirmDialog({
-      title: "Informations manquantes",
-      message: "Merci de compléter au minimum : client, adresse client, lieu, type de bassin, fréquence, période, mode de facturation et montant.",
+      title: "Aucun contrat ouvert",
+      message: "Aucun contrat n'est actuellement chargé.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
@@ -4789,510 +5063,477 @@ async function saveContract(showToast = true) {
     return;
   }
 
-  const now = new Date();
+  const list = getAllContracts();
+  const existing = list.find((c) => c.id === currentContractId);
+  const label = existing?.client?.name || "Contrat";
 
-  const contractData = {
-    type: "contrat_piscine_spa",
-    reference: contractRef || null,
-    createdLocal: now.toISOString(),
-    client: {
-      civility: clientCivility || null,
-      name: clientName,
-      address: clientAddress,
-      phone: clientPhone || null,
-      email: clientEmail || null
-    },
-    site: {
-      civility: siteCivility || null,
-      name: siteName,
-      address: siteAddress
-    },
-    pool: {
-      type: poolType,
-      treatment: treatment || null,
-      volume: volume || null,
-      specificities: specificities || null
-    },
-    frequency: {
-      label: frequency,
-      preferredDay: preferredDay || null,
-      seasonStart,
-      seasonEnd
-    },
-    billing: {
-      mode: billingMode,
-      amountTTC: Number(amount),
-      paymentDetails: paymentDetails || null,
-      tvaApplicable: false, // micro-entreprise
-      tvaArticle: "TVA non applicable, article 293 B du CGI."
-    },
-    notes: notes || null,
-    linkedDocumentId: currentDocumentId || null,
-    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-  };
+  showConfirmDialog({
+    title: "Supprimer le contrat",
+    message: `Es-tu sûr de vouloir supprimer le contrat pour :\n« ${label} » ?`,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: function () {
+      const newList = list.filter((c) => c.id !== currentContractId);
+      saveContracts(newList);
+      deleteContractFromFirestore(currentContractId);
+      currentContractId = null;
 
-  if (!currentContractId) {
-    // nouveau contrat
-    contractData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
-  }
+      // On vide le formulaire
+      document
+        .getElementById("contractView")
+        .querySelectorAll("input, textarea, select")
+        .forEach((el) => {
+          if (el.type === "select-one") {
+            // on laisse les valeurs par défaut du <select>
+          } else if (
+            el.type === "date" ||
+            el.type === "text" ||
+            el.type === "email" ||
+            el.type === "tel" ||
+            el.type === "number"
+          ) {
+            if (!el.readOnly) el.value = "";
+          } else if (el.tagName === "TEXTAREA") {
+            el.value = "";
+          }
+        });
 
-  try {
-    let docRef;
-    if (currentContractId) {
-      docRef = db.collection("contracts").doc(currentContractId);
-      await docRef.set(contractData, { merge: true });
-    } else {
-      docRef = await db.collection("contracts").add(contractData);
-      currentContractId = docRef.id;
+      // Remet les defaults du contrat
+      const ctClientType = document.getElementById("ctClientType");
+      if (ctClientType) ctClientType.value = "particulier";
+
+      const ctMainService = document.getElementById("ctMainService");
+      if (ctMainService) ctMainService.value = "piscine_chlore";
+
+      const ctMode = document.getElementById("ctMode");
+      if (ctMode) ctMode.value = "standard";
+
+      const ctPassHiver = document.getElementById("ctPassHiver");
+      if (ctPassHiver) ctPassHiver.value = "1";
+
+      const ctPassEte = document.getElementById("ctPassEte");
+      if (ctPassEte) ctPassEte.value = "2";
+
+      const ctDuration = document.getElementById("ctDuration");
+      if (ctDuration) ctDuration.value = "12";
+
+      const ctStartDate = document.getElementById("ctStartDate");
+      if (ctStartDate) ctStartDate.value = "";
+
+      // Options forfaitaires
+      const openingEl = document.getElementById("ctIncludeOpening");
+      if (openingEl) openingEl.checked = false;
+      const winterEl = document.getElementById("ctIncludeWinter");
+      if (winterEl) winterEl.checked = false;
+
+      // Nouvelle référence de contrat dispo
+      const ctRef = document.getElementById("ctReference");
+      if (ctRef && typeof getNextContractReference === "function") {
+        ctRef.value = getNextContractReference();
+      }
+
+      // Recalcul des passages / tarifs
+      if (typeof recomputeContract === "function") {
+        recomputeContract();
+      }
     }
-
-    if (showToast) {
-      showConfirmDialog({
-        title: "Contrat enregistré",
-        message: `Le contrat a bien été enregistré dans Firestore.${contractRef ? "\n\nRéf. : " + contractRef : ""}`,
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "success",
-        icon: "✅"
-      });
-    }
-
-  } catch (e) {
-    console.error("Erreur enregistrement contrat", e);
-    showConfirmDialog({
-      title: "Erreur",
-      message: "Une erreur est survenue lors de l’enregistrement du contrat.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "danger",
-      icon: "⚠️"
-    });
-  }
+  });
 }
 
-// Impression du contrat (PDF)
-function printContract(previewOnly) {
-  const val = (id) => {
-    const el = document.getElementById(id);
-    return el ? el.value.trim() : "";
-  };
+function openContractPDF() {
+  recomputeContract();
+  const contract = buildContractFromForm(true);
+  if (!contract) return;
 
-  // Récup des champs
-  const clientCivility = val("contractClientCivility");
-  const clientName = val("contractClientName");
-  const clientAddress = val("contractClientAddress");
-  const clientPhone = val("contractClientPhone");
-  const clientEmail = val("contractClientEmail");
-  const contractRef = val("contractReference");
+  const c = contract.client;
+  const s = contract.site;
+  const p = contract.pool;
+  const pr = contract.pricing;
+const isSyndic = pr.clientType === "syndic";
+const clientBlockTitle = isSyndic ? "Syndic / Agence" : "Client";
+const nameLabel = isSyndic ? "Société" : "Nom";
 
-  const siteCivility = val("contractSiteCivility");
-  const siteName = val("contractSiteName");
-  const siteAddress = val("contractSiteAddress");
 
-  const poolType = val("contractPoolType");
-  const treatment = val("contractTreatment");
-  const volume = val("contractVolume");
-  const specificities = val("contractSpecificities");
+  const format = (typeof formatEuro === "function")
+    ? formatEuro
+    : (v) => (v.toFixed ? v.toFixed(2) + " €" : v + " €");
 
-  const frequency = val("contractFrequency");
-  const seasonStart = val("contractSeasonStart");
-  const seasonEnd = val("contractSeasonEnd");
-  const preferredDay = val("contractPreferredDay");
-
-  const billingMode = val("contractBillingMode");
-  const amount = val("contractAmount");
-  const paymentDetails = val("contractPaymentDetails");
-  const notes = val("contractNotes");
-
-  // Vérif minimum avant impression
-  if (
-    !clientName ||
-    !clientAddress ||
-    !siteName ||
-    !siteAddress ||
-    !poolType ||
-    !frequency ||
-    !seasonStart ||
-    !seasonEnd ||
-    !billingMode ||
-    !amount
-  ) {
-    showConfirmDialog({
-      title: "Informations manquantes",
-      message:
-        "Merci de compléter au minimum : client, adresse client, lieu d’intervention, type de bassin, fréquence, période, mode de facturation et montant avant l’impression du contrat.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "info",
-      icon: "ℹ️",
-    });
-    return;
-  }
-
-  const today = new Date();
-  const dateStr = today.toLocaleDateString("fr-FR");
-  const logoSrc =
-    "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
-  const signSrc =
-    "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
+  const logoSrc = "logo.png";
 
   const printWindow = window.open("", "_blank");
+const today = new Date();
+const pdfDateStr = today.toLocaleDateString("fr-FR");
+
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <title>Contrat d’entretien${contractRef ? " - " + contractRef : ""}</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      margin:0;
-      padding:0;
-      font-family: Arial, sans-serif;
-      color:#333;
-      font-size:10.5px;
-    }
-    .page {
-      min-height:100vh;
-      padding:10mm 12mm 14mm 12mm;
-      display:flex;
-      flex-direction:column;
-    }
-    .page-main { flex:1 0 auto; }
-    .page-footer { flex-shrink:0; margin-top:10mm; }
+<meta charset="UTF-8" />
+<title>Contrat d'entretien piscine / spa</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: Arial, sans-serif; font-size: 11px; color:#333; }
 
-    .header {
-      text-align:center;
-      margin-bottom:8px;
-      border-bottom:1.5px solid #1a74d9;
-      padding-bottom:7px;
-    }
-    .header img.logo { height:55px; margin-bottom:4px; }
-    .header h1 {
-      color:#1a74d9;
-      font-size:21px;
-      margin-bottom:3px;
-      font-weight:700;
-    }
-    .header p {
-      color:#444;
-      font-size:10.5px;
-      line-height:1.25;
-    }
-    .subtitle { font-weight:600; font-size:11px; }
-    .contact { font-size:10.5px; font-weight:500; }
-    .contact strong { font-weight:700; }
+  .page {
+    padding: 12mm 14mm 14mm 14mm;
+  }
 
-    .doc-header-center {
-      text-align:center;
-      margin:10px 0 12px 0;
-    }
-    .doc-title-main {
-      display:block;
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:0.18em;
-      font-weight:600;
-      opacity:0.9;
-    }
-    .doc-title-number {
-      display:block;
-      margin-top:2px;
-      font-size:20px;
-      font-weight:800;
-      letter-spacing:0.04em;
-      color:#0d47a1;
-    }
-    .doc-subject {
-      margin-top:6px;
-      font-size:11.5px;
-      font-weight:600;
-    }
+  .header {
+    text-align: center;
+    margin-bottom: 8px;
+    border-bottom: 1.5px solid #1a74d9;
+    padding-bottom: 6px;
+  }
 
-    .doc-info-block {
-      display:inline-block;
-      border:1px solid #cbd3e1;
-      border-radius:6px;
-      padding:6px 8px;
-      font-size:10px;
-      background:#f6f8fc;
-      margin-top:4px;
-    }
-    .doc-info-row { display:flex; gap:4px; margin:1px 0; }
-    .doc-info-label { min-width:95px; font-weight:bold; }
-    .doc-info-value { flex:1; }
+  .header img.logo {
+    height: 55px;
+    margin-bottom: 4px;
+  }
 
-    .client-block {
-      margin-top:8px;
-      margin-bottom:10px;
-      font-size:10px;
-      border:1px solid #dde4ee;
-      border-radius:8px;
-      padding:8px 10px;
-      background:#f5f7fb;
-    }
-    .client-inner-row { display:flex; gap:18px; }
-    .client-col { flex:1 1 auto; }
-    .client-col.right { flex:0 0 auto; margin-left:auto; }
-    .client-title {
-      font-weight:700;
-      font-size:10.5px;
-      margin-bottom:4px;
-      color:#1a74d9;
-    }
-    .client-line { margin:2px 0; }
+  .header h1 {
+    color: #1a74d9;
+    font-size: 18px;
+    margin-bottom: 2px;
+  }
 
-    .contract-section {
-      margin-top:8px;
-      font-size:10.5px;
-    }
-    .contract-section h3 {
-      font-size:11.5px;
-      margin-bottom:4px;
-      color:#0d47a1;
-    }
-    .contract-section h4 {
-      font-size:10.5px;
-      margin-top:8px;
-      margin-bottom:3px;
-      color:#1a74d9;
-    }
-    .contract-section p {
-      margin-bottom:4px;
-      text-align:justify;
-    }
-    .contract-section ul {
-      margin-left:16px;
-      margin-bottom:4px;
-    }
-    .contract-section li {
-      margin-bottom:2px;
-    }
+  .header .subtitle {
+    font-size: 11px;
+    margin-bottom: 2px;
+  }
 
-    .info-table {
-      width:100%;
-      border-collapse:collapse;
-      margin:6px 0 10px;
-    }
-    .info-table th,
-    .info-table td {
-      border:1px solid #dde4ee;
-      padding:4px 6px;
-      font-size:10px;
-      vertical-align:top;
-    }
-    .info-table th {
-      background:#f3f6fc;
-      font-weight:600;
-    }
+  .header .contact {
+    font-size: 10px;
+  }
 
-    .highlight-box {
-      border:1px solid #1a74d9;
-      background:#f3f7ff;
-      border-radius:6px;
-      padding:6px 8px;
-      font-size:10px;
-      margin-top:6px;
-    }
+  h2.contrat-title {
+    text-align:center;
+    margin: 8px 0 4px;
+    font-size: 15px;
+    text-transform: uppercase;
+  }
 
-    .signatures {
-      margin-top:14px;
-      display:flex;
-      justify-content:space-between;
-      gap:22px;
-    }
-    .signature-block {
-      flex:1;
-      border-top:1px solid #333;
-      padding-top:4px;
-      font-size:10px;
-      min-height:55px;
-    }
-    .signature-title {
-      font-weight:bold;
-      margin-bottom:3px;
-    }
-    img.sig {
-      height:90px;
-      width:auto;
-      margin-top:5px;
-    }
+  .section {
+    margin-top: 8px;
+  }
 
-    @media print {
-      @page { margin:0; }
-      body { margin:0; padding:0; }
-      .page { min-height:100vh; }
-    }
-  </style>
+  .section-title {
+    font-weight: bold;
+    margin-bottom: 3px;
+    color: #1a74d9;
+    font-size: 11px;
+  }
+
+  .block {
+    border: 1px solid #cbd3e1;
+    border-radius: 6px;
+    padding: 6px 8px;
+    margin-bottom: 6px;
+    background:#fafbff;
+  }
+
+  .block p {
+    margin: 2px 0;
+  }
+
+  .label {
+    font-weight:bold;
+  }
+
+  .grid-2 {
+    display:flex;
+    gap:14px;
+  }
+  .grid-2 > div {
+    flex:1;
+  }
+
+  ul {
+    margin-left: 14px;
+    margin-top: 3px;
+  }
+
+  .signatures {
+    margin-top: 10px;
+    display:flex;
+    gap:18px;
+  }
+  .signature-block {
+    flex:1;
+    border-top:1px solid #333;
+    padding-top:4px;
+    min-height:50px;
+    font-size:10px;
+  }
+  .signature-title {
+    font-weight:bold;
+    margin-bottom:3px;
+  }
+
+  .amount-highlight {
+    margin-top:4px;
+    font-weight:bold;
+    font-size:12px;
+  }
+
+  @media print {
+    @page { margin:0; }
+    body { margin:0; }
+  }
+</style>
 </head>
 <body>
 <div class="page">
-  <div class="page-main">
-    <div class="header">
-      <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
-      <h1>AquaClim Prestige</h1>
-      <p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>
-      <p class="contact">
-        Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
-        Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
-        SIRET : <strong>XXXXXXXXXXXXX</strong>
+  <div class="header">
+    <img src="${logoSrc}" class="logo" alt="AquaClim Prestige" />
+    <h1>AquaClim Prestige</h1>
+    <p class="subtitle">AquaClim Prestige – Contrat de maintenance</p>
+    <p class="contact">
+      Le Blevennec Loïc – Micro-entreprise déclarée – SIRET : XXXXXXXXXXXXX<br>
+      Adresse : 2 avenue Cauvin, 06100 Nice – Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com
+    </p>
+  </div>
+
+  <h2 class="contrat-title">Contrat d’entretien Piscine / Spa – Version Premium</h2>
+
+  <!-- 1. Identification -->
+  <div class="section">
+    <div class="section-title">1. Identification des parties</div>
+    <div class="block">
+      <p class="label">Prestataire</p>
+      <p>AquaClim Prestige – représentée par M. Le Blevennec Loïc</p>
+      <p>Domiciliation : 2 avenue Cauvin, 06100 Nice</p>
+      <p>RC Pro : Oui (attestation disponible sur demande)</p>
+      <br>
+<p class="label">${clientBlockTitle}</p>
+
+${
+  c.name || c.civility
+    ? `<p>${nameLabel} : ${
+        [c.civility, c.name].filter(Boolean).join(" ")
+      }</p>`
+    : ""
+}
+
+${c.address ? `<p>Adresse : ${c.address}</p>` : ""}
+
+${
+  c.phone || c.email
+    ? `<p>Téléphone / Email : ${
+        [c.phone, c.email].filter(Boolean).join(" / ")
+      }</p>`
+    : ""
+}
+
+${c.reference ? `<p>Référence contrat : ${c.reference}</p>` : ""}
+
+
+      <br>
+  ${
+  c.phone || c.email
+    ? `<p>Téléphone / Email : ${
+        [c.phone, c.email].filter(Boolean).join(" / ")
+      }</p>`
+    : ""
+}
+${c.reference ? `<p>Référence contrat : ${c.reference}</p>` : ""}
+
+<br>
+${
+  pr.clientType === "syndic"
+    ? `
+      <p class="label">Lieu d’intervention</p>
+      ${
+        s.civility || s.name
+          ? `<p>Nom sur place : ${
+              (s.civility ? s.civility + " " : "") + (s.name || "")
+            }</p>`
+          : ""
+      }
+      ${s.address ? `<p>Adresse : ${s.address}</p>` : ""}
+    `
+    : ""
+}
+
+<p>Type d’installation :
+  ${
+    p.type === "piscine_sel"
+      ? "Piscine au sel"
+      : p.type === "piscine_chlore"
+      ? "Piscine au chlore"
+      : p.type === "spa"
+      ? "Spa / Jacuzzi"
+      : ""
+  }
+</p>
+${p.volume ? `<p>Volume approximatif : ${p.volume} m³</p>` : ""}
+${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
+
+    </div>
+  </div>
+
+  <!-- 2. Objet -->
+  <div class="section">
+    <div class="section-title">2. Objet du contrat</div>
+    <div class="block">
+      <p>Le présent contrat a pour objet l’entretien, la surveillance et le contrôle des installations énoncées ci-dessus, comprenant piscine, spa, jacuzzi et local technique, selon la fréquence et les prestations décrites ci-après.</p>
+    </div>
+  </div>
+
+  <!-- 3. Fréquence & période -->
+  <div class="section">
+    <div class="section-title">3. Fréquence des interventions & période</div>
+    <div class="block">
+      <div class="grid-2">
+        <div>
+        
+     <p><span class="label">Prestation principale :</span>
+            ${
+              pr.mainService === "piscine_sel"
+                ? "Piscine au sel"
+                : pr.mainService === "piscine_chlore"
+                ? "Piscine au chlore"
+                : "Spa / Jacuzzi"
+            }
+          </p>
+          <p><span class="label">Mode de passages :</span>
+            ${
+              pr.mode === "standard"
+                ? "Standard : 1/mois hiver – 2/mois été"
+                : pr.mode === "intensif"
+                ? "Intensif : 2/mois hiver – 4/mois été"
+                : "Personnalisé"
+            }
+          </p>
+          <p><span class="label">Passages hiver (oct → avr) :</span> ${pr.passHiver} / mois</p>
+          <p><span class="label">Passages été (mai → sept) :</span> ${pr.passEte} / mois</p>
+        </div>
+        <div>
+          <p><span class="label">Début de contrat :</span> ${pr.startDate || ""}</p>
+          <p><span class="label">Durée :</span> ${pr.durationMonths} mois</p>
+          <p><span class="label">Fin de contrat :</span> ${pr.endDateLabel || ""}</p>
+          <p><span class="label">Période couverte :</span> ${pr.periodLabel || ""}</p>
+          <p><span class="label">Total visites estimées :</span> ${pr.totalPassages}</p>
+        </div>
+      </div>
+
+      <p class="amount-highlight">
+        Prix par passage : ${format(pr.unitPrice)} — Montant total estimatif du contrat : ${format(pr.totalHT)}
       </p>
     </div>
+  </div>
 
-    <div class="doc-header-center">
-      <span class="doc-title-main">CONTRAT D’ENTRETIEN PISCINE / SPA</span>
-      <span class="doc-title-number">
-        ${contractRef ? "Réf. " + contractRef : "Sans référence"}
-      </span>
-      <div class="doc-info-block">
-        <div class="doc-info-row">
-          <span class="doc-info-label">Date :</span>
-          <span class="doc-info-value">${dateStr}</span>
-        </div>
-        <div class="doc-info-row">
-          <span class="doc-info-label">Lieu :</span>
-          <span class="doc-info-value">Nice</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="client-block">
-      <div class="client-inner-row">
-        <div class="client-col">
-          <div class="client-title">Client</div>
-          <p class="client-line">${[clientCivility, clientName].filter(Boolean).join(" ")}</p>
-          <p class="client-line">${clientAddress}</p>
-          ${clientPhone ? `<p class="client-line">Tél : ${clientPhone}</p>` : ""}
-          ${clientEmail ? `<p class="client-line">Email : ${clientEmail}</p>` : ""}
-        </div>
-        <div class="client-col right">
-          <div class="client-title">Lieu d’intervention</div>
-          <p class="client-line">${[siteCivility, siteName].filter(Boolean).join(" ")}</p>
-          <p class="client-line">${siteAddress}</p>
-        </div>
-      </div>
-    </div>
-
-    <table class="info-table">
-      <tr>
-        <th style="width:35%;">Type de bassin</th>
-        <td>${poolType}${treatment ? " – Traitement : " + treatment : ""}${volume ? " – Volume : " + volume + " m³" : ""}</td>
-      </tr>
-      <tr>
-        <th>Fréquence d’intervention</th>
-        <td>
-          ${frequency}${
-            preferredDay ? " – Jour privilégié : " + preferredDay : ""
-          }<br>
-          Période : du ${seasonStart} au ${seasonEnd}
-        </td>
-      </tr>
-      <tr>
-        <th>Facturation</th>
-        <td>
-          Mode : ${billingMode}<br>
-          Montant TTC : ${amount} €<br>
-          ${
-            paymentDetails
-              ? "Modalités : " + paymentDetails + "<br>"
-              : ""
-          }
-          TVA non applicable, article 293 B du CGI.
-        </td>
-      </tr>
-      ${
-        specificities
-          ? `<tr>
-        <th>Spécificités / accès</th>
-        <td>${specificities}</td>
-      </tr>`
-          : ""
-      }
-    </table>
-
-    <div class="contract-section">
-      <h3>1. Objet du contrat</h3>
-      <p>Le présent contrat a pour objet l’entretien régulier, la surveillance et le contrôle du bassin (piscine, spa ou jacuzzi) situé au lieu d’intervention ci-dessus désigné.</p>
-
-      <h4>2. Prestations incluses</h4>
-      <p>Dans le cadre des passages prévus au contrat, le prestataire réalise notamment&nbsp;:</p>
+  <!-- 4. Prestations incluses -->
+  <div class="section">
+    <div class="section-title">4. Prestations incluses</div>
+    <div class="block">
+      <p class="label">4.1 Prestations standards (sel / chlore)</p>
       <ul>
-        <li>Nettoyage des paniers de skimmer et du préfiltre de pompe.</li>
-        <li>Contrôle et nettoyage de la ligne d’eau si accessible.</li>
-        <li>Contrôle du système de filtration (pompe, filtre, manomètre, vannes, etc.).</li>
-        <li>Analyse de l’eau (pH, TAC, TH, chlore libre / redox selon installation).</li>
-        <li>Ajustement des réglages de filtration si nécessaire.</li>
-        <li>Contrôle visuel du local technique et des équipements de sécurité.</li>
-        ${
-          treatment && treatment.toLowerCase().includes("sel")
-            ? "<li>Contrôle et nettoyage de la cellule d’électrolyse (si l’installation le permet).</li>"
-            : ""
-        }
+        <li>Contrôle et nettoyage : paniers skimmer, préfiltre pompe, ligne d’eau, fond et parois (si robot absent ou HS).</li>
+        <li>Vérification du système de filtration.</li>
+        <li>Nettoyage filtre (sable, verre, cartouche) selon besoin.</li>
+        <li>Analyse complète de l’eau (pH / TAC / TH / Chlore libre / Redox).</li>
+        <li>Contrôle cellule électrolyse (piscine au sel le cas échéant).</li>
+        <li>Vérification pompes, vannes, canalisations, joints.</li>
+        <li>Contrôle volet / bâche / barrière si présents.</li>
+        <li>Conseils d’usage et ajustements nécessaires.</li>
       </ul>
 
-      <h4>3. Prestations hors forfait</h4>
-      <p>Ne sont pas inclus dans le présent contrat et feront l’objet d’un devis ou d’une facturation complémentaire&nbsp;:</p>
+      <p class="label" style="margin-top:4px;">4.2 Spa / Jacuzzi (si inclus)</p>
       <ul>
-        <li>Dépannages, réparations, recherche et traitement de fuites.</li>
-        <li>Remplacement de pièces (pompes, filtres, cellules, cartes électroniques, vannes, etc.).</li>
-        <li>Traitement choc et remise en état après eau verte, forte pollution ou défaut prolongé de traitement.</li>
-        <li>Nettoyage exceptionnel après intempéries importantes (tempête, grêle, sable du Sahara, inondation, etc.).</li>
-        <li>Toute intervention demandée en dehors du planning habituel de passages.</li>
+        <li>Vidange complète selon fréquence définie.</li>
+        <li>Nettoyage cuve, buses, cartouches.</li>
+        <li>Désinfection air/eau.</li>
+        <li>Contrôle soufflerie et chauffage.</li>
+        <li>Analyse de l’eau et dosage adapté.</li>
       </ul>
 
-      <h4>4. Produits de traitement</h4>
-      <p>Les produits de traitement (chlore choc, galets de chlore, sel, stabilisant, correcteurs de pH, anti-algues, floculants, etc.) ne sont pas inclus sauf mention contraire et sont facturés selon les tarifs en vigueur. Aucun produit n’est utilisé sans accord préalable du client ou de son représentant.</p>
-
-      <h4>5. Conditions d’accès</h4>
-      <p>Le client s’engage à garantir un accès libre, sécurisé et non encombré au bassin et au local technique (portes déverrouillées, animaux éventuellement isolés, absence d’obstacles majeurs). En cas d’accès impossible lors d’un passage prévu, le déplacement reste dû.</p>
-
-      <h4>6. Installations non conformes ou dangereuses</h4>
-      <p>En cas d’installation dangereuse, vétuste, non conforme ou présentant un risque (défaut électrique, fuite importante, structure fragilisée, matériel très dégradé), le prestataire pourra suspendre tout ou partie des prestations jusqu’à mise en conformité, après information du client.</p>
-
-      <h4>7. Responsabilités du client</h4>
-      <p>Le client s’engage à maintenir les installations en bon état, à signaler sans délai tout dysfonctionnement constaté et à ne pas modifier les réglages (filtration, horloges, vannes, coffrets électriques, etc.) sans concertation avec le prestataire. Il informe également le prestataire de toute intervention d’un tiers.</p>
-
-      <h4>8. Responsabilités du prestataire</h4>
-      <p>Le prestataire intervient selon les règles de l’art, avec du matériel adapté, et dispose d’une assurance Responsabilité Civile Professionnelle couvrant ses interventions dans le cadre du présent contrat.</p>
-
-      <h4>9. Durée et renouvellement</h4>
-      <p>Le présent contrat est conclu pour la période suivante&nbsp;: du ${seasonStart} au ${seasonEnd}. Sauf accord contraire, il est reconductible tacitement d’une année sur l’autre aux mêmes conditions, hors évolution de tarifs dûment notifiée au client au préalable.</p>
-
-      <h4>10. Conditions de règlement</h4>
-      <p>Le règlement des prestations s’effectue selon le mode défini ci-dessus (${billingMode}). Toute somme non réglée à échéance pourra donner lieu à l’application des pénalités légales de retard et, pour les professionnels, à l’indemnité forfaitaire de 40 € pour frais de recouvrement, conformément à l’article L441-10 du Code de commerce.</p>
-
-      <h4>11. Force majeure</h4>
-      <p>En cas de force majeure (intempéries exceptionnelles, catastrophes naturelles, coupures de courant prolongées, interdictions administratives, etc.), les prestations pourront être suspendues ou reportées sans que la responsabilité du prestataire ne puisse être engagée.</p>
-
-      <h4>12. Données personnelles</h4>
-      <p>Les données du client sont utilisées uniquement pour la gestion du présent contrat (interventions, facturation, suivi) et ne sont pas transmises à des tiers à des fins commerciales. Conformément à la réglementation en vigueur, le client dispose d’un droit d’accès, de rectification et de suppression sur simple demande.</p>
-
-      ${
-        notes
-          ? `<h4>13. Particularités / remarques</h4>
-             <p>${notes.replace(/\n/g, "<br>")}</p>`
-          : ""
-      }
+      <p class="label" style="margin-top:4px;">4.3 Hivernage / Remise en service</p>
+      <p>Hivernage actif ou passif et remise en service possibles selon option retenue et fiche technique associée.</p>
     </div>
   </div>
 
-  <div class="page-footer">
-    <div class="signatures">
-      <div class="signature-block">
-        <div class="signature-title">Le client</div>
-        <p>Signature précédée de la mention manuscrite&nbsp;:</p>
-        <p><em>« Lu et approuvé, bon pour accord »</em></p>
-        <p style="margin-top:10px;">Date : __________________</p>
-        <p style="margin-top:8px;">Signature :</p>
-      </div>
-      <div class="signature-block" style="text-align:right;">
-        <div class="signature-title">AquaClim Prestige</div>
-        <p>Le Blevennec Loïc</p>
-        <p>Signature et cachet de l’entreprise :</p>
-        <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+  <!-- 5. Clauses principales (résumé premium) -->
+  <div class="section">
+    <div class="section-title">5. Clauses principales</div>
+    <div class="block">
+      <p class="label">Prestations non incluses (hors forfait)</p>
+      <ul>
+        <li>Dépannage piscine ou climatisation, fuites, réparations hydrauliques.</li>
+        <li>Remplacement pompes / filtres / cellules / cartes électroniques.</li>
+        <li>Travaux nécessitant pièces détachées ou vidange complète du bassin.</li>
+        <li>Nettoyages lourds : eau verte, algues massives, tempête, sable du Sahara, etc.</li>
+      </ul>
+
+      <p class="label" style="margin-top:4px;">Produits & consommables</p>
+      <p>Les produits (chlore choc, sel, correcteurs pH, floculant, cartouches, etc.) sont fournis selon les conditions précisées au devis ou sur facture (inclus ou facturés au tarif en vigueur). Le prestataire utilise des produits professionnels conformes aux normes AFNOR.</p>
+
+      <p class="label" style="margin-top:4px;">Conditions d'accès – déplacement dû</p>
+      <p>Le client garantit un accès libre au bassin, au local technique et à une alimentation électrique fonctionnelle. En cas d’accès impossible le jour du passage prévu, le déplacement reste dû.</p>
+
+      <p class="label" style="margin-top:4px;">Installations non conformes – suspension</p>
+      <p>En cas d’installation dangereuse, fuyarde, obsolète ou manifestement inadaptée, AquaClim Prestige peut suspendre tout ou partie des interventions jusqu’à remise en conformité.</p>
+
+      <p class="label" style="margin-top:4px;">Responsabilités</p>
+      <ul>
+        <li>Le client s’engage à maintenir l’installation en bon état, à informer en cas de travaux ou de location saisonnière et à ne pas modifier les réglages sans accord.</li>
+        <li>Le prestataire intervient selon les règles professionnelles, conseille, informe et est couvert par une assurance RC Pro.</li>
+      </ul>
+
+      <p class="label" style="margin-top:4px;">Durée – renouvellement – résiliation</p>
+      <p>Le contrat est conclu pour la période indiquée ci-dessus. Sauf mention contraire, il peut être reconduit ou résilié avec un préavis de 30 jours, notamment en cas d’installation dangereuse, d’impayés répétés, d’absence d’accès ou de force majeure.</p>
+
+      <p class="label" style="margin-top:4px;">Données personnelles & confidentialité</p>
+      <p>Les données clients sont utilisées uniquement pour la gestion des interventions et contrats, ne sont jamais revendues et peuvent être rectifiées sur simple demande par email. AquaClim Prestige s’engage à ne pas divulguer codes d’accès, plans ou informations privées.</p>
+    </div>
+  </div>
+
+  <!-- 6. Tarifs & paiement -->
+  <div class="section">
+    <div class="section-title">6. Tarifs & paiement</div>
+    <div class="block">
+    ${
+  pr.tvaRate && pr.tvaRate > 0
+    ? `
+      <p>Montant HT estimatif : <strong>${format(pr.totalHT)}</strong></p>
+      <p>TVA (${pr.tvaRate.toFixed(2).replace(/\\.00$/, "")} %) : <strong>${format(pr.tvaAmount || 0)}</strong></p>
+      <p>Montant TTC estimatif pour la période : <strong>${format(pr.totalTTC || (pr.totalHT * (1 + pr.tvaRate / 100)))}</strong></p>
+    `
+    : pr.clientType === "syndic"
+    ? `
+      <p>Montant HT estimatif pour la période : <strong>${format(pr.totalHT)}</strong></p>
+      <p>TVA non applicable, article 293 B du CGI (montant soumis à évolution selon régime fiscal).</p>
+    `
+    : `
+      <p>Net à payer estimatif pour la période : <strong>${format(pr.totalHT)}</strong></p>
+      <p>TVA non applicable, article 293 B du CGI.</p>
+    `
+}
+
+      <p>Les modalités (mensualisation, facturation périodique, etc.) peuvent être précisées sur les factures associées.</p>
+    </div>
+  </div>
+
+  <!-- 7. Signature -->
+  <div class="section">
+    <div class="section-title">7. Signature des parties</div>
+    <div class="block">
+     <p>Fait à Nice, le ${pdfDateStr}</p>
+
+      <div class="signatures">
+        <div class="signature-block">
+          <div class="signature-title">Client / Syndic</div>
+          <p>Signature précédée de la mention : « Lu et approuvé, bon pour accord ».</p>
+        </div>
+        <div class="signature-block">
+          <div class="signature-title">AquaClim Prestige</div>
+          <p>Signature & cachet de l’entreprise</p>
+        </div>
       </div>
     </div>
   </div>
+
 </div>
 </body>
 </html>`;
@@ -5302,144 +5543,127 @@ function printContract(previewOnly) {
 
   printWindow.onload = function () {
     printWindow.focus();
-    if (!previewOnly) {
-      printWindow.print();
-    }
+    printWindow.print();
   };
 }
+function updateContractClientType(type) {
+  // on stocke "particulier" ou "syndic" dans ctClientType
+  const hidden = document.getElementById("ctClientType");
+  if (hidden) hidden.value = type;
 
-// =========================================
-// Aide : ajouter des mois à une date (YYYY-MM-DD)
-// =========================================
-function addMonthsToDate(dateStr, months) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  const day = d.getDate();
-  d.setMonth(d.getMonth() + Number(months));
-  // Ajustement fin de mois (ex : 31 → 30)
-  if (d.getDate() < day) d.setDate(0);
-  return d.toISOString().split("T")[0]; // format "YYYY-MM-DD"
-}
-
-// Été / hiver pour le calcul (ici : mai à septembre = été)
-function isSummerMonthIndex(m) {
-  // m = 0 (janvier) ... 11 (décembre)
-  return m >= 4 && m <= 8; // 4=mai, 8=septembre – tu peux ajuster si tu veux
-}
-
-// =========================================
-// CALCUL AUTOMATIQUE CONTRAT
-// =========================================
-function onContractAutoChange() {
-  const start = document.getElementById("contractCalcStart")?.value;
-  const duration = Number(document.getElementById("contractCalcDuration")?.value || 0);
-  const visitsWinter = Number(document.getElementById("contractCalcVisitsWinter")?.value || 0);
-  const visitsSummer = Number(document.getElementById("contractCalcVisitsSummer")?.value || 0);
-  const pricePerVisit = Number(document.getElementById("contractCalcPricePerVisit")?.value || 0);
-
-  const totalVisitsSpan = document.getElementById("contractCalcTotalVisits");
-  const totalAmountSpan = document.getElementById("contractCalcTotalAmount");
-  const seasonStartInput = document.getElementById("contractSeasonStart");
-  const seasonEndInput = document.getElementById("contractSeasonEnd");
-  const contractAmountInput = document.getElementById("contractAmount");
-
-  if (!start || !duration) {
-    if (totalVisitsSpan) totalVisitsSpan.textContent = "0";
-    if (totalAmountSpan) totalAmountSpan.textContent = "0,00 €";
-    return;
+  // afficher / cacher le bloc "Lieu d’intervention"
+  const siteSection = document.getElementById("ctSiteSection");
+  if (siteSection) {
+    if (type === "syndic") {
+      siteSection.classList.remove("hidden");
+    } else {
+      siteSection.classList.add("hidden");
+    }
   }
 
-  // 1) Calcul de la date de fin
-  const endDateStr = addMonthsToDate(start, duration);
-
-  // 2) Période Saison (champs type="month")
-  if (seasonStartInput) seasonStartInput.value = start.slice(0, 7);      // YYYY-MM
-  if (seasonEndInput) seasonEndInput.value = endDateStr.slice(0, 7);    // YYYY-MM
-
-  // 3) Calcul du nombre de passages (en fonction des mois été/hiver)
-  let totalVisits = 0;
-  let current = new Date(start);
-  const endDate = new Date(endDateStr);
-
-  // On se place au 1er du mois pour la boucle
-  current.setDate(1);
-  endDate.setDate(1);
-
-  while (current <= endDate) {
-    const m = current.getMonth(); // 0..11
-    totalVisits += isSummerMonthIndex(m) ? visitsSummer : visitsWinter;
-    current.setMonth(current.getMonth() + 1);
-  }
-
-  if (totalVisitsSpan) {
-    totalVisitsSpan.textContent = totalVisits.toString();
-  }
-
-  // 4) Calcul du montant
-  const totalAmount = totalVisits * pricePerVisit;
-  const totalAmountText = totalAmount.toLocaleString("fr-FR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  }) + " €";
-
-  if (totalAmountSpan) {
-    totalAmountSpan.textContent = totalAmountText;
-  }
-
-  // 5) On remplit aussi le champ "Montant TTC de la période"
-  if (contractAmountInput) {
-    contractAmountInput.value = totalAmount ? totalAmount.toFixed(2) : "";
+  // recalcul (tarifs particuliers / syndic)
+  if (typeof recomputeContract === "function") {
+    recomputeContract();
   }
 }
-function onContractVisitsModeChange() {
-  const mode = document.getElementById("contractVisitsMode")?.value || "standard";
-  const winInput = document.getElementById("contractCalcVisitsWinter");
-  const sumInput = document.getElementById("contractCalcVisitsSummer");
-  const customBlock = document.getElementById("customVisitsBlock");
 
-  if (!winInput || !sumInput || !customBlock) return;
+function initContractsUI() {
+  const root = document.getElementById("contractView");
+  if (!root) return;
 
-  if (mode === "standard") {
-    winInput.value = 1;  // hiver
-    sumInput.value = 2;  // été
-    customBlock.style.display = "none";
-  } else if (mode === "intensif") {
-    winInput.value = 2;
-    sumInput.value = 4;
-    customBlock.style.display = "none";
-  } else { // perso
-    if (!winInput.value) winInput.value = 1;
-    if (!sumInput.value) sumInput.value = 2;
-    customBlock.style.display = "block";
+  // Champs qui déclenchent un recalcul
+  const ids = [
+    "ctMode",
+    "ctPassHiver",
+    "ctPassEte",
+    "ctStartDate",
+    "ctDuration"
+  ];
+
+  ids.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    const evtName =
+      el.tagName === "INPUT" && (el.type === "number" || el.type === "date")
+        ? "input"
+        : "change";
+
+    el.addEventListener(evtName, recomputeContract);
+  });
+
+  // Synchronisation type de bassin -> prestation principale
+  const poolTypeEl = document.getElementById("ctPoolType");
+  const mainServiceEl = document.getElementById("ctMainService");
+
+  if (poolTypeEl && mainServiceEl) {
+    poolTypeEl.addEventListener("change", () => {
+      const v = poolTypeEl.value;
+      if (v === "piscine_sel") {
+        mainServiceEl.value = "piscine_sel";
+      } else if (v === "piscine_chlore") {
+        mainServiceEl.value = "piscine_chlore";
+      } else {
+        // Spa / jacuzzi -> entretien_jacuzzi
+        mainServiceEl.value = "entretien_jacuzzi";
+      }
+      recomputeContract();
+    });
+
+    // init à l'ouverture
+    poolTypeEl.dispatchEvent(new Event("change"));
   }
 
-  onContractAutoChange();
+  // Options forfaitaires (remise en route / hivernage)
+  const opening = document.getElementById("ctIncludeOpening");
+  const winter = document.getElementById("ctIncludeWinter");
+  if (opening) opening.addEventListener("change", recomputeContract);
+  if (winter) winter.addEventListener("change", recomputeContract);
+
+  // Radios Particulier / Syndic (si tu les ajoutes ensuite au HTML)
+  const ctPartRadio = document.getElementById("ctClientParticulier");
+  const ctSynRadio = document.getElementById("ctClientSyndic");
+  const hiddenType = document.getElementById("ctClientType");
+
+  if (ctPartRadio) {
+    ctPartRadio.addEventListener("change", () => {
+      if (ctPartRadio.checked) {
+        updateContractClientType("particulier");
+      }
+    });
+  }
+
+  if (ctSynRadio) {
+    ctSynRadio.addEventListener("change", () => {
+      if (ctSynRadio.checked) {
+        updateContractClientType("syndic");
+      }
+    });
+  }
+
+  // état initial
+  const initialType = (hiddenType && hiddenType.value) || "particulier";
+  updateContractClientType(initialType);
+
+  // 1er calcul
+  recomputeContract();
 }
+
 
 
 // ------- Init -------
 window.onload = function () {
-  loadCustomTemplates();   // charge les prestations perso (Option A)
-  loadCustomTexts();       // applique les textes détaillés personnalisés
+  loadCustomTemplates();   // prestations perso
+  loadCustomTexts();       // textes détaillés
   setTVA(0);
-refreshClientDatalist();
+  refreshClientDatalist();
 
-  switchListType("devis");
-  initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
+  initFirebase();          // 🔥 Firestore
+  initContractsUI();       // 🟦 Contrats (écouteurs + calculs)
+
+  switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

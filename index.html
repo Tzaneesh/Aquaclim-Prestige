@@ -32,60 +32,29 @@
   </header>
 
   <!-- ONGLET DEVIS / FACTURES -->
-<div class="top-nav no-print">
-  <button
-    id="tabDevis"
-    class="btn tab-btn active"
-    onclick="switchListType('devis')"
-  >
-    📄 Devis
-  </button>
+  <div class="top-nav no-print">
+    <button id="tabDevis" class="btn tab-btn active" onclick="switchListType('devis')">📄 Devis</button>
+<button id="tabContrats" class="btn tab-btn" onclick="switchListType('contrat')">📘 Contrats</button>
 
-  <!-- 👉 Nouveau bouton contrat ICI -->
-  <button
-    id="tabContrat"
-    class="btn tab-btn"
-    type="button"
-    onclick="openContractView()"
-  >
-    📘 Contrat Piscine / Spa
-  </button>
-
-  <button
-    id="tabFactures"
-    class="btn tab-btn"
-    onclick="switchListType('facture')"
-  >
-    💰 Factures
-  </button>
-</div>
-
+    <button id="tabFactures" class="btn tab-btn" onclick="switchListType('facture')">💰 Factures</button>
+  </div>
 
   <!-- LISTE DES DOCUMENTS -->
   <section id="listView">
 
-  <div class="actions no-print">
-  <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">
-    ➕ Nouveau devis
-  </button>
+    <div class="actions no-print">
+      <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
+      <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
 
-  <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">
-    ➕ Nouvelle facture
-  </button>
-
-  <button class="btn btn-devis tarifs-button" onclick="openTarifsPanel()">
-    📋 Tarifs prestations
-  </button>
-
-  <button
-    class="btn btn-primary"
-    type="button"
-    onclick="openClientsListPopup()"
-  >
-    👥 Clients
-  </button>
-</div>
-
+      <button class="btn btn-devis tarifs-button" onclick="openTarifsPanel()">📋 Tarifs prestations</button>
+<button
+  class="btn btn-primary"
+  type="button"
+  onclick="openClientsListPopup()"
+>
+  👥 Clients
+</button>
+    </div>
 
     <!-- PANEL TARIFS -->
     <div id="tarifsPanel" class="card no-print hidden">
@@ -209,7 +178,7 @@
     <div class="actions no-print">
       <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
       <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
-      <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+      <button class="btn action-button" onclick="openPrintable()">🖨️ PDF</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
       <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
@@ -482,276 +451,296 @@
       <!-- ACTIONS BAS -->
       <div class="form-actions no-print">
         <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
-        <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+        <button class="btn action-button" onclick="openPrintable()">🖨️ PDF</button>
         <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
       </div>
 
     </div>
   </section>
-    <!-- PAGE CONTRAT PISCINE / SPA -->
-  <section id="contractView" class="hidden">
+<!-- ========================================================= -->
+<!-- ===============   PAGE  CONTRAT PISCINE/SPA   ============ -->
+<!-- ========================================================= -->
 
-<div class="actions no-print">
-  <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
-  <button class="btn action-button" type="button" onclick="saveContract()">💾 Enregistrer le contrat</button>
-  <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
+<section id="contractView" class="hidden">
+
+  <div class="actions no-print" style="margin-bottom:20px;">
+    <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
+    <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
+    <button class="btn btn-primary" onclick="openContractPDF()">🖨️ PDF</button>
+    <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
+  </div>
+
+  <div class="card">
+    <div class="contract-header-blue">
+  <h2>🟦 Contrat d’entretien Piscine / Spa — Version Premium</h2>
 </div>
 
 
-    <div class="card contract-card">
-      <h2>Contrat d’entretien Piscine / Spa</h2>
-      <p class="contract-intro">
-        Ce formulaire génère un contrat d’entretien complet prêt à être signé par le client
-        (particulier ou syndic). Les champs ci-dessous seront intégrés automatiquement dans le PDF.
-      </p>
+    <!-- ================= INFOS CLIENT ================= -->
+    <h3 class="section-title">1. Informations client</h3>
 
-      <!-- Infos client -->
-      <h3 class="section-title">1. Informations client</h3>
-      <div class="row contract-grid">
-        <div class="form-group">
-          <label>Civilité</label>
-          <select id="contractClientCivility">
-            <option value="">—</option>
-            <option value="Monsieur">Monsieur</option>
-            <option value="Madame">Madame</option>
-            <option value="Monsieur et Madame">Monsieur et Madame</option>
-            <option value="Société">Société</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Nom / Raison sociale *</label>
-          <input type="text" id="contractClientName" placeholder="Ex : M. Dupont, Syndic Martin & Associés">
-        </div>
-
-        <div class="form-group">
-          <label>Adresse *</label>
-          <input type="text" id="contractClientAddress" placeholder="Adresse de facturation">
-        </div>
-
-        <div class="form-group">
-          <label>Téléphone</label>
-          <input type="tel" id="contractClientPhone">
-        </div>
-
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="contractClientEmail">
-        </div>
-
-        <div class="form-group">
-          <label>Référence contrat (facultatif)</label>
-          <input type="text" id="contractReference" placeholder="Ex : CTR-2025-001">
-        </div>
-      </div>
-
-      <!-- Lieu d’intervention -->
-      <h3 class="section-title">2. Lieu d’intervention</h3>
-      <div class="row contract-grid">
-        <div class="form-group">
-          <label>Civilité lieu</label>
-          <select id="contractSiteCivility">
-            <option value="">—</option>
-            <option value="Chez Monsieur">Chez Monsieur</option>
-            <option value="Chez Madame">Chez Madame</option>
-            <option value="Appartement Monsieur">Appartement Monsieur</option>
-            <option value="Appartement Madame">Appartement Madame</option>
-            <option value="Villa Monsieur">Villa Monsieur</option>
-            <option value="Villa Madame">Villa Madame</option>
-            <option value="Résidence">Résidence</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Nom sur place *</label>
-          <input type="text" id="contractSiteName" placeholder="Ex : Mme Dupont Élise">
-        </div>
-
-        <div class="form-group">
-          <label>Adresse du bassin *</label>
-          <input type="text" id="contractSiteAddress" placeholder="Adresse complète du bassin / résidence">
-        </div>
-      </div>
-
-      <!-- Bassin & technique -->
-      <h3 class="section-title">3. Caractéristiques du bassin</h3>
-      <div class="row contract-grid">
-        <div class="form-group">
-          <label>Type de bassin *</label>
-          <select id="contractPoolType">
-            <option value="">—</option>
-            <option value="piscine au chlore">Piscine au chlore</option>
-            <option value="piscine au sel">Piscine au sel</option>
-            <option value="spa">Spa / Jacuzzi</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Traitement / équipement principal</label>
-          <select id="contractTreatment">
-            <option value="">—</option>
-            <option value="traitement manuel">Traitement manuel</option>
-            <option value="électrolyseur au sel">Électrolyseur au sel</option>
-            <option value="régulation automatique pH / redox">Régulation automatique pH / redox</option>
-            <option value="autre équipement spécifique">Autre (précisé en observation)</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Volume approximatif</label>
-          <input type="text" id="contractVolume" placeholder="Ex : 40 m³">
-        </div>
-
-        <div class="form-group">
-          <label>Particularités</label>
-          <input type="text" id="contractSpecificities" placeholder="Couverture, volet, débordement, local technique difficile d’accès…">
-        </div>
-      </div>
-
-       <!-- Fréquence & période -->
-      <h3 class="section-title">4. Fréquence & période d’intervention</h3>
-      <div class="row contract-grid">
-
-        <!-- Début + durée servent aussi au calcul -->
-        <div class="form-group">
-          <label>Début de contrat *</label>
-          <input type="date" id="contractCalcStart" onchange="onContractAutoChange()">
-        </div>
-
-        <div class="form-group">
-          <label>Durée du contrat</label>
-          <select id="contractCalcDuration" onchange="onContractAutoChange()">
-            <option value="4">4 mois</option>
-            <option value="5">5 mois</option>
-            <option value="6" selected>6 mois</option>
-            <option value="12">12 mois</option>
-          </select>
-        </div>
-
-        <!-- Presets simples -->
-        <div class="form-group">
-          <label>Mode de passages *</label>
-          <select id="contractVisitsMode" onchange="onContractVisitsModeChange()">
-            <option value="standard" selected>Standard : 1/mois hiver – 2/mois été</option>
-            <option value="intensif">Intensif : 2/mois hiver – 4/mois été</option>
-            <option value="perso">Personnalisé</option>
-          </select>
-        </div>
-
-        <!-- Valeurs détaillées, auto ou personnalisées -->
-        <div class="form-group" id="customVisitsBlock" style="display:none;">
-          <label>Passages par mois (hiver / été)</label>
-          <div style="display:flex; gap:8px;">
-            <input type="number" id="contractCalcVisitsWinter" min="0" step="1" value="1" oninput="onContractAutoChange()">
-            <input type="number" id="contractCalcVisitsSummer" min="0" step="1" value="2" oninput="onContractAutoChange()">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Jour / créneau souhaité</label>
-          <input type="text" id="contractPreferredDay" placeholder="Ex : Le mardi matin, hors week-end et jours fériés">
-        </div>
-
-        <!-- Période affichée automatiquement (lecture seule) -->
-        <div class="form-group">
-          <label>Période – début</label>
-          <input type="month" id="contractSeasonStart" readonly>
-        </div>
-
-        <div class="form-group">
-          <label>Période – fin</label>
-          <input type="month" id="contractSeasonEnd" readonly>
-        </div>
-      </div>
-
-
-       <!-- Montant & facturation -->
-      <h3 class="section-title">5. Montant du contrat</h3>
-
-      <!-- 🔢 CALCUL AUTOMATIQUE -->
-      <div class="row contract-grid">
-        <div class="form-group">
-          <label>Début de contrat</label>
-          <input type="date" id="contractCalcStart" onchange="onContractAutoChange()">
-        </div>
-
-        <div class="form-group">
-          <label>Durée (en mois)</label>
-          <select id="contractCalcDuration" onchange="onContractAutoChange()">
-            <option value="4">4 mois</option>
-            <option value="5">5 mois</option>
-            <option value="6" selected>6 mois</option>
-            <option value="12">12 mois</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Passages / mois en hiver</label>
-          <input type="number" id="contractCalcVisitsWinter" min="0" step="1" value="1" oninput="onContractAutoChange()">
-        </div>
-
-        <div class="form-group">
-          <label>Passages / mois en été</label>
-          <input type="number" id="contractCalcVisitsSummer" min="0" step="1" value="2" oninput="onContractAutoChange()">
-        </div>
-
-        <div class="form-group">
-          <label>Prix HT par passage</label>
-          <input type="number" id="contractCalcPricePerVisit" step="0.01" value="70" oninput="onContractAutoChange()">
-        </div>
-      </div>
-
-      <!-- Résumé automatique -->
-      <div class="totals" style="margin-top:10px;">
-        <div class="total-line">
-          <span>Nombre total de passages :</span>
-          <span id="contractCalcTotalVisits">0</span>
-        </div>
-        <div class="total-line grand-total">
-          <span>Montant total estimé :</span>
-          <span id="contractCalcTotalAmount">0,00 €</span>
-        </div>
-      </div>
-
-      <!-- Zone de facturation (remplie automatiquement mais modifiable) -->
-      <div class="row contract-grid" style="margin-top:15px;">
-        <div class="form-group">
-          <label>Mode de facturation *</label>
-          <select id="contractBillingMode">
-            <option value="">—</option>
-            <option value="mensuelle">Facturation mensuelle</option>
-            <option value="trimestrielle">Facturation trimestrielle</option>
-            <option value="annuelle">Facturation annuelle</option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label>Montant TTC de la période *</label>
-          <input type="number" id="contractAmount" step="0.01" placeholder="Ex : 1800">
-        </div>
-
-        <div class="form-group">
-          <label>Précisions de règlement</label>
-          <input type="text" id="contractPaymentDetails" placeholder="Ex : Paiement à réception de facture, par virement">
-        </div>
-      </div>
-
-
-      <!-- Observations -->
-      <h3 class="section-title">6. Observations / clauses particulières</h3>
+    <div class="row">
       <div class="form-group">
-        <textarea id="contractNotes" placeholder="Ex : Bassin utilisé par copropriété, attention aux horaires de calme, local technique accessible par clé…"></textarea>
+        <label>Civilité</label>
+        <select id="ctClientCivility">
+          <option value="">—</option>
+          <option value="Monsieur">Monsieur</option>
+          <option value="Madame">Madame</option>
+          <option value="Société">Société</option>
+        </select>
       </div>
 
-<div class="form-actions no-print">
-  <button class="btn action-button" type="button" onclick="saveContract()">💾 Enregistrer le contrat</button>
-  <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
-  <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
+      <div class="form-group">
+        <label>Nom / Raison sociale *</label>
+        <input type="text" id="ctClientName" required>
+      </div>
+
+      <div class="form-group">
+        <label>Adresse *</label>
+        <input type="text" id="ctClientAddress">
+      </div>
+
+      <div class="form-group">
+        <label>Téléphone</label>
+        <input type="text" id="ctClientPhone">
+      </div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="ctClientEmail">
+      </div>
+
+      <div class="form-group">
+        <label>Référence contrat (optionnel)</label>
+        <input type="text" id="ctReference">
+      </div>
 </div>
 
+
+
+
+   <!-- ================= LIEU ================= -->
+<div id="ctSiteSection">
+  <h3 class="section-title">2. Lieu d’intervention</h3>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Civilité du lieu</label>
+      <select id="ctSiteCivility">
+        <option value="">—</option>
+        <option value="Chez Monsieur">Chez Monsieur</option>
+        <option value="Chez Madame">Chez Madame</option>
+        <option value="Appartement Monsieur">Appartement Monsieur</option>
+        <option value="Appartement Madame">Appartement Madame</option>
+        <option value="Villa Monsieur">Villa Monsieur</option>
+        <option value="Villa Madame">Villa Madame</option>
+        <option value="Résidence">Résidence</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Nom sur place *</label>
+      <input type="text" id="ctSiteName">
+    </div>
+
+    <div class="form-group">
+      <label>Adresse du bassin *</label>
+      <input type="text" id="ctSiteAddress">
+    </div>
+  </div>
+</div>
+
+
+
+    <!-- ================= BASSIN ================= -->
+    <h3 class="section-title">3. Caractéristiques du bassin</h3>
+
+    <div class="row">
+<div class="form-group">
+  <label>Type de bassin</label>
+  <select id="ctPoolType">
+    <option value="piscine_chlore">🏊 Piscine au chlore (traitement classique)</option>
+    <option value="piscine_sel">🌊 Piscine au sel (électrolyseur)</option>
+    <option value="spa">🛁 Spa / Jacuzzi</option>
+  </select>
+</div>
+
+
+ <div class="form-group">
+  <label>Traitement / équipement principal</label>
+  <select id="ctEquipment">
+    <option value="">—</option>
+    <option value="Traitement manuel">Traitement manuel</option>
+    <option value="Électrolyseur au sel">Électrolyseur au sel</option>
+    <option value="Régulation automatique pH / redox">Régulation automatique pH / redox</option>
+    <option value="Autre (précisé en observation)">Autre (précisé en observation)</option>
+  </select>
+</div>
+
+
+<div class="form-group">
+  <label>Volume approximatif (m³)</label>
+  <input type="text" id="ctVolume">
+</div>
+
+      <div class="form-group">
+        <label>Particularités</label>
+        <textarea id="ctNotes" placeholder="Accès difficile, horaires, animaux…"></textarea>
+      </div>
+    </div>
+
+
+    <!-- ================= FRÉQUENCE ================= -->
+    <h3 class="section-title">4. Fréquence & planification</h3>
+
+    <div class="row">
+<div class="form-group">
+  <label>Type de client</label>
+  <div class="client-type-row">
+    <label class="client-type-option">
+      <input type="radio" name="ctClientTypeChoice" value="particulier" id="ctClientParticulier" checked>
+      Particulier
+    </label>
+    <label class="client-type-option">
+      <input type="radio" name="ctClientTypeChoice" value="syndic" id="ctClientSyndic">
+      Syndic / Agence
+    </label>
+  </div>
+  <!-- Valeur utilisée par le JS (comme avant) -->
+  <input type="hidden" id="ctClientType" value="particulier">
+</div>
+
+
+ <div class="form-group">
+  <label>Prestation principale (auto pour le tarif)</label>
+  <select id="ctMainService" disabled>
+    <option value="piscine_chlore">Piscine (Chlore)</option>
+    <option value="piscine_sel">Piscine (Sel)</option>
+    <option value="entretien_jacuzzi">Spa / Jacuzzi</option>
+  </select>
+</div>
+
+
+      <div class="form-group">
+        <label>Mode de passages</label>
+        <select id="ctMode">
+          <option value="standard">Standard : 1/mois hiver – 2/mois été</option>
+          <option value="intensif">Intensif : 2/mois hiver – 4/mois été</option>
+          <option value="custom">Personnalisé</option>
+        </select>
+      </div>
+
+<div class="form-group">
+  <label>Passages hiver (oct → avr)</label>
+  <select id="ctPassHiver">
+    <option value="0">0 – Sur demande</option>
+    <option value="1">1 passage / mois</option>
+    <option value="2">2 passages / mois</option>
+    <option value="4">4 passages / mois</option>
+  </select>
+</div>
+
+<div class="form-group">
+  <label>Passages été (mai → sept)</label>
+  <select id="ctPassEte">
+    <option value="0">0 – Sur demande</option>
+    <option value="1">1 passage / mois</option>
+    <option value="2" selected>2 passages / mois</option>
+    <option value="4">4 passages / mois</option>
+  </select>
+</div>
 
     </div>
-  </section>
+
+    <div class="row">
+      <div class="form-group">
+        <label>Début du contrat</label>
+        <input type="date" id="ctStartDate">
+      </div>
+
+ <div class="form-group">
+  <label>Durée du contrat</label>
+  <select id="ctDuration">
+    <option value="4">4 mois – Saison été</option>
+    <option value="5">5 mois – Saison étendue</option>
+    <option value="6">6 mois – Saison longue</option>
+    <option value="12" selected>12 mois – Annuel</option>
+  </select>
+</div>
+
+
+      <div class="form-group">
+        <label>Fin du contrat (auto)</label>
+        <input type="text" id="ctEndDate" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Période couverte</label>
+        <input type="text" id="ctPeriod" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Total passages (auto)</label>
+        <input type="text" id="ctTotalPassages" readonly>
+      </div>
+    </div>
+
+
+      <!-- ================= TARIFS ================= -->
+    <h3 class="section-title">5. Tarifs & calcul automatique</h3>
+
+    <div class="row">
+      <div class="form-group">
+        <label>Prix unitaire (auto)</label>
+        <input type="text" id="ctUnitPrice" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Montant total HT</label>
+        <input type="text" id="ctTotalHT" readonly>
+      </div>
+    </div>
+<div class="row">
+  <div class="form-group">
+    <label>Options forfaitaires</label>
+
+    <div class="options-box">
+      <label class="option-item">
+        <input type="checkbox" id="ctIncludeOpening">
+        <span>Remise en route avant été</span>
+      </label>
+
+      <label class="option-item">
+        <input type="checkbox" id="ctIncludeWinter">
+        <span>Hivernage</span>
+      </label>
+    </div>
+
+  </div>
+</div>
+
+
+    <div class="contract-summary">
+      <h4>Récapitulatif</h4>
+      <p><strong>Visites :</strong> <span id="ctRecapPassages">0</span></p>
+      <p><strong>Prix unitaire :</strong> <span id="ctRecapPrice">0 €</span></p>
+      <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
+    </div>
+
+    <!-- ACTIONS BAS CONTRAT -->
+    <div class="form-actions no-print">
+      <button class="btn action-button" onclick="saveContract()">💾 Enregistrer</button>
+      <button class="btn action-button" onclick="openContractPDF()">🖨️ PDF</button>
+<button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
+
+      <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
+    </div>
+
+  </div> <!-- fin .card -->
+
+</section> <!-- fin #contractView -->
+
+
 
   <!-- ================= POPUP CONFIRM CUSTOM ================= -->
   <div id="confirmOverlay" class="confirm-overlay hidden">
@@ -831,22 +820,6 @@
     </button>
   </div>
 </div>
-/* ===== PAGE CONTRAT ===== */
-
-.contract-card {
-  max-width: 980px;
-  margin: 0 auto 20px auto;
-}
-
-.contract-intro {
-  font-size: 13px;
-  color: #555;
-  margin-bottom: 12px;
-}
-
-.contract-grid .form-group {
-  margin-bottom: 12px;
-}
 
 
   </div> <!-- .popup -->
@@ -858,12 +831,4 @@
 <script src="app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
 
