@@ -491,10 +491,12 @@
     <!-- PAGE CONTRAT PISCINE / SPA -->
   <section id="contractView" class="hidden">
 
-    <div class="actions no-print">
-      <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
-      <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
-    </div>
+<div class="actions no-print">
+  <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
+  <button class="btn action-button" type="button" onclick="saveContract()">💾 Enregistrer le contrat</button>
+  <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
+</div>
+
 
     <div class="card contract-card">
       <h2>Contrat d’entretien Piscine / Spa</h2>
@@ -666,10 +668,12 @@
         <textarea id="contractNotes" placeholder="Ex : Bassin utilisé par copropriété, attention aux horaires de calme, local technique accessible par clé…"></textarea>
       </div>
 
-      <div class="form-actions no-print">
-        <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
-        <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
-      </div>
+<div class="form-actions no-print">
+  <button class="btn action-button" type="button" onclick="saveContract()">💾 Enregistrer le contrat</button>
+  <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
+  <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
+</div>
+
 
     </div>
   </section>
@@ -779,6 +783,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
