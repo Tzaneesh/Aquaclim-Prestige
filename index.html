@@ -608,35 +608,62 @@
         </div>
       </div>
 
-      <!-- Fréquence & période -->
+       <!-- Fréquence & période -->
       <h3 class="section-title">4. Fréquence & période d’intervention</h3>
       <div class="row contract-grid">
+
+        <!-- Début + durée servent aussi au calcul -->
         <div class="form-group">
-          <label>Fréquence des passages *</label>
-          <select id="contractFrequency">
-            <option value="">—</option>
-            <option value="1 passage par semaine">1 passage par semaine</option>
-            <option value="2 passages par semaine">2 passages par semaine</option>
-            <option value="1 passage toutes les deux semaines">1 passage toutes les deux semaines</option>
-            <option value="1 passage par mois">1 passage par mois</option>
+          <label>Début de contrat *</label>
+          <input type="date" id="contractCalcStart" onchange="onContractAutoChange()">
+        </div>
+
+        <div class="form-group">
+          <label>Durée du contrat</label>
+          <select id="contractCalcDuration" onchange="onContractAutoChange()">
+            <option value="4">4 mois</option>
+            <option value="5">5 mois</option>
+            <option value="6" selected>6 mois</option>
+            <option value="12">12 mois</option>
           </select>
         </div>
 
+        <!-- Presets simples -->
         <div class="form-group">
-          <label>Période – début *</label>
-          <input type="month" id="contractSeasonStart">
+          <label>Mode de passages *</label>
+          <select id="contractVisitsMode" onchange="onContractVisitsModeChange()">
+            <option value="standard" selected>Standard : 1/mois hiver – 2/mois été</option>
+            <option value="intensif">Intensif : 2/mois hiver – 4/mois été</option>
+            <option value="perso">Personnalisé</option>
+          </select>
         </div>
 
-        <div class="form-group">
-          <label>Période – fin *</label>
-          <input type="month" id="contractSeasonEnd">
+        <!-- Valeurs détaillées, auto ou personnalisées -->
+        <div class="form-group" id="customVisitsBlock" style="display:none;">
+          <label>Passages par mois (hiver / été)</label>
+          <div style="display:flex; gap:8px;">
+            <input type="number" id="contractCalcVisitsWinter" min="0" step="1" value="1" oninput="onContractAutoChange()">
+            <input type="number" id="contractCalcVisitsSummer" min="0" step="1" value="2" oninput="onContractAutoChange()">
+          </div>
         </div>
 
         <div class="form-group">
           <label>Jour / créneau souhaité</label>
           <input type="text" id="contractPreferredDay" placeholder="Ex : Le mardi matin, hors week-end et jours fériés">
         </div>
+
+        <!-- Période affichée automatiquement (lecture seule) -->
+        <div class="form-group">
+          <label>Période – début</label>
+          <input type="month" id="contractSeasonStart" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Période – fin</label>
+          <input type="month" id="contractSeasonEnd" readonly>
+        </div>
       </div>
+
 
        <!-- Montant & facturation -->
       <h3 class="section-title">5. Montant du contrat</h3>
@@ -831,6 +858,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
