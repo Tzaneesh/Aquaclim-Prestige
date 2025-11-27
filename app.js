@@ -429,6 +429,9 @@ function addCurrentClient() {
   const phone = document.getElementById("clientPhone").value.trim();
   const email = document.getElementById("clientEmail").value.trim();
 
+  // 🛠️ CORRECTION : Déclaration de la variable 'civility' manquante
+  const civility = document.getElementById("clientCivility")?.value || ""; 
+
   if (!name) {
     // popup jolie au lieu d'alert
     showConfirmDialog({
@@ -446,13 +449,8 @@ function addCurrentClient() {
   const existingIndex = clients.findIndex(
     c => (c.name || "").toLowerCase() === name.toLowerCase()
   );
-// Déclare la variable 'civility' et récupère sa valeur
-const civility = document.getElementById("clientCivility")?.value || ""; 
 
-const newClient = { civility, name, address, phone, email }; 
-// ... le reste de la fonction
-const newClient = { civility, name, address, phone, email };
-
+  const newClient = { civility, name, address, phone, email }; // Maintenant 'civility' est bien définie
 
   let title;
   let message;
@@ -5365,6 +5363,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
