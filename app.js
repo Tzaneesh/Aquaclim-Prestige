@@ -668,6 +668,34 @@ function editClient(index) {
 
   document.getElementById("editClientForm").classList.remove("hidden");
 }
+function createPoolContract() {
+  const newId = "CT-" + Date.now();
+
+  const contract = {
+    id: newId,
+    type: "contrat",
+    number: "CTR-" + new Date().getFullYear() + "-" + String(Math.floor(Math.random()*999)).padStart(3,"0"),
+    date: new Date().toISOString().split("T")[0],
+    client: {
+      civility: "",
+      name: "",
+      address: "",
+      phone: "",
+      email: ""
+    },
+    siteName: "",
+    siteCivility: "",
+    siteAddress: "",
+    prestations: [],
+    notes: "",
+    validityDate: "",
+    paid: false
+  };
+
+  saveDocument(contract);
+  loadDocument(contract.id);
+}
+
 function openAddClientFromList() {
   // Vide les champs
   document.getElementById("editClientName").value = "";
@@ -3575,16 +3603,21 @@ function openPrintable(id, previewOnly) {
     (p) => p.kind === "produits" || p.kind === "fournitures"
   );
 
-  const isDevis = doc.type === "devis";
-  const isPaidInvoice = !isDevis && doc.paid;
-  const isUnpaidInvoice = !isDevis && !doc.paid;
+const isDevis = doc.type === "devis";
+const isContrat = doc.type === "contrat";
+const isPaidInvoice = !isDevis && !isContrat && doc.paid;
+const isUnpaidInvoice = !isDevis && !isContrat && !doc.paid;
 
-  const titleColor = isDevis
-    ? "#1a74d9"
-    : doc.paid
-    ? "#1b5e20"
-    : "#1a74d9";
-  const conditionsType = doc.conditionsType || "particulier";
+const titleColor = isContrat
+  ? "#0d47a1" // bleu plus sérieux pour les contrats
+  : isDevis
+  ? "#1a74d9"
+  : doc.paid
+  ? "#1b5e20"
+  : "#1a74d9";
+
+const conditionsType = doc.conditionsType || "particulier";
+
 
   const formatEuroFR = (value) =>
     (Number(value) || 0).toLocaleString("fr-FR", {
@@ -3903,12 +3936,95 @@ function openPrintable(id, previewOnly) {
     : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
 
   const printWindow = window.open("", "_blank");
+  // ========= BLOC CONTRAT PISCINE / SPA IMPRIMÉ =========
+  let contratHtml = "";
+  if (isContrat) {
+    contratHtml = `
+      <div class="contract-block">
+
+        <h3>Contrat d’entretien piscine / spa</h3>
+
+        <p><strong>Prestataire :</strong> AquaClim Prestige – Le Blevennec Loïc<br>
+        2 avenue Cauvin, 06100 Nice – 06 03 53 77 73 – aquaclimprestige@gmail.com<br>
+        SIRET : XXXXXXXXXXXXX – RC Pro : disponible sur demande</p>
+
+        <h4>1. Objet du contrat</h4>
+        <p>Le présent contrat a pour objet l’entretien, la surveillance et le contrôle de la piscine, du spa ou du jacuzzi situés au lieu d’intervention indiqué.</p>
+
+        <h4>2. Prestations incluses</h4>
+        <ul>
+          <li>Nettoyage paniers skimmer</li>
+          <li>Nettoyage préfiltre pompe</li>
+          <li>Nettoyage ligne d’eau</li>
+          <li>Analyse complète de l’eau (pH, TAC, TH, chlore / redox)</li>
+          <li>Contrôle système de filtration</li>
+          <li>Contrôle cellule d’électrolyse (si piscine au sel)</li>
+          <li>Vérification des pompes, vannes, canalisation, local technique</li>
+        </ul>
+
+        <h4>3. Prestations hors forfait</h4>
+        <ul>
+          <li>Dépannages, réparations, fuites</li>
+          <li>Remplacement de pièces (pompes, filtres, cellules, cartes, etc.)</li>
+          <li>Traitement choc en cas d’algues ou d’eau verte</li>
+          <li>Nettoyage spécifique après intempéries (tempête, sable du Sahara, etc.).</li>
+        </ul>
+
+        <h4>4. Produits</h4>
+        <p>Les produits de traitement (chlore choc, sel, stabilisant, correcteurs pH, anti-algues, etc.) ne sont pas inclus sauf mention contraire et sont facturés au tarif en vigueur.</p>
+
+        <h4>5. Conditions d’accès</h4>
+        <p>Le client s’engage à garantir un accès libre, sécurisé et non encombré au bassin et au local technique. En cas d’accès impossible lors du passage prévu, le déplacement reste dû.</p>
+
+        <h4>6. Installations non conformes</h4>
+        <p>En cas d’installation dangereuse, vétuste, non conforme ou présentant un risque (fuites importantes, défaut électrique, matériel très dégradé), le prestataire pourra suspendre les prestations jusqu’à mise en conformité.</p>
+
+        <h4>7. Responsabilités du client</h4>
+        <p>Le client s’engage à maintenir les installations en bon état, à informer le prestataire de toute intervention d’un tiers et à respecter les consignes d’utilisation communiquées.</p>
+
+        <h4>8. Responsabilités du prestataire</h4>
+        <p>Le prestataire intervient selon les règles de l’art, avec du matériel adapté, et dispose d’une assurance Responsabilité Civile Professionnelle.</p>
+
+        <h4>9. Durée et renouvellement</h4>
+        <p>Le présent contrat est conclu pour une durée d’un an, du ____ / ____ / ____ au ____ / ____ / ____, avec reconduction tacite sauf résiliation 30 jours avant l’échéance.</p>
+
+        <h4>10. Conditions de règlement</h4>
+        <p>Paiement à réception de facture (mensuelle / trimestrielle / annuelle selon accord). Toute somme non réglée donne lieu à l’application des pénalités légales et de l’indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).</p>
+
+        <h4>11. Force majeure</h4>
+        <p>En cas de force majeure (tempêtes, grêle, inondations, coupures de courant prolongées, interdiction administrative), les prestations pourront être suspendues ou reportées sans responsabilité du prestataire.</p>
+
+        <h4>12. Données personnelles</h4>
+        <p>Les données du client sont utilisées uniquement pour la gestion du présent contrat et ne sont pas transmises à des tiers à des fins commerciales. Le client dispose d’un droit d’accès, de rectification et de suppression sur simple demande.</p>
+
+        <h4>13. Signatures</h4>
+
+        <table style="width:100%; margin-top:15px;">
+          <tr>
+            <td style="width:50%; vertical-align:top;">
+              <strong>Client / Syndic :</strong><br>
+              (Signature précédée de “Lu et approuvé, bon pour accord”)<br><br>
+              Signature : __________________________
+            </td>
+
+            <td style="width:50%; vertical-align:top; text-align:right;">
+              <strong>AquaClim Prestige</strong><br>
+              Signature et cachet de l’entreprise :<br>
+              <img src="${signSrc}" style="height:90px; margin-top:5px;">
+            </td>
+          </tr>
+        </table>
+
+      </div>
+    `;
+  }
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <title>${isDevis ? "Devis " : "Facture "}${doc.number}</title>
+  <title>${isContrat ? "Contrat " : isDevis ? "Devis " : "Facture "}${doc.number}</title>
+
   <style>
     * {
       margin: 0;
@@ -4365,7 +4481,11 @@ img.sig {
 <div class="doc-header-center">
   <h2 style="color:${titleColor};">
     <span class="doc-title-main">
-      ${isDevis ? "DEVIS" : "FACTURE"}
+      ${
+        isContrat
+          ? "CONTRAT D’ENTRETIEN"
+          : (isDevis ? "DEVIS" : "FACTURE")
+      }
     </span>
     <span class="doc-title-number">
       N° ${doc.number}
@@ -4379,6 +4499,8 @@ img.sig {
       : ``
   }
 </div>
+
+
 
 
     <div class="client-block">
@@ -4441,34 +4563,39 @@ img.sig {
 
   <div class="page-footer bottom-block">
     ${
-      isDevis
-        ? `
-          ${notesHtml}
-          ${importantHtml}
-          <div class="signatures">
-            <div class="signature-block">
-              <div class="signature-title">${signatureClientTitle}</div>
-              <p>${signatureClientText}</p>
-            <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
-              <p>Signature du client :</p>
-            </div>
-            <div class="signature-block">
-              <div class="signature-title">AquaClim Prestige</div>
-              <p>Signature et cachet de l’entreprise</p>
-              <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-            </div>
-          </div>
-        `
+      isContrat
+        ? contratHtml
         : (
-          isUnpaidInvoice
+          isDevis
             ? `
-              ${ribHtml}
               ${notesHtml}
+              ${importantHtml}
+              <div class="signatures">
+                <div class="signature-block">
+                  <div class="signature-title">${signatureClientTitle}</div>
+                  <p>${signatureClientText}</p>
+                  <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
+                  <p>Signature du client :</p>
+                </div>
+                <div class="signature-block">
+                  <div class="signature-title">AquaClim Prestige</div>
+                  <p>Signature et cachet de l’entreprise</p>
+                  <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+                </div>
+              </div>
             `
-            : ``
+            : (
+              isUnpaidInvoice
+                ? `
+                  ${ribHtml}
+                  ${notesHtml}
+                `
+                : ``
+            )
         )
     }
   </div>
+
 </div>
 </body>
 </html>`;
@@ -4496,6 +4623,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
