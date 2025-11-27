@@ -488,6 +488,192 @@
 
     </div>
   </section>
+    <!-- PAGE CONTRAT PISCINE / SPA -->
+  <section id="contractView" class="hidden">
+
+    <div class="actions no-print">
+      <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
+      <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
+    </div>
+
+    <div class="card contract-card">
+      <h2>Contrat d’entretien Piscine / Spa</h2>
+      <p class="contract-intro">
+        Ce formulaire génère un contrat d’entretien complet prêt à être signé par le client
+        (particulier ou syndic). Les champs ci-dessous seront intégrés automatiquement dans le PDF.
+      </p>
+
+      <!-- Infos client -->
+      <h3 class="section-title">1. Informations client</h3>
+      <div class="row contract-grid">
+        <div class="form-group">
+          <label>Civilité</label>
+          <select id="contractClientCivility">
+            <option value="">—</option>
+            <option value="Monsieur">Monsieur</option>
+            <option value="Madame">Madame</option>
+            <option value="Monsieur et Madame">Monsieur et Madame</option>
+            <option value="Société">Société</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Nom / Raison sociale *</label>
+          <input type="text" id="contractClientName" placeholder="Ex : M. Dupont, Syndic Martin & Associés">
+        </div>
+
+        <div class="form-group">
+          <label>Adresse *</label>
+          <input type="text" id="contractClientAddress" placeholder="Adresse de facturation">
+        </div>
+
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" id="contractClientPhone">
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="contractClientEmail">
+        </div>
+
+        <div class="form-group">
+          <label>Référence contrat (facultatif)</label>
+          <input type="text" id="contractReference" placeholder="Ex : CTR-2025-001">
+        </div>
+      </div>
+
+      <!-- Lieu d’intervention -->
+      <h3 class="section-title">2. Lieu d’intervention</h3>
+      <div class="row contract-grid">
+        <div class="form-group">
+          <label>Civilité lieu</label>
+          <select id="contractSiteCivility">
+            <option value="">—</option>
+            <option value="Chez Monsieur">Chez Monsieur</option>
+            <option value="Chez Madame">Chez Madame</option>
+            <option value="Appartement Monsieur">Appartement Monsieur</option>
+            <option value="Appartement Madame">Appartement Madame</option>
+            <option value="Villa Monsieur">Villa Monsieur</option>
+            <option value="Villa Madame">Villa Madame</option>
+            <option value="Résidence">Résidence</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Nom sur place *</label>
+          <input type="text" id="contractSiteName" placeholder="Ex : Mme Dupont Élise">
+        </div>
+
+        <div class="form-group">
+          <label>Adresse du bassin *</label>
+          <input type="text" id="contractSiteAddress" placeholder="Adresse complète du bassin / résidence">
+        </div>
+      </div>
+
+      <!-- Bassin & technique -->
+      <h3 class="section-title">3. Caractéristiques du bassin</h3>
+      <div class="row contract-grid">
+        <div class="form-group">
+          <label>Type de bassin *</label>
+          <select id="contractPoolType">
+            <option value="">—</option>
+            <option value="piscine au chlore">Piscine au chlore</option>
+            <option value="piscine au sel">Piscine au sel</option>
+            <option value="spa">Spa / Jacuzzi</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Traitement / équipement principal</label>
+          <select id="contractTreatment">
+            <option value="">—</option>
+            <option value="traitement manuel">Traitement manuel</option>
+            <option value="électrolyseur au sel">Électrolyseur au sel</option>
+            <option value="régulation automatique pH / redox">Régulation automatique pH / redox</option>
+            <option value="autre équipement spécifique">Autre (précisé en observation)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Volume approximatif</label>
+          <input type="text" id="contractVolume" placeholder="Ex : 40 m³">
+        </div>
+
+        <div class="form-group">
+          <label>Particularités</label>
+          <input type="text" id="contractSpecificities" placeholder="Couverture, volet, débordement, local technique difficile d’accès…">
+        </div>
+      </div>
+
+      <!-- Fréquence & période -->
+      <h3 class="section-title">4. Fréquence & période d’intervention</h3>
+      <div class="row contract-grid">
+        <div class="form-group">
+          <label>Fréquence des passages *</label>
+          <select id="contractFrequency">
+            <option value="">—</option>
+            <option value="1 passage par semaine">1 passage par semaine</option>
+            <option value="2 passages par semaine">2 passages par semaine</option>
+            <option value="1 passage toutes les deux semaines">1 passage toutes les deux semaines</option>
+            <option value="1 passage par mois">1 passage par mois</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Période – début *</label>
+          <input type="month" id="contractSeasonStart">
+        </div>
+
+        <div class="form-group">
+          <label>Période – fin *</label>
+          <input type="month" id="contractSeasonEnd">
+        </div>
+
+        <div class="form-group">
+          <label>Jour / créneau souhaité</label>
+          <input type="text" id="contractPreferredDay" placeholder="Ex : Le mardi matin, hors week-end et jours fériés">
+        </div>
+      </div>
+
+      <!-- Montant & facturation -->
+      <h3 class="section-title">5. Montant du contrat</h3>
+      <div class="row contract-grid">
+        <div class="form-group">
+          <label>Mode de facturation *</label>
+          <select id="contractBillingMode">
+            <option value="">—</option>
+            <option value="mensuelle">Facturation mensuelle</option>
+            <option value="trimestrielle">Facturation trimestrielle</option>
+            <option value="annuelle">Facturation annuelle</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Montant TTC de la période *</label>
+          <input type="number" id="contractAmount" step="0.01" placeholder="Ex : 1800">
+        </div>
+
+        <div class="form-group">
+          <label>Précisions de règlement</label>
+          <input type="text" id="contractPaymentDetails" placeholder="Ex : Paiement à réception de facture, par virement">
+        </div>
+      </div>
+
+      <!-- Observations -->
+      <h3 class="section-title">6. Observations / clauses particulières</h3>
+      <div class="form-group">
+        <textarea id="contractNotes" placeholder="Ex : Bassin utilisé par copropriété, attention aux horaires de calme, local technique accessible par clé…"></textarea>
+      </div>
+
+      <div class="form-actions no-print">
+        <button class="btn action-button" type="button" onclick="printContract()">🖨️ Imprimer le contrat</button>
+        <button class="btn btn-secondary" type="button" onclick="backToListFromContract()">← Retour</button>
+      </div>
+
+    </div>
+  </section>
+
   <!-- ================= POPUP CONFIRM CUSTOM ================= -->
   <div id="confirmOverlay" class="confirm-overlay hidden">
     <div class="confirm-box">
@@ -577,6 +763,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
