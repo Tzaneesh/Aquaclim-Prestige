@@ -1553,10 +1553,9 @@ function calculateTotals() {
     let qty = parseFloat(qtyInput.value) || 0;
     let price = parseFloat(priceInput.value) || 0;
     const kind = line.dataset.kind || "";
-    const kind = line.dataset.kind || "";
     const autoPrice = line.dataset.autoPrice !== "0";
 
-        // Entretien clim : gestion du tarif dégressif 100 / 85 / 70
+    // Entretien clim : gestion du tarif dégressif 100 / 85 / 70
     if (kind === "entretien_clim") {
       const n = qty <= 0 ? 1 : qty;
 
@@ -1574,7 +1573,7 @@ function calculateTotals() {
 
         // Sécurité : si base pas défini, on met un défaut logique
         if (!base) {
-          base = (clientType === "syndic") ? 120 : 100;
+          base = clientType === "syndic" ? 120 : 100;
         }
 
         if (clientType === "particulier") {
@@ -1587,7 +1586,7 @@ function calculateTotals() {
             price = base * 0.70;   // 3+ clims → ~70 €/u si base = 100
           }
         } else {
-          // Grille syndic (exemple, à ajuster si besoin)
+          // Grille syndic (à ajuster si besoin)
           if (n === 1) {
             price = base;
           } else if (n === 2) {
@@ -1602,13 +1601,10 @@ function calculateTotals() {
 
         priceInput.value = price.toFixed(2);
       } else {
-        // Mode manuel
+        // Mode manuel : on respecte ce que tu as tapé
         price = parseFloat(priceInput.value) || 0;
       }
     }
-
-
-
 
     const total = qty * price;
     const totField = line.querySelector(".prestation-total");
@@ -4651,6 +4647,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
