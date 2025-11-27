@@ -429,8 +429,8 @@ function addCurrentClient() {
   const phone = document.getElementById("clientPhone").value.trim();
   const email = document.getElementById("clientEmail").value.trim();
 
-  // 🛠️ CORRECTION : Déclaration de la variable 'civility' manquante
-  const civility = document.getElementById("clientCivility")?.value || ""; 
+  // 💡 CORRECTION : Ajout de la déclaration de 'civility'
+  const civility = document.getElementById("clientCivility")?.value || "";
 
   if (!name) {
     // popup jolie au lieu d'alert
@@ -1104,10 +1104,13 @@ function onPayModeChange() {
   wrapper.style.display = "block";
 
   if (!dateInput.value) {
-    const docDate = document.getElementById("docDate")?.value;
-    dateInput.value = docDate || new Date().toISOString().split("T")[0];
+    // 💡 CODE CORRIGÉ
+    const docDate = document.getElementById("docDate").value;
+    if (docDate) {
+      dateInput.value = docDate;
+    }
   }
-}
+} // La fonction DOIT se terminer par une accolade fermante.
 
 // ================== RÉDUCTION ==================
 
@@ -5363,6 +5366,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
