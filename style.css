@@ -279,6 +279,10 @@ body {
   margin-bottom: 20px;
   font-size: 22px;
 }
+.badge-contract {
+  background:#e3f2fd;
+  color:#0d47a1;
+}
 #editClientForm input {
   width: 100%;
   margin-bottom: 8px;
@@ -1353,3 +1357,4 @@ textarea {
   padding: 6px 14px;
   border-radius: 999px;
 }
+
