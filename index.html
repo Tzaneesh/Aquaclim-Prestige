@@ -638,9 +638,56 @@
         </div>
       </div>
 
-      <!-- Montant & facturation -->
+       <!-- Montant & facturation -->
       <h3 class="section-title">5. Montant du contrat</h3>
+
+      <!-- 🔢 CALCUL AUTOMATIQUE -->
       <div class="row contract-grid">
+        <div class="form-group">
+          <label>Début de contrat</label>
+          <input type="date" id="contractCalcStart" onchange="onContractAutoChange()">
+        </div>
+
+        <div class="form-group">
+          <label>Durée (en mois)</label>
+          <select id="contractCalcDuration" onchange="onContractAutoChange()">
+            <option value="4">4 mois</option>
+            <option value="5">5 mois</option>
+            <option value="6" selected>6 mois</option>
+            <option value="12">12 mois</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Passages / mois en hiver</label>
+          <input type="number" id="contractCalcVisitsWinter" min="0" step="1" value="1" oninput="onContractAutoChange()">
+        </div>
+
+        <div class="form-group">
+          <label>Passages / mois en été</label>
+          <input type="number" id="contractCalcVisitsSummer" min="0" step="1" value="2" oninput="onContractAutoChange()">
+        </div>
+
+        <div class="form-group">
+          <label>Prix HT par passage</label>
+          <input type="number" id="contractCalcPricePerVisit" step="0.01" value="70" oninput="onContractAutoChange()">
+        </div>
+      </div>
+
+      <!-- Résumé automatique -->
+      <div class="totals" style="margin-top:10px;">
+        <div class="total-line">
+          <span>Nombre total de passages :</span>
+          <span id="contractCalcTotalVisits">0</span>
+        </div>
+        <div class="total-line grand-total">
+          <span>Montant total estimé :</span>
+          <span id="contractCalcTotalAmount">0,00 €</span>
+        </div>
+      </div>
+
+      <!-- Zone de facturation (remplie automatiquement mais modifiable) -->
+      <div class="row contract-grid" style="margin-top:15px;">
         <div class="form-group">
           <label>Mode de facturation *</label>
           <select id="contractBillingMode">
@@ -661,6 +708,7 @@
           <input type="text" id="contractPaymentDetails" placeholder="Ex : Paiement à réception de facture, par virement">
         </div>
       </div>
+
 
       <!-- Observations -->
       <h3 class="section-title">6. Observations / clauses particulières</h3>
@@ -783,6 +831,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
