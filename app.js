@@ -4605,7 +4605,7 @@ function openContractView() {
   // on ouvre un NOUVEAU contrat (pas encore lié à un doc Firestore)
   currentContractId = null;
 
-  // Onglets visuels
+  // ===== Onglets visuels =====
   const tabDevis = document.getElementById("tabDevis");
   const tabFactures = document.getElementById("tabFactures");
   const tabContrat = document.getElementById("tabContrat");
@@ -4614,7 +4614,7 @@ function openContractView() {
   if (tabFactures) tabFactures.classList.remove("active");
   if (tabContrat) tabContrat.classList.add("active");
 
-  // Affichage / masquage des vues
+  // ===== Affichage / masquage des vues =====
   const listView = document.getElementById("listView");
   const formView = document.getElementById("formView");
   const contractView = document.getElementById("contractView");
@@ -4623,16 +4623,16 @@ function openContractView() {
   if (formView) formView.classList.add("hidden");
   if (contractView) contractView.classList.remove("hidden");
 
-  // On vide/réinitialise les champs du contrat
+  // ===== Réinitialisation des champs "simples" du contrat =====
   const idsToReset = [
     "contractClientCivility", "contractClientName", "contractClientAddress",
     "contractClientPhone", "contractClientEmail", "contractReference",
     "contractSiteCivility", "contractSiteName", "contractSiteAddress",
     "contractPoolType", "contractTreatment", "contractVolume", "contractSpecificities",
-    "contractFrequency", "contractSeasonStart", "contractSeasonEnd",
     "contractPreferredDay", "contractBillingMode", "contractAmount",
     "contractPaymentDetails", "contractNotes"
   ];
+
   idsToReset.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -4640,34 +4640,72 @@ function openContractView() {
     if (el.tagName === "TEXTAREA") el.value = "";
   });
 
-  // Si un devis est ouvert → on pré-remplit les infos client / site
+  // ===== Réinitialisation / valeurs par défaut des champs "auto-calcul" =====
+  const calcStart      = document.getElementById("contractCalcStart");
+  const calcDuration   = document.getElementById("contractCalcDuration");
+  const visitsMode     = document.getElementById("contractVisitsMode");
+  const visitsWinter   = document.getElementById("contractCalcVisitsWinter");
+  const visitsSummer   = document.getElementById("contractCalcVisitsSummer");
+  const seasonStart    = document.getElementById("contractSeasonStart");
+  const seasonEnd      = document.getElementById("contractSeasonEnd");
+
+  // Date de début = aujourd’hui par défaut
+  if (calcStart) {
+    const today = new Date();
+    calcStart.valueAsDate = today;
+  }
+
+  // Durée par défaut = 6 mois
+  if (calcDuration) calcDuration.value = "6";
+
+  // Mode de passages = "standard" (1 hiver / 2 été)
+  if (visitsMode) visitsMode.value = "standard";
+  if (visitsWinter) visitsWinter.value = 1;
+  if (visitsSummer) visitsSummer.value = 2;
+
+  // On nettoie la période affichée
+  if (seasonStart) seasonStart.value = "";
+  if (seasonEnd) seasonEnd.value = "";
+
+  // Applique le preset + calcule période / totaux si les fonctions existent
+  if (typeof onContractVisitsModeChange === "function") {
+    onContractVisitsModeChange();
+  } else if (typeof onContractAutoChange === "function") {
+    onContractAutoChange();
+  }
+
+  // ===== Pré-remplissage depuis le document courant (si un devis est ouvert) =====
   if (currentDocumentId) {
     const doc = getDocument(currentDocumentId);
+
+    // Infos client
     if (doc && doc.client) {
-      const civ = document.getElementById("contractClientCivility");
-      const name = document.getElementById("contractClientName");
-      const addr = document.getElementById("contractClientAddress");
+      const civ   = document.getElementById("contractClientCivility");
+      const name  = document.getElementById("contractClientName");
+      const addr  = document.getElementById("contractClientAddress");
       const phone = document.getElementById("contractClientPhone");
       const email = document.getElementById("contractClientEmail");
 
-      if (civ && doc.client.civility) civ.value = doc.client.civility;
-      if (name && doc.client.name) name.value = doc.client.name;
-      if (addr && doc.client.address) addr.value = doc.client.address;
-      if (phone && doc.client.phone) phone.value = doc.client.phone;
-      if (email && doc.client.email) email.value = doc.client.email;
+      if (civ   && doc.client.civility) civ.value   = doc.client.civility;
+      if (name  && doc.client.name)     name.value  = doc.client.name;
+      if (addr  && doc.client.address)  addr.value  = doc.client.address;
+      if (phone && doc.client.phone)    phone.value = doc.client.phone;
+      if (email && doc.client.email)    email.value = doc.client.email;
     }
 
+    // Lieu d’intervention
     if (doc && (doc.siteName || doc.siteAddress)) {
-      const siteCiv = document.getElementById("contractSiteCivility");
+      const siteCiv  = document.getElementById("contractSiteCivility");
       const siteName = document.getElementById("contractSiteName");
       const siteAddr = document.getElementById("contractSiteAddress");
 
-      if (siteCiv && doc.siteCivility) siteCiv.value = doc.siteCivility;
-      if (siteName && doc.siteName) siteName.value = doc.siteName;
-      if (siteAddr && doc.siteAddress) siteAddr.value = doc.siteAddress;
+      if (siteCiv  && doc.siteCivility) siteCiv.value  = doc.siteCivility;
+      if (siteName && doc.siteName)     siteName.value = doc.siteName;
+      if (siteAddr && doc.siteAddress)  siteAddr.value = doc.siteAddress;
     }
   }
 }
+
 
 
 // Retour à la liste devis/factures
@@ -5390,6 +5428,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
