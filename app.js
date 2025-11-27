@@ -1553,9 +1553,10 @@ function calculateTotals() {
     let qty = parseFloat(qtyInput.value) || 0;
     let price = parseFloat(priceInput.value) || 0;
     const kind = line.dataset.kind || "";
+    const kind = line.dataset.kind || "";
     const autoPrice = line.dataset.autoPrice !== "0";
 
-        // Entretien clim : gestion du tarif dégressif basé sur un pourcentage
+        // Entretien clim : gestion du tarif dégressif 100 / 85 / 70
     if (kind === "entretien_clim") {
       const n = qty <= 0 ? 1 : qty;
 
@@ -1571,32 +1572,28 @@ function calculateTotals() {
         // Prix de base = prix pour 1 clim (issu des tarifs persos ou de la saisie)
         let base = parseFloat(line.dataset.basePrice) || 0;
 
-        // Sécurité : si base pas défini, on retombe sur tes anciens tarifs
+        // Sécurité : si base pas défini, on met un défaut logique
         if (!base) {
           base = (clientType === "syndic") ? 120 : 100;
         }
 
-        // On garde TES réductions actuelles, mais exprimées en % :
-        // Particulier : 1 = 100 / 2 = 85 / 3+ = 65
-        //   → 2 = -16,67 %, 3+ = -27,78 %
-        // Syndic : 1 = 110 / 2 = 90 / 3+ = 80
-        //   → 2 = -18,18 %, 3+ = -27,27 %
-
         if (clientType === "particulier") {
+          // 💰 Grille particulier : 1 = 100 %, 2 = 85 %, 3+ = 70 %
           if (n === 1) {
-            price = base;
+            price = base;          // 1 clim → 100 €
           } else if (n === 2) {
-            price = base * (1 - 15 / 100); // -15 %
+            price = base * 0.85;   // 2 clims → ~85 €/u si base = 100
           } else {
-            price = base * (1 - 25 / 100); // -25 %
+            price = base * 0.70;   // 3+ clims → ~70 €/u si base = 100
           }
         } else {
+          // Grille syndic (exemple, à ajuster si besoin)
           if (n === 1) {
             price = base;
           } else if (n === 2) {
-            price = base * (1 - 20 / 120); // -20 %
+            price = base * 0.85;
           } else {
-            price = base * (1 - 30 / 120); // -30 %
+            price = base * 0.75;
           }
         }
 
@@ -4654,6 +4651,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
