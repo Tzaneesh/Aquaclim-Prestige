@@ -446,7 +446,11 @@ function addCurrentClient() {
   const existingIndex = clients.findIndex(
     c => (c.name || "").toLowerCase() === name.toLowerCase()
   );
+// Déclare la variable 'civility' et récupère sa valeur
+const civility = document.getElementById("clientCivility")?.value || ""; 
 
+const newClient = { civility, name, address, phone, email }; 
+// ... le reste de la fonction
 const newClient = { civility, name, address, phone, email };
 
 
@@ -5361,6 +5365,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
