@@ -4610,6 +4610,37 @@ img.sig {
     }
   };
 }
+// ================== PAGE CONTRAT ==================
+
+function openContractView() {
+
+  // Onglets visuels
+  const tabDevis = document.getElementById("tabDevis");
+  const tabFactures = document.getElementById("tabFactures");
+  const tabContrat = document.getElementById("tabContrat");
+
+  if (tabDevis) tabDevis.classList.remove("active");
+  if (tabFactures) tabFactures.classList.remove("active");
+  if (tabContrat) tabContrat.classList.add("active");
+
+  // Pour l’instant : simple popup
+  showConfirmDialog({
+    title: "Contrat Piscine / Spa",
+    message: 
+      "La page dédiée contrat sera affichée ici.\n\nPour l’instant, ce bouton ne nécessite pas d’enregistrer un document.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "info",
+    icon: "ℹ️"
+  });
+
+  // 🔥 NOTE :
+  // Plus tard on remplacera cette popup par :
+  // - un écran contractView()
+  // - structure complète du contrat
+  // - bouton PDF
+  // - durée / passages / saison, etc.
+}
 
 
 // ------- Init -------
@@ -4623,6 +4654,7 @@ refreshClientDatalist();
   initFirebase();          // 🔥 synchronisation avec Firestore au démarrage
   updateButtonColors();
 };
+
 
 
 
