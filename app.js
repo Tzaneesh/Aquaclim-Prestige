@@ -4617,6 +4617,18 @@ function getAllContracts() {
     return [];
   }
 }
+function getContractLabel(type) {
+  if (type === "piscine_chlore" || type === "piscine_sel") {
+    return "Contrat d’entretien Piscine";
+  }
+  if (type === "spa") {
+    return "Contrat d’entretien Spa / Jacuzzi";
+  }
+  if (type === "piscine+spa") {
+    return "Contrat d’entretien Piscine + Spa / Jacuzzi";
+  }
+  return "Contrat d’entretien Piscine / Spa";
+}
 
 function getContract(id) {
   return getAllContracts().find((c) => c.id === id) || null;
@@ -5869,6 +5881,7 @@ window.onload = function () {
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
+
 
 
 
