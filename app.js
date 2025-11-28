@@ -5062,6 +5062,13 @@ function buildContractFromForm(showErrors) {
     .replace(/\s|€|€/g, "")
     .replace(",", ".");
 
+  // TVA pour le contrat (on lit le même champ que devis/factures)
+  const tvaRateInput = document.getElementById("tvaRate");
+  const tvaRate = tvaRateInput ? parseFloat(tvaRateInput.value) || 0 : 0;
+  const totalHTNum = parseFloat(totalHTStr) || 0;
+  const tvaAmount = totalHTNum * (tvaRate / 100);
+  const totalTTC = totalHTNum + tvaAmount;
+
   const pricing = {
     clientType: (document.getElementById("ctClientType")?.value || "particulier").trim(),
     mainService: (document.getElementById("ctMainService")?.value || "piscine_chlore").trim(),
@@ -5074,8 +5081,12 @@ function buildContractFromForm(showErrors) {
     periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
     totalPassages,
     unitPrice: parseFloat(unitPriceStr) || 0,
-    totalHT: parseFloat(totalHTStr) || 0
+    totalHT: totalHTNum,
+    tvaRate,
+    tvaAmount,
+    totalTTC
   };
+
 
   const contract = {
     id: currentContractId || Date.now().toString(),
@@ -5910,6 +5921,7 @@ window.onload = function () {
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
+
 
 
 
