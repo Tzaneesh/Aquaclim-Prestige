@@ -42,19 +42,23 @@
   <!-- LISTE DES DOCUMENTS -->
   <section id="listView">
 
-    <div class="actions no-print">
-      <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
-      <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
+<div class="actions no-print">
+  <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
 
-      <button class="btn btn-devis tarifs-button" onclick="openTarifsPanel()">📋 Tarifs prestations</button>
-<button
-  class="btn btn-primary"
-  type="button"
-  onclick="openClientsListPopup()"
->
-  👥 Clients
-</button>
-    </div>
+  <button id="createContract" class="btn btn-secondary" onclick="newContract()">📘 Nouveau contrat</button>
+
+  <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
+
+  <button class="btn btn-devis tarifs-button" onclick="openTarifsPanel()">📋 Tarifs prestations</button>
+  <button
+    class="btn btn-primary"
+    type="button"
+    onclick="openClientsListPopup()"
+  >
+    👥 Clients
+  </button>
+</div>
+
 
     <!-- PANEL TARIFS -->
     <div id="tarifsPanel" class="card no-print hidden">
@@ -831,4 +835,5 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
