@@ -4433,6 +4433,7 @@ function openPrintable(id, previewOnly) {
 
     .signature-block {
       flex: 1;
+      page-break-inside: avoid;
       border-top: 1px solid #333;
       padding-top: 4px;
       font-size: 10px;
@@ -5516,14 +5517,17 @@ const pdfDateStr = today.toLocaleDateString("fr-FR");
     min-height:50px;
     font-size:10px;
   }
-  .signature-title {
-    font-weight:bold;
-    margin-bottom:3px;
-    img.sig {
-    height: 80px;
-    width: auto;
-    margin-top: 4px;
-  }
+.signature-title {
+  font-weight:bold;
+  margin-bottom:3px;
+}
+
+img.sig {
+  height: 80px;
+  width: auto;
+  margin-top: 4px;
+}
+
 
 
   .amount-highlight {
@@ -5766,8 +5770,9 @@ ${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
      <p>Fait à Nice, le ${pdfDateStr}</p>
 
       <div class="signatures">
-        <div class="signature-block">
-          <div class="signature-title">Client / Syndic</div>
+     <div class="signature-block">
+  <div class="signature-title">Client / Syndic</div>
+
           <p>Signature précédée de la mention : « Lu et approuvé, bon pour accord ».</p>
         </div>
        <div class="signature-block">
@@ -5909,6 +5914,7 @@ window.onload = function () {
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
+
 
 
 
