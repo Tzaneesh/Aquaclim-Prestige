@@ -731,6 +731,19 @@
       <p><strong>Prix unitaire :</strong> <span id="ctRecapPrice">0 €</span></p>
       <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
     </div>
+<div class="contract-tva">
+  <label>TVA du contrat</label>
+  <div class="tva-options">
+    <label>
+      <input type="radio" name="ctTvaRadio" onchange="setTVA(0)" checked>
+      Sans TVA (micro)
+    </label>
+    <label>
+      <input type="radio" name="ctTvaRadio" onchange="setTVA(20)">
+      TVA 20 %
+    </label>
+  </div>
+</div>
 
     <!-- ACTIONS BAS CONTRAT -->
     <div class="form-actions no-print">
@@ -836,6 +849,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
