@@ -5584,18 +5584,6 @@ ${
 
 ${c.reference ? `<p>Référence contrat : ${c.reference}</p>` : ""}
 
-
-      <br>
-  ${
-  c.phone || c.email
-    ? `<p>Téléphone / Email : ${
-        [c.phone, c.email].filter(Boolean).join(" / ")
-      }</p>`
-    : ""
-}
-${c.reference ? `<p>Référence contrat : ${c.reference}</p>` : ""}
-
-<br>
 ${
   pr.clientType === "syndic"
     ? `
@@ -5921,6 +5909,7 @@ window.onload = function () {
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
+
 
 
 
