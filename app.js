@@ -257,7 +257,8 @@ const MARGIN_MULTIPLIER = 1.4;
 
 let currentDocumentId = null;
 let prestationCount = 0;
-let currentListType = "devis"; // "devis" ou "facture"
+let currentListType = "devis"; // "devis", "facture" ou "contrat"
+
 
 // Firebase Firestore
 let db = null;
@@ -921,16 +922,23 @@ function switchListType(type) {
 
   const btnDevis = document.getElementById("createDevis");
   const btnFacture = document.getElementById("createFacture");
+  const btnContract = document.getElementById("createContract");
 
-  // 🔵 MODE CONTRATS : on affiche uniquement la page contrat
+  // 🔵 MODE CONTRATS : même layout que devis/factures, mais avec la liste de contrats
   if (type === "contrat") {
-    if (listView) listView.classList.add("hidden");
+    if (listView) listView.classList.remove("hidden");
     if (formView) formView.classList.add("hidden");
-    if (contractView) contractView.classList.remove("hidden");
+    if (contractView) contractView.classList.add("hidden"); // on n'affiche le formulaire que quand on ouvre/crée un contrat
 
+    // Titre de la liste
+    const listTitle = document.getElementById("listTitle");
+    if (listTitle) listTitle.textContent = "Liste des contrats";
+
+    // Pas de filtre année ni export pour les contrats
     if (yearFilterContainer) yearFilterContainer.classList.add("hidden");
     if (exportContainer) exportContainer.classList.add("hidden");
 
+    // Boutons en haut : seul "Nouveau contrat" est actif
     if (btnDevis) {
       btnDevis.disabled = true;
       btnDevis.classList.add("disabled-btn");
@@ -939,28 +947,32 @@ function switchListType(type) {
       btnFacture.disabled = true;
       btnFacture.classList.add("disabled-btn");
     }
-
-    // 🔢 Numéro auto pour un NOUVEAU contrat
-    const ctRef = document.getElementById("ctReference");
-    if (ctRef && (!ctRef.value || !currentContractId)) {
-      ctRef.value = getNextContractReference();
+    if (btnContract) {
+      btnContract.disabled = false;
+      btnContract.classList.remove("disabled-btn");
     }
 
+    resetTarifsPanel();
     currentDocumentId = null;
+
+    // On remplit le tableau avec les contrats
+    loadContractsList();
     return;
   }
-
 
   // 🟡 MODE DEVIS / FACTURES (comportement existant)
   if (contractView) contractView.classList.add("hidden");
   if (listView) listView.classList.remove("hidden");
   if (formView) formView.classList.add("hidden");
 
-  if (document.getElementById("listTitle")) {
-    document.getElementById("listTitle").textContent =
+  // Titre de liste
+  const listTitle = document.getElementById("listTitle");
+  if (listTitle) {
+    listTitle.textContent =
       type === "devis" ? "Liste des devis" : "Liste des factures";
   }
 
+  // Filtre année + export visibles uniquement pour les factures
   if (yearFilterContainer) {
     yearFilterContainer.classList.toggle("hidden", type !== "facture");
   }
@@ -968,6 +980,7 @@ function switchListType(type) {
     exportContainer.classList.toggle("hidden", type !== "facture");
   }
 
+  // Boutons en haut : seulement le bouton du type courant est actif
   if (btnDevis && btnFacture) {
     if (type === "devis") {
       btnDevis.disabled = false;
@@ -981,6 +994,11 @@ function switchListType(type) {
       btnDevis.classList.add("disabled-btn");
     }
   }
+  if (btnContract) {
+    // En mode devis/factures, le bouton contrat est grisé
+    btnContract.disabled = true;
+    btnContract.classList.add("disabled-btn");
+  }
 
   resetTarifsPanel();
   currentDocumentId = null;
@@ -988,6 +1006,7 @@ function switchListType(type) {
   loadYearFilter();
   loadDocumentsList();
 }
+
 
 function onDocumentsSearchChange() {
   loadDocumentsList();
@@ -2572,6 +2591,10 @@ function backToContracts() {
 // ================== LISTE DOCUMENTS & STATUTS ==================
 
 function loadDocumentsList() {
+   if (currentListType === "contrat") {
+    loadContractsList();
+    return;
+  }
   const docs = getAllDocuments();
   let filtered = docs.filter((d) => d.type === currentListType);
 
@@ -2774,6 +2797,73 @@ tr.innerHTML =
   `<td class="status-cell">${statutHTML}</td>` +
   `<td>${actionsHtml}</td>`;
 
+
+    tbody.appendChild(tr);
+  });
+}
+function loadContractsList() {
+  const contracts = getAllContracts();
+
+  // 🔍 Filtre recherche (référence, client, adresse, période)
+  const searchInput = document.getElementById("docSearchInput");
+  const q = (searchInput ? searchInput.value : "").trim().toLowerCase();
+
+  let filtered = contracts;
+
+  if (q) {
+    filtered = contracts.filter((c) => {
+      const ref = (c.client?.reference || "").toLowerCase();
+      const name = (c.client?.name || "").toLowerCase();
+      const addr = (c.client?.address || "").toLowerCase();
+      const period = (c.pricing?.periodLabel || "").toLowerCase();
+      return (
+        ref.includes(q) ||
+        name.includes(q) ||
+        addr.includes(q) ||
+        period.includes(q)
+      );
+    });
+  }
+
+  // Tri : plus récents en premier (date de début ou createdAt)
+  filtered.sort((a, b) => {
+    const da = (a.pricing?.startDate || a.createdAt || "");
+    const db = (b.pricing?.startDate || b.createdAt || "");
+    return db.localeCompare(da);
+  });
+
+  const tbody = document.getElementById("documentsTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+
+  if (filtered.length === 0) {
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="no-docs-cell">Aucun contrat pour le moment</td></tr>';
+    return;
+  }
+
+  filtered.forEach((c) => {
+    const tr = document.createElement("tr");
+
+    const ref = c.client?.reference || "";
+    const clientName = c.client?.name || "";
+    const startDate = c.pricing?.startDate || "";
+    const totalHT = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
+
+    const actionsHtml =
+      `<button class="btn btn-secondary btn-small" type="button" onclick="openContractFromList('${c.id}')">Ouvrir</button>` +
+      ` <button class="btn btn-danger btn-small" type="button" onclick="deleteContractFromList('${c.id}')">Supprimer</button>`;
+
+    const statutHTML = ""; // tu pourras mettre "Actif", "Archivé", etc. plus tard si tu veux
+
+    tr.innerHTML =
+      `<td>Contrat</td>` +
+      `<td>${escapeHtml(ref || c.id)}</td>` +
+      `<td>${escapeHtml(clientName)}</td>` +
+      `<td>${escapeHtml(startDate || "")}</td>` +
+      `<td><strong>${formatEuro(totalHT)}</strong></td>` +
+      `<td class="status-cell">${statutHTML}</td>` +
+      `<td>${actionsHtml}</td>`;
 
     tbody.appendChild(tr);
   });
@@ -4535,6 +4625,121 @@ function getContract(id) {
 function saveContracts(list) {
   localStorage.setItem("contracts", JSON.stringify(list));
 }
+function newContract() {
+  currentContractId = null;
+
+  const listView = document.getElementById("listView");
+  const contractView = document.getElementById("contractView");
+  if (listView) listView.classList.add("hidden");
+  if (contractView) contractView.classList.remove("hidden");
+
+  // On remet tout le formulaire contrat "propre"
+  const root = document.getElementById("contractView");
+  if (root) {
+    root.querySelectorAll("input, textarea, select").forEach((el) => {
+      const id = el.id || "";
+      // On ne touche pas au champ TVA global
+      if (id === "tvaRate") return;
+
+      if (el.type === "checkbox" || el.type === "radio") {
+        el.checked = false;
+      } else if (el.type !== "button" && el.type !== "submit") {
+        el.value = "";
+      }
+    });
+  }
+
+  // Valeurs par défaut principales
+  const ctClientType = document.getElementById("ctClientType");
+  if (ctClientType) ctClientType.value = "particulier";
+
+  const ctMode = document.getElementById("ctMode");
+  if (ctMode) ctMode.value = "standard";
+
+  const ctPassHiver = document.getElementById("ctPassHiver");
+  if (ctPassHiver) ctPassHiver.value = "1";
+
+  const ctPassEte = document.getElementById("ctPassEte");
+  if (ctPassEte) ctPassEte.value = "2";
+
+  const ctDuration = document.getElementById("ctDuration");
+  if (ctDuration) ctDuration.value = "12";
+
+  const ctPoolType = document.getElementById("ctPoolType");
+  if (ctPoolType) ctPoolType.value = "piscine_chlore";
+
+  const ctMainService = document.getElementById("ctMainService");
+  if (ctMainService) ctMainService.value = "piscine_chlore";
+
+  // Options par défaut
+  const openingEl = document.getElementById("ctIncludeOpening");
+  if (openingEl) openingEl.checked = false;
+  const winterEl = document.getElementById("ctIncludeWinter");
+  if (winterEl) winterEl.checked = false;
+
+  // Numéro de contrat auto
+  const ctRef = document.getElementById("ctReference");
+  if (ctRef && typeof getNextContractReference === "function") {
+    ctRef.value = getNextContractReference();
+  }
+
+  recomputeContract();
+}
+
+function openContractFromList(id) {
+  const contract = getContract(id);
+  if (!contract) return;
+
+  const listView = document.getElementById("listView");
+  const contractView = document.getElementById("contractView");
+  if (listView) listView.classList.add("hidden");
+  if (contractView) contractView.classList.remove("hidden");
+
+  fillContractForm(contract);
+}
+
+function deleteContractFromList(id) {
+  const contracts = getAllContracts();
+  const contract = contracts.find((c) => c.id === id);
+  if (!contract) return;
+
+  const ref = (contract.client && contract.client.reference) || id;
+  const name = (contract.client && contract.client.name) || "Sans nom";
+
+  showConfirmDialog({
+    title: "Supprimer le contrat",
+    message:
+      `Voulez-vous vraiment supprimer le contrat ${ref} pour « ${name} » ?\n\n` +
+      `Cette action est définitive.`,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: function () {
+      const newList = contracts.filter((c) => c.id !== id);
+      saveContracts(newList);
+
+      // Si tu synchronises aussi les contrats dans Firestore :
+      if (db) {
+        db.collection("contracts")
+          .doc(id)
+          .delete()
+          .catch((err) => console.error("Erreur Firestore delete contrat :", err));
+      }
+
+      loadContractsList();
+    }
+  });
+}
+
+function backToContracts() {
+  const contractView = document.getElementById("contractView");
+  const listView = document.getElementById("listView");
+  if (contractView) contractView.classList.add("hidden");
+  if (listView) listView.classList.remove("hidden");
+
+  switchListType("contrat");
+}
 
 // ----- Firestore contrats -----
 
@@ -5664,6 +5869,7 @@ window.onload = function () {
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
+
 
 
 
