@@ -4601,6 +4601,18 @@ img.sig {
   };
 }
 // ================== CONTRATS PISCINE / SPA ==================
+function getContractLabel(type) {
+  if (type === "piscine_chlore" || type === "piscine_sel") {
+    return "Contrat d’entretien Piscine";
+  }
+  if (type === "spa") {
+    return "Contrat d’entretien Spa / Jacuzzi";
+  }
+  if (type === "piscine+spa") {
+    return "Contrat d’entretien Piscine + Spa / Jacuzzi";
+  }
+  return "Contrat d’entretien Piscine / Spa";
+}
 
 let currentContractId = null;
 
@@ -5371,6 +5383,11 @@ function openContractPDF() {
 const isSyndic = pr.clientType === "syndic";
 const clientBlockTitle = isSyndic ? "Syndic / Agence" : "Client";
 const nameLabel = isSyndic ? "Société" : "Nom";
+    const contractTitle =
+    typeof getContractLabel === "function"
+      ? getContractLabel(p.type)
+      : "Contrat d’entretien Piscine / Spa";
+
 
 
   const format = (typeof formatEuro === "function")
@@ -5433,6 +5450,9 @@ const pdfDateStr = today.toLocaleDateString("fr-FR");
 
   .section {
     margin-top: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    -webkit-column-break-inside: avoid;
   }
 
   .section-title {
@@ -5440,7 +5460,9 @@ const pdfDateStr = today.toLocaleDateString("fr-FR");
     margin-bottom: 3px;
     color: #1a74d9;
     font-size: 11px;
+    page-break-after: avoid;
   }
+
 
   .block {
     border: 1px solid #cbd3e1;
@@ -5486,7 +5508,12 @@ const pdfDateStr = today.toLocaleDateString("fr-FR");
   .signature-title {
     font-weight:bold;
     margin-bottom:3px;
+    img.sig {
+    height: 80px;
+    width: auto;
+    margin-top: 4px;
   }
+
 
   .amount-highlight {
     margin-top:4px;
@@ -5512,7 +5539,8 @@ const pdfDateStr = today.toLocaleDateString("fr-FR");
     </p>
   </div>
 
-  <h2 class="contrat-title">Contrat d’entretien Piscine / Spa – Version Premium</h2>
+  <h2 class="contrat-title">${contractTitle}</h2>
+
 
   <!-- 1. Identification -->
   <div class="section">
@@ -5743,9 +5771,10 @@ ${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
           <div class="signature-title">Client / Syndic</div>
           <p>Signature précédée de la mention : « Lu et approuvé, bon pour accord ».</p>
         </div>
-        <div class="signature-block">
+       <div class="signature-block">
           <div class="signature-title">AquaClim Prestige</div>
           <p>Signature & cachet de l’entreprise</p>
+          <img src="signature.png" class="sig" alt="Signature AquaClim Prestige" />
         </div>
       </div>
     </div>
@@ -5881,6 +5910,7 @@ window.onload = function () {
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
 };
+
 
 
 
