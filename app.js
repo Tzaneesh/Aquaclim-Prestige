@@ -447,9 +447,9 @@ function addCurrentClient() {
     c => (c.name || "").toLowerCase() === name.toLowerCase()
   );
 
+const civility = document.getElementById("clientCivility")?.value.trim();
+
 const newClient = { civility, name, address, phone, email };
-
-
   let title;
   let message;
 
@@ -2587,14 +2587,15 @@ function backToContracts() {
   // Pour l’instant : retour à la liste Devis/Factures
   switchListType("devis");
 }
-
 // ================== LISTE DOCUMENTS & STATUTS ==================
 
 function loadDocumentsList() {
-   if (currentListType === "contrat") {
+  // Cas spécial : onglet Contrats
+  if (currentListType === "contrat") {
     loadContractsList();
     return;
   }
+
   const docs = getAllDocuments();
   let filtered = docs.filter((d) => d.type === currentListType);
 
@@ -2634,10 +2635,11 @@ function loadDocumentsList() {
     });
   }
 
-
+  // Tri : plus récents d’abord
   filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
 
   const tbody = document.getElementById("documentsTableBody");
+  if (!tbody) return;
   tbody.innerHTML = "";
 
   if (filtered.length === 0) {
@@ -2648,19 +2650,20 @@ function loadDocumentsList() {
 
   filtered.forEach((doc) => {
     const tr = document.createElement("tr");
-const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
+    const typeLabel = doc.type === "devis" ? "Devis" : "Facture";
 
-let badgeClass;
-if (doc.type === "devis") {
-  badgeClass = "badge-devis";
-} else {
-  // Facture : rouge si non payée, vert si payée
-  badgeClass = doc.paid ? "badge-facture-paid" : "badge-facture-unpaid";
-}
+    // Badge type (Devis / Facture payée / non payée)
+    let badgeClass;
+    if (doc.type === "devis") {
+      badgeClass = "badge-devis";
+    } else {
+      badgeClass = doc.paid ? "badge-facture-paid" : "badge-facture-unpaid";
+    }
 
-
+    // ====== STATUT (colonne) ======
     let statutHTML = "";
 
+    // --- FACTURE ---
     if (doc.type === "facture") {
       const mode = doc.paymentMode || "";
       const modeLabel =
@@ -2677,11 +2680,19 @@ if (doc.type === "devis") {
       const badgeStatus = doc.paid ? "badge-paid" : "badge-unpaid";
       const statusText = doc.paid
         ? "🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : "")
-        : "🔴 Non payée";
+        : "🔴 Non réglée";
 
       statutHTML =
-        `<span class="badge ${badgeStatus}">${statusText}</span><br>` +
-        `<div style="font-size:11px;margin-top:4px;white-space:nowrap;">` +
+        `<span class="badge ${badgeStatus}">${statusText}</span>` +
+        (doc.paymentDate
+          ? `<div class="status-sub">le ${
+              new Date(doc.paymentDate).toLocaleDateString("fr-FR")
+            }</div>`
+          : "");
+
+      // + radios en dessous (Non réglée / Espèces / CB / Virement / Chèque)
+      const modeRadio =
+        `<div class="pay-line">` +
         `<label><input type="radio" name="mode-${doc.id}" value="" ${
           !mode ? "checked" : ""
         } onchange="setPaymentMode('${doc.id}', '')"> Non réglée</label> ` +
@@ -2698,11 +2709,19 @@ if (doc.type === "devis") {
           mode === "cheque" ? "checked" : ""
         } onchange="setPaymentMode('${doc.id}', 'cheque')"> Chèque</label>` +
         `</div>`;
-    } else {
+
+      statutHTML += "<br>" + modeRadio;
+    }
+
+    // --- DEVIS ---
+    if (doc.type === "devis") {
       let storedStatus = doc.status || "en_attente";
       let displayStatus = storedStatus;
 
-      if (isDevisExpired("devis", doc.validityDate) && storedStatus === "en_attente") {
+      if (
+        isDevisExpired("devis", doc.validityDate) &&
+        storedStatus === "en_attente"
+      ) {
         displayStatus = "expire";
       }
 
@@ -2742,65 +2761,64 @@ if (doc.type === "devis") {
         selectHtml;
     }
 
-let openBtnClass = "btn btn-primary btn-small";
-let printBtnClass = "btn btn-primary btn-small";
+    // ====== BOUTONS (Modifier / Imprimer / Aperçu / Supprimer) ======
+    let openBtnClass = "btn btn-primary btn-small";
+    let printBtnClass = "btn btn-primary btn-small";
 
-if (doc.type === "facture") {
-  if (doc.paid) {
-    openBtnClass = "btn btn-success btn-small";
-    printBtnClass = "btn btn-success btn-small";
-  } else {
-    openBtnClass = "btn btn-danger btn-small";
-    printBtnClass = "btn btn-danger btn-small";
-  }
-}
+    if (doc.type === "facture") {
+      if (doc.paid) {
+        openBtnClass = "btn btn-success btn-small";
+        printBtnClass = "btn btn-success btn-small";
+      } else {
+        openBtnClass = "btn btn-danger btn-small";
+        printBtnClass = "btn btn-danger btn-small";
+      }
+    }
 
-// Aperçu = même couleur que Imprimer
-const previewBtnClass = printBtnClass;
-// Supprimer = toujours rouge
-const deleteBtnClass = "btn btn-danger btn-small";
+    const previewBtnClass = printBtnClass;
+    const deleteBtnClass = "btn btn-danger btn-small";
 
-const actionsHtml =
-  `<div class="actions-btns">` +
-    `<div class="actions-btns-row">` +
+    const actionsHtml =
+      `<div class="actions-btns">` +
+      `<div class="actions-btns-row">` +
       `<button class="${openBtnClass}" type="button" onclick="loadDocument('${doc.id}')">Modifier</button>` +
       `<button class="${printBtnClass}" type="button" onclick="openPrintable('${doc.id}')">Imprimer</button>` +
-    `</div>` +
-    `<div class="actions-btns-row">` +
+      `</div>` +
+      `<div class="actions-btns-row">` +
       `<button class="${previewBtnClass}" type="button" onclick="openPrintable('${doc.id}', true)">Aperçu</button>` +
       `<button class="${deleteBtnClass}" type="button" onclick="deleteDocument('${doc.id}')">Supprimer</button>` +
-    `</div>` +
-  `</div>`;
+      `</div>` +
+      `</div>`;
 
+    // ====== LIGNE DU TABLEAU ======
+    const clientName = doc.client?.name || "";
+    const subject = (doc.subject || "").trim();
+    const safeClient = escapeHtml(clientName);
+    const safeSubject = escapeHtml(subject);
+    const dateText = doc.date
+      ? new Date(doc.date).toLocaleDateString("fr-FR")
+      : "";
 
-
-
-  const clientName = doc.client?.name || "";
-const subject = (doc.subject || "").trim();
-const safeClient = escapeHtml(clientName);
-const safeSubject = escapeHtml(subject);
-
-tr.innerHTML =
-  `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
-  `<td>${doc.number}</td>` +
-  `<td class="client-cell">` +
-    `<div class="client-main" title="${safeClient}">${safeClient || "-"}</div>` +
-    (subject
-      ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
-      : ""
-    ) +
-  `</td>` +
-  `<td>${
-    doc.date ? new Date(doc.date).toLocaleDateString("fr-FR") : ""
-  }</td>` +
-  `<td><strong>${formatEuro(doc.totalTTC)}</strong></td>` +
-  `<td class="status-cell">${statutHTML}</td>` +
-  `<td>${actionsHtml}</td>`;
-
+    tr.innerHTML =
+      `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
+      `<td>${escapeHtml(doc.number || "")}</td>` +
+      `<td class="client-cell">` +
+      `<div class="client-main" title="${safeClient}">${safeClient || "-"}</div>` +
+      (subject
+        ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
+        : "") +
+      `</td>` +
+      `<td>${dateText}</td>` +
+      `<td><strong>${formatEuro(doc.totalTTC)}</strong></td>` +
+      `<td class="status-cell">${statutHTML}</td>` +
+      `<td>${actionsHtml}</td>`;
 
     tbody.appendChild(tr);
   });
 }
+
+
+
 function loadContractsList() {
   const contracts = getAllContracts();
 
@@ -2850,11 +2868,20 @@ function loadContractsList() {
     const startDate = c.pricing?.startDate || "";
     const totalHT = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
 
+    // ✅ mêmes boutons que devis/factures : Modifier / Imprimer / Aperçu / Supprimer
     const actionsHtml =
-      `<button class="btn btn-secondary btn-small" type="button" onclick="openContractFromList('${c.id}')">Ouvrir</button>` +
-      ` <button class="btn btn-danger btn-small" type="button" onclick="deleteContractFromList('${c.id}')">Supprimer</button>`;
+      `<div class="actions-btns">` +
+        `<div class="actions-btns-row">` +
+          `<button class="btn btn-primary btn-small" type="button" onclick="openContractFromList('${c.id}')">Modifier</button>` +
+          `<button class="btn btn-primary btn-small" type="button" onclick="printContractFromList('${c.id}')">Imprimer</button>` +
+        `</div>` +
+        `<div class="actions-btns-row">` +
+          `<button class="btn btn-primary btn-small" type="button" onclick="previewContractFromList('${c.id}')">Aperçu</button>` +
+          `<button class="btn btn-danger btn-small" type="button" onclick="deleteContractFromList('${c.id}')">Supprimer</button>` +
+        `</div>` +
+      `</div>`;
 
-    const statutHTML = ""; // tu pourras mettre "Actif", "Archivé", etc. plus tard si tu veux
+    const statutHTML = ""; // tu pourras mettre "Actif", "Archivé", etc. plus tard
 
     tr.innerHTML =
       `<td>Contrat</td>` +
@@ -4062,6 +4089,17 @@ function openPrintable(id, previewOnly) {
       page-break-inside: avoid;
       break-inside: avoid;
     }
+  .ref-bar {
+    margin: 6px 0 10px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd3e1;
+    background: #f5f7ff;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
 
     /* ===== HEADER ===== */
 
@@ -4601,6 +4639,8 @@ img.sig {
     }
   };
 }
+
+
 // ================== CONTRATS PISCINE / SPA ==================
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
@@ -4630,26 +4670,16 @@ function getAllContracts() {
     return [];
   }
 }
-function getContractLabel(type) {
-  if (type === "piscine_chlore" || type === "piscine_sel") {
-    return "Contrat d’entretien Piscine";
-  }
-  if (type === "spa") {
-    return "Contrat d’entretien Spa / Jacuzzi";
-  }
-  if (type === "piscine+spa") {
-    return "Contrat d’entretien Piscine + Spa / Jacuzzi";
-  }
-  return "Contrat d’entretien Piscine / Spa";
-}
 
 function getContract(id) {
-  return getAllContracts().find((c) => c.id === id) || null;
+  const list = getAllContracts();
+  return list.find((c) => c.id === id) || null;
 }
 
 function saveContracts(list) {
   localStorage.setItem("contracts", JSON.stringify(list));
 }
+
 function newContract() {
   currentContractId = null;
 
@@ -4756,6 +4786,32 @@ function deleteContractFromList(id) {
     }
   });
 }
+function openContractPdfFromList(id, previewOnly) {
+  const contract = getContract(id);
+  if (!contract) return;
+
+  // On remplit le formulaire contrat en arrière-plan
+  fillContractForm(contract);
+
+  // On génère le PDF (avec ou sans impression auto)
+  openContractPDF(previewOnly);
+}
+
+function printContractFromList(id) {
+  const contract = getContract(id);
+  if (!contract) return;
+
+  fillContractForm(contract);
+  openContractPDF(false); // impression directe
+}
+
+function previewContractFromList(id) {
+  const contract = getContract(id);
+  if (!contract) return;
+
+  fillContractForm(contract);
+  openContractPDF(true); // aperçu seulement
+}
 
 function backToContracts() {
   const contractView = document.getElementById("contractView");
@@ -4765,6 +4821,20 @@ function backToContracts() {
 
   switchListType("contrat");
 }
+
+function getNextInvoiceNumber() {
+  const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
+  const numbers = docs
+    .filter(d => d.type === "facture")
+    .map(d => d.number)
+    .filter(n => /^F\d+/.test(n))
+    .map(n => parseInt(n.slice(1), 10))
+    .filter(n => !isNaN(n));
+
+  const next = numbers.length ? Math.max(...numbers) + 1 : 1;
+  return "F" + next.toString().padStart(4, "0");
+}
+
 
 // ----- Firestore contrats -----
 
@@ -4819,19 +4889,8 @@ function getContractUnitPrice() {
 }
 
 
-// ----- Prix unitaire pour le contrat (entretien régulier) -----
 
-function getContractUnitPrice() {
-  const clientType =
-    document.getElementById("ctClientType")?.value || "particulier";
-  const mainService =
-    document.getElementById("ctMainService")?.value || "piscine_chlore";
-
-  return getTarifFromTemplates(mainService, clientType);
-}
-
-
-// ----- Compte des mois été / hiver sur la période du contrat -----
+// ----- Distribution des mois été / hiver (été = mai à octobre) -----
 
 function computeContractMonths(startDateStr, durationMonths) {
   if (!startDateStr || !durationMonths) {
@@ -4850,8 +4909,8 @@ function computeContractMonths(startDateStr, durationMonths) {
   let monthsHiver = 0;
 
   while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
-    // Mai (4) à Septembre (8) = été, le reste = hiver
-    if (m >= 4 && m <= 8) monthsEte++;
+    // Mai (4) à Octobre (9) = été, le reste = hiver
+    if (m >= 4 && m <= 9) monthsEte++;
     else monthsHiver++;
 
     m++;
@@ -4865,10 +4924,12 @@ function computeContractMonths(startDateStr, durationMonths) {
 }
 
 
+
 // ----- Recalcul global du contrat -----
 
 function recomputeContract() {
-  const mode = document.getElementById("ctMode")?.value || "standard";
+  const modeEl = document.getElementById("ctMode");
+  const mode = modeEl?.value || "standard";
   const passHiverInput = document.getElementById("ctPassHiver");
   const passEteInput = document.getElementById("ctPassEte");
 
@@ -4890,34 +4951,38 @@ function recomputeContract() {
   const totalPassInput = document.getElementById("ctTotalPassages");
 
   let totalPassages = 0;
+  let monthsEte = 0;
+  let monthsHiver = 0;
 
+  let passHiver = parseInt(passHiverInput?.value || "0", 10) || 0;
+  let passEte = parseInt(passEteInput?.value || "0", 10) || 0;
+
+  // 1bis) Calcul période + répartition hiver/été
   if (startDateStr && duration > 0) {
     const start = new Date(startDateStr + "T00:00:00");
     const end = new Date(start);
     end.setMonth(end.getMonth() + duration);
     end.setDate(end.getDate() - 1);
 
-    if (endDateInput) {
-      endDateInput.value = end.toLocaleDateString("fr-FR");
+    if (!isNaN(end.getTime())) {
+      if (endDateInput) {
+        endDateInput.value = end.toLocaleDateString("fr-FR");
+      }
+
+      const startYM = startDateStr.slice(0, 7); // YYYY-MM
+      const endYM =
+        end.getFullYear() +
+        "-" +
+        String(end.getMonth() + 1).padStart(2, "0");
+
+      if (periodInput) {
+        periodInput.value = `${startYM} → ${endYM}`;
+      }
     }
 
-    const startYM = startDateStr.slice(0, 7); // YYYY-MM
-    const endYM =
-      end.getFullYear() +
-      "-" +
-      String(end.getMonth() + 1).padStart(2, "0");
-
-    if (periodInput) {
-      periodInput.value = `${startYM} → ${endYM}`;
-    }
-
-    const { monthsEte, monthsHiver } = computeContractMonths(
-      startDateStr,
-      duration
-    );
-
-    const passHiver = parseInt(passHiverInput?.value || "0", 10) || 0;
-    const passEte = parseInt(passEteInput?.value || "0", 10) || 0;
+    const res = computeContractMonths(startDateStr, duration);
+    monthsEte = res.monthsEte;
+    monthsHiver = res.monthsHiver;
 
     totalPassages = monthsEte * passEte + monthsHiver * passHiver;
   } else {
@@ -4929,7 +4994,58 @@ function recomputeContract() {
     totalPassInput.value = totalPassages.toString();
   }
 
-  // 2) Prix unitaire + options
+  // 2) Récap lisible pour humain
+  const recapSummaryEl = document.getElementById("ctRecapSummary");
+  if (recapSummaryEl) {
+    if (startDateStr && duration > 0) {
+      const labelPeriode =
+        duration >= 12 ? "par an" : "sur la période du contrat";
+      const totalHiver = monthsHiver * passHiver;
+      const totalEte = monthsEte * passEte;
+
+      recapSummaryEl.innerHTML =
+        `Ce contrat prévoit <strong>${totalPassages}</strong> passages ${labelPeriode} : ` +
+        `<strong>${totalHiver}</strong> en hiver et <strong>${totalEte}</strong> en été.`;
+    } else {
+      recapSummaryEl.textContent = "";
+    }
+  }
+
+  // 3) Avertissements pro si configuration étrange
+  const warnBox = document.getElementById("ctWarning");
+  if (warnBox) {
+    const warnings = [];
+
+    if (startDateStr && duration > 0) {
+      if (monthsEte === 0 && passEte > 0) {
+        warnings.push(
+          "La période sélectionnée ne contient aucun mois d’été (mai à octobre) alors que des passages d’été sont paramétrés."
+        );
+      }
+      if (monthsHiver === 0 && passHiver > 0) {
+        warnings.push(
+          "La période sélectionnée ne contient aucun mois d’hiver alors que des passages d’hiver sont paramétrés."
+        );
+      }
+      if (totalPassages === 0 && (passHiver > 0 || passEte > 0)) {
+        warnings.push(
+          "Avec ces paramètres, le total de passages calculé est de 0. Merci de vérifier la date de début, la durée et la fréquence."
+        );
+      }
+    }
+
+    if (warnings.length > 0) {
+      warnBox.innerHTML =
+        `<span style="font-size:18px;line-height:1;">⚠️</span>` +
+        `<div><strong>Attention à la configuration du contrat :</strong><br>${warnings.join("<br>")}</div>`;
+      warnBox.classList.remove("hidden");
+    } else {
+      warnBox.classList.add("hidden");
+      warnBox.innerHTML = "";
+    }
+  }
+
+  // 4) Prix unitaire + options
   const clientType =
     document.getElementById("ctClientType")?.value || "particulier";
   const mainService =
@@ -4937,7 +5053,6 @@ function recomputeContract() {
 
   const unitPrice = getTarifFromTemplates(mainService, clientType);
 
-  // Options forfaitaires
   const includeOpening =
     document.getElementById("ctIncludeOpening")?.checked || false;
   const includeWinter =
@@ -4949,7 +5064,7 @@ function recomputeContract() {
     const kindOpening =
       mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
         ? "vidange_jacuzzi"
-        : "remise_service_piscine"; // adapte aux noms réels de tes templates
+        : "remise_service_piscine"; // adapte selon tes PRESTATION_TEMPLATES
     extra += getTarifFromTemplates(kindOpening, clientType);
   }
 
@@ -4959,13 +5074,13 @@ function recomputeContract() {
 
   const totalHT = totalPassages * unitPrice + extra;
 
-  // 3) TVA (même logique que devis/factures)
+  // 5) TVA
   const tvaRateInput = document.getElementById("tvaRate");
   const tvaRate = tvaRateInput ? parseFloat(tvaRateInput.value) || 0 : 0;
   const tvaAmount = totalHT * (tvaRate / 100);
   const totalTTC = totalHT + tvaAmount;
 
-  // 4) Mise à jour UI
+  // 6) Mise à jour UI
   const unitInput = document.getElementById("ctUnitPrice");
   const totalHTInput = document.getElementById("ctTotalHT");
 
@@ -4985,7 +5100,7 @@ function recomputeContract() {
   if (recapPrice)
     recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
 
-  // 5) Récap montant : Net à payer / HT / TTC
+  // 7) Récap montant : Net à payer / HT / TTC
   let labelAmount = "";
   let displayAmount = 0;
 
@@ -5003,11 +5118,7 @@ function recomputeContract() {
   if (recapTotal) {
     recapTotal.textContent = labelAmount + " : " + format(displayAmount);
   }
-
-  // (le détail exact HT/TVA/TTC est ressaisi dans buildContractFromForm)
 }
-
-
 
 // ----- Construction d'un objet contrat depuis le formulaire -----
 
@@ -5288,29 +5399,107 @@ function saveContract() {
     icon: "✅"
   });
 }
+function resetContractFormToDefaults() {
+  const root = document.getElementById("contractView");
+  if (root) {
+    root.querySelectorAll("input, textarea, select").forEach((el) => {
+      if (el.type === "select-one") {
+        // on garde la valeur par défaut définie dans le HTML
+        return;
+      } else if (
+        el.type === "date" ||
+        el.type === "text" ||
+        el.type === "email" ||
+        el.type === "tel" ||
+        el.type === "number"
+      ) {
+        if (!el.readOnly) el.value = "";
+      } else if (el.tagName === "TEXTAREA") {
+        el.value = "";
+      } else if (el.type === "checkbox" || el.type === "radio") {
+        el.checked = false;
+      }
+    });
+  }
+
+  // Valeurs par défaut principales
+  const ctClientType = document.getElementById("ctClientType");
+  if (ctClientType) ctClientType.value = "particulier";
+
+  const ctMainService = document.getElementById("ctMainService");
+  if (ctMainService) ctMainService.value = "piscine_chlore";
+
+  const ctMode = document.getElementById("ctMode");
+  if (ctMode) ctMode.value = "standard";
+
+  const ctPassHiver = document.getElementById("ctPassHiver");
+  if (ctPassHiver) ctPassHiver.value = "1";
+
+  const ctPassEte = document.getElementById("ctPassEte");
+  if (ctPassEte) ctPassEte.value = "2";
+
+  const ctDuration = document.getElementById("ctDuration");
+  if (ctDuration) ctDuration.value = "12";
+
+  const ctStartDate = document.getElementById("ctStartDate");
+  if (ctStartDate) ctStartDate.value = "";
+
+  // Options
+  const openingEl = document.getElementById("ctIncludeOpening");
+  if (openingEl) openingEl.checked = false;
+  const winterEl = document.getElementById("ctIncludeWinter");
+  if (winterEl) winterEl.checked = false;
+
+  // Nouvelle référence de contrat
+  const ctRef = document.getElementById("ctReference");
+  if (ctRef && typeof getNextContractReference === "function") {
+    ctRef.value = getNextContractReference();
+  }
+
+  // recalcul
+  if (typeof recomputeContract === "function") {
+    recomputeContract();
+  }
+}
+function parseFrenchDate(str) {
+  if (!str) return null;
+  const parts = str.split("/");
+  if (parts.length !== 3) return null;
+  return `${parts[2]}-${parts[1]}-${parts[0]}`;
+}
 
 // ----- Suppression -----
 
 function deleteCurrentContract() {
+  const ref = (document.getElementById("ctReference")?.value || "").trim();
+  const clientName = (document.getElementById("ctClientName")?.value || "").trim();
+  const label = clientName || ref || "Contrat";
+
+  // 1) Aucun contrat enregistré (pas encore sauvegardé)
   if (!currentContractId) {
     showConfirmDialog({
-      title: "Aucun contrat ouvert",
-      message: "Aucun contrat n'est actuellement chargé.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "info",
-      icon: "ℹ️"
+      title: "Effacer le contrat en cours",
+      message:
+        `Ce contrat (${label}) n'a pas encore été enregistré.\n\n` +
+        "Voulez-vous effacer tout le contenu et repartir sur un contrat vierge ?",
+      confirmLabel: "Réinitialiser",
+      cancelLabel: "Annuler",
+      variant: "danger",
+      icon: "⚠️",
+      onConfirm: function () {
+        resetContractFormToDefaults();
+      }
     });
     return;
   }
 
+  // 2) Contrat déjà enregistré -> vraie suppression
   const list = getAllContracts();
   const existing = list.find((c) => c.id === currentContractId);
-  const label = existing?.client?.name || "Contrat";
 
   showConfirmDialog({
     title: "Supprimer le contrat",
-    message: `Es-tu sûr de vouloir supprimer le contrat pour :\n« ${label} » ?`,
+    message: `Es-tu sûr de vouloir supprimer le contrat pour :\n« ${existing?.client?.name || label} » ?`,
     confirmLabel: "Supprimer",
     cancelLabel: "Annuler",
     variant: "danger",
@@ -5321,69 +5510,217 @@ function deleteCurrentContract() {
       deleteContractFromFirestore(currentContractId);
       currentContractId = null;
 
-      // On vide le formulaire
-      document
-        .getElementById("contractView")
-        .querySelectorAll("input, textarea, select")
-        .forEach((el) => {
-          if (el.type === "select-one") {
-            // on laisse les valeurs par défaut du <select>
-          } else if (
-            el.type === "date" ||
-            el.type === "text" ||
-            el.type === "email" ||
-            el.type === "tel" ||
-            el.type === "number"
-          ) {
-            if (!el.readOnly) el.value = "";
-          } else if (el.tagName === "TEXTAREA") {
-            el.value = "";
-          }
-        });
+      resetContractFormToDefaults();
+    }
+  });
+}
 
-      // Remet les defaults du contrat
-      const ctClientType = document.getElementById("ctClientType");
-      if (ctClientType) ctClientType.value = "particulier";
+function formatNicePeriod(startISO, endValue) {
+  if (!startISO || !endValue) return "";
 
-      const ctMainService = document.getElementById("ctMainService");
-      if (ctMainService) ctMainService.value = "piscine_chlore";
+  // endValue peut être "2026-09-30" ou "30/09/2026"
+  let endISO = endValue;
+  if (endValue.includes("/")) {
+    const parsed = parseFrenchDate(endValue); // utilise la fonction que tu as déjà
+    if (!parsed) return "";
+    endISO = parsed;
+  }
 
-      const ctMode = document.getElementById("ctMode");
-      if (ctMode) ctMode.value = "standard";
+  const start = new Date(startISO);
+  const end = new Date(endISO);
 
-      const ctPassHiver = document.getElementById("ctPassHiver");
-      if (ctPassHiver) ctPassHiver.value = "1";
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return "";
 
-      const ctPassEte = document.getElementById("ctPassEte");
-      if (ctPassEte) ctPassEte.value = "2";
+  const opts = { day: "numeric", month: "long", year: "numeric" };
 
-      const ctDuration = document.getElementById("ctDuration");
-      if (ctDuration) ctDuration.value = "12";
+  const startFR = start.toLocaleDateString("fr-FR", opts);
+  const endFR = end.toLocaleDateString("fr-FR", opts);
 
-      const ctStartDate = document.getElementById("ctStartDate");
-      if (ctStartDate) ctStartDate.value = "";
+  // Calcul du nombre de mois inclus
+  const months =
+    (end.getFullYear() - start.getFullYear()) * 12 +
+    (end.getMonth() - start.getMonth()) +
+    1;
 
-      // Options forfaitaires
-      const openingEl = document.getElementById("ctIncludeOpening");
-      if (openingEl) openingEl.checked = false;
-      const winterEl = document.getElementById("ctIncludeWinter");
-      if (winterEl) winterEl.checked = false;
+  return `du ${startFR} au ${endFR} (${months} mois)`;
+}
 
-      // Nouvelle référence de contrat dispo
-      const ctRef = document.getElementById("ctReference");
-      if (ctRef && typeof getNextContractReference === "function") {
-        ctRef.value = getNextContractReference();
+function transformContractToInvoice() {
+  // On s'assure que le contrat est bien recalculé
+  recomputeContract();
+  const contract = buildContractFromForm(true);
+  if (!contract) return;
+
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+  const pr = contract.pricing || {};
+
+  // Sécurisation des montants
+  const subtotal = Number(pr.totalHT) || 0;
+  const tvaRate  =
+    (typeof pr.tvaRate === "number"
+      ? pr.tvaRate
+      : (parseFloat(document.getElementById("tvaRate")?.value || "0"))) || 0;
+  const tvaAmount = subtotal * (tvaRate / 100);
+  const totalTTC  = subtotal + tvaAmount;
+
+  // Numéro & date de facture
+  const number   = typeof getNextNumber === "function" ? getNextNumber("facture") : "";
+  const todayISO = new Date().toISOString().slice(0, 10); // yyyy-mm-dd
+
+  // Sujet & ligne de prestation (avec type d'installation)
+  const mainService = pr.mainService || (contract.pool && contract.pool.type) || "";
+
+  let serviceLabel = "";
+  if (mainService === "piscine_sel") {
+    serviceLabel = "piscine au sel";
+  } else if (mainService === "piscine_chlore") {
+    serviceLabel = "piscine au chlore";
+  } else if (
+    mainService === "entretien_jacuzzi" ||
+    mainService === "spa" ||
+    mainService === "spa_jacuzzi"
+  ) {
+    serviceLabel = "spa / jacuzzi";
+  } else {
+    serviceLabel = "piscine / spa";
+  }
+
+  const baseLabel = `Contrat d’entretien ${serviceLabel}`;
+
+  const formattedPeriod = formatNicePeriod(pr.startDate, pr.endDateLabel);
+
+  const subject = formattedPeriod
+    ? `${baseLabel} – ${formattedPeriod}`
+    : baseLabel;
+
+  // On met la même phrase pour la ligne de prestation
+  const lineDesc = subject;
+
+
+  const prestations = [
+    {
+      desc: lineDesc,
+      detail: "",
+      qty: 1,
+      price: subtotal,
+      total: subtotal,
+      unit: "forfait",
+      dates: [],
+      kind: "contrat_entretien"
+    }
+  ];
+
+  // 🔹 Conditions de règlement par défaut (à adapter si tu veux)
+  const notes =
+    pr.clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+        ].join("\n")
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités de retard pourront être appliquées."
+        ].join("\n");
+
+ const facture = {
+  id: Date.now().toString(),
+  type: "facture",
+  number,
+  date: todayISO,
+  validityDate: "",
+
+  subject,
+  contractReference: c.reference || "", // 🔥 lien direct vers le contrat
+
+  client: {
+    civility: c.civility || "",
+    name:     c.name     || "",
+    address:  c.address  || "",
+    phone:    c.phone    || "",
+    email:    c.email    || ""
+  },
+
+  siteCivility: s.civility || "",
+  siteName:     s.name     || "",
+  siteAddress:  s.address  || "",
+
+  prestations,
+  tvaRate,
+  subtotal,
+  discountRate: 0,
+  discountAmount: 0,
+  tvaAmount,
+  totalTTC,
+
+  notes,
+
+  // Facture créée à partir d’un contrat => non payée par défaut
+  paid: false,
+  paymentMode: "",
+  paymentDate: "",
+
+  status: "",
+  conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
+
+  createdAt: new Date().toISOString()
+};
+
+
+  // Enregistrement dans la liste des documents
+  const docs = getAllDocuments();
+  docs.push(facture);
+  saveDocuments(docs);
+
+  // Sauvegarde Firestore si dispo
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(facture);
+  }
+
+  // Popup PRO qui fonctionne
+  showConfirmDialog({
+    title: "Contrat transformé en facture",
+    message:
+      `Une facture ${facture.number || ""} a été créée à partir de ce contrat.\n\n` +
+      `Souhaites-tu l’ouvrir maintenant ?`,
+    confirmLabel: "Ouvrir la facture",
+    cancelLabel: "Rester sur le contrat",
+    variant: "success",
+    icon: "✅",
+    onConfirm: function () {
+      // On passe en mode factures
+      if (typeof switchListType === "function") {
+        switchListType("facture");
       }
 
-      // Recalcul des passages / tarifs
-      if (typeof recomputeContract === "function") {
-        recomputeContract();
+      // On affiche la vue formulaire devis/factures
+      const contractView = document.getElementById("contractView");
+      const formView     = document.getElementById("formView");
+      if (contractView) contractView.classList.add("hidden");
+      if (formView) formView.classList.remove("hidden");
+
+      // On charge la facture dans le formulaire
+      if (typeof loadDocument === "function") {
+        loadDocument(facture.id);
+      }
+
+      // On rafraîchit la liste (pour voir la facture dans le tableau)
+      if (typeof loadDocumentsList === "function") {
+        loadDocumentsList();
+      }
+    },
+    onCancel: function () {
+      if (typeof loadDocumentsList === "function") {
+        loadDocumentsList();
       }
     }
   });
 }
 
-function openContractPDF() {
+
+function openContractPDF(previewOnly = false) {
   recomputeContract();
   const contract = buildContractFromForm(true);
   if (!contract) return;
@@ -5395,10 +5732,34 @@ function openContractPDF() {
 const isSyndic = pr.clientType === "syndic";
 const clientBlockTitle = isSyndic ? "Syndic / Agence" : "Client";
 const nameLabel = isSyndic ? "Société" : "Nom";
-    const contractTitle =
-    typeof getContractLabel === "function"
-      ? getContractLabel(p.type)
-      : "Contrat d’entretien Piscine / Spa";
+
+// 🔥 Détermination du type d'installation comme sur la facture
+const mainService = pr.mainService || p.type || "";
+
+let serviceLabel = "";
+if (mainService === "piscine_sel") {
+  serviceLabel = "piscine au sel";
+} else if (mainService === "piscine_chlore") {
+  serviceLabel = "piscine au chlore";
+} else if (
+  mainService === "entretien_jacuzzi" ||
+  mainService === "spa" ||
+  mainService === "spa_jacuzzi"
+) {
+  serviceLabel = "spa / jacuzzi";
+} else {
+  serviceLabel = "piscine / spa";
+}
+
+const baseContractLabel = `Contrat d’entretien ${serviceLabel}`;
+
+// 🗓 On réutilise la même logique que sur la facture
+const formattedPeriodForTitle = formatNicePeriod(pr.startDate, pr.endDateLabel);
+
+// Titre final super pro 🤌
+const contractTitle = formattedPeriodForTitle
+  ? `${baseContractLabel} – ${formattedPeriodForTitle}`
+  : baseContractLabel;
 
 
 
@@ -5411,6 +5772,32 @@ const nameLabel = isSyndic ? "Société" : "Nom";
   const printWindow = window.open("", "_blank");
 const today = new Date();
 const pdfDateStr = today.toLocaleDateString("fr-FR");
+  // Sécurisation des montants (évite les 0 € si pr.totalHT est vide)
+  const rawTotalHT = Number(pr.totalHT) || 0;
+  const computedHT = (pr.totalPassages || 0) * (pr.unitPrice || 0);
+  const totalHTSafe = rawTotalHT > 0 ? rawTotalHT : computedHT;
+
+  const tvaRate = pr.tvaRate || 0;
+  const rawTvaAmount = Number(pr.tvaAmount) || 0;
+  const tvaAmountSafe =
+    tvaRate > 0
+      ? (rawTvaAmount > 0 ? rawTvaAmount : totalHTSafe * (tvaRate / 100))
+      : 0;
+
+  const totalTTCSafe = tvaRate > 0 ? totalHTSafe + tvaAmountSafe : totalHTSafe;
+  // Helper pour formater les dates proprement
+  const formatDateFR = (str) => {
+    if (!str) return "";
+    const d = new Date(str);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("fr-FR");
+    }
+    // si c'est déjà une date type "12/05/2025", on renvoie tel quel
+    return str;
+  };
+
+  const startDateFR = formatDateFR(pr.startDate);
+  const endDateFR = formatDateFR(pr.endDateLabel);
 
 
   const html = `<!DOCTYPE html>
@@ -5491,6 +5878,16 @@ const pdfDateStr = today.toLocaleDateString("fr-FR");
   .label {
     font-weight:bold;
   }
+  .tarif-block {
+    border: 1.5px solid #1a74d9;
+    background: #f0f5ff;
+  }
+
+  .tarif-main-amount {
+    font-size: 12px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
 
   .grid-2 {
     display:flex;
@@ -5549,12 +5946,20 @@ img.sig {
     <h1>AquaClim Prestige</h1>
     <p class="subtitle">AquaClim Prestige – Contrat de maintenance</p>
     <p class="contact">
-      Le Blevennec Loïc – Micro-entreprise déclarée – SIRET : XXXXXXXXXXXXX<br>
+      Le Blevennec Loïc – SIRET : XXXXXXXXXXXXX<br>
       Adresse : 2 avenue Cauvin, 06100 Nice – Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com
     </p>
   </div>
 
   <h2 class="contrat-title">${contractTitle}</h2>
+  <div class="ref-bar">
+    <div><strong>Contrat n°</strong> ${c.reference || contract.id}</div>
+    ${
+      c.name
+        ? `<div><strong>Client :</strong> ${c.name}</div>`
+        : ""
+    }
+  </div>
 
 
   <!-- 1. Identification -->
@@ -5654,13 +6059,14 @@ ${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
                 : "Personnalisé"
             }
           </p>
-          <p><span class="label">Passages hiver (oct → avr) :</span> ${pr.passHiver} / mois</p>
-          <p><span class="label">Passages été (mai → sept) :</span> ${pr.passEte} / mois</p>
+      <p><span class="label">Passages hiver (nov → avr) :</span> ${pr.passHiver} / mois</p>
+<p><span class="label">Passages été (mai → oct) :</span> ${pr.passEte} / mois</p>
+
         </div>
         <div>
-          <p><span class="label">Début de contrat :</span> ${pr.startDate || ""}</p>
+    <p><span class="label">Début de contrat :</span> ${startDateFR}</p>
           <p><span class="label">Durée :</span> ${pr.durationMonths} mois</p>
-          <p><span class="label">Fin de contrat :</span> ${pr.endDateLabel || ""}</p>
+ <p><span class="label">Fin de contrat :</span> ${endDateFR}</p>
           <p><span class="label">Période couverte :</span> ${pr.periodLabel || ""}</p>
           <p><span class="label">Total visites estimées :</span> ${pr.totalPassages}</p>
         </div>
@@ -5740,28 +6146,31 @@ ${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
   <!-- 6. Tarifs & paiement -->
   <div class="section">
     <div class="section-title">6. Tarifs & paiement</div>
-    <div class="block">
-    ${
-  pr.tvaRate && pr.tvaRate > 0
-    ? `
-      <p>Montant HT estimatif : <strong>${format(pr.totalHT)}</strong></p>
-      <p>TVA (${pr.tvaRate.toFixed(2).replace(/\\.00$/, "")} %) : <strong>${format(pr.tvaAmount || 0)}</strong></p>
-      <p>Montant TTC estimatif pour la période : <strong>${format(pr.totalTTC || (pr.totalHT * (1 + pr.tvaRate / 100)))}</strong></p>
-    `
-    : pr.clientType === "syndic"
-    ? `
-      <p>Montant HT estimatif pour la période : <strong>${format(pr.totalHT)}</strong></p>
-      <p>TVA non applicable, article 293 B du CGI (montant soumis à évolution selon régime fiscal).</p>
-    `
-    : `
-      <p>Net à payer estimatif pour la période : <strong>${format(pr.totalHT)}</strong></p>
-      <p>TVA non applicable, article 293 B du CGI.</p>
-    `
-}
+    <div class="block tarif-block">
+      ${
+        tvaRate && tvaRate > 0
+          ? `
+        <p><strong>Montant HT estimatif :</strong> ${format(totalHTSafe)}</p>
+        <p><strong>TVA (${tvaRate.toFixed(2).replace(/\\.00$/, "")} %) :</strong> ${format(tvaAmountSafe)}</p>
+        <p class="tarif-main-amount"><strong>Montant TTC estimatif pour la période :</strong> ${format(totalTTCSafe)}</p>
+      `
+          : pr.clientType === "syndic"
+          ? `
+        <p class="tarif-main-amount"><strong>Montant HT estimatif pour la période :</strong> ${format(totalHTSafe)}</p>
+        <p>TVA non applicable, article 293 B du CGI (montant soumis à évolution selon régime fiscal).</p>
+      `
+          : `
+        <p class="tarif-main-amount"><strong>Net à payer estimatif pour la période :</strong> ${format(totalHTSafe)}</p>
+        <p>TVA non applicable, article 293 B du CGI.</p>
+      `
+      }
 
-      <p>Les modalités (mensualisation, facturation périodique, etc.) peuvent être précisées sur les factures associées.</p>
+      <p style="margin-top:6px;">
+        Les modalités (mensualisation, facturation périodique, etc.) sont précisées dans les devis et factures associés.
+      </p>
     </div>
   </div>
+
 
   <!-- 7. Signature -->
   <div class="section">
@@ -5793,7 +6202,9 @@ ${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
 
   printWindow.onload = function () {
     printWindow.focus();
-    printWindow.print();
+    if (!previewOnly) {
+      printWindow.print();
+    }
   };
 }
 function updateContractClientType(type) {

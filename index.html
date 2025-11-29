@@ -7,9 +7,11 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 
-  <!-- Firebase -->
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
 </head>
 
 <body>
@@ -183,7 +185,7 @@
     <div class="actions no-print">
       <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
       <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
-      <button class="btn action-button" onclick="openPrintable()">🖨️ PDF</button>
+      <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
       <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
@@ -456,7 +458,7 @@
       <!-- ACTIONS BAS -->
       <div class="form-actions no-print">
         <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
-        <button class="btn action-button" onclick="openPrintable()">🖨️ PDF</button>
+        <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
         <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
       </div>
 
@@ -471,7 +473,9 @@
   <div class="actions no-print" style="margin-bottom:20px;">
     <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
-    <button class="btn btn-primary" onclick="openContractPDF()">🖨️ PDF</button>
+    <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
+<button class="btn action-button" onclick="transformContractToInvoice()">🔁 Transformer en facture</button>
+
     <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>
 
@@ -516,7 +520,7 @@
       </div>
 
       <div class="form-group">
-        <label>Référence contrat (optionnel)</label>
+        <label>Référence contrat</label>
         <input type="text" id="ctReference">
       </div>
 </div>
@@ -636,7 +640,7 @@
       </div>
 
 <div class="form-group">
-  <label>Passages hiver (oct → avr)</label>
+  <label>Passages hiver (nov → avr)</label>
   <select id="ctPassHiver">
     <option value="0">0 – Sur demande</option>
     <option value="1">1 passage / mois</option>
@@ -646,7 +650,7 @@
 </div>
 
 <div class="form-group">
-  <label>Passages été (mai → sept)</label>
+  <label>Passages été (mai → oct)</label>
   <select id="ctPassEte">
     <option value="0">0 – Sur demande</option>
     <option value="1">1 passage / mois</option>
@@ -665,12 +669,13 @@
 
  <div class="form-group">
   <label>Durée du contrat</label>
-  <select id="ctDuration">
-    <option value="4">4 mois – Saison été</option>
-    <option value="5">5 mois – Saison étendue</option>
-    <option value="6">6 mois – Saison longue</option>
-    <option value="12" selected>12 mois – Annuel</option>
-  </select>
+<select id="ctDuration" class="form-select">
+  <option value="4">4 mois – Saison été (juin → septembre)</option>
+  <option value="5">5 mois – Saison étendue</option>
+  <option value="6">6 mois – Saison longue (mai → octobre)</option>
+  <option value="12">12 mois – Annuel</option>
+</select>
+
 </div>
 
 
@@ -684,10 +689,15 @@
         <input type="text" id="ctPeriod" readonly>
       </div>
 
-      <div class="form-group">
-        <label>Total passages (auto)</label>
-        <input type="text" id="ctTotalPassages" readonly>
-      </div>
+<div class="form-group">
+  <label>Total passages (auto)</label>
+
+  <input type="text" id="ctTotalPassages" readonly>
+
+  <div id="ctRecapSummary" class="ct-recap-summary"></div>
+  <div id="ctWarning" class="ct-warning hidden"></div>
+</div>
+
     </div>
 
 
@@ -732,15 +742,15 @@
       <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
     </div>
 <div class="contract-tva">
-  <label>TVA du contrat</label>
+  <label>TVA </label>
   <div class="tva-options">
     <label>
       <input type="radio" name="ctTvaRadio" onchange="setTVA(0)" checked>
-      Sans TVA (micro)
+      0 %
     </label>
     <label>
       <input type="radio" name="ctTvaRadio" onchange="setTVA(20)">
-      TVA 20 %
+      20 %
     </label>
   </div>
 </div>
@@ -748,7 +758,9 @@
     <!-- ACTIONS BAS CONTRAT -->
     <div class="form-actions no-print">
       <button class="btn action-button" onclick="saveContract()">💾 Enregistrer</button>
-      <button class="btn action-button" onclick="openContractPDF()">🖨️ PDF</button>
+      <button class="btn action-button" onclick="openContractPDF()">🖨️ Imprimer</button>
+<button class="btn action-button" onclick="transformContractToInvoice()">🔁 Transformer en facture</button>
+
 <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
 
       <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>

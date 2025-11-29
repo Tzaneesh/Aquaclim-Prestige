@@ -732,9 +732,17 @@ textarea {
   font-size: 12px;
   margin-bottom: 4px;
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;   /* ➜ options l’une sous l’autre */
+  gap: 4px;
+  align-items: flex-start;
 }
+
+.pay-line label {
+  display: flex;
+  align-items: center;
+  gap: 4px;                 /* petit espace entre le rond et le texte */
+}
+
 
 .payment-date-wrapper {
   margin-top: 4px;
@@ -1461,5 +1469,56 @@ textarea {
   color: #fff !important;
 }
 
+.ct-recap-summary {
+  margin-top: 6px;
+  font-size: 13px;
+  color: #374151;
+}
 
+.ct-recap-summary strong {
+  font-weight: 600;
+}
+
+.ct-warning {
+  margin-top: 6px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: #fff3cd;
+  border: 1px solid #ffe8a1;
+  color: #856404;
+  font-size: 13px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ct-warning.hidden {
+  display: none;
+}
+
+/* Petits écrans : on empile au lieu d'afficher côte à côte */
+@media (max-width: 900px) {
+  body {
+    font-size: 14px;
+  }
+
+  .main-columns {
+    flex-direction: column;
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  table {
+    font-size: 12px;
+  }
+
+  .toolbar,
+  .filters-bar {
+    flex-wrap: wrap;
+  }
+}
 
