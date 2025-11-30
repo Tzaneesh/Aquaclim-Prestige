@@ -967,10 +967,19 @@ textarea {
     16. CONTRATS PISCINE / SPA (VUE APPLICATION)
 ========================================================= */
 #contractView {
-    background: #eef3ff !important;
-    border-radius: 15px;
+    width: 100%;
+    max-width: 1400px !important;
+    margin: 0 auto !important;
     padding: 25px;
+    background: #eef3ff;
+    border-radius: 15px;
+    display: block;
 }
+
+#contractView .card {
+    margin: 0 auto !important;   /* Force le bloc interne à se centrer */
+}
+
 
 #contractView .card {
     background: #fff;

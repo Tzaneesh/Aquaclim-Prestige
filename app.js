@@ -7660,11 +7660,21 @@ if (docsForThis.length > 0) {
 <title>Contrat d'entretien piscine / spa</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family: Arial, sans-serif; font-size: 10.5px; color:#333; }
+body {
+  font-family: Arial, sans-serif;
+  font-size: 10.5px;
+  color:#333;
+  display: flex;
+  justify-content: center;   /* centre la page dans la fenêtre */
+}
 
-  .page {
-    padding: 10mm 12mm 12mm 12mm; /* légèrement plus compact que 12 / 14 */
-  }
+.page {
+  width: 210mm;              /* largeur A4 */
+  margin: 0 auto;            /* sécurité */
+  padding: 10mm 12mm 12mm 12mm;
+  box-sizing: border-box;
+}
+
 
   .header {
     text-align: center;
