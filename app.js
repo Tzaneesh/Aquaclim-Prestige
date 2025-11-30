@@ -8851,10 +8851,18 @@ function generateImmediateBilling(contract) {
   // 💰 Part de contrat à facturer tout de suite
   let amountHT = 0;
 
-  if (mode === "annuel")      amountHT = totalHT;
-  if (mode === "semestriel")  amountHT = totalHT / 2;
-  if (mode === "trimestriel") amountHT = totalHT / 4;
-  if (mode === "mensuel")     amountHT = totalHT / 12;
+  if (mode === "annuel") {
+    // 1 seule échéance : on facture tout
+    amountHT = totalHT;
+  } else {
+    // même logique que l'échéancier : nb d'échéances réelles
+    let n = 1;
+    if (typeof getNumberOfInstallments === "function") {
+      n = getNumberOfInstallments(pr);
+    }
+    if (!n || n <= 0) n = 1;
+    amountHT = totalHT / n;
+  }
 
   const tvaRate   = Number(pr.tvaRate) || 0;
   const tvaAmount = amountHT * (tvaRate / 100);
@@ -8893,7 +8901,7 @@ function generateImmediateBilling(contract) {
     number,
     date: todayISO,
 
-    subject,                      // 👈 nouveau titre propre
+    subject, // 👈 nouveau titre propre
 
     contractId: contract.id,
     contractReference: c.reference || "",
@@ -8938,7 +8946,6 @@ function generateImmediateBilling(contract) {
     createdAt: new Date().toISOString()
   };
 }
-
 
 
 function checkScheduledInvoices() {
