@@ -1,391 +1,406 @@
 /* =========================================================
-   1. RESET & BASE
+    1. RESET & BASE (Général, Corps, Typographie de base)
 ========================================================= */
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
 }
 
 html,
 body {
-  height: 100%;
+    height: 100%;
 }
 
 body {
-  font-family: "Poppins", sans-serif;
-  background: #f5f7fa;
-  color: #333;
-  line-height: 1.6;
+    font-family: "Poppins", sans-serif;
+    background: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
 }
 
 /* =========================================================
-   2. TYPOGRAPHIE & PETITS HELPERS TEXTE
-========================================================= */
-
-.client-main {
-  font-weight: 600;
-}
-
-.client-subject {
-  font-size: 11px;
-  color: #666;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.list-title {
-  font-weight: 600;
-  color: #1a74d9;
-}
-
-.tva-note {
-  margin-top: 8px;
-  font-size: 12px;
-  font-style: italic;
-  color: #555;
-}
-
-.tva-percent-symbol {
-  font-size: 14px;
-  color: #555;
-  font-weight: 600;
-}
-
-/* =========================================================
-   3. LAYOUT GLOBAL & CONTENEURS
+    2. LAYOUT GLOBAL & CONTENEURS (Structure de la page)
 ========================================================= */
 
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
 .row {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 20px;
 }
 
 .hidden {
-  display: none !important;
+    display: none !important;
 }
 
 .no-print {
-  /* masqué uniquement à l'impression via @media print */
+    /* masqué uniquement à l'impression via @media print */
 }
 
 /* =========================================================
-   4. EN-TÊTE (HEADER)
+    3. EN-TÊTE (HEADER)
 ========================================================= */
 
 .header {
-  background: linear-gradient(135deg, #1a74d9 0%, #0d5ab8 100%);
-  color: #fff;
-  padding: 28px;
-  border-radius: 14px;
-  margin-bottom: 26px;
-  box-shadow: 0 4px 10px rgba(26, 116, 217, 0.25);
+    background: linear-gradient(135deg, #1a74d9 0%, #0d5ab8 100%);
+    color: #fff;
+    padding: 28px;
+    border-radius: 14px;
+    margin-bottom: 26px;
+    box-shadow: 0 4px 10px rgba(26, 116, 217, 0.25);
 }
 
 .header-inner {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: wrap;
 }
 
 .header-logo {
-  height: 90px;
-  width: auto;
+    height: 90px;
+    width: auto;
 }
 
 .header h1 {
-  font-size: 38px;
-  margin-bottom: 6px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+    font-size: 38px;
+    margin-bottom: 6px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
 }
 
 .header p {
-  opacity: 0.98;
-  font-size: 16px;
-  line-height: 1.45;
+    opacity: 0.98;
+    font-size: 16px;
+    line-height: 1.45;
 }
 
 .header p.subtitle {
-  font-size: 17px;
-  font-weight: 700;
+    font-size: 17px;
+    font-weight: 700;
 }
 
 .header p.contact {
-  font-size: 15px;
-  margin-top: 8px;
-  font-weight: 600;
+    font-size: 15px;
+    margin-top: 8px;
+    font-weight: 600;
 }
 
 /* =========================================================
-   5. BOUTONS & NAVIGATION
+    4. TYPOGRAPHIE & PETITS HELPERS TEXTE
+========================================================= */
+
+.client-main {
+    font-weight: 600;
+}
+
+.client-subject {
+    font-size: 11px;
+    color: #666;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.list-title {
+    font-weight: 600;
+    color: #1a74d9;
+}
+
+.tva-note {
+    margin-top: 8px;
+    font-size: 12px;
+    font-style: italic;
+    color: #555;
+}
+
+.tva-percent-symbol {
+    font-size: 14px;
+    color: #555;
+    font-weight: 600;
+}
+
+/* =========================================================
+    5. CARTES / BLOCS
+========================================================= */
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
+}
+
+.card h2 {
+    color: #1a74d9;
+    margin-bottom: 20px;
+    font-size: 22px;
+}
+
+.section-title {
+    color: #1a74d9;
+    margin: 25px 0 15px;
+}
+
+/* =========================================================
+    6. BOUTONS & NAVIGATION (Classes génériques)
 ========================================================= */
 
 .top-nav {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
 }
 
 .btn {
-  padding: 10px 18px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  transition: all 0.3s;
-  display: inline-block;
-  text-decoration: none;
-  white-space: nowrap;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+    display: inline-block;
+    text-decoration: none;
+    white-space: nowrap;
 }
 
 .btn-icon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .btn-icon-emoji {
-  font-size: 15px;
-  transform: translateY(0.5px);
+    font-size: 15px;
+    transform: translateY(0.5px);
 }
 
 .btn:disabled {
-  cursor: not-allowed;
+    cursor: not-allowed;
 }
 
 /* Couleurs principales boutons */
 .btn-primary {
-  background: #1a74d9;
-  color: #fff;
+    background: #1a74d9;
+    color: #fff;
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #0d5ab8;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(26, 116, 217, 0.3);
+    background: #0d5ab8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 116, 217, 0.3);
 }
 
 .btn-secondary {
-  background: #6c757d;
-  color: #fff;
+    background: #6c757d;
+    color: #fff;
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: #5a6268;
+    background: #5a6268;
 }
 
 .btn-success {
-  background: #2e7d32;
-  color: #fff;
+    background: #2e7d32;
+    color: #fff;
 }
 
 .btn-success:hover:not(:disabled) {
-  background: #1b5e20;
+    background: #1b5e20;
 }
 
 .btn-danger {
-  background: #dc3545;
-  color: #fff;
+    background: #dc3545;
+    color: #fff;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #c82333;
+    background: #c82333;
 }
 /* Déclinaison danger (utilisée pour les suppressions) */
 .btn-danger {
-  background-color: #d9534f;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: 0.2s;
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: 0.2s;
 }
 
 .btn-danger:hover {
-  background-color: #c9302c;
+    background-color: #c9302c;
 }
 
 .btn-danger:active {
-  background-color: #a92320;
+    background-color: #a92320;
 }
 
 .btn-info {
-  background-color: #17a2b8;
-  color: white;
+    background-color: #17a2b8;
+    color: white;
 }
 
 .btn-info:hover {
-  background-color: #117a8b;
+    background-color: #117a8b;
+}
+
+.btn-warning {
+    background-color: #f59e0b;
+    color: #fff;
+    border: none;
+}
+
+.btn-warning:hover {
+    background-color: #d97706;
 }
 
 .btn-small {
-  padding: 6px 12px;
-  font-size: 13px;
-  /* On rend les btn-small un peu plus élégants */
-  padding: 6px 14px;
-  border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    /* On rend les btn-small un peu plus élégants */
+    padding: 6px 14px;
+    border-radius: 999px;
 }
 
 /* Boutons d’action spécifiques (devis/facture) */
 .action-button {
-  min-width: 140px;
+    min-width: 140px;
 }
 
 .btn-devis {
-  background: #1a74d9;
-  color: #fff;
+    background: #1a74d9;
+    color: #fff;
 }
 
 .btn-devis:hover:not(:disabled) {
-  background: #0d5ab8;
+    background: #0d5ab8;
 }
 
 .btn-facture {
-  background: #2e7d32;
-  color: #fff;
+    background: #2e7d32;
+    color: #fff;
 }
 
 .btn-facture:hover:not(:disabled) {
-  background: #1b5e20;
+    background: #1b5e20;
 }
 
 /* Boutons outline (Popup clients) */
 .btn-outline-primary {
-  background: #fff;
-  color: #0d6efd;
-  border: 1px solid #0d6efd;
+    background: #fff;
+    color: #0d6efd;
+    border: 1px solid #0d6efd;
 }
 .btn-outline-primary:hover {
-  background: #0d6efd;
-  color: #fff;
+    background: #0d6efd;
+    color: #fff;
 }
 
 .btn-light {
-  background: #f5f5f5;
-  color: #333;
-  border: 1px solid #ddd;
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #ddd;
 }
 .btn-light:hover {
-  background: #e4e4e4;
+    background: #e4e4e4;
 }
 
 /* Onglets */
 .tab-btn {
-  background: #e9ecef;
-  color: #333;
+    background: #e9ecef;
+    color: #333;
 }
 
 .tab-btn.active {
-  color: #fff;
+    color: #fff;
 }
 
 #tabDevis.tab-btn.active {
-  background: #1a74d9;
+    background: #1a74d9;
 }
 
 #tabFactures.tab-btn.active {
-  background: #2e7d32;
+    background: #2e7d32;
+}
+
+#tabContrats.tab-btn.active {
+    background: #1a74d9 !important;
+    color: #fff !important;
 }
 
 /* Désactivation visuelle */
 .disabled-btn {
-  opacity: 0.4;
-  cursor: not-allowed;
+    opacity: 0.4;
+    cursor: not-allowed;
 }
 
 /* Boutons de modification/suppression */
 .modify-btn {
-  background: #0275d8;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 5px;
-  cursor: pointer;
+    background: #0275d8;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 .modify-btn:hover {
-  background: #025aa5;
+    background: #025aa5;
 }
 
 .delete-btn {
-  background: #d9534f;
-  color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 5px;
-  cursor: pointer;
+    background: #d9534f;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 .delete-btn:hover {
-  background: #b52b27;
+    background: #b52b27;
 }
 
 .date-remove-btn {
-  padding-inline: 8px;
+    padding-inline: 8px;
 }
 
 .tarif-delete-btn {
-  cursor: pointer;
-  color: #c62828;
-  font-weight: bold;
-  font-size: 18px;
-  display: inline-block;
+    cursor: pointer;
+    color: #c62828;
+    font-weight: bold;
+    font-size: 18px;
+    display: inline-block;
 }
 
 .tarif-delete-btn:hover {
-  color: #ff0000;
+    color: #ff0000;
 }
 
 /* =========================================================
-   6. CARTES / BLOCS
-========================================================= */
-
-.card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  margin-bottom: 20px;
-}
-
-.card h2 {
-  color: #1a74d9;
-  margin-bottom: 20px;
-  font-size: 22px;
-}
-
-.section-title {
-  color: #1a74d9;
-  margin: 25px 0 15px;
-}
-
-/* =========================================================
-   7. FORMULAIRES & INPUTS
+    7. FORMULAIRES & INPUTS (Général)
 ========================================================= */
 
 .form-group {
-  margin-bottom: 16px;
+    margin-bottom: 16px;
 }
 
 label {
-  display: block;
-  margin-bottom: 6px;
-  font-weight: 600;
-  color: #555;
-  font-size: 13px;
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #555;
+    font-size: 13px;
 }
 
 input[type="text"],
@@ -395,649 +410,675 @@ input[type="number"],
 input[type="date"],
 textarea,
 select {
-  width: 100%;
-  padding: 10px;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
-  font-size: 14px;
-  transition: border-color 0.3s;
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s;
 }
 
 input:focus,
 textarea:focus,
 select:focus {
-  outline: none;
-  border-color: #1a74d9;
+    outline: none;
+    border-color: #1a74d9;
 }
 
 input[readonly] {
-  background: #f5f7fa;
-  color: #6c757d;
+    background: #f5f7fa;
+    color: #6c757d;
 }
 
 textarea {
-  min-height: 80px;
-  resize: vertical;
+    min-height: 80px;
+    resize: vertical;
 }
 
 /* Inputs spécifiques */
 #editClientForm input {
-  width: 100%;
-  margin-bottom: 8px;
-  padding: 6px 8px;
-  border: 1px solid #ccc;
-  border-radius: 5px;
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
 }
 
 #tvaRate {
-  width: 60px !important;
-  min-width: 60px !important;
-  height: 36px;
-  border-radius: 8px;
-  text-align: center;
+    width: 60px !important;
+    min-width: 60px !important;
+    height: 36px;
+    border-radius: 8px;
+    text-align: center;
 }
 
 .discount-row input[type="number"] {
-  width: 50px;
-  min-width: 50px;
-  height: 36px;
-  border-radius: 8px;
-  text-align: center;
+    width: 50px;
+    min-width: 50px;
+    height: 36px;
+    border-radius: 8px;
+    text-align: center;
 }
 
 #clientCivility,
 #siteCivility {
-  width: 260px;
-  max-width: 100%;
-  box-sizing: border-box;
-  margin-right: 12px;
+    width: 260px;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-right: 12px;
 }
 
 /* Radio type client (ronds) */
 .client-type-option input[type="radio"] {
-  appearance: auto !important;
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  cursor: pointer;
+    appearance: auto !important;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
 }
 
 .client-type-row {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  margin-top: 5px;
-  flex-wrap: wrap;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 5px;
+    flex-wrap: wrap;
 }
 
 .client-type-option {
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  white-space: nowrap;   
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
 }
-
 
 /* =========================================================
-   8. ACTIONS FORMULAIRE
+    8. ACTIONS FORMULAIRE
 ========================================================= */
 
-.actions {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 20px;
-  padding-top: 15px;
-  border-top: 1px solid #e1e8ed;
-  flex-wrap: wrap;
-}
-
 .actions-btns {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  margin-bottom: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch; /* chaque ligne prend toute la largeur de la cellule */
+    margin-bottom: 4px;
 }
 
 .actions-btns-row {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-start;
+    display: flex;
+    flex-wrap: nowrap; /* on force 2 boutons par ligne */
+    gap: 8px;
+    justify-content: space-between;
 }
 
 .actions-btns-row .btn {
-  padding: 4px 10px;
-  font-size: 12px;
-  border-radius: 999px;
+    flex: 1 1 0; /* 🧨 chaque bouton prend 50% de la ligne, ils restent côte à côte */
+    padding: 5px 0;
+    font-size: 12px;
+    border-radius: 999px;
+    text-align: center;
+}
+
+/* Ligne spéciale pour le bouton Supprimer dans les CONTRATS */
+.actions-btns-row--full {
+    justify-content: center;
 }
 
 /* =========================================================
-   9. CLIENT / BLOC CLIENT
+    9. CLIENT / BLOC CLIENT
 ========================================================= */
 
 .client-list-box {
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 10px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
+    max-height: 400px;
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #fafafa;
 }
 
 .client-item {
-  padding: 10px;
-  border-bottom: 1px solid #eee;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
 }
 
 .client-item:last-child {
-  border-bottom: none;
+    border-bottom: none;
 }
 
 .clients-pagination {
-  margin: 8px 0;
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
+    margin: 8px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
 }
 
 /* Bloc client pour l'impression */
 .print-client-block h3 {
-  margin-bottom: 6px;
-  font-size: 14px;
-  font-weight: bold;
-  text-transform: uppercase;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    text-transform: uppercase;
 }
 
 .client-inner-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
-  width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 18px;
+    width: 100%;
 }
 
 .client-col.left {
-  flex: 1 1 auto;
-  min-width: 220px;
+    flex: 1 1 auto;
+    min-width: 220px;
 }
 
 .client-col.right {
-  flex: 0 0 auto;
-  margin-left: auto;
-  min-width: 220px;
+    flex: 0 0 auto;
+    margin-left: auto;
+    min-width: 220px;
 }
 
 /* =========================================================
-   10. PRESTATIONS & DATES
+    10. PRESTATIONS & DATES
 ========================================================= */
 
 .prestations-section {
-  margin-top: 25px;
+    margin-top: 25px;
 }
 
 .prestation-line {
-  display: grid;
-  grid-template-columns: 2.6fr 1.6fr 0.9fr 0.4fr;
-  gap: 10px;
-  margin-bottom: 12px;
-  align-items: flex-start;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 8px;
+    display: grid;
+    grid-template-columns: 2.6fr 1.6fr 0.9fr 0.4fr;
+    gap: 10px;
+    margin-bottom: 12px;
+    align-items: flex-start;
+    padding: 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
 }
 
 .prestation-line input,
 .prestation-line select,
 .prestation-line textarea {
-  margin-bottom: 0;
+    margin-bottom: 0;
 }
 
 .prestation-dates {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  margin-top: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 4px;
 }
 
 .prestation-dates input {
-  font-size: 12px;
-  padding: 7px;
+    font-size: 12px;
+    padding: 7px;
 }
 
 .dates-add-btn {
-  margin-top: 4px;
-  padding: 4px 10px;
-  font-size: 11px;
+    margin-top: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
 }
 
 .prestation-total {
-  font-weight: 600;
+    font-weight: 600;
 }
 
 .prestation-remove-wrapper {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-end;
-  margin-right: 10px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-end;
+    margin-right: 10px;
 }
 
 /* Groupes dans Prestations */
 .qty-price-group {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
 }
 
 .qty-price-group label {
-  font-size: 12px;
+    font-size: 12px;
 }
 
 .purchase-wrapper {
-  margin-top: 4px;
+    margin-top: 4px;
 }
 
 .prestation-line .purchase-wrapper {
-  margin-top: 0 !important;
-  align-self: flex-start;
+    margin-top: 0 !important;
+    align-self: flex-start;
 }
 
 .prestation-date-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .prestation-date-row .prestation-date {
-  width: 140px;
-  min-width: 140px;
-  max-width: 140px;
-  padding: 7px;
+    width: 140px;
+    min-width: 140px;
+    max-width: 140px;
+    padding: 7px;
 }
 
 /* =========================================================
-   11. TOTAUX / TVA / RÉDUCTION
+    11. TOTAUX / TVA / RÉDUCTION
 ========================================================= */
 
 .totals {
-  background: #f0f3f7;
-  padding: 18px 16px;
-  border-radius: 10px;
-  margin-top: 20px;
-  border: 1px solid #dde4ee;
+    background: #f0f3f7;
+    padding: 18px 16px;
+    border-radius: 10px;
+    margin-top: 20px;
+    border: 1px solid #dde4ee;
 }
 
 .totals-grid {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 16px;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
 }
 
 .total-line {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-size: 14px;
 }
 
 .total-line.grand-total {
-  font-size: 18px;
-  font-weight: 700;
-  color: #000;
-  border-top: 2px solid #cbd3e1;
-  padding-top: 10px;
-  margin-top: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #000;
+    border-top: 2px solid #cbd3e1;
+    padding-top: 10px;
+    margin-top: 12px;
 }
 
 .tva-rate-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .discount-group {
-  margin: 8px 0;
+    margin: 8px 0;
 }
 
 .discount-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .discount-toggle {
-  font-size: 12px;
+    font-size: 12px;
 }
 
 .discount-percent-symbol {
-  font-size: 12px;
-  color: #555;
+    font-size: 12px;
+    color: #555;
 }
 
 /* =========================================================
-   12. PAIEMENT / STATUTS
+    12. PAIEMENT / STATUTS
 ========================================================= */
 
 .pay-line {
-  font-size: 12px;
-  margin-bottom: 4px;
-  display: flex;
-  flex-direction: column;   /* ➜ options l’une sous l’autre */
-  gap: 4px;
-  align-items: flex-start;
+    font-size: 12px;
+    margin-bottom: 4px;
+    display: flex;
+    flex-direction: column; /* ➜ options l’une sous l’autre */
+    gap: 4px;
+    align-items: flex-start;
 }
 
 .pay-line label {
-  display: flex;
-  align-items: center;
-  gap: 4px;                 /* petit espace entre le rond et le texte */
+    display: flex;
+    align-items: center;
+    gap: 4px; /* petit espace entre le rond et le texte */
 }
 
 
 .payment-date-wrapper {
-  margin-top: 4px;
-  display: none;
+    margin-top: 4px;
+    display: none;
 }
 
 .payment-date-wrapper label {
-  font-size: 12px;
-  margin-bottom: 2px;
+    font-size: 12px;
+    margin-bottom: 2px;
 }
 
 .devis-status-info {
-  font-size: 12px;
-  color: #c62828;
-  margin-top: 4px;
-  display: none;
+    font-size: 12px;
+    color: #c62828;
+    margin-top: 4px;
+    display: none;
 }
 
 /* =========================================================
-   13. BADGES
+    13. BADGES
 ========================================================= */
 
 .badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 /* Type document */
 .badge-devis {
-  background: #e3f2fd;
-  color: #1976d2;
+    background: #e3f2fd;
+    color: #1976d2;
 }
 
 /* Facture payée / non payée */
 .badge-facture-paid {
-  background: #e8f5e9;
-  color: #388e3c;
+    background: #e8f5e9;
+    color: #388e3c;
 }
 
 .badge-facture-unpaid {
-  background: #ffebee;
-  color: #c62828;
+    background: #ffebee;
+    color: #c62828;
 }
 
 .badge-paid {
-  background: #e8f5e9;
-  color: #1b5e20;
+    background: #e8f5e9;
+    color: #1b5e20;
 }
 
 .badge-unpaid {
-  background: #ffebee;
-  color: #c62828;
+    background: #ffebee;
+    color: #c62828;
 }
 
 /* Statuts devis */
 .badge-devis-en-attente {
-  background: #fff3cd;
-  color: #856404;
+    background: #fff3cd;
+    color: #856404;
 }
 
 .badge-devis-accepte {
-  background: #e8f5e9;
-  color: #2e7d32;
+    background: #e8f5e9;
+    color: #2e7d32;
 }
 
 .badge-devis-refuse {
-  background: #ffebee;
-  color: #c62828;
+    background: #ffebee;
+    color: #c62828;
 }
 
 .badge-devis-expire {
-  background: #ffe0b2;
-  color: #ef6c00;
+    background: #ffe0b2;
+    color: #ef6c00;
 }
 
 /* =========================================================
-   14. TABLE DOCUMENTS / TARIFS
+    14. TABLE DOCUMENTS / TARIFS
 ========================================================= */
 
 .documents-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  font-size: 13px;
-  table-layout: fixed;
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 13px;
+    table-layout: fixed;
 }
 
 .documents-table th {
-  background: #1a74d9;
-  color: #fff;
-  padding: 10px;
-  text-align: left;
-  font-weight: 600;
+    background: #1a74d9;
+    color: #fff;
+    padding: 10px;
+    text-align: left;
+    font-weight: 600;
 }
 
 .documents-table td {
-  padding: 10px;
-  border-bottom: 1px solid #e1e8ed;
-  vertical-align: middle;
+    padding: 10px;
+    border-bottom: 1px solid #e1e8ed;
+    vertical-align: middle;
 }
 
 .documents-table tr:hover {
-  background: #f8f9fa;
+    background: #f8f9fa;
 }
 
 .documents-table th:nth-child(6),
 .documents-table td.status-cell {
-  width: 260px;
+    width: 260px;
 }
 
 .no-docs-cell {
-  text-align: center;
-  color: #999;
+    text-align: center;
+    color: #999;
 }
 
 /* Panel tarifs */
 #tarifsPanel table.documents-table th,
 #tarifsPanel table.documents-table td {
-  font-size: 12px;
+    font-size: 12px;
 }
 
 .tarifs-intro {
-  font-size: 13px;
-  margin-bottom: 8px;
+    font-size: 13px;
+    margin-bottom: 8px;
 }
 
 .tarifs-actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-start;
-  flex-wrap: wrap;
-  margin-top: 10px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    margin-top: 10px;
 }
 
 .tarifs-actions-top {
-  margin-bottom: 10px;
+    margin-bottom: 10px;
 }
 
 .tarif-label-cell {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .tarif-label-text {
-  text-decoration: none;
+    text-decoration: none;
 }
 
 .tarif-label-cell:hover .tarif-label-text {
-  text-decoration: underline;
+    text-decoration: underline;
 }
 
 .tarif-desc-icon {
-  font-size: 14px;
-  opacity: 0.7;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+    font-size: 14px;
+    opacity: 0.7;
+    transition: transform 0.15s ease, opacity 0.15s ease;
 }
 
 .tarif-label-cell:hover .tarif-desc-icon {
-  opacity: 1;
-  transform: translateY(-1px) rotate(-5deg);
+    opacity: 1;
+    transform: translateY(-1px) rotate(-5deg);
 }
 
 /* =========================================================
-   15. FILTRES LISTE
+    15. FILTRES LISTE
 ========================================================= */
 
 .filters-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-  flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
 }
 
 .filters-row select {
-  max-width: 160px;
+    max-width: 160px;
 }
 
 .filter-label {
-  margin-bottom: 0;
-  font-weight: 500;
-  font-size: 12px;
+    margin-bottom: 0;
+    font-weight: 500;
+    font-size: 12px;
 }
 
 .doc-search-wrapper {
-  margin-left: auto;
-  margin-right: 16px;
+    margin-left: auto;
+    margin-right: 16px;
 }
 
 .doc-search-wrapper input {
-  min-width: 230px;
+    min-width: 230px;
 }
 
 /* =========================================================
-   16. CONTRATS PISCINE / SPA
+    16. CONTRATS PISCINE / SPA (VUE APPLICATION)
 ========================================================= */
 #contractView {
-  background: #eef3ff !important;
-  border-radius: 15px;
-  padding: 25px;
+    background: #eef3ff !important;
+    border-radius: 15px;
+    padding: 25px;
 }
 
 #contractView .card {
-  background: #fff;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-  margin-bottom: 25px;
+    background: #fff;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.08);
+    margin-bottom: 25px;
 }
 
 /* Titre des sections du contrat */
 #contractView h3.section-title {
-  margin-top: 25px;
-  margin-bottom: 12px;
-  font-size: 18px;
-  font-weight: 600;
-  color: #0d47a1;
+    margin-top: 25px;
+    margin-bottom: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    color: #0d47a1;
 }
 
 /* Labels des champs */
 #contractView .form-group label {
-  font-weight: 500;
-  color: #333;
+    font-weight: 500;
+    color: #333;
 }
 
 /* Inputs / selects / textarea du contrat */
 #contractView .form-group input,
 #contractView .form-group select,
 #contractView .form-group textarea {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
 }
 
 /* Layout des lignes dans le contrat (on reste en flex dédié contrat) */
 #contractView .row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
 }
 
 /* Chaque form-group prend une largeur mini pour rester propre */
 #contractView .form-group {
-  flex: 1 1 220px;
+    flex: 1 1 220px;
 }
 
 #contractView .form-group textarea {
-  min-height: 70px;
+    min-height: 70px;
 }
 
 /* Encadré récapitulatif */
 .contract-summary {
-  margin-top: 20px;
-  padding: 16px;
-  border-radius: 10px;
-  background: #f3f7ff;
-  border: 1px solid #d4e0f5;
-  font-size: 14px;
+    margin-top: 20px;
+    padding: 16px;
+    border-radius: 10px;
+    background: #f3f7ff;
+    border: 1px solid #d4e0f5;
+    font-size: 14px;
 }
 
 .contract-summary h4 {
-  margin-bottom: 8px;
-  color: #1a74d9;
+    margin-bottom: 8px;
+    color: #1a74d9;
 }
 
 .contract-summary p {
-  margin: 4px 0;
+    margin: 4px 0;
 }
 
 .contract-summary strong {
-  font-weight: 600;
+    font-weight: 600;
+}
+
+.ct-recap-summary {
+    margin-top: 6px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.ct-recap-summary strong {
+    font-weight: 600;
+}
+
+.ct-warning {
+    margin-top: 6px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    background: #fff3cd;
+    border: 1px solid #ffe8a1;
+    color: #856404;
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.ct-warning.hidden {
+    display: none;
+}
+
+.contract-client-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin: 15px 0;
+    flex-wrap: wrap;
 }
 
 /* Options forfaitaires (remise en route / hivernage) */
 .contract-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  font-size: 13px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 13px;
 }
 .contract-options label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: #f5f7ff;
-  border-radius: 6px;
-  padding: 6px 10px;
-  border: 1px solid #dce4ff;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f5f7ff;
+    border-radius: 6px;
+    padding: 6px 10px;
+    border: 1px solid #dce4ff;
 }
 
 /* ---- OPTIONS FORFAITAIRES – STYLE PROPRE ---- */
@@ -1046,479 +1087,544 @@ textarea {
 /* --- OPTIONS COMPACTES --- */
 
 .options-box {
-  display: flex !important;
-  gap: 12px !important;
-  margin-top: 8px !important;
+    display: flex !important;
+    gap: 12px !important;
+    margin-top: 8px !important;
 }
 
 .option-item {
-  display: flex !important;
-  align-items: center !important;
-  gap: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
 
-  background: #f8faff !important;
-  border: 1px solid #d8e2ff !important;
-  padding: 8px 12px !important;
-  border-radius: 10px !important;
+    background: #f8faff !important;
+    border: 1px solid #d8e2ff !important;
+    padding: 8px 12px !important;
+    border-radius: 10px !important;
 
-  box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
-  cursor: pointer !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
+    cursor: pointer !important;
 
-  transition: 0.15s ease !important;
+    transition: 0.15s ease !important;
 }
 
 .option-item:hover {
-  background: #eef3ff !important;
-  border-color: #c2d1ff !important;
+    background: #eef3ff !important;
+    border-color: #c2d1ff !important;
 }
 
 .option-item input[type="checkbox"] {
-  width: 16px !important;
-  height: 16px !important;
-  accent-color: #4a68ff !important;
+    width: 16px !important;
+    height: 16px !important;
+    accent-color: #4a68ff !important;
 }
 
 .option-item span {
-  font-size: 13px !important;
-  color: #334 !important;
-  font-weight: 500 !important;
+    font-size: 13px !important;
+    color: #334 !important;
+    font-weight: 500 !important;
 }
 
 
 /* =========================================================
-   17. SIGNATURE (VUE APPLICATION)
+    17. SIGNATURE (VUE APPLICATION)
 ========================================================= */
 
 .signature-block {
-  margin-top: 30px;
-  text-align: right;
+    margin-top: 30px;
+    text-align: right;
 }
 
 .signature-block .signature-img {
-  width: 160px;
-  height: auto;
+    width: 160px;
+    height: auto;
 }
 
 /* =========================================================
-   18. POPUP / CONFIRMATION
+    18. POPUP / CONFIRMATION
 ========================================================= */
 
 /* Overlay général */
 .popup-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 10000 !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000 !important;
 }
 
 .popup-overlay.hidden {
-  display: none;
+    display: none;
 }
 
 .popup {
-  background: #fff;
-  padding: 25px;
-  border-radius: 14px;
-  width: 340px;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  animation: popIn 0.2s ease-out;
+    background: #fff;
+    padding: 25px;
+    border-radius: 14px;
+    width: 340px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    animation: popIn 0.2s ease-out;
 }
 
 .popup h3 {
-  margin-bottom: 15px;
-  color: #1a74d9;
+    margin-bottom: 15px;
+    color: #1a74d9;
 }
 
 .popup input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 14px;
-  border: 2px solid #e1e8ed;
-  border-radius: 8px;
-  font-size: 14px;
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 14px;
+    border: 2px solid #e1e8ed;
+    border-radius: 8px;
+    font-size: 14px;
 }
 
 .popup-buttons {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
 }
 
 /* Confirmation Modal */
 #confirmOverlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  backdrop-filter: blur(3px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 11000 !important;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    backdrop-filter: blur(3px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 11000 !important;
 }
 
 #confirmOverlay .confirm-box {
-  position: relative;
-  background: #fff;
-  width: 360px;
-  padding: 28px 22px 22px 22px;
-  border-radius: 12px;
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
-  animation: popupSlideDown 0.25s ease-out;
-  border-top: 4px solid #1a74d9;
-  text-align: center;
+    position: relative;
+    background: #fff;
+    width: 360px;
+    padding: 28px 22px 22px 22px;
+    border-radius: 12px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+    animation: popupSlideDown 0.25s ease-out;
+    border-top: 4px solid #1a74d9;
+    text-align: center;
 }
 
 .confirm-box.danger {
-  border-top-color: #d32f2f;
+    border-top-color: #d32f2f;
 }
 .confirm-box.success {
-  border-top-color: #2e7d32;
+    border-top-color: #2e7d32;
 }
 .confirm-box.info {
-  border-top-color: #1a74d9;
+    border-top-color: #1a74d9;
 }
 
 .confirm-icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 50%;
-  margin: 0 auto 10px auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 26px;
-  background: #e3f2fd;
-  color: #1a74d9;
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    margin: 0 auto 10px auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    background: #e3f2fd;
+    color: #1a74d9;
 }
 
 .confirm-icon.danger {
-  background: #ffebee;
-  color: #d32f2f;
+    background: #ffebee;
+    color: #d32f2f;
 }
 .confirm-icon.success {
-  background: #e8f5e9;
-  color: #2e7d32;
+    background: #e8f5e9;
+    color: #2e7d32;
 }
 .confirm-icon.info {
-  background: #e3f2fd;
-  color: #1a74d9;
+    background: #e3f2fd;
+    color: #1a74d9;
 }
 
 #confirmTitle {
-  font-weight: 700;
-  font-size: 18px;
-  color: #333;
-  margin-bottom: 8px;
+    font-weight: 700;
+    font-size: 18px;
+    color: #333;
+    margin-bottom: 8px;
 }
 
 #confirmMessage {
-  font-size: 14px;
-  color: #444;
-  line-height: 1.45;
-  margin-bottom: 18px;
-  white-space: pre-line;
+    font-size: 14px;
+    color: #444;
+    line-height: 1.45;
+    margin-bottom: 18px;
+    white-space: pre-line;
 }
 
 .confirm-buttons {
-  display: flex;
-  justify-content: center;
-  gap: 12px;
+    display: flex;
+    justify-content: center;
+    gap: 12px;
 }
 
 #confirmOk,
 #confirmCancel {
-  padding: 6px 14px;
-  font-size: 14px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  border: none;
+    padding: 6px 14px;
+    font-size: 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    border: none;
 }
 
 #confirmOk {
-  background: #d32f2f;
-  color: #fff;
+    background: #d32f2f;
+    color: #fff;
 }
 #confirmOk:hover {
-  background: #b71c1c;
+    background: #b71c1c;
 }
 
 #confirmCancel {
-  background: #e0e0e0;
-  color: #333;
+    background: #e0e0e0;
+    color: #333;
 }
 #confirmCancel:hover {
-  background: #bdbdbd;
+    background: #bdbdbd;
 }
 
 /* Footer du popup clients */
 #clientsPopup .clients-footer {
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid #eee;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 10px;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+
+.clients-footer-left,
+.clients-footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #clientsPopup .clients-footer-left,
 #clientsPopup .clients-footer-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 #clientsPopup .clients-footer .btn {
-  font-size: 13px;
-  padding: 6px 12px;
-  border-radius: 999px;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 999px;
 }
 
 
 /* =========================================================
-   19. ANIMATIONS
+    19. ANIMATIONS
 ========================================================= */
 
 @keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 @keyframes popIn {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* =========================================================
-   20. RESPONSIVE
+    20. RESPONSIVE
 ========================================================= */
 
 @media (max-width: 768px) {
-  .prestation-line {
-    grid-template-columns: 1fr;
-    gap: 10px;
-  }
+    .prestation-line {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
 
-  .header h1 {
-    font-size: 26px;
-  }
+    .header h1 {
+        font-size: 26px;
+    }
 
-  .btn {
-    width: 100%;
-  }
-}
-
-/* =========================================================
-   21. IMPRESSION (VUE APPLICATION)
-========================================================= */
-
-@media print {
-  .no-print {
-    display: none !important;
-  }
-
-  body {
-    background: #fff;
-  }
-
-  .container {
-    max-width: none;
-    padding: 10mm;
-  }
-
-  .card {
-    box-shadow: none;
-    border-radius: 0;
-  }
-
-  /* En-tête plus compact à l’impression */
-  .header {
-    padding: 18px 22px;
-    margin-bottom: 12px;
-  }
-
-  .header-logo {
-    height: 90px !important;
-    width: auto !important;
-  }
-
-  .header h1 {
-    font-size: 38px !important;
-    margin-bottom: 6px;
-  }
-
-  .header p.subtitle {
-    font-size: 18px !important;
-  }
-
-  .header p.contact {
-    font-size: 14px !important;
-  }
-
-  .print-doc-title {
-    font-size: 26px;
-    font-weight: 800;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin: 8px 0 16px;
-    color: #1a74d9;
-    border-bottom: 2px solid #dde4ee;
-    padding-bottom: 6px;
-  }
-
-  .print-client-block {
-    background: #f5f7fb;
-    border-radius: 8px;
-    border: 1px solid #dde4ee;
-    padding: 10px 12px;
-    margin: 6px 0 16px;
-  }
-
-  .print-client-block h3 {
-    margin-bottom: 4px;
-    font-size: 13px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    color: #1a74d9;
-  }
-
-  .print-client-block p {
-    font-size: 12px;
-    margin-bottom: 2px;
-  }
-
-  /* Zébrage léger sur tableaux */
-  .documents-table tbody tr:nth-child(odd),
-  .print-prestations-table tbody tr:nth-child(odd) {
-    background: #f8f9fc;
-  }
-
-  .documents-table tbody tr:nth-child(even),
-  .print-prestations-table tbody tr:nth-child(even) {
-    background: #ffffff;
-  }
-
-  .documents-table th,
-  .print-prestations-table th {
-    border-bottom: 2px solid #cbd3e1;
-  }
-
-  .documents-table td,
-  .print-prestations-table td {
-    border-bottom: 1px solid #e1e8ed;
-  }
-
-  /* Totaux plus premium à l’impression */
-  .totals {
-    background: #f3f6fc;
-    border: 1px solid #cbd3e1;
-    border-radius: 10px;
-    padding: 14px 16px;
-    margin-top: 18px;
-  }
-
-  .totals .total-line {
-    font-size: 12px;
-  }
-
-  .totals .grand-total {
-    font-size: 18px;
-    font-weight: 800;
-    color: #0d3b66;
-    background: #e3edff;
-    border-radius: 8px;
-    padding: 8px 10px;
-    margin-top: 10px;
-    border-top: none;
-    justify-content: space-between;
-  }
-
-  .totals .grand-total span:last-child {
-    font-size: 19px;
-  }
-
-  .section-title {
-    color: #1a74d9;
-    border-bottom: 1px solid #dde4ee;
-    padding-bottom: 4px;
-    margin-bottom: 10px;
-    font-size: 15px;
-  }
-}
-
-/* FOND BLEU POUR LA PAGE CONTRAT */
-#tabContrats.tab-btn.active {
-  background: #1a74d9 !important; /* même bleu que le bouton Devis */
-  color: #fff !important;
-}
-
-.ct-recap-summary {
-  margin-top: 6px;
-  font-size: 13px;
-  color: #374151;
-}
-
-.ct-recap-summary strong {
-  font-weight: 600;
-}
-
-.ct-warning {
-  margin-top: 6px;
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: #fff3cd;
-  border: 1px solid #ffe8a1;
-  color: #856404;
-  font-size: 13px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.ct-warning.hidden {
-  display: none;
+    .btn {
+        width: 100%;
+    }
 }
 
 /* Petits écrans : on empile au lieu d'afficher côte à côte */
 @media (max-width: 900px) {
-  body {
-    font-size: 14px;
-  }
+    body {
+        font-size: 14px;
+    }
 
-  .main-columns {
-    flex-direction: column;
-  }
+    .main-columns {
+        flex-direction: column;
+    }
 
-  .left-panel,
-  .right-panel {
-    width: 100%;
-    max-width: 100%;
-  }
+    .left-panel,
+    .right-panel {
+        width: 100%;
+        max-width: 100%;
+    }
 
-  table {
-    font-size: 12px;
-  }
+    table {
+        font-size: 12px;
+    }
 
-  .toolbar,
-  .filters-bar {
-    flex-wrap: wrap;
-  }
+    .toolbar,
+    .filters-bar {
+        flex-wrap: wrap;
+    }
+}
+
+/* =========================================================
+    21. IMPRESSION (VUE APPLICATION)
+========================================================= */
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: #fff;
+    }
+
+    .container {
+        max-width: none;
+        padding: 10mm;
+    }
+
+    .card {
+        box-shadow: none;
+        border-radius: 0;
+    }
+
+    /* En-tête plus compact à l’impression */
+    .header {
+        padding: 18px 22px;
+        margin-bottom: 12px;
+    }
+
+    .header-logo {
+        height: 90px !important;
+        width: auto !important;
+    }
+
+    .header h1 {
+        font-size: 38px !important;
+        margin-bottom: 6px;
+    }
+
+    .header p.subtitle {
+        font-size: 18px !important;
+    }
+
+    .header p.contact {
+        font-size: 14px !important;
+    }
+
+    .print-doc-title {
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin: 8px 0 16px;
+        color: #1a74d9;
+        border-bottom: 2px solid #dde4ee;
+        padding-bottom: 6px;
+    }
+
+    .print-client-block {
+        background: #f5f7fb;
+        border-radius: 8px;
+        border: 1px solid #dde4ee;
+        padding: 10px 12px;
+        margin: 6px 0 16px;
+    }
+
+    .print-client-block h3 {
+        margin-bottom: 4px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #1a74d9;
+    }
+
+    .print-client-block p {
+        font-size: 12px;
+        margin-bottom: 2px;
+    }
+
+    /* Zébrage léger sur tableaux */
+    .documents-table tbody tr:nth-child(odd),
+    .print-prestations-table tbody tr:nth-child(odd) {
+        background: #f8f9fc;
+    }
+
+    .documents-table tbody tr:nth-child(even),
+    .print-prestations-table tbody tr:nth-child(even) {
+        background: #ffffff;
+    }
+
+    .documents-table th,
+    .print-prestations-table th {
+        border-bottom: 2px solid #cbd3e1;
+    }
+
+    .documents-table td,
+    .print-prestations-table td {
+        border-bottom: 1px solid #e1e8ed;
+    }
+
+    /* Totaux plus premium à l’impression */
+    .totals {
+        background: #f3f6fc;
+        border: 1px solid #cbd3e1;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-top: 18px;
+    }
+
+    .totals .total-line {
+        font-size: 12px;
+    }
+
+    .totals .grand-total {
+        font-size: 18px;
+        font-weight: 800;
+        color: #0d3b66;
+        background: #e3edff;
+        border-radius: 8px;
+        padding: 8px 10px;
+        margin-top: 10px;
+        border-top: none;
+        justify-content: space-between;
+    }
+
+    .totals .grand-total span:last-child {
+        font-size: 19px;
+    }
+
+    .section-title {
+        color: #1a74d9;
+        border-bottom: 1px solid #dde4ee;
+        padding-bottom: 4px;
+        margin-bottom: 10px;
+        font-size: 15px;
+    }
+}
+
+.status-cell {
+  text-align: center;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-ok {
+  background-color: #e6f4ea;
+  color: #137333;
+}
+
+.status-warning {
+  background-color: #fff4e5;
+  color: #b06000;
+}
+
+.status-terminated {
+  background-color: #fce8e6;
+  color: #c5221f;
+}
+.resiliation-note {
+  font-size: 11px;
+  margin-top: 8px;
+  color: #555;
+}.custom-dialog-overlay {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+}
+
+.custom-dialog {
+  background: white;
+  width: 380px;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+  animation: fadeIn 0.2s ease-out;
+}
+
+.custom-dialog h3 {
+  margin: 0 0 12px 0;
+}
+
+.dialog-label {
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.dialog-input,
+.dialog-textarea {
+  width: 100%;
+  margin-top: 3px;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+}
+
+.dialog-textarea {
+  height: 70px;
+  resize: none;
+}
+
+.dialog-actions {
+  margin-top: 14px;
+  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 

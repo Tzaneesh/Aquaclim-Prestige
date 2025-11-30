@@ -47,7 +47,7 @@
 <div class="actions no-print">
   <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
 
- <button id="createContract" class="btn btn-primary" onclick="newContract()">📘 Nouveau contrat</button>
+ <button id="createContract" class="btn btn-primary" onclick="newContract()">➕ Nouveau contrat</button>
 
 
   <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
@@ -456,11 +456,14 @@
       </div>
 
       <!-- ACTIONS BAS -->
-      <div class="form-actions no-print">
-        <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
-        <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
-        <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
-      </div>
+    <div class="actions no-print">
+      <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
+      <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
+      <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+      <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
+      <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+      <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
+    </div>
 
     </div>
   </section>
@@ -481,48 +484,87 @@
 
   <div class="card">
     <div class="contract-header-blue">
-  <h2>🟦 Contrat d’entretien Piscine / Spa — Version Premium</h2>
+  <h2>🟦 Contrat d’entretien Piscine / Spa</h2>
 </div>
 
 
     <!-- ================= INFOS CLIENT ================= -->
-    <h3 class="section-title">1. Informations client</h3>
 
-    <div class="row">
-      <div class="form-group">
-        <label>Civilité</label>
-        <select id="ctClientCivility">
-          <option value="">—</option>
-          <option value="Monsieur">Monsieur</option>
-          <option value="Madame">Madame</option>
-          <option value="Société">Société</option>
-        </select>
-      </div>
+<h3 class="section-title">1. Informations client</h3>
 
-      <div class="form-group">
-        <label>Nom / Raison sociale *</label>
-        <input type="text" id="ctClientName" required>
-      </div>
+<div class="row">
+  <div class="form-group">
+    <label>Civilité</label>
+    <select id="ctClientCivility">
+      <option value="">—</option>
+      <option value="Monsieur">Monsieur</option>
+      <option value="Madame">Madame</option>
+      <option value="Société">Société</option>
+    </select>
+  </div>
 
-      <div class="form-group">
-        <label>Adresse *</label>
-        <input type="text" id="ctClientAddress">
-      </div>
+  <div class="form-group">
+    <label>Nom ou Société *</label>
+   <input
+  type="text"
+  id="ctClientName"
+  list="clientsList"
+  autocomplete="off"
+  required
+  onchange="onContractClientNameChange()"
+  onblur="onContractClientNameChange()"
+/>
 
-      <div class="form-group">
-        <label>Téléphone</label>
-        <input type="text" id="ctClientPhone">
-      </div>
+  </div>
 
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" id="ctClientEmail">
-      </div>
+  <div class="form-group">
+    <label>Adresse *</label>
+    <input type="text" id="ctClientAddress">
+  </div>
 
-      <div class="form-group">
-        <label>Référence contrat</label>
-        <input type="text" id="ctReference">
-      </div>
+  <div class="form-group">
+    <label>Téléphone</label>
+    <input type="text" id="ctClientPhone">
+  </div>
+
+  <div class="form-group">
+    <label>Email</label>
+    <input type="email" id="ctClientEmail">
+  </div>
+
+  <div class="form-group">
+    <label>Référence contrat</label>
+    <input type="text" id="ctReference">
+  </div>
+</div>
+
+<!-- Boutons clients pour les contrats -->
+<div class="row no-print" style="gap:10px; display:flex; margin-bottom:15px;">
+
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="addCurrentClientFromContract()"
+  >
+    ➕ Ajouter ce client
+  </button>
+
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="openClientsListPopup()"
+  >
+    📋 Voir liste clients
+  </button>
+
+  <button
+    type="button"
+    class="btn btn-danger btn-small btn-icon"
+    onclick="deleteCurrentClientFromContract()"
+  >
+    🗑️ Supprimer ce client
+  </button>
+
 </div>
 
 
@@ -715,6 +757,19 @@
         <input type="text" id="ctTotalHT" readonly>
       </div>
     </div>
+
+<div class="row">
+  <div class="form-group">
+    <label>Options d’usage</label>
+    <div class="options-box">
+      <label class="option-item">
+        <input type="checkbox" id="ctAirbnb">
+        <span>Usage location saisonnière / Airbnb (majoration +20 %)</span>
+      </label>
+    </div>
+  </div>
+</div>
+
 <div class="row">
   <div class="form-group">
     <label>Options forfaitaires</label>
@@ -722,7 +777,7 @@
     <div class="options-box">
       <label class="option-item">
         <input type="checkbox" id="ctIncludeOpening">
-        <span>Remise en route avant été</span>
+        <span>Mise en service de la piscine avant la saison estivale</span>
       </label>
 
       <label class="option-item">
@@ -756,15 +811,14 @@
 </div>
 
     <!-- ACTIONS BAS CONTRAT -->
-    <div class="form-actions no-print">
-      <button class="btn action-button" onclick="saveContract()">💾 Enregistrer</button>
-      <button class="btn action-button" onclick="openContractPDF()">🖨️ Imprimer</button>
+   <div class="actions no-print" style="margin-bottom:20px;">
+    <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
+    <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
+    <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
 <button class="btn action-button" onclick="transformContractToInvoice()">🔁 Transformer en facture</button>
 
-<button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
-
-      <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
-    </div>
+    <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
+  </div>
 
   </div> <!-- fin .card -->
 
@@ -787,7 +841,44 @@
     </div>
   </div>
 
+  <!-- ================= POPUP RÉSILIATION CONTRAT ================= -->
+
+  <div id="resiliationPopup" class="popup-overlay hidden">
+    <div class="popup">
+      <h3>Résiliation du contrat</h3>
+
+      <label>Qui résilie ?</label>
+      <select id="resiliationWho">
+        <option value="client">Le client</option>
+        <option value="prestataire">AquaClim Prestige</option>
+      </select>
+
+      <label style="margin-top:8px;">Motif de résiliation</label>
+      <textarea
+        id="resiliationMotif"
+        placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
+      ></textarea>
+
+      <p class="resiliation-note">
+        La résiliation prendra effet après validation écrite des deux parties
+        (mail ou signature sur le présent contrat).
+      </p>
+
+      <div class="popup-buttons">
+        <button class="btn btn-secondary btn-small" type="button"
+                onclick="closeResiliationPopup()">
+          Annuler
+        </button>
+        <button class="btn btn-danger btn-small" type="button"
+                onclick="confirmResiliationPopup()">
+          Confirmer la résiliation
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- ================= POPUP LISTE CLIENTS ================= -->
+
   <div id="clientsPopup" class="popup-overlay hidden">
     <div class="popup">
 
