@@ -286,6 +286,7 @@ async function initFirebase() {
   db = firebase.firestore();
 
   try {
+    // 1️⃣ SYNC DOCUMENTS (devis / factures)
     const snapshot = await db.collection("documents").get();
     const cloudDocs = [];
     snapshot.forEach((docSnap) => {
@@ -309,12 +310,23 @@ async function initFirebase() {
       }
     }
 
+    // 2️⃣ SYNC CONTRATS
+    await syncContractsWithFirestore();
+
+    // 3️⃣ SYNC CLIENTS
+    await syncClientsWithFirestore();
+
+    // 4️⃣ UI initiale
     loadYearFilter();
     loadDocumentsList();
+    if (typeof refreshClientDatalist === "function") {
+      refreshClientDatalist();
+    }
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
 }
+
 
 // ================== GESTION CLIENTS ==================
 
@@ -325,6 +337,19 @@ function getClients() {
     return [];
   }
 }
+
+function getClientDocId(client) {
+  const name = (client.name || "").toLowerCase().trim();
+  const address = (client.address || "").toLowerCase().trim();
+
+  let base = (name + "_" + address).replace(/[^a-z0-9]+/g, "_");
+  base = base.replace(/^_+|_+$/g, "");
+
+  if (!base) base = "client_" + Date.now().toString();
+
+  return base;
+}
+
 
 function saveClients(list) {
   try {
@@ -429,7 +454,8 @@ const clients = getClients();
   }
 }
 
-// Ajoute le client du contrat dans la base clients (même logique que addCurrentClient)
+// Ajoute le client du contrat dans la base clients 
+
 function addCurrentClientFromContract() {
   const name = (document.getElementById("ctClientName")?.value || "").trim();
   const address = (document.getElementById("ctClientAddress")?.value || "").trim();
@@ -449,22 +475,43 @@ function addCurrentClientFromContract() {
     return;
   }
 
-const clients = getClients();
+  const clients = getClients();
 
+  // 🔎 On cherche s'il existe déjà (par nom)
   const existingIdx = clients.findIndex(
     (c) => (c.name || "").toLowerCase() === name.toLowerCase()
   );
 
-  const clientObj = { civility, name, address, phone, email };
+  let clientObj;
 
   if (existingIdx >= 0) {
+    // On met à jour en conservant l'id existant s'il existe
+    const old = clients[existingIdx];
+    clientObj = {
+      ...old,
+      civility,
+      name,
+      address,
+      phone,
+      email
+    };
     clients[existingIdx] = clientObj;
   } else {
+    // Nouveau client : on lui génère un id stable (nom+adresse)
+    const tmp = { civility, name, address, phone, email };
+    const id = getClientDocId(tmp);
+    clientObj = { ...tmp, id };
     clients.push(clientObj);
   }
 
-  saveClients(clients);          // même fonction que pour les devis
-  refreshClientDatalist();       // met à jour <datalist id="clientsList">
+  // 💾 LocalStorage
+  saveClients(clients);
+  refreshClientDatalist();
+
+  // ☁️ Firestore (si dispo)
+  if (typeof saveSingleClientToFirestore === "function") {
+    saveSingleClientToFirestore(clientObj);
+  }
 
   showConfirmDialog({
     title: "Client enregistré",
@@ -481,12 +528,14 @@ function deleteCurrentClientFromContract() {
   const name = (document.getElementById("ctClientName")?.value || "").trim();
   if (!name) return;
 
-const clients = getClients();
+  const clients = getClients();
 
   const existingIdx = clients.findIndex(
     (c) => (c.name || "").toLowerCase() === name.toLowerCase()
   );
   if (existingIdx < 0) return;
+
+  const clientToDelete = clients[existingIdx];
 
   showConfirmDialog({
     title: "Supprimer ce client ?",
@@ -496,68 +545,23 @@ const clients = getClients();
     variant: "danger",
     icon: "⚠️",
     onConfirm: function () {
+      // 🔴 1. LocalStorage
       clients.splice(existingIdx, 1);
       saveClients(clients);
       refreshClientDatalist();
+
+      // 🔴 2. Firestore
+      if (typeof deleteClientFromFirestore === "function") {
+        deleteClientFromFirestore(clientToDelete);
+      }
     }
   });
 }
 
-// Supprimer un client
-function deleteClientByName(name) {
-  if (!name) return;
-
-  const clients = getClients().filter(
-    (c) => c.name.toLowerCase() !== name.toLowerCase()
-  );
-
-  saveClients(clients);
-  refreshClientDatalist();
-}
-
-// Fonction pour supprimer un client depuis le formulaire
-function deleteCurrentClient() {
-  const name = document.getElementById("clientName").value.trim();
-  if (!name) {
-    showConfirmDialog({
-      title: "Suppression impossible",
-      message: "Aucun client sélectionné.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "warning",
-      icon: "⚠️"
-    });
-    return;
-  }
-
-  showConfirmDialog({
-    title: "Supprimer ce client ?",
-    message: `Êtes-vous sûr de vouloir supprimer '${name}' de la base clients ?`,
-    confirmLabel: "Supprimer",
-    cancelLabel: "Annuler",
-    variant: "danger",
-    icon: "🗑️",
-    onConfirm: () => {
-      deleteClientByName(name);
-      document.getElementById("clientName").value = "";
-      document.getElementById("clientAddress").value = "";
-      document.getElementById("clientPhone").value = "";
-      document.getElementById("clientEmail").value = "";
-
-      showConfirmDialog({
-        title: "Client supprimé",
-        message: "Le client a été supprimé avec succès.",
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "success",
-        icon: "✅"
-      });
-    }
-  });
-}
 
 
 // Ajouter le client actuel à la base
+
 function addCurrentClient() {
   const name = document.getElementById("clientName").value.trim();
   const address = document.getElementById("clientAddress").value.trim();
@@ -5990,6 +5994,112 @@ async function deleteContractFromFirestore(id) {
     console.error("Erreur Firestore (delete contract)", e);
   }
 }
+
+async function syncContractsWithFirestore() {
+  if (!db) return;
+
+  try {
+    const snap = await db.collection("contracts").get();
+    const cloudContracts = [];
+    snap.forEach(doc => {
+      const data = doc.data();
+      if (data && data.id) {
+        cloudContracts.push(data);
+      }
+    });
+
+    if (cloudContracts.length > 0) {
+      // 🟦 On prend la vérité Firestore pour remplir localStorage
+      console.log("[Contracts] Chargement depuis Firestore :", cloudContracts.length, "contrats");
+      saveContracts(cloudContracts);
+    } else {
+      // 🔁 Si Firestore est vide mais qu’on a des contrats en local → on les pousse
+      const localContracts = getAllContracts();
+      if (localContracts.length > 0) {
+        console.log("[Contracts] Firestore vide, push des contrats locaux");
+        for (const c of localContracts) {
+          await db.collection("contracts")
+            .doc(c.id)
+            .set(c, { merge: true });
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Erreur sync contrats Firestore :", e);
+  }
+}
+
+// ----- Firestore clients -----
+
+async function saveSingleClientToFirestore(client) {
+  try {
+    if (!db) return;
+
+    // On garantit un id stable pour le doc
+    const id = client.id || getClientDocId(client);
+    client.id = id;
+
+    await db.collection("clients")
+      .doc(id)
+      .set(client, { merge: true });
+
+  } catch (e) {
+    console.error("Erreur Firestore (save client)", e);
+  }
+}
+
+async function deleteClientFromFirestore(client) {
+  try {
+    if (!db) return;
+
+    const id = client.id || getClientDocId(client);
+    await db.collection("clients").doc(id).delete();
+
+  } catch (e) {
+    console.error("Erreur Firestore (delete client)", e);
+  }
+}
+
+async function syncClientsWithFirestore() {
+  if (!db) return;
+
+  try {
+    const snap = await db.collection("clients").get();
+    const cloudClients = [];
+    snap.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data && data.name) {
+        cloudClients.push(data);
+      }
+    });
+
+    if (cloudClients.length > 0) {
+      // 🔵 Firestore devient la vérité → on recharge le local
+      console.log("[Clients] Chargement depuis Firestore :", cloudClients.length, "clients");
+      saveClients(cloudClients);
+      refreshClientDatalist();
+    } else {
+      // ☁️ vide → on pousse le local vers Firestore si on a déjà des clients
+      const localClients = getClients();
+      if (localClients.length > 0) {
+        console.log("[Clients] Firestore vide, push des clients locaux");
+        for (const c of localClients) {
+          const id = c.id || getClientDocId(c);
+          c.id = id;
+          await db.collection("clients")
+            .doc(id)
+            .set(c, { merge: true });
+        }
+      }
+      // et on rafraîchit quand même la datalist
+      refreshClientDatalist();
+    }
+  } catch (e) {
+    console.error("Erreur sync clients Firestore :", e);
+  }
+}
+
+
 // ----- Récupération d'un tarif dans PRESTATION_TEMPLATES -----
 
 function getTarifFromTemplates(kind, clientType) {
