@@ -157,6 +157,8 @@
     </div>
   </div>
 
+  <!-- Alerte contrats à renouveler (visible uniquement sur l’onglet Contrats) -->
+  <div id="contractsAlert" class="contracts-alert no-print hidden"></div>
 
       <table class="documents-table">
         <thead>
@@ -376,9 +378,8 @@
           <span id="subtotalHT">0,00 €</span>
         </div>
 
+        <!-- Réduction dans la grille -->
         <div class="totals-grid">
-
-          <!-- Réduction -->
           <div class="form-group discount-group">
             <label>Réduction</label>
             <div class="discount-row">
@@ -387,27 +388,38 @@
                 Appliquer une réduction
               </label>
 
-              <input type="number" id="discountPercentInput" min="0" max="100" value="0"
-                     step="0.01" oninput="onDiscountPercentChange()" disabled>
+              <input
+                type="number"
+                id="discountPercentInput"
+                min="0"
+                max="100"
+                value="0"
+                step="0.01"
+                oninput="onDiscountPercentChange()"
+                disabled
+              >
               <span class="discount-percent-symbol">%</span>
             </div>
           </div>
+        </div>
 
-          <!-- TVA -->
-          <div class="form-group tva-group">
-            <label>TVA</label>
+        <!-- 🔻 BLOC TVA DÉPLACÉ ICI, SOUS LA RÉDUCTION -->
+        <div class="form-group tva-group">
+          <label>TVA</label>
 
-            <div class="tva-options">
-              <label><input type="radio" name="tvaRadio" id="tva0" checked onchange="setTVA(0)"> 0 %</label>
-              <label><input type="radio" name="tvaRadio" id="tva20" onchange="setTVA(20)"> 20 %</label>
-            </div>
-
-            <div class="tva-rate-wrapper">
-              <input type="number" id="tvaRate" value="0" step="0.01" readonly>
-              <span class="tva-percent-symbol">%</span>
-            </div>
+          <div class="tva-options">
+            <label>
+              <input type="radio" name="tvaRadio" id="tva0" checked onchange="setTVA(0)"> 0 %
+            </label>
+            <label>
+              <input type="radio" name="tvaRadio" id="tva20" onchange="setTVA(20)"> 20 %
+            </label>
           </div>
 
+          <div class="tva-rate-wrapper">
+            <input type="number" id="tvaRate" value="0" step="0.01" readonly>
+            <span class="tva-percent-symbol">%</span>
+          </div>
         </div>
 
         <div id="discountLine" class="total-line" style="display:none;">
@@ -427,6 +439,7 @@
 
         <div class="tva-note" id="tvaNote">TVA non applicable, article 293 B du CGI.</div>
       </div>
+
 
       <!-- SECTION PAIEMENT (factures) -->
       <div class="form-group no-print" id="paymentSection">
@@ -789,26 +802,41 @@
   </div>
 </div>
 
+<div class="contract-summary">
+  <h4>Récapitulatif</h4>
+  <p><strong>Visites :</strong> <span id="ctRecapPassages">0</span></p>
+  <p><strong>Prix unitaire :</strong> <span id="ctRecapPrice">0 €</span></p>
+  <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
+</div>
 
-    <div class="contract-summary">
-      <h4>Récapitulatif</h4>
-      <p><strong>Visites :</strong> <span id="ctRecapPassages">0</span></p>
-      <p><strong>Prix unitaire :</strong> <span id="ctRecapPrice">0 €</span></p>
-      <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
-    </div>
 <div class="contract-tva">
   <label>TVA </label>
   <div class="tva-options">
     <label>
-      <input type="radio" name="ctTvaRadio" onchange="setTVA(0)" checked>
+      <input
+        type="radio"
+        name="contractTva"
+        id="ctTva0"
+        value="0"
+        checked
+        onchange="setTVA(0)"
+      >
       0 %
     </label>
+
     <label>
-      <input type="radio" name="ctTvaRadio" onchange="setTVA(20)">
+      <input
+        type="radio"
+        name="contractTva"
+        id="ctTva20"
+        value="20"
+        onchange="setTVA(20)"
+      >
       20 %
     </label>
   </div>
 </div>
+
 
     <!-- ACTIONS BAS CONTRAT -->
    <div class="actions no-print" style="margin-bottom:20px;">

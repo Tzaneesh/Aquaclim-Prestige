@@ -947,6 +947,22 @@ textarea {
     min-width: 230px;
 }
 
+/* Bandeau alerte contrats à renouveler */
+
+.contracts-alert {
+    margin: 8px 0 4px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #fff8e5;
+    border: 1px solid #f3d08a;
+    color: #8a5a00;
+    font-size: 13px;
+}
+
+.contracts-alert strong {
+    font-weight: 600;
+}
+
 /* =========================================================
     16. CONTRATS PISCINE / SPA (VUE APPLICATION)
 ========================================================= */
@@ -967,12 +983,12 @@ textarea {
 /* Titre des sections du contrat */
 #contractView h3.section-title {
     margin-top: 25px;
-    margin-bottom: 12px;
-    font-size: 18px;
-    font-weight: 600;
+    margin-bottom: 4px;
+    font-size: 12px;
+   font-weight: bold;
     color: #0d47a1;
 }
-
+.block p { margin: 3px 0; }
 /* Labels des champs */
 #contractView .form-group label {
     font-weight: 500;
@@ -1552,20 +1568,32 @@ textarea {
   white-space: nowrap;
 }
 
+/* En cours : vert */
 .status-ok {
   background-color: #e6f4ea;
   color: #137333;
 }
 
+/* À renouveler : orange */
 .status-warning {
   background-color: #fff4e5;
   color: #b06000;
 }
 
+/* Terminé : gris / noir */
 .status-terminated {
-  background-color: #fce8e6;
-  color: #c5221f;
+  background-color: #eeeeee;
+  color: #222222;
+  border: 1px solid #bbbbbb;
 }
+
+/* Résilié : rouge */
+.status-cancelled {
+  background-color: #ffe6e6;
+  color: #cc0000;
+  border: 1px solid #cc0000;
+}
+
 .resiliation-note {
   font-size: 11px;
   margin-top: 8px;
