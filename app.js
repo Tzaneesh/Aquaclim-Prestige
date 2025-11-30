@@ -567,9 +567,9 @@ function addCurrentClient() {
   const address = document.getElementById("clientAddress").value.trim();
   const phone = document.getElementById("clientPhone").value.trim();
   const email = document.getElementById("clientEmail").value.trim();
+  const civility = document.getElementById("clientCivility")?.value.trim();
 
   if (!name) {
-    // popup jolie au lieu d'alert
     showConfirmDialog({
       title: "Nom obligatoire",
       message: "Merci de renseigner au minimum le nom du client.",
@@ -586,36 +586,49 @@ function addCurrentClient() {
     c => (c.name || "").toLowerCase() === name.toLowerCase()
   );
 
-const civility = document.getElementById("clientCivility")?.value.trim();
-
-const newClient = { civility, name, address, phone, email };
-  let title;
-  let message;
+  let clientObj;
 
   if (existingIndex === -1) {
-    // ➕ AJOUT
-    clients.push(newClient);
-    title = "Client ajouté";
-    message = "Le client a été ajouté à la base.";
+    // ➕ Nouveau client (avec id)
+    const tmp = { civility, name, address, phone, email };
+    const id = getClientDocId(tmp);
+    clientObj = { ...tmp, id };
+    clients.push(clientObj);
   } else {
-    // ✏️ MISE À JOUR
-    clients[existingIndex] = newClient;
-    title = "Client mis à jour";
-    message = "Les informations du client ont été mises à jour.";
+    // ✏️ Mise à jour en conservant l'id
+    const old = clients[existingIndex];
+    clientObj = {
+      ...old,
+      civility,
+      name,
+      address,
+      phone,
+      email
+    };
+    clients[existingIndex] = clientObj;
   }
 
   saveClients(clients);
   refreshClientDatalist();
 
+  if (typeof saveSingleClientToFirestore === "function") {
+    saveSingleClientToFirestore(clientObj);
+  }
+
+  const isUpdate = existingIndex !== -1;
+
   showConfirmDialog({
-    title,
-    message,
+    title: isUpdate ? "Client mis à jour" : "Client ajouté",
+    message: isUpdate
+      ? "Les informations du client ont été mises à jour."
+      : "Le client a été ajouté à la base.",
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
     icon: "✅"
   });
 }
+
 
 
 let pendingRenewId = null;
