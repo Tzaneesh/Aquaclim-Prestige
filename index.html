@@ -136,6 +136,7 @@
     <span id="listTitle" class="list-title">Liste des devis</span>
 
     <!-- 🔍 Recherche devis / factures -->
+
     <div class="doc-search-wrapper">
       <input
         type="text"
@@ -156,6 +157,14 @@
       <button class="btn btn-secondary btn-small" onclick="exportFacturesCSV()">📥 Exporter (CSV)</button>
     </div>
   </div>
+
+    <div id="unpaidFilterContainer" class="hidden">
+      <label style="font-size:14px;">
+        <input type="checkbox" id="filterUnpaid" onchange="loadDocumentsList()">
+        Afficher seulement les factures impayées
+      </label>
+    </div>
+
 
   <!-- Alerte contrats à renouveler (visible uniquement sur l’onglet Contrats) -->
 
@@ -517,6 +526,13 @@
 <button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
   <span class="icon">🔁</span> Renouveler
 </button>
+<button class="btn btn-primary" onclick="openContractSchedulePopup()">
+  📅 Voir l’échéancier
+</button>
+
+
+
+
 
 
 <button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
@@ -904,6 +920,9 @@
 <button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
   <span class="icon">🔁</span> Renouveler
 </button>
+<button class="btn btn-primary" onclick="openContractSchedulePopup()">
+  📅 Voir l’échéancier
+</button>
 
 
 <button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
@@ -943,6 +962,20 @@
     <button class="btn btn-primary" onclick="confirmRenewPopup()">Renouveler</button>
   </div>
 </div>
+<div id="contractSchedulePopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Échéancier du contrat</h3>
+    <p id="contractScheduleTitle" class="schedule-contract-title"></p>
+    <p id="contractSchedulePeriod" class="schedule-contract-period"></p>
+
+    <div id="contractScheduleContent"></div>
+
+    <div class="popup-buttons">
+      <button class="btn btn-light" onclick="closeContractSchedulePopup()">Fermer</button>
+    </div>
+  </div>
+</div>
+
 
 
 

@@ -695,8 +695,22 @@ function openClientsListPopup() {
   currentClientPage = 1;
   rebuildClientsPopupList("");
 
-  document.getElementById("editClientForm").classList.add("hidden");
-  document.getElementById("clientsPopup").classList.remove("hidden");
+  // on masque le formulaire d’édition
+  const editForm = document.getElementById("editClientForm");
+  if (editForm) editForm.classList.add("hidden");
+
+  // on affiche l’overlay
+  const overlay = document.getElementById("clientsPopup");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+
+  // 👉 on active la popup à l’intérieur
+  const popup = overlay.querySelector(".popup");
+  if (popup) {
+    // petit reflow si tu veux que l’anim soit propre
+    void popup.offsetWidth;
+    popup.classList.add("show");
+  }
 
   renderClientsList();
 }
@@ -903,7 +917,10 @@ function saveEditedClient() {
 
 
 function closeClientsListPopup() {
-  document.getElementById("clientsPopup").classList.add("hidden");
+  const overlay = document.getElementById("clientsPopup");
+  const popup = overlay.querySelector(".popup");
+  popup.classList.remove("show");
+  overlay.classList.add("hidden");
 }
 
 
@@ -1066,40 +1083,47 @@ function getNextContractReference() {
 function switchListType(type) {
   currentListType = type;
 
-  const tabDevis = document.getElementById("tabDevis");
+  const tabDevis    = document.getElementById("tabDevis");
   const tabFactures = document.getElementById("tabFactures");
   const tabContrats = document.getElementById("tabContrats");
 
-  if (tabDevis) tabDevis.classList.toggle("active", type === "devis");
+  if (tabDevis)    tabDevis.classList.toggle("active", type === "devis");
   if (tabFactures) tabFactures.classList.toggle("active", type === "facture");
   if (tabContrats) tabContrats.classList.toggle("active", type === "contrat");
 
-  const listView = document.getElementById("listView");
-  const formView = document.getElementById("formView");
+  const listView     = document.getElementById("listView");
+  const formView     = document.getElementById("formView");
   const contractView = document.getElementById("contractView");
 
-  const yearFilterContainer = document.getElementById("yearFilterContainer");
-  const exportContainer = document.getElementById("exportContainer");
+  const yearFilterContainer   = document.getElementById("yearFilterContainer");
+  const exportContainer       = document.getElementById("exportContainer");
+  const unpaidFilterContainer = document.getElementById("unpaidFilterContainer");
 
-  const btnDevis = document.getElementById("createDevis");
-  const btnFacture = document.getElementById("createFacture");
+  const btnDevis    = document.getElementById("createDevis");
+  const btnFacture  = document.getElementById("createFacture");
   const btnContract = document.getElementById("createContract");
 
-  // 🔵 MODE CONTRATS : même layout que devis/factures, mais avec la liste de contrats
+  // 🔵 MODE CONTRATS
   if (type === "contrat") {
-    if (listView) listView.classList.remove("hidden");
-    if (formView) formView.classList.add("hidden");
-    if (contractView) contractView.classList.add("hidden"); // on n'affiche le formulaire que quand on ouvre/crée un contrat
+    if (listView)     listView.classList.remove("hidden");
+    if (formView)     formView.classList.add("hidden");
+    if (contractView) contractView.classList.add("hidden"); // on ouvre le form seulement sur "Modifier" / "Nouveau"
 
     // Titre de la liste
     const listTitle = document.getElementById("listTitle");
     if (listTitle) listTitle.textContent = "Liste des contrats";
 
-    // Pas de filtre année ni export pour les contrats
-    if (yearFilterContainer) yearFilterContainer.classList.add("hidden");
-    if (exportContainer) exportContainer.classList.add("hidden");
+    // Pas de filtres factures en mode contrat
+    if (yearFilterContainer)   yearFilterContainer.classList.add("hidden");
+    if (exportContainer)       exportContainer.classList.add("hidden");
+    if (unpaidFilterContainer) unpaidFilterContainer.classList.add("hidden");
 
-    // Boutons en haut : seul "Nouveau contrat" est actif
+    // Bandeau contrats : on le laissera géré par updateContractsAlert()
+    const alertBox = document.getElementById("contractsAlert");
+    if (alertBox) alertBox.classList.remove("hidden");
+    if (tabContrats) tabContrats.textContent = "📘 Contrats";
+
+    // Boutons
     if (btnDevis) {
       btnDevis.disabled = true;
       btnDevis.classList.add("disabled-btn");
@@ -1116,18 +1140,16 @@ function switchListType(type) {
     resetTarifsPanel();
     currentDocumentId = null;
 
-    // On remplit le tableau avec les contrats
     loadContractsList();
     return;
   }
 
-  // 🟡 MODE DEVIS / FACTURES (comportement existant)
+  // 🟡 MODE DEVIS / FACTURES
   if (contractView) contractView.classList.add("hidden");
-  if (listView) listView.classList.remove("hidden");
-  if (formView) formView.classList.add("hidden");
+  if (listView)     listView.classList.remove("hidden");
+  if (formView)     formView.classList.add("hidden");
 
-  // Reset du bandeau contrats quand on n'est plus sur l’onglet Contrats
-
+  // Reset bandeau contrats quand on quitte l’onglet
   const alertBox = document.getElementById("contractsAlert");
   if (alertBox) {
     alertBox.classList.add("hidden");
@@ -1137,23 +1159,25 @@ function switchListType(type) {
     tabContrats.textContent = "📘 Contrats";
   }
 
-
-  // Titre de liste
+  // Titre liste
   const listTitle = document.getElementById("listTitle");
   if (listTitle) {
     listTitle.textContent =
       type === "devis" ? "Liste des devis" : "Liste des factures";
   }
 
-  // Filtre année + export visibles uniquement pour les factures
+  // Filtres visibles uniquement pour les factures
   if (yearFilterContainer) {
     yearFilterContainer.classList.toggle("hidden", type !== "facture");
   }
   if (exportContainer) {
     exportContainer.classList.toggle("hidden", type !== "facture");
   }
+  if (unpaidFilterContainer) {
+    unpaidFilterContainer.classList.toggle("hidden", type !== "facture");
+  }
 
-  // Boutons en haut : seulement le bouton du type courant est actif
+  // Boutons haut
   if (btnDevis && btnFacture) {
     if (type === "devis") {
       btnDevis.disabled = false;
@@ -1168,7 +1192,6 @@ function switchListType(type) {
     }
   }
   if (btnContract) {
-    // En mode devis/factures, le bouton contrat est grisé
     btnContract.disabled = true;
     btnContract.classList.add("disabled-btn");
   }
@@ -1179,6 +1202,7 @@ function switchListType(type) {
   loadYearFilter();
   loadDocumentsList();
 }
+
 
 
 function onDocumentsSearchChange() {
@@ -2777,7 +2801,7 @@ function backToContracts() {
 }
 // ================== LISTE DOCUMENTS & STATUTS ==================
 
-function loadDocumentsList() {
+function loadDocumentsList() { 
   // Cas spécial : onglet Contrats
   if (currentListType === "contrat") {
     loadContractsList();
@@ -2787,14 +2811,21 @@ function loadDocumentsList() {
   const docs = getAllDocuments();
   let filtered = docs.filter((d) => d.type === currentListType);
 
-  // Filtre année (factures uniquement)
+  // 🔵 Filtres spécifiques aux FACTURES
   if (currentListType === "facture") {
+    // Filtre année
     const yearSel = document.getElementById("yearFilter");
     if (yearSel && yearSel.value !== "all") {
       const y = parseInt(yearSel.value, 10);
       filtered = filtered.filter(
         (d) => d.date && new Date(d.date).getFullYear() === y
       );
+    }
+
+    // Filtre "seulement les factures impayées"
+    const unpaidToggle = document.getElementById("filterUnpaid");
+    if (unpaidToggle && unpaidToggle.checked) {
+      filtered = filtered.filter((d) => !d.paid);
     }
   }
 
@@ -2852,7 +2883,8 @@ function loadDocumentsList() {
     let statutHTML = "";
 
     // --- FACTURE ---
-    if (doc.type === "facture") {
+
+        if (doc.type === "facture") {
       const mode = doc.paymentMode || "";
       const modeLabel =
         mode === "especes"
@@ -2865,18 +2897,55 @@ function loadDocumentsList() {
           ? "Chèque"
           : "";
 
-      const badgeStatus = doc.paid ? "badge-paid" : "badge-unpaid";
-      const statusText = doc.paid
-        ? "🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : "")
-        : "🔴 Non réglée";
+      const DELAI_REGLEMENT_JOURS = 30;
+
+      let badgeStatus;
+      let statusText;
+
+      if (doc.paid) {
+        // ✅ Facture payée
+        badgeStatus = "badge-paid";
+        statusText =
+          "🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : "");
+      } else {
+        // ❌ Facture non payée -> on regarde si elle est en retard ou non
+        badgeStatus = "badge-unpaid";
+
+        let isLate = false;
+
+        if (doc.date) {
+          const d = new Date(doc.date);
+          const today = new Date();
+          d.setHours(0, 0, 0, 0);
+          today.setHours(0, 0, 0, 0);
+
+          const diffDays = Math.floor(
+            (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+          );
+
+          if (!isNaN(diffDays) && diffDays > DELAI_REGLEMENT_JOURS) {
+            isLate = true;
+          }
+        }
+
+    if (isLate) {
+  badgeStatus = "badge-unpaid";   // rouge (déjà existant)
+  statusText = "🔴 En retard";
+} else {
+  badgeStatus = "badge-pending";  // 👉 notre nouvelle classe orange
+  statusText = "🟡 En attente";
+}
+
+      }
 
       statutHTML =
         `<span class="badge ${badgeStatus}">${statusText}</span>` +
-        (doc.paymentDate
+        (doc.paymentDate && doc.paid
           ? `<div class="status-sub">le ${
               new Date(doc.paymentDate).toLocaleDateString("fr-FR")
             }</div>`
           : "");
+
 
       // + radios en dessous (Non réglée / Espèces / CB / Virement / Chèque)
       const modeRadio =
@@ -2966,25 +3035,21 @@ function loadDocumentsList() {
     const previewBtnClass = printBtnClass;
     const deleteBtnClass = "btn btn-danger btn-small";
 
-const actionsHtml =
-  `<div class="actions-btns">` +
-
-    `<div class="actions-btns-row">
-       <button class="${openBtnClass}" type="button"
-               onclick="loadDocument('${doc.id}')">Modifier</button>
-       <button class="${printBtnClass}" type="button"
-               onclick="openPrintable('${doc.id}')">Imprimer</button>
-     </div>`
-
-  + `<div class="actions-btns-row">
-       <button class="${previewBtnClass}" type="button"
-               onclick="openPrintable('${doc.id}', true)">Aperçu</button>
-       <button class="${deleteBtnClass}" type="button"
-               onclick="deleteDocument('${doc.id}')">Supprimer</button>
-     </div>`
-
-  + `</div>`;
-
+    const actionsHtml =
+      `<div class="actions-btns">` +
+        `<div class="actions-btns-row">
+           <button class="${openBtnClass}" type="button"
+                   onclick="loadDocument('${doc.id}')">Modifier</button>
+           <button class="${printBtnClass}" type="button"
+                   onclick="openPrintable('${doc.id}')">Imprimer</button>
+         </div>` +
+        `<div class="actions-btns-row">
+           <button class="${previewBtnClass}" type="button"
+                   onclick="openPrintable('${doc.id}', true)">Aperçu</button>
+           <button class="${deleteBtnClass}" type="button"
+                   onclick="deleteDocument('${doc.id}')">Supprimer</button>
+         </div>` +
+      `</div>`;
 
     // ====== LIGNE DU TABLEAU ======
     const clientName = doc.client?.name || "";
@@ -2999,10 +3064,10 @@ const actionsHtml =
       `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
       `<td>${escapeHtml(doc.number || "")}</td>` +
       `<td class="client-cell">` +
-      `<div class="client-main" title="${safeClient}">${safeClient || "-"}</div>` +
-      (subject
-        ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
-        : "") +
+        `<div class="client-main" title="${safeClient}">${safeClient || "-"}</div>` +
+        (subject
+          ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
+          : "") +
       `</td>` +
       `<td>${dateText}</td>` +
       `<td><strong>${formatEuro(doc.totalTTC)}</strong></td>` +
@@ -5514,38 +5579,53 @@ function normalizeContractBeforeSave(contract) {
 }
 
 function computeNextInvoiceDate(contract) {
-  const pr = contract.pricing || {};
+  const pr   = contract.pricing || {};
   const mode = pr.billingMode || "annuel";
-  const start = pr.startDate ? new Date(pr.startDate + "T00:00:00") : null;
 
-  if (!start) return "";
+  const startISO = pr.startDate;
+  const duration = Number(pr.durationMonths || 0);
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
+  if (!startISO || !duration) return "";
 
-  // 🔵 Cas ANNUEL intelligent
+  const start = new Date(startISO + "T00:00:00");
+  if (isNaN(start.getTime())) return "";
+
+  // Date de fin de contrat
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + duration);
+  end.setDate(end.getDate() - 1);
+
+  // 🔹 Cas ANNUEL : tout est facturé d’un coup (generateImmediateBilling)
   if (mode === "annuel") {
-    const diffDays =
-      (start.getTime() - today.getTime()) / (1000 * 3600 * 24);
-
-    // Si dans < 30 jours → facture immédiate
-    if (diffDays <= 30) {
-      return today.toISOString().slice(0,10);
-    }
-
-    // Sinon → facture le jour de startDate
-    return pr.startDate;
+    return "";
   }
 
-  // 🔵 Cas MENSUEL / TRIMESTRIEL / SEMESTRIEL
-  const next = new Date(start);
+  const stepMonths = getBillingStepMonths(mode); // 1 / 3 / 6
+  if (!stepMonths) return "";
 
-  if (mode === "mensuel")    next.setMonth(next.getMonth() + 1);
-  if (mode === "trimestriel") next.setMonth(next.getMonth() + 3);
-  if (mode === "semestriel")  next.setMonth(next.getMonth() + 6);
+  let base;
 
-  return next.toISOString().slice(0,10);
+  if (pr.nextInvoiceDate) {
+    // On part de la DERNIÈRE échéance connue
+    base = new Date(pr.nextInvoiceDate + "T00:00:00");
+    if (isNaN(base.getTime())) base = new Date(start);
+  } else {
+    // 1ʳᵉ échéance auto = un “step” après le début du contrat
+    // (la toute première est déjà facturée par generateImmediateBilling)
+    base = new Date(start);
+  }
+
+  const next = new Date(base);
+  next.setMonth(next.getMonth() + stepMonths);
+
+  // Si on dépasse la fin du contrat → plus d’échéance
+  if (next > end) {
+    return "";
+  }
+
+  return next.toISOString().slice(0, 10);
 }
+
 
 
 function getContractLabel(type) {
@@ -8237,6 +8317,285 @@ function renewCurrentContract() {
   renewContract(id);
 }
 
+function formatDateFr(iso) {
+  if (!iso) return "";
+  const d = new Date(iso + "T00:00:00");
+  if (isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString("fr-FR");
+}
+
+function openContractSchedulePopup() {
+  let contract = null;
+
+  if (typeof currentContractId !== "undefined" && currentContractId) {
+    contract = getContract(currentContractId);
+  }
+  if (!contract) {
+    contract = buildContractFromForm(false);
+  }
+
+  if (!contract || !contract.pricing) {
+    alert("Aucun contrat chargé ou contrat incomplet.");
+    return;
+  }
+
+  const pr = contract.pricing || {};
+  const client = contract.client || {};
+
+  // 🔹 Ligne 1 : "Contrat entretien piscine Mr Dupont"
+  const clientName = (client.name || "").trim();
+  let titleText = "Contrat d'entretien piscine";
+  if (clientName) {
+    titleText += " " + clientName;
+  }
+
+  // 🔹 Ligne 2 : "Du 04/01/2026 au 09/08/2026"
+  const startISO = pr.startDate || "";
+  let endISO = pr.endDateLabel || "";
+
+  // Si pas de date de fin saisie, on essaie de la calculer à partir de la durée
+  if (!endISO && startISO && pr.durationMonths) {
+    const d = new Date(startISO + "T00:00:00");
+    d.setMonth(d.getMonth() + Number(pr.durationMonths || 0));
+    endISO = d.toISOString().slice(0, 10);
+  }
+
+  const startLabel = formatDateFr(startISO);
+  const endLabel   = formatDateFr(endISO);
+
+  let periodText = "";
+  if (startLabel && endLabel) {
+    periodText = `Du ${startLabel} au ${endLabel}`;
+  } else if (startLabel) {
+    periodText = `À partir du ${startLabel}`;
+  }
+
+  const titleEl = document.getElementById("contractScheduleTitle");
+  if (titleEl) titleEl.textContent = titleText;
+
+  const periodEl = document.getElementById("contractSchedulePeriod");
+  if (periodEl) periodEl.textContent = periodText;
+
+  // 🔹 reste comme avant
+  const schedule = buildContractSchedule(contract);
+  const html = renderContractScheduleHTML(schedule);
+
+  const container = document.getElementById("contractScheduleContent");
+  if (container) container.innerHTML = html;
+
+  const overlay = document.getElementById("contractSchedulePopup");
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) {
+      void popup.offsetWidth;
+      popup.classList.add("show");
+    }
+  }
+}
+
+
+function monthYearFr(dateISO) {
+  const d = new Date(dateISO + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+}
+
+function createAutomaticInvoice(contract) {
+  const pr     = contract.pricing || {};
+  const client = contract.client  || {};
+
+  const tvaRate        = Number(pr.tvaRate || 0);
+  const totalHTContrat = Number(pr.totalHT || 0);
+  const mode           = pr.billingMode || "annuel";
+
+  // 💰 Montant par échéance
+  const n = mode === "annuel" ? 1 : getNumberOfInstallments(pr);
+  const amountHT = n > 1 ? totalHTContrat / n : totalHTContrat;
+
+  const tva      = amountHT * (tvaRate / 100);
+  const totalTTC = amountHT + tva;
+
+  // 📅 Date d’échéance = nextInvoiceDate (sinon aujourd’hui)
+  const nextEcheance = pr.nextInvoiceDate || new Date().toISOString().slice(0,10);
+  const moisLabel    = monthYearFr(nextEcheance);
+  const dateLabel    = new Date(nextEcheance + "T00:00:00").toLocaleDateString("fr-FR");
+
+  // 🧍 Nom client pour le titre
+  const clientName = (client.name || "").trim();
+  const suffixClient = clientName ? " – " + clientName : "";
+
+  const number   = getNextNumber("facture");
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  return {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+
+    // 🎯 Titre propre dans les factures
+    subject: `Entretien piscine – Échéance de ${moisLabel}${suffixClient}`,
+
+    contractId: contract.id,
+    client,
+    site: contract.site || {},
+
+    prestations: [
+      {
+        label: `Entretien piscine – échéance du ${dateLabel}`,
+        quantity: 1,
+        unitPrice: amountHT,
+        totalHT: amountHT
+      }
+    ],
+
+    totalHT: amountHT,
+    tvaRate,
+    tvaAmount: tva,
+    totalTTC,
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    meta: { autoFromContract: true },
+    createdAt: todayISO,
+    updatedAt: todayISO
+  };
+}
+
+
+
+
+function closeContractSchedulePopup() {
+  const overlay = document.getElementById("contractSchedulePopup");
+  if (!overlay) return;
+  const popup = overlay.querySelector(".popup");
+  if (popup) popup.classList.remove("show");
+  overlay.classList.add("hidden");
+}
+
+function buildContractSchedule(contract) {
+  const pr = contract.pricing || {};
+  const mode = pr.billingMode || "annuel";
+
+  const startISO = pr.startDate;
+  if (!startISO) return [];
+
+  const totalHT = Number(pr.totalHT || 0);
+  const tvaRate = Number(pr.tvaRate || 0);
+
+  let n = 1;
+  let stepMonths = 0;
+
+  if (mode === "annuel") {
+    n = 1;
+    stepMonths = 0;
+  } else {
+    n = getNumberOfInstallments(pr);      // 👈 basé sur durationMonths
+    stepMonths = getBillingStepMonths(mode);
+  }
+
+  if (n < 1) n = 1;
+
+  const amountHT = mode === "annuel" ? totalHT : totalHT / n;
+  const amountTVA = amountHT * (tvaRate / 100);
+  const amountTTC = amountHT + amountTVA;
+
+  const rows = [];
+  let current = new Date(startISO + "T00:00:00");
+
+  for (let i = 0; i < n; i++) {
+    const iso = current.toISOString().slice(0, 10);
+
+    rows.push({
+      index: i + 1,
+      date: iso,
+      amountHT,
+      amountTVA,
+      amountTTC,
+      status: "prévisionnel"
+    });
+
+    if (stepMonths > 0) {
+      current.setMonth(current.getMonth() + stepMonths);
+    }
+  }
+
+  return rows;
+}
+
+
+function renderContractScheduleHTML(rows) {
+  if (!rows || rows.length === 0) {
+    return "<p>Aucune échéance calculable (vérifie la date de début et le montant).</p>";
+  }
+
+  const nbEcheances = rows.length;
+  const montantTTCEcheance = rows[0].amountTTC || 0;
+  const montantTTCTotal = montantTTCEcheance * nbEcheances;
+
+  // 👉 est-ce qu’il y a de la TVA ?
+  const hasTVA = rows.some(r => (r.amountTVA || 0) > 0.0001);
+
+  let html = `
+    <div class="schedule-summary">
+      <p><strong>Nombre d’échéances :</strong> ${nbEcheances}</p>
+      <p><strong>Montant TTC / échéance :</strong> ${montantTTCEcheance.toFixed(2)} €</p>
+      <p><strong>Montant TTC total :</strong> ${montantTTCTotal.toFixed(2)} €</p>
+    </div>
+    <div class="schedule-table-wrapper">
+      <table class="schedule-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Date</th>
+            <th>Montant HT</th>`;
+
+  if (hasTVA) {
+    html += `
+            <th>Montant TVA</th>
+            <th>Montant TTC</th>`;
+  }
+
+  html += `
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  rows.forEach((r) => {
+    const d = new Date(r.date + "T00:00:00");
+    const dateFr = isNaN(d.getTime()) ? r.date : d.toLocaleDateString("fr-FR");
+
+    html += `
+      <tr>
+        <td>${r.index}</td>
+        <td>${dateFr}</td>
+        <td class="amount-cell">${r.amountHT.toFixed(2)} €</td>`;
+
+    if (hasTVA) {
+      html += `
+        <td class="amount-cell">${r.amountTVA.toFixed(2)} €</td>
+        <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>`;
+    }
+
+    html += `
+        <td>${r.status}</td>
+      </tr>
+    `;
+  });
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `;
+
+  return html;
+}
+
+
 
 function initContractsUI() {
   const root = document.getElementById("contractView");
@@ -8323,49 +8682,28 @@ if (airbnb) airbnb.addEventListener("change", recomputeContract);
   recomputeContract();
 }
 
-function createAutomaticInvoice(contract) {
-  const pr = contract.pricing || {};
+// Nombre de mois entre deux factures selon le mode
+function getBillingStepMonths(mode) {
+  if (mode === "mensuel")      return 1;
+  if (mode === "trimestriel")  return 3;
+  if (mode === "semestriel")   return 6;
+  // annuel = tout en une fois
+  return 0;
+}
 
-  const tvaRate = Number(pr.tvaRate || 0);
-  const amountHT = Number(pr.totalHT || 0);
+// Combien d'échéances pour ce contrat ?
+function getNumberOfInstallments(pr) {
+  const mode = pr.billingMode || "annuel";
 
-  // montant selon mode
-  let amount;
-  if (pr.billingMode === "annuel")       amount = amountHT;
-  if (pr.billingMode === "semestriel")   amount = amountHT / 2;
-  if (pr.billingMode === "trimestriel")  amount = amountHT / 4;
-  if (pr.billingMode === "mensuel")      amount = amountHT / 12;
+  if (mode === "annuel") return 1;
 
-  const tva = amount * (tvaRate/100);
-  const totalTTC = amount + tva;
+  const dur = Number(pr.durationMonths || 0);
+  const step = getBillingStepMonths(mode);
 
-  const number = getNextNumber("facture");
-  const todayISO = new Date().toISOString().slice(0,10);
+  if (!dur || !step) return 1;
 
-  return {
-    id: Date.now().toString(),
-    type: "facture",
-    number,
-    date: todayISO,
-    subject: "Facturation automatique du contrat",
-    contractId: contract.id,
-    client: contract.client,
-    prestations: [
-      {
-        desc: "Facturation automatique selon échéancier",
-        qty: 1,
-        price: amount,
-        total: amount,
-        unit: "forfait",
-        kind: "auto_contrat"
-      }
-    ],
-    tvaRate,
-    subtotal: amount,
-    tvaAmount: tva,
-    totalTTC,
-    paid: false
-  };
+  // ex : 6 mois / trimestriel → ceil(6/3) = 2
+  return Math.max(1, Math.ceil(dur / step));
 }
 
 function generateImmediateBilling(contract) {
@@ -8377,7 +8715,7 @@ function generateImmediateBilling(contract) {
   const totalHT = Number(pr.totalHT) || 0;
   if (totalHT <= 0) return null;
 
-  // amount = portion à facturer immédiatement
+  // 💰 Part de contrat à facturer tout de suite
   let amountHT = 0;
 
   if (mode === "annuel")      amountHT = totalHT;
@@ -8385,12 +8723,36 @@ function generateImmediateBilling(contract) {
   if (mode === "trimestriel") amountHT = totalHT / 4;
   if (mode === "mensuel")     amountHT = totalHT / 12;
 
-  const tvaRate = Number(pr.tvaRate) || 0;
+  const tvaRate   = Number(pr.tvaRate) || 0;
   const tvaAmount = amountHT * (tvaRate / 100);
-  const totalTTC = amountHT + tvaAmount;
+  const totalTTC  = amountHT + tvaAmount;
 
-  const number = getNextInvoiceNumber();
+  const number   = getNextInvoiceNumber();
   const todayISO = new Date().toISOString().slice(0, 10);
+
+  // 📅 Mois de référence = mois de début du contrat (fallback : aujourd'hui)
+  const refDateISO  = pr.startDate || todayISO;
+  const moisLabel   = monthYearFr(refDateISO); // ex "novembre 2025"
+  const clientName  = (c.name || "").trim();
+  const suffixClient = clientName ? " – " + clientName : "";
+
+  // 🏊 type : piscine / spa / etc.
+  const poolType = pr.mainService || (contract.pool && contract.pool.type) || "";
+  let serviceLabel = "Entretien piscine";
+  if (
+    poolType === "spa" ||
+    poolType === "spa_jacuzzi" ||
+    poolType === "entretien_jacuzzi"
+  ) {
+    serviceLabel = "Entretien spa / jacuzzi";
+  } else if (poolType === "piscine_chlore" || poolType === "piscine_sel") {
+    serviceLabel = "Entretien piscine";
+  } else {
+    serviceLabel = "Entretien piscine / spa";
+  }
+
+  // 🧾 Objet de la facture
+  const subject = `${serviceLabel} – Facture initiale ${moisLabel}${suffixClient}`;
 
   return {
     id: Date.now().toString(),
@@ -8398,7 +8760,7 @@ function generateImmediateBilling(contract) {
     number,
     date: todayISO,
 
-    subject: `Facture initiale – Mode ${mode}`,
+    subject,                      // 👈 nouveau titre propre
 
     contractId: contract.id,
     contractReference: c.reference || "",
@@ -8417,7 +8779,8 @@ function generateImmediateBilling(contract) {
 
     prestations: [
       {
-        desc: "Facturation initiale du contrat selon échéancier",
+        // 👇 ligne de détail lisible
+        desc: `${serviceLabel.toLowerCase()} – facture initiale ${moisLabel}`,
         qty: 1,
         price: amountHT,
         total: amountHT,
@@ -8431,7 +8794,9 @@ function generateImmediateBilling(contract) {
     tvaAmount,
     totalTTC,
 
-    notes: "Facture générée automatiquement lors de la création du contrat.",
+    notes:
+      "Facture générée automatiquement lors de la création du contrat " +
+      "(échéancier de facturation).",
 
     paid: false,
     paymentMode: "",
@@ -8440,6 +8805,7 @@ function generateImmediateBilling(contract) {
     createdAt: new Date().toISOString()
   };
 }
+
 
 
 function checkScheduledInvoices() {
