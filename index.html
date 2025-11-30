@@ -158,7 +158,14 @@
   </div>
 
   <!-- Alerte contrats à renouveler (visible uniquement sur l’onglet Contrats) -->
+
   <div id="contractsAlert" class="contracts-alert no-print hidden"></div>
+<div id="contractsFilterBar" class="no-print hidden" style="margin-bottom:10px;">
+  <label style="font-size:14px;">
+    <input type="checkbox" id="filterRenewal" onchange="loadContractsList()">
+    Voir uniquement les contrats à renouveler / terminés
+  </label>
+</div>
 
       <table class="documents-table">
         <thead>
@@ -190,6 +197,7 @@
       <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
       <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+  <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
 
@@ -199,7 +207,9 @@
       <!-- type document -->
       <div class="row">
         <div class="form-group">
-          <label>Type *</label>
+         <label class="form-label">
+  Type<span class="required-star">*</span>
+</label>
           <select id="docType" onchange="updateDocType(); updateTransformButtonVisibility();">
             <option value="devis">Devis</option>
             <option value="facture">Facture</option>
@@ -224,13 +234,17 @@
       </div>
 
       <div class="form-group">
-        <label>Objet *</label>
+       <label class="form-label">
+  Objet <span class="required-star">*</span>
+</label>
         <input type="text" id="docSubject" placeholder="Ex : Entretien piscine + clim – Villa Martin">
       </div>
 
       <!-- type client -->
       <div class="form-group">
-        <label>Type client *</label>
+       <label class="form-label">
+  Type de client <span class="required-star">*</span>
+</label>
         <div class="client-type-row">
 
           <label class="client-type-option">
@@ -261,7 +275,9 @@
   </div>
 
   <div class="form-group">
-    <label>Nom ou Société *</label>
+   <label class="form-label">
+  TNom ou Société <span class="required-star">*</span>
+</label>
     <input
       type="text"
       id="clientName"
@@ -279,7 +295,9 @@
 
 
         <div class="form-group">
-          <label>Adresse *</label>
+         <label class="form-label">
+  Adresse <span class="required-star">*</span>
+</label>
           <input type="text" id="clientAddress">
         </div>
 
@@ -347,12 +365,16 @@
   </div>
 
   <div class="form-group">
-    <label>Nom du client sur site *</label>
+    <label class="form-label">
+  Nom du client sur site <span class="required-star">*</span>
+</label>
     <input type="text" id="siteName" placeholder="Ex : Mme Dupont Élise">
   </div>
 
   <div class="form-group">
-    <label>Adresse du lieu d’intervention *</label>
+<label class="form-label">
+  Adresse du lieu d'intervention <span class="required-star">*</span>
+</label>
     <input type="text" id="siteAddress" placeholder="Ex : Résidence Le Parc, Bât A, 14 rue ...">
   </div>
 
@@ -475,6 +497,7 @@
       <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
       <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+  <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
 
@@ -491,6 +514,13 @@
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
 <button class="btn action-button" onclick="transformContractToInvoice()">🔁 Transformer en facture</button>
+<button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
+  <span class="icon">🔁</span> Renouveler
+</button>
+
+
+<button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
+
 
     <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>
@@ -517,7 +547,9 @@
   </div>
 
   <div class="form-group">
-    <label>Nom ou Société *</label>
+    <label class="form-label">
+  Nom ou Société <span class="required-star">*</span>
+</label>
    <input
   type="text"
   id="ctClientName"
@@ -531,7 +563,9 @@
   </div>
 
   <div class="form-group">
-    <label>Adresse *</label>
+   <label class="form-label">
+ Adresse <span class="required-star">*</span>
+</label>
     <input type="text" id="ctClientAddress">
   </div>
 
@@ -603,12 +637,16 @@
     </div>
 
     <div class="form-group">
-      <label>Nom sur place *</label>
+     <label class="form-label">
+  Nom sur place <span class="required-star">*</span>
+</label>
       <input type="text" id="ctSiteName">
     </div>
 
     <div class="form-group">
-      <label>Adresse du bassin *</label>
+      <label class="form-label">
+ Adresse du bassin <span class="required-star">*</span>
+</label>
       <input type="text" id="ctSiteAddress">
     </div>
   </div>
@@ -659,7 +697,9 @@
 
     <div class="row">
 <div class="form-group">
-  <label>Type de client</label>
+        <label for="ctStartDate">
+ Type de client <span class="required-star">*</span>
+</label>
   <div class="client-type-row">
     <label class="client-type-option">
       <input type="radio" name="ctClientTypeChoice" value="particulier" id="ctClientParticulier" checked>
@@ -718,7 +758,10 @@
 
     <div class="row">
       <div class="form-group">
-        <label>Début du contrat</label>
+        <label for="ctStartDate">
+  Début du contrat <span class="required-star">*</span>
+</label>
+
         <input type="date" id="ctStartDate">
       </div>
 
@@ -770,6 +813,20 @@
         <input type="text" id="ctTotalHT" readonly>
       </div>
     </div>
+<div class="row">
+  <div class="form-group">
+  <label for="ctBillingMode">
+  Mode de facturation <span class="required-star">*</span>
+</label>
+
+    <select id="ctBillingMode">
+      <option value="mensuel">Mensuel</option>
+      <option value="trimestriel">Trimestriel</option>
+      <option value="semestriel">Semestriel</option>
+      <option value="annuel">Annuel (forfait)</option>
+    </select>
+  </div>
+</div>
 
 <div class="row">
   <div class="form-group">
@@ -844,6 +901,13 @@
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
 <button class="btn action-button" onclick="transformContractToInvoice()">🔁 Transformer en facture</button>
+<button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
+  <span class="icon">🔁</span> Renouveler
+</button>
+
+
+<button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
+
 
     <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>
@@ -869,40 +933,57 @@
     </div>
   </div>
 
+
+<div id="renewPopup" class="popup hidden">
+  <h3>Renouvellement du contrat</h3>
+  <p>Souhaites-tu renouveler ce contrat pour une nouvelle période ?</p>
+
+  <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
+    <button class="btn btn-secondary" onclick="closeRenewPopup()">Annuler</button>
+    <button class="btn btn-primary" onclick="confirmRenewPopup()">Renouveler</button>
+  </div>
+</div>
+
+
+
   <!-- ================= POPUP RÉSILIATION CONTRAT ================= -->
 
-  <div id="resiliationPopup" class="popup-overlay hidden">
-    <div class="popup">
-      <h3>Résiliation du contrat</h3>
+<div id="resiliationPopup" class="popup hidden">
+  <h3>Résiliation du contrat</h3>
 
-      <label>Qui résilie ?</label>
-      <select id="resiliationWho">
-        <option value="client">Le client</option>
-        <option value="prestataire">AquaClim Prestige</option>
-      </select>
+<label for="resiliationWho">Qui résilie ?</label>
+  <select id="resiliationWho">
+    <option value="client">Le client</option>
+    <option value="prestataire">AquaClim Prestige</option>
+  </select>
 
-      <label style="margin-top:8px;">Motif de résiliation</label>
-      <textarea
-        id="resiliationMotif"
-        placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
-      ></textarea>
+  <label for="resiliationDate" style="margin-top:8px;">Date de réception du courrier recommandé</label>
+  <input
+    type="date"
+    id="resiliationDate"
+  />
+  <p class="resiliation-note">
+    Laisse vide pour utiliser la date d'aujourd'hui.
+  </p>
 
-      <p class="resiliation-note">
-        La résiliation prendra effet après validation écrite des deux parties
-        (mail ou signature sur le présent contrat).
-      </p>
+  <label for="resiliationMotif" style="margin-top:8px;">Motif de résiliation</label>
+  <textarea
+    id="resiliationMotif"
+    placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
+    rows="3"
+  ></textarea>
 
-      <div class="popup-buttons">
-        <button class="btn btn-secondary btn-small" type="button"
-                onclick="closeResiliationPopup()">
-          Annuler
-        </button>
-        <button class="btn btn-danger btn-small" type="button"
-                onclick="confirmResiliationPopup()">
-          Confirmer la résiliation
-        </button>
-      </div>
-    </div>
+  <p class="resiliation-note">
+    La résiliation prendra effet après réception du courrier recommandé et émission de la facture de clôture.
+  </p>
+
+  <div class="popup-buttons">
+    <button type="button" class="btn btn-secondary" onclick="closeResiliationPopup()">Annuler</button>
+    <button type="button" class="btn btn-danger" onclick="confirmResiliationPopup()">
+      Confirmer la résiliation
+    </button>
+  </div>
+</div>
   </div>
 
   <!-- ================= POPUP LISTE CLIENTS ================= -->
@@ -933,10 +1014,14 @@
       <div id="editClientForm" class="hidden" style="margin-top:15px;">
         <h4>Modifier le client</h4>
 
-        <label>Nom</label>
+             <label for="ctStartDate">
+ Nom <span class="required-star">*</span>
+</label>
         <input type="text" id="editClientName">
 
-        <label>Adresse</label>
+             <label for="ctStartDate">
+  Adresse <span class="required-star">*</span>
+</label>
         <input type="text" id="editClientAddress">
 
         <label>Téléphone</label>

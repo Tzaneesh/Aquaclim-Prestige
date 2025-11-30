@@ -614,6 +614,32 @@ const newClient = { civility, name, address, phone, email };
 }
 
 
+let pendingRenewId = null;
+
+function openRenewPopup(id) {
+  pendingRenewId = id;
+  const popup = document.getElementById("renewPopup");
+  popup.classList.remove("hidden");
+  void popup.offsetWidth;
+  popup.classList.add("show");
+}
+
+function closeRenewPopup() {
+  const popup = document.getElementById("renewPopup");
+  popup.classList.remove("show");
+  setTimeout(() => popup.classList.add("hidden"), 150);
+  pendingRenewId = null;
+}
+
+function confirmRenewPopup() {
+  if (!pendingRenewId) return;
+
+  renewContract(pendingRenewId);
+
+  closeRenewPopup();
+}
+
+
 function rebuildClientsPopupList(searchQuery) {
   const base = getClients();
   let list = base.map((c, index) => ({ client: c, index }));
@@ -1279,12 +1305,21 @@ function updateDocType() {
 }
 
 function updateTransformButtonVisibility() {
-  const btn = document.getElementById("transformButton");
-  if (!btn) return;
-  const type = document.getElementById("docType").value;
-  btn.style.display =
-    type === "devis" && currentDocumentId ? "inline-block" : "none";
+  const transformBtn = document.getElementById("transformButton");
+  const contractBtn = document.getElementById("contractFromDevisButton");
+  const typeSelect = document.getElementById("docType");
+  const type = typeSelect ? typeSelect.value : "devis";
+
+  const canTransform = type === "devis" && !!currentDocumentId;
+
+  if (transformBtn) {
+    transformBtn.style.display = canTransform ? "inline-block" : "none";
+  }
+  if (contractBtn) {
+    contractBtn.style.display = canTransform ? "inline-block" : "none";
+  }
 }
+
 
 function onDocDateChange() {
   if (document.getElementById("docType").value === "devis") {
@@ -3030,6 +3065,10 @@ function updateContractsAlert() {
 
 
 function renderContractStatusBadge(contract) {
+
+  if (contract.meta && contract.meta.forceStatus === "termine_renouvele") {
+    return '<span class="status-badge status-terminated">Terminé (renouvelé)</span>';
+  }
   const st = contract.status || computeContractStatus(contract);
 
   switch (st) {
@@ -3046,32 +3085,167 @@ function renderContractStatusBadge(contract) {
 
 // ---- Popup résiliation ----
 
+let resiliationContractId = null;
+
 function openResiliationPopup(id) {
   resiliationContractId = id;
 
-  const popup = document.getElementById("resiliationPopup");
+  const popup   = document.getElementById("resiliationPopup");
   if (!popup) return;
 
-  const whoEl = document.getElementById("resiliationWho");
+  const whoEl   = document.getElementById("resiliationWho");
   const motifEl = document.getElementById("resiliationMotif");
+  const dateEl  = document.getElementById("resiliationDate");
+
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   const contract = getContract(id);
   if (contract && contract.meta) {
-    if (whoEl) whoEl.value = contract.meta.resiliationWho || "client";
+    if (whoEl)   whoEl.value   = contract.meta.resiliationWho   || "client";
     if (motifEl) motifEl.value = contract.meta.resiliationMotif || "";
+    if (dateEl)  dateEl.value  = contract.meta.resiliationDate  || "";
   } else {
-    if (whoEl) whoEl.value = "client";
+    if (whoEl)   whoEl.value   = "client";
     if (motifEl) motifEl.value = "";
+    if (dateEl)  dateEl.value  = ""; // vide => utilisera todayISO si rien saisi
   }
 
+  // 🔥 affichage propre : on enlève hidden, puis on ajoute show
   popup.classList.remove("hidden");
+
+  // force un reflow pour que le navigateur prenne bien en compte la position
+  // avant d'appliquer la transition (évite le petit "saut")
+  void popup.offsetWidth;
+
+  popup.classList.add("show");
 }
 
 function closeResiliationPopup() {
   const popup = document.getElementById("resiliationPopup");
-  if (popup) popup.classList.add("hidden");
+  if (!popup) return;
+
+  // on enlève la classe d’animation
+  popup.classList.remove("show");
+
+  // on remet hidden après la fin de la transition (150 ms)
+  setTimeout(() => {
+    popup.classList.add("hidden");
+  }, 150);
+
   resiliationContractId = null;
 }
+
+
+
+function createTerminationInvoiceForContract(contract) {
+  const c   = contract.client  || {};
+  const s   = contract.site    || {};
+  const pr  = contract.pricing || {};
+
+  const totalContractHT = Number(pr.totalHT) || 0;
+  const tvaRate         = Number(pr.tvaRate) || 0;
+
+  // 1) Montant déjà facturé pour ce contrat
+  const docs = getAllDocuments();
+  const alreadyBilledHT = docs
+    .filter(d => d.type === "facture" && d.contractId === contract.id)
+    .reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
+
+  // 2) Solde restant
+  const remainingHT = Math.max(0, totalContractHT - alreadyBilledHT);
+
+  if (remainingHT <= 0) {
+    // Rien à facturer
+    return null;
+  }
+
+  const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
+  const totalTTC  = remainingHT + tvaAmount;
+
+  const number   = getNextInvoiceNumber();
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const baseLabel = "Facture de clôture – Contrat d’entretien";
+  const formattedPeriod = formatNicePeriod(pr.startDate, pr.endDateLabel);
+  const subject = formattedPeriod
+    ? `${baseLabel} ${formattedPeriod}`
+    : baseLabel;
+
+  const lineDesc = subject;
+
+  const prestations = [
+    {
+      desc: lineDesc,
+      detail: "Montant restant dû au titre du contrat d’entretien.",
+      qty: 1,
+      price: remainingHT,
+      total: remainingHT,
+      unit: "forfait",
+      dates: [],
+      kind: "contrat_resiliation"
+    }
+  ];
+
+  const notes = [
+    "Facture de clôture émise suite à la résiliation du contrat d’entretien.",
+    "Le montant facturé correspond au solde restant dû conformément aux conditions contractuelles.",
+    "Les conditions générales restent applicables."
+  ].join("\n");
+
+  const facture = {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+    validityDate: "",
+
+    subject,
+
+    contractId: contract.id || null,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations,
+    tvaRate,
+    subtotal: remainingHT,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+
+    status: "",
+    conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
+
+    createdAt: new Date().toISOString()
+  };
+
+  docs.push(facture);
+  saveDocuments(docs);
+
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(facture);
+  }
+
+  return facture;
+}
+
 
 function confirmResiliationPopup() {
   if (!resiliationContractId) {
@@ -3085,104 +3259,281 @@ function confirmResiliationPopup() {
     return;
   }
 
-  const who =
-    document.getElementById("resiliationWho")?.value || "client";
-  const motif =
-    (document.getElementById("resiliationMotif")?.value || "").trim();
+  const whoSelect  = document.getElementById("resiliationWho");
+  const motifInput = document.getElementById("resiliationMotif");
+  const dateInput  = document.getElementById("resiliationDate");
 
-  if (!motif) {
-    alert("Merci de saisir un motif de résiliation.");
-    return;
+  const who   = whoSelect ? (whoSelect.value || "client") : "client";
+  const motif = motifInput ? motifInput.value.trim() : "";
+
+  // 🔹 Date de réception du recommandé
+  let resDateISO = new Date().toISOString().slice(0, 10); // par défaut : aujourd'hui
+
+  if (dateInput) {
+    const raw = (dateInput.value || "").trim();
+
+    if (raw) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+        // format AAAA-MM-JJ (type="date")
+        resDateISO = raw;
+      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(raw)) {
+        // format JJ/MM/AAAA accepté aussi
+        const parsed = parseFrenchDate(raw); // ta fonction existante
+        if (parsed) {
+          resDateISO = parsed;
+        } else {
+          alert("Format de date invalide. Utilise AAAA-MM-JJ ou JJ/MM/AAAA.");
+          return;
+        }
+      } else {
+        alert("Format de date invalide. Utilise AAAA-MM-JJ ou JJ/MM/AAAA.");
+        return;
+      }
+    }
   }
 
+  // 🔹 Mise à jour du contrat
   contract.status = CONTRACT_STATUS.RESILIE;
-  contract.meta = contract.meta || {};
-  contract.meta.resiliationWho = who;
+  if (!contract.meta) contract.meta = {};
+  contract.meta.resiliationWho   = who;
   contract.meta.resiliationMotif = motif;
-  contract.meta.resiliationDate = new Date()
-    .toISOString()
-    .slice(0, 10);
+  contract.meta.resiliationDate  = resDateISO;
 
+  // 🔹 Sauvegarde
   const list = getAllContracts();
-  const idx = list.findIndex((c) => c.id === contract.id);
+  const idx  = list.findIndex((c) => c.id === contract.id);
   if (idx >= 0) list[idx] = contract;
-  saveContracts(list);
+  else list.push(contract);
 
+  saveContracts(list);
   saveSingleContractToFirestore(contract);
 
+  // 🔹 Facture de clôture automatique (prorata + préavis)
+  const facture = createTerminationInvoiceForContract(contract);
+
   closeResiliationPopup();
-  loadContractsList();
+
+  if (typeof loadContractsList === "function") {
+    loadContractsList();
+  }
+
+  if (facture) {
+    // On propose d’ouvrir la facture
+    showConfirmDialog({
+      title: "Contrat résilié",
+      message:
+        `Le contrat a été résilié et une facture de clôture ${facture.number || ""} a été créée.\n\n` +
+        `Souhaites-tu ouvrir cette facture maintenant ?`,
+      confirmLabel: "Ouvrir la facture",
+      cancelLabel: "Plus tard",
+      variant: "success",
+      icon: "✅",
+      onConfirm: function () {
+        if (typeof switchListType === "function") {
+          switchListType("facture");
+        }
+
+        const contractView = document.getElementById("contractView");
+        const formView     = document.getElementById("formView");
+        if (contractView) contractView.classList.add("hidden");
+        if (formView) formView.classList.remove("hidden");
+
+        if (typeof loadDocument === "function") {
+          loadDocument(facture.id);
+        }
+        if (typeof loadDocumentsList === "function") {
+          loadDocumentsList();
+        }
+      }
+    });
+  } else {
+    // Rien à facturer
+    showConfirmDialog({
+      title: "Contrat résilié",
+      message:
+        "Le contrat a été résilié.\nAucun montant restant dû n’a été détecté, " +
+        "aucune facture de clôture n’a été générée.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "success",
+      icon: "✅"
+    });
+  }
 }
 
-// bouton utilisé dans la liste + dans le formulaire
+
+// Bouton utilisé dans la liste + dans le formulaire
+
 function resiliateContractFromList(id) {
   // simplement ouvrir la popup, la logique finale est dans confirmResiliationPopup()
   openResiliationPopup(id);
 }
 
 function resiliateCurrentContract() {
-  if (!currentContractId) return;
-  resiliateContractFromList(currentContractId);
-}
+  // On s'assure que le contrat est bien à jour
+  recomputeContract();
+  let contract = buildContractFromForm(true);
+  if (!contract) return;
 
-// ---- Renouvellement ----
+  const clientName =
+    (contract.client && contract.client.name) ||
+    (contract.client && contract.client.reference) ||
+    contract.id;
 
-function renewContractFromList(id) {
-  const contract = getContract(id);
-  if (!contract || !contract.pricing) return;
+  const today = new Date();
+  const todayISO = today.toISOString().slice(0, 10);
+  const todayFR = today.toLocaleDateString("fr-FR");
 
-  const pr = contract.pricing;
+  // 🔹 Contenu HTML de la popup
+  const popupHtml = `
+    <div class="resiliation-dialog">
+      <div class="resiliation-field">
+        <label for="resWhoSelect"><strong>Qui résilie ?</strong></label>
+        <select id="resWhoSelect" class="resiliation-input">
+          <option value="client">Le client</option>
+          <option value="prestataire">AquaClim Prestige</option>
+        </select>
+      </div>
 
-  if (!pr.endDateLabel || !pr.durationMonths) {
-    alert("Impossible de calculer la nouvelle période (date de fin manquante).");
-    return;
-  }
+      <div class="resiliation-field">
+        <label for="resDateInput">
+          <strong>Date de réception du courrier recommandé</strong>
+        </label>
+        <input
+          type="date"
+          id="resDateInput"
+          class="resiliation-input"
+          value="${todayISO}"
+        />
+        <small>
+          Tu peux ajuster cette date si le recommandé a été reçu plus tôt.
+          Par défaut : ${todayFR}.
+        </small>
+      </div>
 
-  const endISO = parseFrenchDate(pr.endDateLabel);
-  if (!endISO) {
-    alert("Date de fin du contrat invalide.");
-    return;
-  }
+      <div class="resiliation-field">
+        <label for="resMotifInput"><strong>Motif de résiliation</strong></label>
+        <textarea
+          id="resMotifInput"
+          class="resiliation-input"
+          rows="3"
+          placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
+        ></textarea>
+      </div>
 
-  const endDate = new Date(endISO + "T00:00:00");
-  if (isNaN(endDate.getTime())) {
-    alert("Date de fin du contrat invalide.");
-    return;
-  }
-
-  // lendemain de la fin actuelle
-  endDate.setDate(endDate.getDate() + 1);
-  const newStartISO =
-    endDate.getFullYear() +
-    "-" +
-    String(endDate.getMonth() + 1).padStart(2, "0") +
-    "-" +
-    String(endDate.getDate()).padStart(2, "0");
-
-  pr.startDate = newStartISO;
-  pr.endDateLabel = "";
-  pr.periodLabel = "";
-
-  contract.status = CONTRACT_STATUS.EN_COURS;
-
-  const list = getAllContracts();
-  const idx = list.findIndex((c) => c.id === contract.id);
-  if (idx >= 0) list[idx] = contract;
-
-  saveContracts(list);
-  saveSingleContractToFirestore(contract);
+      <p class="resiliation-note">
+        La résiliation prendra effet après validation écrite du client
+        (courrier recommandé avec accusé de réception) et sera calculée
+        avec un préavis de 30&nbsp;jours à compter de la date saisie ci-dessus.
+      </p>
+    </div>
+  `;
 
   showConfirmDialog({
-    title: "Contrat renouvelé",
+    title: "Résiliation du contrat",
     message:
-      "La période du contrat a été renouvelée. Pense à vérifier les dates avant impression.",
-    confirmLabel: "OK",
-    cancelLabel: "",
-    variant: "success",
-    icon: "✅"
-  });
+      `Contrat pour « ${escapeHtml(clientName)} »<br><br>` +
+      popupHtml,
+    confirmLabel: "Confirmer la résiliation",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: function () {
+      const whoEl   = document.getElementById("resWhoSelect");
+      const dateEl  = document.getElementById("resDateInput");
+      const motifEl = document.getElementById("resMotifInput");
 
-  loadContractsList();
+      const who = whoEl ? whoEl.value : "client";
+
+      let dateStr = dateEl ? (dateEl.value || "").trim() : "";
+      let resISO;
+
+      if (!dateStr) {
+        // sécurité : si l'utilisateur vide le champ -> aujourd'hui
+        resISO = todayISO;
+      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        // AAAA-MM-JJ
+        resISO = dateStr;
+      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+        // JJ/MM/AAAA -> on réutilise ta fonction
+        const parsed = parseFrenchDate(dateStr);
+        resISO = parsed || todayISO;
+      } else {
+        // format bizarre -> fallback
+        resISO = todayISO;
+      }
+
+      const motif = motifEl ? motifEl.value.trim() : "";
+
+      // 1) Met à jour le statut + meta résiliation
+      contract.status = CONTRACT_STATUS.RESILIE;
+      if (!contract.meta) contract.meta = {};
+      contract.meta.resiliationDate  = resISO;
+      contract.meta.resiliationWho   = who;
+      contract.meta.resiliationMotif = motif;
+
+      // 2) Sauvegarde du contrat modifié
+      const list = getAllContracts();
+      const idx  = list.findIndex((c) => c.id === contract.id);
+      if (idx >= 0) {
+        list[idx] = contract;
+      } else {
+        list.push(contract);
+      }
+      saveContracts(list);
+      saveSingleContractToFirestore(contract);
+
+      // 3) Création de la facture de résiliation (prorata + préavis)
+      const facture = createTerminationInvoiceForContract(contract);
+
+      // Recharge la liste des contrats (statut RÉSILIÉ visible)
+      if (typeof loadContractsList === "function") {
+        loadContractsList();
+      }
+
+      if (facture) {
+        // Propose d’ouvrir la facture
+        showConfirmDialog({
+          title: "Contrat résilié",
+          message:
+            `Le contrat a été résilié et une facture de clôture ${facture.number} a été créée.\n\n` +
+            `Souhaites-tu ouvrir cette facture maintenant ?`,
+          confirmLabel: "Ouvrir la facture",
+          cancelLabel: "Plus tard",
+          variant: "success",
+          icon: "✅",
+          onConfirm: function () {
+            if (typeof switchListType === "function") {
+              switchListType("facture");
+            }
+
+            const contractView = document.getElementById("contractView");
+            const formView     = document.getElementById("formView");
+            if (contractView) contractView.classList.add("hidden");
+            if (formView)     formView.classList.remove("hidden");
+
+            if (typeof loadDocument === "function") {
+              loadDocument(facture.id);
+            }
+            if (typeof loadDocumentsList === "function") {
+              loadDocumentsList();
+            }
+          }
+        });
+      } else {
+        // Rien à facturer
+        showConfirmDialog({
+          title: "Contrat résilié",
+          message:
+            "Le contrat a été résilié.\nAucun montant restant dû n’a été détecté, aucune facture de clôture n’a été générée automatiquement.",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "success",
+          icon: "✅"
+        });
+      }
+    }
+  });
 }
 
 // ---- Liste des contrats (onglet "Contrats") ----
@@ -3201,8 +3552,19 @@ function loadContractsList() {
 
   let filtered = contracts;
 
+
+
+  const renewalToggle = document.getElementById("filterRenewal");
+  if (renewalToggle && renewalToggle.checked) {
+    filtered = filtered.filter(c =>
+      computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER ||
+      computeContractStatus(c) === CONTRACT_STATUS.TERMINE
+    );
+  }
+
+
   if (q) {
-    filtered = contracts.filter((c) => {
+    filtered = filtered.filter((c) => {
       const ref = (c.client?.reference || "").toLowerCase();
       const name = (c.client?.name || "").toLowerCase();
       const addr = (c.client?.address || "").toLowerCase();
@@ -3240,22 +3602,31 @@ function loadContractsList() {
     const startDate = c.pricing?.startDate || "";
     const totalHT = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
 
-    // statut (badge)
     const statutHTML = renderContractStatusBadge(c);
+let renewedLink = "";
+if (c.meta && c.meta.renewedTo) {
+  renewedLink = `
+    <div class="renew-link">
+      <a href="#" onclick="openContractFromList('${c.meta.renewedTo}')">
+        Voir nouveau contrat →
+      </a>
+    </div>
+  `;
+}
+
     const status = computeContractStatus(c);
 
-    // bouton "Renouveler" si à renouveler ou terminé
-    const renewBtn =
-      (status === CONTRACT_STATUS.A_RENOUVELER || status === CONTRACT_STATUS.TERMINE)
-        ? `
-          <button class="btn btn-warning btn-small" type="button"
-                  onclick="renewContractFromList('${c.id}')">
-            Renouveler
-          </button>
-        `
-        : "";
+const renewBtn =
+  (status === CONTRACT_STATUS.A_RENOUVELER || status === CONTRACT_STATUS.TERMINE)
+    ? `
+ <button class="btn btn-primary btn-small" onclick="openRenewPopup('${c.id}')">
+  Renouveler
+</button>
 
-    // ligne "Résilier" si en cours ou à renouveler
+    `
+    : "";
+
+
     const resiliationRow =
       (status === CONTRACT_STATUS.EN_COURS || status === CONTRACT_STATUS.A_RENOUVELER)
         ? `
@@ -3269,42 +3640,38 @@ function loadContractsList() {
         `
         : "";
 
-   const actionsHtml = `
-  <div class="actions-btns">
+    const actionsHtml = `
+      <div class="actions-btns">
 
-    <div class="actions-btns-row">
-      <button class="btn btn-primary btn-small" type="button"
-              onclick="openContractFromList('${c.id}')">Modifier</button>
-      <button class="btn btn-primary btn-small" type="button"
-              onclick="printContractFromList('${c.id}')">Imprimer</button>
-    </div>
-
-    <div class="actions-btns-row">
-      <button class="btn btn-primary btn-small" type="button"
-              onclick="previewContractFromList('${c.id}')">Aperçu</button>
-      <button class="btn btn-warning btn-small" type="button"
-              onclick="transformContractFromList('${c.id}')">Facturer</button>
-    </div>
-
-    ${renewBtn
-      ? `
-        <div class="actions-btns-row actions-btns-row--single">
-          ${renewBtn}
+        <div class="actions-btns-row">
+          <button class="btn btn-primary btn-small" type="button"
+                  onclick="openContractFromList('${c.id}')">Modifier</button>
+          <button class="btn btn-primary btn-small" type="button"
+                  onclick="printContractFromList('${c.id}')">Imprimer</button>
         </div>
-      `
-      : ""
-    }
 
-    ${resiliationRow}
+        <div class="actions-btns-row">
+          <button class="btn btn-primary btn-small" type="button"
+                  onclick="previewContractFromList('${c.id}')">Aperçu</button>
+   <button class="btn btn-success btn-small" type="button"
+        onclick="transformContractFromList('${c.id}')">Facturer</button>
 
-    <div class="actions-btns-row actions-btns-row--single">
-      <button class="btn btn-danger btn-small" type="button"
-              onclick="deleteContractFromList('${c.id}')">Supprimer</button>
-    </div>
+        </div>
 
-  </div>
-`;
+        ${renewBtn
+          ? `<div class="actions-btns-row actions-btns-row--single">${renewBtn}</div>`
+          : ""
+        }
 
+        ${resiliationRow}
+
+        <div class="actions-btns-row actions-btns-row--single">
+          <button class="btn btn-danger btn-small" type="button"
+                  onclick="deleteContractFromList('${c.id}')">Supprimer</button>
+        </div>
+
+      </div>
+    `;
 
     tr.innerHTML =
       `<td>Contrat</td>` +
@@ -3312,7 +3679,11 @@ function loadContractsList() {
       `<td>${escapeHtml(clientName)}</td>` +
       `<td>${escapeHtml(startDate || "")}</td>` +
       `<td><strong>${formatEuro(totalHT)}</strong></td>` +
-      `<td class="status-cell">${statutHTML}</td>` +
+      `<td class="status-cell">
+  ${statutHTML}
+  ${renewedLink}
+</td>
+` +
       `<td>${actionsHtml}</td>`;
 
     tbody.appendChild(tr);
@@ -5085,7 +5456,12 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 // Calcul du statut en fonction de la date de fin
+
 function computeContractStatus(contract) {
+if (contract.meta && contract.meta.forceStatus === "termine_renouvele") {
+  return CONTRACT_STATUS.TERMINE;
+}
+
   if (!contract || !contract.pricing) return CONTRACT_STATUS.EN_COURS;
 
   // Si déjà résilié, on ne touche pas
@@ -5137,6 +5513,41 @@ function normalizeContractBeforeSave(contract) {
   return contract;
 }
 
+function computeNextInvoiceDate(contract) {
+  const pr = contract.pricing || {};
+  const mode = pr.billingMode || "annuel";
+  const start = pr.startDate ? new Date(pr.startDate + "T00:00:00") : null;
+
+  if (!start) return "";
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  // 🔵 Cas ANNUEL intelligent
+  if (mode === "annuel") {
+    const diffDays =
+      (start.getTime() - today.getTime()) / (1000 * 3600 * 24);
+
+    // Si dans < 30 jours → facture immédiate
+    if (diffDays <= 30) {
+      return today.toISOString().slice(0,10);
+    }
+
+    // Sinon → facture le jour de startDate
+    return pr.startDate;
+  }
+
+  // 🔵 Cas MENSUEL / TRIMESTRIEL / SEMESTRIEL
+  const next = new Date(start);
+
+  if (mode === "mensuel")    next.setMonth(next.getMonth() + 1);
+  if (mode === "trimestriel") next.setMonth(next.getMonth() + 3);
+  if (mode === "semestriel")  next.setMonth(next.getMonth() + 6);
+
+  return next.toISOString().slice(0,10);
+}
+
+
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
     return "Contrat d’entretien Piscine";
@@ -5174,6 +5585,130 @@ function getContract(id) {
 function saveContracts(list) {
   localStorage.setItem("contracts", JSON.stringify(list));
 }
+
+function createContractFromDevis() {
+  // 1) Vérifs de base
+  if (!currentDocumentId) {
+    showConfirmDialog({
+      title: "Aucun devis ouvert",
+      message: "Ouvre et enregistre d'abord un devis avant de créer un contrat.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
+    return;
+  }
+
+  const devis = getDocument(currentDocumentId);
+  if (!devis || devis.type !== "devis") {
+    showConfirmDialog({
+      title: "Action impossible",
+      message: "La création de contrat ne fonctionne qu'à partir d'un devis.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  // 2) Mapping Devis → Client / Site pour le contrat
+  const client = {
+    civility:  devis.client?.civility || "",
+    name:      devis.client?.name || "",
+    address:   devis.client?.address || "",
+    phone:     devis.client?.phone || "",
+    email:     devis.client?.email || "",
+    // On récupère le numéro de devis en référence de contrat (modifiable ensuite)
+    reference: devis.number || ""
+  };
+
+  const site = {
+    civility: devis.siteCivility || "",
+    name:     devis.siteName || "",
+    address:  devis.siteAddress || ""
+  };
+
+  // 3) Pool par défaut (à ajuster dans le contrat)
+  const pool = {
+    type: "piscine_chlore",   // par défaut, tu pourras changer en sel / spa
+    equipment: "",
+    volume: "",
+    notes: ""
+  };
+
+  // 4) Type de client en fonction des conditions du devis
+  // devis.conditionsType = "particulier" / "agence"
+  const clientType =
+    devis.conditionsType === "agence" ? "syndic" : "particulier";
+
+  const todayISO = new Date().toISOString().split("T")[0];
+
+  // 5) Pricing de base : on récupère totals du devis, le reste sera ajusté par le contrat
+  const pricing = {
+    clientType,
+    mainService: "piscine_chlore",   // tu pourras changer ensuite
+    mode: "standard",
+    passHiver: 1,
+    passEte: 2,
+
+    startDate: todayISO,
+    durationMonths: 12,
+    endDateLabel: "",
+    periodLabel: "",
+
+    totalPassages: 0,
+    unitPrice: 0,
+
+    totalHT: typeof devis.subtotal === "number" ? devis.subtotal : 0,
+    tvaRate: typeof devis.tvaRate === "number" ? devis.tvaRate : 0,
+    tvaAmount: typeof devis.tvaAmount === "number" ? devis.tvaAmount : 0,
+    totalTTC:
+      typeof devis.totalTTC === "number"
+        ? devis.totalTTC
+        : (typeof devis.subtotal === "number" ? devis.subtotal : 0),
+
+    airbnbOption: false
+  };
+
+  // 6) Objet contrat complet
+  const contract = {
+    id: Date.now().toString(),
+    client,
+    site,
+    pool,
+    pricing,
+    status: CONTRACT_STATUS.EN_COURS,
+    meta: {
+      sourceDevisId: devis.id,
+      sourceDevisNumber: devis.number || ""
+    },
+    createdAt: new Date().toISOString()
+  };
+
+  // 7) Bascule UI : onglet Contrats + ouverture du formulaire pré-rempli
+  switchListType("contrat");
+
+  const listView = document.getElementById("listView");
+  const contractView = document.getElementById("contractView");
+  if (listView) listView.classList.add("hidden");
+  if (contractView) contractView.classList.remove("hidden");
+
+  fillContractForm(contract);
+
+  showConfirmDialog({
+    title: "Contrat préparé",
+    message:
+      "Un contrat a été pré-rempli à partir de ce devis. Tu peux maintenant ajuster les passages, les dates et enregistrer le contrat.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+}
+
+
 function newContract() {
   currentContractId = null;
 
@@ -5457,6 +5992,52 @@ function computeContractMonths(startDateStr, durationMonths) {
   return { monthsEte, monthsHiver };
 }
 
+function computeMonthsEteHiverBetween(startISO, endISO) {
+  if (!startISO || !endISO) {
+    return { monthsEte: 0, monthsHiver: 0 };
+  }
+
+  const start = new Date(startISO + "T00:00:00");
+  const end   = new Date(endISO  + "T00:00:00");
+
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+    return { monthsEte: 0, monthsHiver: 0 };
+  }
+
+  let y = start.getFullYear();
+  let m = start.getMonth(); // 0-11
+
+  let monthsEte = 0;
+  let monthsHiver = 0;
+
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+  const MIN_DAYS = 15; // au moins 15 jours dans le mois
+
+  while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
+    const monthStart = new Date(y, m, 1);
+    const monthEnd   = new Date(y, m + 1, 0);
+
+    // chevauchement réel entre le contrat et ce mois
+    const effStart = monthStart < start ? start : monthStart;
+    const effEnd   = monthEnd > end   ? end   : monthEnd;
+
+    const days = Math.floor((effEnd - effStart) / ONE_DAY) + 1;
+
+    if (days >= MIN_DAYS) {
+      // Mai (4) à Octobre (9) = été
+      if (m >= 4 && m <= 9) monthsEte++;
+      else monthsHiver++;
+    }
+
+    m++;
+    if (m > 11) {
+      m = 0;
+      y++;
+    }
+  }
+
+  return { monthsEte, monthsHiver };
+}
 
 
 
@@ -5691,6 +6272,21 @@ function buildContractFromForm(showErrors) {
     });
     return null;
   }
+  // Type de client obligatoire (Particulier / Syndic)
+  const clientTypeHiddenEl = document.getElementById("ctClientType");
+  const clientTypeValue = (clientTypeHiddenEl?.value || "").trim();
+
+  if (showErrors && !clientTypeValue) {
+    showConfirmDialog({
+      title: "Type de client manquant",
+      message: "Merci de sélectionner un type de client (Particulier ou Syndic / Agence).",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return null;
+  }
 
   const client = {
     civility: (document.getElementById("ctClientCivility")?.value || "").trim(),
@@ -5736,7 +6332,8 @@ function buildContractFromForm(showErrors) {
   const totalTTC = totalHTNum + tvaAmount;
 
 const pricing = {
-  clientType: (document.getElementById("ctClientType")?.value || "particulier").trim(),
+  clientType: clientTypeValue || "particulier",
+
   mainService: (document.getElementById("ctMainService")?.value || "piscine_chlore").trim(),
   mode: (document.getElementById("ctMode")?.value || "standard").trim(),
   passHiver: parseInt(document.getElementById("ctPassHiver")?.value || "0", 10) || 0,
@@ -5751,12 +6348,21 @@ const pricing = {
   tvaRate,
   tvaAmount,
   totalTTC,
-  // ✅ nouvelle info stockée
+
+  // 🔹 NOUVEAUX CHAMPS FACTURATION
+
+  billingMode: document.getElementById("ctBillingMode")?.value || "annuel",
+  nextInvoiceDate: "",
+
+  // ✅ info existante
+
   airbnbOption: document.getElementById("ctAirbnb")?.checked || false
 };
 
 
+
   // On récupère l'existant si on édite un contrat déjà sauvegardé
+
   let existing = null;
   if (currentContractId) {
     existing = getContract(currentContractId);
@@ -5773,6 +6379,9 @@ const pricing = {
     meta: existing?.meta || {},
     createdAt: existing?.createdAt || new Date().toISOString()
   };
+
+contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
+
 
   return contract;
 }
@@ -5943,25 +6552,106 @@ if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
 // ----- Sauvegarde -----
 
 function saveContract() {
-  recomputeContract(); // pour être sûr que tout est à jour
+  // 🔒 Vérification des champs obligatoires
+  const startDateEl   = document.getElementById("ctStartDate");
+  const billingModeEl = document.getElementById("ctBillingMode");
 
+  if (startDateEl && !startDateEl.value) {
+    showConfirmDialog({
+      title: "Champ manquant",
+      message: "Veuillez renseigner la date de début du contrat.",
+      confirmLabel: "OK",
+      variant: "error",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  if (billingModeEl && !billingModeEl.value) {
+    showConfirmDialog({
+      title: "Mode de facturation manquant",
+      message: "Merci de sélectionner un mode de facturation.",
+      confirmLabel: "OK",
+      variant: "error",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+
+
+  // 1️⃣ Recalcul d'abord
+  recomputeContract();
+
+  // 2️⃣ Construction du contrat
   let contract = buildContractFromForm(true);
   if (!contract) return;
 
-  // 🔥 on met à jour le statut avant sauvegarde
+  // 3️⃣ Normalisation (statut, meta, etc.)
   contract = normalizeContractBeforeSave(contract);
 
+  // 4️⃣ Est-ce un nouveau contrat ?
+  // 👉 Un contrat est "nouveau" s’il n’existe PAS encore dans la liste
+  const isNew = !getContract(contract.id);
 
+  // 5️⃣ Sauvegarde du contrat dans la liste locale
   const list = getAllContracts();
   const idx = list.findIndex((c) => c.id === contract.id);
-  if (idx >= 0) list[idx] = contract;
-  else list.push(contract);
+
+  if (idx >= 0) {
+    list[idx] = contract;       // mise à jour
+  } else {
+    list.push(contract);        // nouveau
+  }
 
   saveContracts(list);
-  saveSingleContractToFirestore(contract);
 
+  // 6️⃣ Sauvegarde Firestore
+  if (typeof saveSingleContractToFirestore === "function") {
+    saveSingleContractToFirestore(contract);
+  }
+
+  // 7️⃣ Mise à jour de l'ID courant
   currentContractId = contract.id;
 
+
+  // -----------------------------------------------------
+  // 🔵 8️⃣ FACTURE IMMÉDIATE si NOUVEAU contrat
+  // -----------------------------------------------------
+  if (isNew) {
+
+    const invoice = generateImmediateBilling(contract);
+
+    if (invoice) {
+      const docs = getAllDocuments();
+      docs.push(invoice);
+      saveDocuments(docs);
+
+      if (typeof saveSingleDocumentToFirestore === "function") {
+        saveSingleDocumentToFirestore(invoice);
+      }
+
+showConfirmDialog({
+  title: "Facture créée",
+  message: "La facture initiale a été générée automatiquement 💶",
+  confirmLabel: "OK",
+  cancelLabel: "",
+  variant: "success",
+  icon: "💶"
+});
+
+    }
+
+    // 9️⃣ Prochaine échéance
+    contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
+
+    // ⚠️ Il faut resave cette modif car on vient de modifier le contrat
+    saveContracts(list);
+    saveSingleContractToFirestore(contract);
+  }
+
+
+  // 🔟 Popup de confirmation
   showConfirmDialog({
     title: "Contrat enregistré",
     message: "Le contrat d'entretien a été enregistré avec succès.",
@@ -5971,6 +6661,7 @@ function saveContract() {
     icon: "✅"
   });
 }
+
 function resetContractFormToDefaults() {
   const root = document.getElementById("contractView");
   if (root) {
@@ -6115,72 +6806,156 @@ function formatNicePeriod(startISO, endRaw) {
   return `du ${startFR} au ${endFR} (${months} mois)`;
 }
 
+const RESILIATION_PREAVIS_DAYS = 30; // adapte si besoin (45, 60...)
 
-function transformContractToInvoice() {
-  recomputeContract();
-  const contract = buildContractFromForm(true);
-  if (!contract) return;
+function createTerminationInvoiceForContract(contract) {
+  const c   = contract.client  || {};
+  const s   = contract.site    || {};
+  const pr  = contract.pricing || {};
+  const meta = contract.meta   || {};
 
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
-  const pr = contract.pricing || {};
+  const totalContractHT = Number(pr.totalHT) || 0;
+  const tvaRate         = Number(pr.tvaRate) || 0;
+
+  // Si on n'a pas de date de début ou de fréquence, on retombe sur l'ancienne logique "reste du contrat"
+
+const hasPassHiver = pr.passHiver !== undefined && pr.passHiver !== null;
+const hasPassEte   = pr.passEte   !== undefined && pr.passEte   !== null;
+
+// Si pas de date ou pas de durée ou aucune fréquence définie -> fallback
+if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
+  return createTerminationInvoiceSimple(contract);
+}
 
 
-  let serviceLabel = "";
-  if (isPiscine) {
-    serviceLabel = "piscine";
-  } else if (isSpa) {
-    serviceLabel = "spa / jacuzzi";
-  } else {
-    serviceLabel = "piscine / spa";
+  // 1) Determiner la date de fin "théorique" du contrat
+
+  let contractEnd = null;
+
+  if (pr.startDate && pr.durationMonths) {
+    const start = new Date(pr.startDate + "T00:00:00");
+    if (!isNaN(start.getTime())) {
+      const end = new Date(start);
+      end.setMonth(end.getMonth() + pr.durationMonths);
+      end.setDate(end.getDate() - 1);
+      contractEnd = end;
+    }
   }
 
-  const baseLabel = `Contrat d’entretien ${serviceLabel}`;
+  if (!contractEnd && pr.endDateLabel) {
+    // si endDateLabel est au format jj/mm/aaaa
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(pr.endDateLabel)) {
+      const iso = parseFrenchDate(pr.endDateLabel);
+      if (iso) {
+        const d = new Date(iso + "T00:00:00");
+        if (!isNaN(d.getTime())) contractEnd = d;
+      }
+    } else {
+      const d = new Date(pr.endDateLabel);
+      if (!isNaN(d.getTime())) contractEnd = d;
+    }
+  }
 
-  const formattedPeriod = formatNicePeriod(pr.startDate, pr.endDateLabel);
+  // 2) Date de résiliation + préavis
+  let resISO = meta.resiliationDate || new Date().toISOString().slice(0,10);
+  let resDate = new Date(resISO + "T00:00:00");
+  if (isNaN(resDate.getTime())) {
+    resDate = new Date();
+    resDate.setHours(0,0,0,0);
+    resISO = resDate.toISOString().slice(0,10);
+  }
 
+  const who = meta.resiliationWho || "client";
+
+  // Si résiliation par le client -> on applique un préavis
+  // Si résiliation par le prestataire -> pas de préavis (tu peux changer la logique si tu veux)
+  let effectiveEnd = new Date(resDate);
+  if (who === "client") {
+    effectiveEnd.setDate(effectiveEnd.getDate() + RESILIATION_PREAVIS_DAYS);
+  }
+
+  // On ne dépasse jamais la fin théorique du contrat
+  if (contractEnd && effectiveEnd > contractEnd) {
+    effectiveEnd = contractEnd;
+  }
+
+  const startISO = pr.startDate;
+  const effectiveEndISO = effectiveEnd.toISOString().slice(0,10);
+
+  // 3) Calcul du nombre de mois été / hiver sur la période début -> résiliation+préavis
+  const { monthsEte, monthsHiver } = computeMonthsEteHiverBetween(startISO, effectiveEndISO);
+
+  // 4) Passages théoriques sur cette période
+
+  const passHiver = Number(pr.passHiver) || 0;
+  const passEte   = Number(pr.passEte)   || 0;
+  const unitPrice =
+    Number(pr.unitPrice) ||
+    (pr.totalPassages ? (Number(pr.totalHT) || 0) / pr.totalPassages : 0);
+
+  let theoreticalPassages = monthsEte * passEte + monthsHiver * passHiver;
+
+  // On ne peut pas dépasser le total de passages du contrat
+  if (pr.totalPassages && theoreticalPassages > pr.totalPassages) {
+    theoreticalPassages = pr.totalPassages;
+  }
+
+  let htDue = theoreticalPassages * unitPrice;
+
+  // On ne dépasse pas le total du contrat
+  if (htDue > totalContractHT) {
+    htDue = totalContractHT;
+  }
+
+  // 5) Montant déjà facturé pour ce contrat
+  const docs = getAllDocuments();
+  const alreadyBilledHT = docs
+    .filter(d => d.type === "facture" && d.contractId === contract.id)
+    .reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
+
+  // 6) Solde à facturer
+  const remainingHT = Math.max(0, htDue - alreadyBilledHT);
+
+  if (remainingHT <= 0) {
+    return null; // rien à facturer
+  }
+
+  const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
+  const totalTTC  = remainingHT + tvaAmount;
+
+  const number   = getNextInvoiceNumber();
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const baseLabel = "Facture de clôture – Contrat d’entretien";
+  const formattedPeriod = formatNicePeriod(startISO, effectiveEndISO);
   const subject = formattedPeriod
-    ? `${baseLabel} – ${formattedPeriod}`
+    ? `${baseLabel} ${formattedPeriod}`
     : baseLabel;
 
-  // On met la même phrase pour la ligne de prestation
   const lineDesc = subject;
 
+  const notes = [
+    `Facture de clôture émise suite à la résiliation du contrat d’entretien.`,
+    `Montant calculé au prorata des passages prévus entre le ${startISO} et le ${effectiveEndISO}` +
+      (who === "client"
+        ? `, en incluant un préavis de ${RESILIATION_PREAVIS_DAYS} jours.`
+        : `. `),
+    `Le montant tient compte des factures déjà émises pour ce contrat.`,
+    `Les conditions générales restent applicables.`
+  ].join("\n");
 
   const prestations = [
     {
       desc: lineDesc,
-      detail: "",
+      detail: "Solde restant dû au titre du contrat d’entretien (prorata + préavis).",
       qty: 1,
-      price: subtotal,
-      total: subtotal,
+      price: remainingHT,
+      total: remainingHT,
       unit: "forfait",
       dates: [],
-      kind: "contrat_entretien"
+      kind: "contrat_resiliation"
     }
   ];
-
-  // 🔹 Conditions de règlement par défaut 
-
-const baseNotesLines =
-  pr.clientType === "syndic"
-    ? [
-        "Règlement à 30 jours fin de mois.",
-        "Aucun escompte pour paiement anticipé.",
-        "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
-      ]
-    : [
-        "Règlement à réception de facture.",
-        "Aucun escompte pour paiement anticipé.",
-        "En cas de retard de paiement, des pénalités de retard pourront être appliquées."
-      ];
-
-const notes = baseNotesLines
-  .concat([
-    "Les Conditions Générales de Vente (CGV) sont disponibles sur simple demande."
-  ])
-  .join("\n");
-
 
   const facture = {
     id: Date.now().toString(),
@@ -6191,7 +6966,6 @@ const notes = baseNotesLines
 
     subject,
 
-    // 🔗 liens avec le contrat d’origine
     contractId: contract.id || null,
     contractReference: c.reference || "",
 
@@ -6203,83 +6977,428 @@ const notes = baseNotesLines
       email:    c.email    || ""
     },
 
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
 
-  siteCivility: s.civility || "",
-  siteName:     s.name     || "",
-  siteAddress:  s.address  || "",
+    prestations,
+    tvaRate,
+    subtotal: remainingHT,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
 
-  prestations,
-  tvaRate,
-  subtotal,
-  discountRate: 0,
-  discountAmount: 0,
-  tvaAmount,
-  totalTTC,
+    notes,
 
-  notes,
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
 
-  // Facture créée à partir d’un contrat => non payée par défaut
-  paid: false,
-  paymentMode: "",
-  paymentDate: "",
+    status: "",
+    conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
 
-  status: "",
-  conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
+    createdAt: new Date().toISOString()
+  };
 
-  createdAt: new Date().toISOString()
-};
-
-
-  // Enregistrement dans la liste des documents
-  const docs = getAllDocuments();
   docs.push(facture);
   saveDocuments(docs);
-
-  // Sauvegarde Firestore si dispo
   if (typeof saveSingleDocumentToFirestore === "function") {
     saveSingleDocumentToFirestore(facture);
   }
 
-  // Popup PRO qui fonctionne
+  return facture;
+}
+
+function createTerminationInvoiceSimple(contract) {
+  const c   = contract.client  || {};
+  const s   = contract.site    || {};
+  const pr  = contract.pricing || {};
+
+  const totalContractHT = Number(pr.totalHT) || 0;
+  const tvaRate         = Number(pr.tvaRate) || 0;
+
+  // Montant déjà facturé pour ce contrat
+  const docs = getAllDocuments();
+  const alreadyBilledHT = docs
+    .filter(d => d.type === "facture" && d.contractId === contract.id)
+    .reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
+
+  const remainingHT = Math.max(0, totalContractHT - alreadyBilledHT);
+  if (remainingHT <= 0) return null;
+
+  const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
+  const totalTTC  = remainingHT + tvaAmount;
+
+  const number   = getNextInvoiceNumber();
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const subject = "Facture de clôture – Contrat d’entretien";
+
+  const prestations = [
+    {
+      desc: subject,
+      detail: "Montant restant dû au titre du contrat d’entretien.",
+      qty: 1,
+      price: remainingHT,
+      total: remainingHT,
+      unit: "forfait",
+      dates: [],
+      kind: "contrat_resiliation"
+    }
+  ];
+
+  const notes = [
+    "Facture de clôture émise suite à la résiliation du contrat d’entretien.",
+    "Le montant facturé correspond au solde restant dû conformément aux conditions contractuelles."
+  ].join("\n");
+
+  const facture = {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+    validityDate: "",
+    subject,
+
+    contractId: contract.id || null,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations,
+    tvaRate,
+    subtotal: remainingHT,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
+
+    createdAt: new Date().toISOString()
+  };
+
+  docs.push(facture);
+  saveDocuments(docs);
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(facture);
+  }
+  return facture;
+}
+
+
+function resiliateCurrentContract() {
+  // On s'assure que le contrat est bien à jour
+  recomputeContract();
+  let contract = buildContractFromForm(true);
+  if (!contract) return;
+
+  const clientName =
+    (contract.client && contract.client.name) ||
+    (contract.client && contract.client.reference) ||
+    contract.id;
+
+  // 📅 Date proposée par défaut = aujourd'hui
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  // On demande la vraie date de réception du recommandé
+  // Formats acceptés :
+  //  - YYYY-MM-DD (2025-03-12)
+  //  - JJ/MM/AAAA (12/03/2025)
+  let inputDate = window.prompt(
+    "Date de réception du courrier recommandé (format AAAA-MM-JJ ou JJ/MM/AAAA).\n" +
+      "Laisse vide pour utiliser la date d'aujourd'hui : " + todayISO,
+    todayISO
+  );
+
+  if (inputDate === null) {
+    // L'utilisateur a cliqué sur Annuler dans le prompt -> on annule toute la résiliation
+    return;
+  }
+
+  inputDate = (inputDate || "").trim();
+
+  let resISO = todayISO;
+
+  if (inputDate) {
+    // Format ISO ?
+    if (/^\d{4}-\d{2}-\d{2}$/.test(inputDate)) {
+      resISO = inputDate;
+    }
+    // Format français JJ/MM/AAAA ?
+    else if (/^\d{2}\/\d{2}\/\d{4}$/.test(inputDate)) {
+      const iso = parseFrenchDate(inputDate);
+      if (iso) {
+        resISO = iso;
+      } else {
+        alert("Date invalide. Résiliation annulée.");
+        return;
+      }
+    } else {
+      alert("Format de date invalide. Utilise AAAA-MM-JJ ou JJ/MM/AAAA.");
+      return;
+    }
+  }
+
+  // On prépare un petit label lisible pour l'affichage dans le message
+  const [y, m, d] = resISO.split("-");
+  const resFR = d + "/" + m + "/" + y;
+
+  showConfirmDialog({
+    title: "Résilier le contrat",
+    message:
+      `Es-tu sûr de vouloir résilier le contrat pour :\n« ${clientName} » ?\n\n` +
+      `Date légale de réception du recommandé prise en compte : ${resFR}.\n` +
+      `Le préavis de ${RESILIATION_PREAVIS_DAYS} jours sera calculé à partir de cette date.\n\n` +
+      `Une facture de clôture sera générée automatiquement pour le montant restant dû (prorata + préavis si applicable).`,
+    confirmLabel: "Résilier et facturer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: function () {
+      // 1) Met à jour le statut + meta résiliation AVEC la bonne date
+      contract.status = CONTRACT_STATUS.RESILIE;
+      if (!contract.meta) contract.meta = {};
+      contract.meta.resiliationDate = resISO;
+      contract.meta.resiliationWho  = "prestataire"; // ou "client" si tu veux gérer le cas
+
+      // 2) Sauvegarde du contrat modifié
+      const list = getAllContracts();
+      const idx = list.findIndex((c) => c.id === contract.id);
+      if (idx >= 0) {
+        list[idx] = contract;
+      } else {
+        list.push(contract);
+      }
+      saveContracts(list);
+      saveSingleContractToFirestore(contract);
+
+      // 3) Création de la facture de résiliation (qui utilisera resiliationDate + préavis)
+      const facture = createTerminationInvoiceForContract(contract);
+
+      // Recharge la liste des contrats (statut RESILIE visible)
+      if (typeof loadContractsList === "function") {
+        loadContractsList();
+      }
+
+      if (facture) {
+        // Propose d’ouvrir la facture
+        showConfirmDialog({
+          title: "Contrat résilié",
+          message:
+            `Le contrat a été résilié et une facture de clôture ${facture.number} a été créée.\n\n` +
+            `Souhaites-tu ouvrir cette facture maintenant ?`,
+          confirmLabel: "Ouvrir la facture",
+          cancelLabel: "Plus tard",
+          variant: "success",
+          icon: "✅",
+          onConfirm: function () {
+            // On passe sur les factures
+            if (typeof switchListType === "function") {
+              switchListType("facture");
+            }
+
+            const contractView = document.getElementById("contractView");
+            const formView     = document.getElementById("formView");
+            if (contractView) contractView.classList.add("hidden");
+            if (formView) formView.classList.remove("hidden");
+
+            if (typeof loadDocument === "function") {
+              loadDocument(facture.id);
+            }
+            if (typeof loadDocumentsList === "function") {
+              loadDocumentsList();
+            }
+          }
+        });
+      } else {
+        // Rien à facturer
+        showConfirmDialog({
+          title: "Contrat résilié",
+          message:
+            "Le contrat a été résilié.\nAucun montant restant dû n’a été détecté, aucune facture n’a été générée automatiquement.",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "success",
+          icon: "✅"
+        });
+      }
+    }
+  });
+}
+
+
+
+function transformContractToInvoice() {
+  recomputeContract();
+  const contract = buildContractFromForm(true);
+  if (!contract) return;
+
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+  const p  = contract.pool    || {};
+  const pr = contract.pricing || {};
+
+  // Détermination du libellé service
+  const poolType = pr.mainService || p.type || "";
+  let serviceLabel = "";
+
+  if (poolType === "piscine_sel" || poolType === "piscine_chlore") {
+    serviceLabel = "piscine";
+  } else if (
+    poolType === "spa" ||
+    poolType === "spa_jacuzzi" ||
+    poolType === "entretien_jacuzzi"
+  ) {
+    serviceLabel = "spa / jacuzzi";
+  } else {
+    serviceLabel = "piscine / spa";
+  }
+
+  const baseLabel = `Contrat d’entretien ${serviceLabel}`;
+  const formattedPeriod = formatNicePeriod(pr.startDate, pr.endDateLabel);
+  const subject = formattedPeriod
+    ? `${baseLabel} – ${formattedPeriod}`
+    : baseLabel;
+
+  // Montants normaux du contrat
+  const subtotal = Number(pr.totalHT) || 0;
+  const tvaRate  = Number(pr.tvaRate) || 0;
+  const tvaAmount = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
+  const totalTTC = subtotal + tvaAmount;
+
+  const number   = getNextInvoiceNumber();
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  // LIGNE NORMALE DE FACTURE — pas de prorata/preavis ici
+  const prestations = [
+    {
+      desc: subject,
+      detail: `Facturation du contrat d’entretien sur la période prévue.`,
+      qty: 1,
+      price: subtotal,
+      total: subtotal,
+      unit: "forfait",
+      dates: [],
+      kind: "contrat_normal"
+    }
+  ];
+
+  // Conditions de paiement
+  const baseNotesLines =
+    pr.clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+        ]
+      : [
+          "Règlement à réception.",
+          "Aucun escompte pour paiement anticipé.",
+          "Des pénalités peuvent être appliquées en cas de retard."
+        ];
+
+  const notes = baseNotesLines
+    .concat(["Les Conditions Générales de Vente sont disponibles sur demande."])
+    .join("\n");
+
+  const facture = {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+    validityDate: "",
+    subject,
+
+    contractId: contract.id || null,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations,
+    tvaRate,
+    subtotal,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
+
+    createdAt: new Date().toISOString()
+  };
+
+  // Sauvegarde
+  const docs = getAllDocuments();
+  docs.push(facture);
+  saveDocuments(docs);
+
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(facture);
+  }
+
+  // Popup
   showConfirmDialog({
     title: "Contrat transformé en facture",
     message:
-      `Une facture ${facture.number || ""} a été créée à partir de ce contrat.\n\n` +
+      `Une facture ${facture.number} a été créée à partir de ce contrat.\n\n` +
       `Souhaites-tu l’ouvrir maintenant ?`,
     confirmLabel: "Ouvrir la facture",
     cancelLabel: "Rester sur le contrat",
     variant: "success",
     icon: "✅",
     onConfirm: function () {
-      // On passe en mode factures
       if (typeof switchListType === "function") {
         switchListType("facture");
       }
 
-      // On affiche la vue formulaire devis/factures
       const contractView = document.getElementById("contractView");
       const formView     = document.getElementById("formView");
       if (contractView) contractView.classList.add("hidden");
       if (formView) formView.classList.remove("hidden");
 
-      // On charge la facture dans le formulaire
       if (typeof loadDocument === "function") {
         loadDocument(facture.id);
       }
-
-      // On rafraîchit la liste (pour voir la facture dans le tableau)
-      if (typeof loadDocumentsList === "function") {
-        loadDocumentsList();
-      }
-    },
-    onCancel: function () {
       if (typeof loadDocumentsList === "function") {
         loadDocumentsList();
       }
     }
   });
 }
-
 
 function openContractPDF(previewOnly = false) {
   // On s'assure que tout est bien à jour
@@ -6416,6 +7535,39 @@ function openContractPDF(previewOnly = false) {
       `.</em>
       </p>`;
   }
+// ---------- 🔵 Bloc facturation de clôture (renouvelé ou résilié) ----------
+let terminationBillingBlockTop = "";
+
+const docsForThis = getAllDocuments().filter(
+  d => d.type === "facture" && d.contractId === contract.id && d.prestations?.some(p => p.kind === "contrat_resiliation")
+);
+
+if (docsForThis.length > 0) {
+  const invoice = docsForThis[docsForThis.length - 1]; // dernière facture de clôture
+  const alreadyBilled = docsForThis.reduce((sum, f) => sum + (Number(f.subtotal) || 0), 0);
+  const totalHT = Number(pr.totalHT) || 0;
+  const remain = Math.max(0, totalHT - alreadyBilled);
+
+  terminationBillingBlockTop = `
+    <div style="
+      margin: 8px 0 6px;
+      padding: 8px 10px;
+      border-left: 3px solid #1a74d9;
+      background:#f0f7ff;
+      font-size:11px;
+      line-height:1.4;
+    ">
+      <div style="font-weight:700; color:#1a74d9; margin-bottom:2px;">
+        <span style="font-size:12px;">🔵</span> FACTURE DE CLÔTURE ÉMISE
+      </div>
+
+      <div>Montant total du contrat : ${format(totalHT)}</div>
+      <div>Montant déjà facturé : ${format(alreadyBilled)}</div>
+      <div>Solde facturé : ${format(remain)}</div>
+      <div>Facture n° ${invoice.number || ""} du ${invoice.date || ""}</div>
+    </div>
+  `;
+}
 
   const isSyndic        = pr.clientType === "syndic";
   const clientBlockTitle = isSyndic ? "Syndic / Agence" : "Client";
@@ -6600,7 +7752,9 @@ function openContractPDF(previewOnly = false) {
     <span class="contrat-period">${headerPeriod}</span>
   </h2>
 
-  ${resiliationBlockTop}
+${resiliationBlockTop}
+${terminationBillingBlockTop}
+
 
   <div class="ref-bar">
   <div><strong>Contrat n°</strong> ${c.reference || contract.id}</div>
@@ -6838,16 +7992,19 @@ function openContractPDF(previewOnly = false) {
       le matériel ancien ou non conforme, ni la mauvaise utilisation par le client.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.10 Durée – renouvellement – résiliation</p>
-    <p>
-      Le contrat est conclu pour la période définie.
-      Résiliation possible avec un préavis de 30 jours.
-      Les prestations réalisées restent dues.
-    </p>
-    <p>
-      Le contrat peut être suspendu ou résilié en cas d’impayés,
-      d’accès impossible récurrent, d’installation dangereuse ou de force majeure.
-    </p>
+  <p class="label" style="margin-top:4px;">5.10 Durée – renouvellement – résiliation</p>
+<p>
+  Le contrat est conclu pour la période définie. Il peut être résilié à tout moment,
+  par le client ou par le prestataire, avec un préavis de <strong>30 jours calendaires</strong>.
+  La résiliation doit être adressée <strong>exclusivement par courrier recommandé avec accusé de réception (LRAR)</strong>.
+
+</p>
+<p>
+  Les prestations réalisées, ainsi que celles prévues durant la période de préavis,
+  restent intégralement dues. En cas d’impayés répétés, d’accès impossible récurrent,
+  d’installation dangereuse ou de force majeure, le prestataire peut suspendre ou résilier
+  le contrat sans préavis.
+</p>
 
     <!-- Encadré automatique si résilié -->
     ${resiliationHTML}
@@ -7001,6 +8158,85 @@ function updateContractClientType(type) {
     recomputeContract();
   }
 }
+function renewContract(id) {
+  const oldContract = getContract(id);
+  if (!oldContract) return;
+
+  const pr = oldContract.pricing || {};
+
+  // ---- 1) Calcul nouvelle date de début ----
+  let newStart;
+  if (pr.endDateLabel && pr.endDateLabel.includes("/")) {
+    const iso = parseFrenchDate(pr.endDateLabel);
+    newStart = new Date(iso + "T00:00:00");
+  } else {
+    newStart = new Date(pr.endDateLabel || new Date());
+  }
+  newStart.setDate(newStart.getDate() + 1);
+  const newStartISO = newStart.toISOString().slice(0, 10);
+
+  // ---- 2) Créer le nouveau contrat ----
+  const newContract = JSON.parse(JSON.stringify(oldContract));
+  newContract.id = Date.now().toString();
+  newContract.createdAt = new Date().toISOString();
+
+  newContract.pricing.startDate = newStartISO;
+
+  newContract.status = "en_cours";
+  newContract.meta = newContract.meta || {};
+  newContract.meta.renewedFrom = oldContract.id;
+
+  // ---- 3) L'ancien contrat passe IMMÉDIATEMENT en TERMINÉ ----
+  oldContract.status = "termine";
+  oldContract.meta = oldContract.meta || {};
+  oldContract.meta.forceStatus = "termine_renouvele";
+  oldContract.meta.renewedTo = newContract.id;
+
+  // ---- 4) Générer automatiquement la facture de clôture ----
+  const facture = createTerminationInvoiceForContract(oldContract);
+
+  // ---- 5) Sauvegarder les 2 contrats ----
+  const list = getAllContracts();
+
+  // Remplacer l'ancien contrat
+  const idx = list.findIndex(c => c.id === oldContract.id);
+  if (idx !== -1) list[idx] = oldContract;
+
+  // Ajouter le nouveau
+  list.push(newContract);
+
+  saveContracts(list);
+  saveSingleContractToFirestore(newContract);
+  saveSingleContractToFirestore(oldContract);
+
+  // ---- 6) Redirection ----
+  switchListType("contrat");
+  fillContractForm(newContract);
+
+  // ---- 7) Notification ----
+  if (facture) {
+    showToast("Contrat renouvelé + facture de clôture créée !");
+  } else {
+    showToast("Contrat renouvelé !");
+  }
+}
+
+
+function renewContractFromList(id) {
+  renewContract(id);
+}
+
+function renewCurrentContract() {
+  // Récupérer l’ID du contrat actuellement affiché
+  const id = currentContractId;
+  if (!id) {
+    showToast("Aucun contrat chargé.", "error");
+    return;
+  }
+
+  renewContract(id);
+}
+
 
 function initContractsUI() {
   const root = document.getElementById("contractView");
@@ -7087,6 +8323,153 @@ if (airbnb) airbnb.addEventListener("change", recomputeContract);
   recomputeContract();
 }
 
+function createAutomaticInvoice(contract) {
+  const pr = contract.pricing || {};
+
+  const tvaRate = Number(pr.tvaRate || 0);
+  const amountHT = Number(pr.totalHT || 0);
+
+  // montant selon mode
+  let amount;
+  if (pr.billingMode === "annuel")       amount = amountHT;
+  if (pr.billingMode === "semestriel")   amount = amountHT / 2;
+  if (pr.billingMode === "trimestriel")  amount = amountHT / 4;
+  if (pr.billingMode === "mensuel")      amount = amountHT / 12;
+
+  const tva = amount * (tvaRate/100);
+  const totalTTC = amount + tva;
+
+  const number = getNextNumber("facture");
+  const todayISO = new Date().toISOString().slice(0,10);
+
+  return {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+    subject: "Facturation automatique du contrat",
+    contractId: contract.id,
+    client: contract.client,
+    prestations: [
+      {
+        desc: "Facturation automatique selon échéancier",
+        qty: 1,
+        price: amount,
+        total: amount,
+        unit: "forfait",
+        kind: "auto_contrat"
+      }
+    ],
+    tvaRate,
+    subtotal: amount,
+    tvaAmount: tva,
+    totalTTC,
+    paid: false
+  };
+}
+
+function generateImmediateBilling(contract) {
+  const pr = contract.pricing || {};
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+  const mode = pr.billingMode || "annuel";
+
+  const totalHT = Number(pr.totalHT) || 0;
+  if (totalHT <= 0) return null;
+
+  // amount = portion à facturer immédiatement
+  let amountHT = 0;
+
+  if (mode === "annuel")      amountHT = totalHT;
+  if (mode === "semestriel")  amountHT = totalHT / 2;
+  if (mode === "trimestriel") amountHT = totalHT / 4;
+  if (mode === "mensuel")     amountHT = totalHT / 12;
+
+  const tvaRate = Number(pr.tvaRate) || 0;
+  const tvaAmount = amountHT * (tvaRate / 100);
+  const totalTTC = amountHT + tvaAmount;
+
+  const number = getNextInvoiceNumber();
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  return {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+
+    subject: `Facture initiale – Mode ${mode}`,
+
+    contractId: contract.id,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations: [
+      {
+        desc: "Facturation initiale du contrat selon échéancier",
+        qty: 1,
+        price: amountHT,
+        total: amountHT,
+        unit: "forfait",
+        kind: "contrat_initial"
+      }
+    ],
+
+    tvaRate,
+    subtotal: amountHT,
+    tvaAmount,
+    totalTTC,
+
+    notes: "Facture générée automatiquement lors de la création du contrat.",
+
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+
+    createdAt: new Date().toISOString()
+  };
+}
+
+
+function checkScheduledInvoices() {
+  const docs = getAllDocuments();
+  const contracts = getAllContracts();
+  const todayISO = new Date().toISOString().slice(0,10);
+
+  contracts.forEach(contract => {
+    const pr = contract.pricing || {};
+
+    if (!pr.billingMode || !pr.nextInvoiceDate) return;
+
+    if (pr.nextInvoiceDate <= todayISO) {
+      // Générer la facture
+      const fac = createAutomaticInvoice(contract);
+      if (fac) {
+        docs.push(fac);
+        saveDocuments(docs);
+        saveSingleDocumentToFirestore(fac);
+      }
+
+      // Programmer la prochaine
+      contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
+    }
+  });
+
+  saveContracts(contracts);
+}
+
+
 // ------- Init -------
 window.onload = function () {
   loadCustomTemplates();   // prestations perso
@@ -7102,6 +8485,7 @@ window.onload = function () {
 
   switchListType("devis"); // onglet par défaut
   updateButtonColors();
+checkScheduledInvoices();
 };
 
 
