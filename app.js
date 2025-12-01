@@ -3244,7 +3244,7 @@ function createTerminationInvoiceForContract(contract) {
   const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
   const totalTTC  = remainingHT + tvaAmount;
 
-  const number   = getNextInvoiceNumber();
+  const number   = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const baseLabel = "Facture de clôture – Contrat d’entretien";
@@ -5974,20 +5974,6 @@ function backToContracts() {
   switchListType("contrat");
 }
 
-function getNextInvoiceNumber() {
-  const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
-  const numbers = docs
-    .filter(d => d.type === "facture")
-    .map(d => d.number)
-    .filter(n => /^F\d+/.test(n))
-    .map(n => parseInt(n.slice(1), 10))
-    .filter(n => !isNaN(n));
-
-  const next = numbers.length ? Math.max(...numbers) + 1 : 1;
-  return "F" + next.toString().padStart(4, "0");
-}
-
-
 // ----- Firestore contrats -----
 
 async function saveSingleContractToFirestore(contract) {
@@ -7126,7 +7112,7 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
   const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
   const totalTTC  = remainingHT + tvaAmount;
 
-  const number   = getNextInvoiceNumber();
+  const number   = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const baseLabel = "Facture de clôture – Contrat d’entretien";
@@ -7233,7 +7219,8 @@ function createTerminationInvoiceSimple(contract) {
   const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
   const totalTTC  = remainingHT + tvaAmount;
 
-  const number   = getNextInvoiceNumber();
+ const number = getNextNumber("facture");
+
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const subject = "Facture de clôture – Contrat d’entretien";
@@ -7487,7 +7474,8 @@ function transformContractToInvoice() {
   const tvaAmount = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
   const totalTTC = subtotal + tvaAmount;
 
-  const number   = getNextInvoiceNumber();
+const number = getNextNumber("facture");
+
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // LIGNE NORMALE DE FACTURE — pas de prorata/preavis ici
@@ -8534,71 +8522,6 @@ function monthYearFr(dateISO) {
   return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
-function createAutomaticInvoice(contract) {
-  const pr     = contract.pricing || {};
-  const client = contract.client  || {};
-
-  const tvaRate        = Number(pr.tvaRate || 0);
-  const totalHTContrat = Number(pr.totalHT || 0);
-  const mode           = pr.billingMode || "annuel";
-
-  // 💰 Montant par échéance
-  const n = mode === "annuel" ? 1 : getNumberOfInstallments(pr);
-  const amountHT = n > 1 ? totalHTContrat / n : totalHTContrat;
-
-  const tva      = amountHT * (tvaRate / 100);
-  const totalTTC = amountHT + tva;
-
-  // 📅 Date d’échéance = nextInvoiceDate (sinon aujourd’hui)
-  const nextEcheance = pr.nextInvoiceDate || new Date().toISOString().slice(0,10);
-  const moisLabel    = monthYearFr(nextEcheance);
-  const dateLabel    = new Date(nextEcheance + "T00:00:00").toLocaleDateString("fr-FR");
-
-  // 🧍 Nom client pour le titre
-  const clientName = (client.name || "").trim();
-  const suffixClient = clientName ? " – " + clientName : "";
-
-  const number   = getNextNumber("facture");
-  const todayISO = new Date().toISOString().slice(0, 10);
-
-  return {
-    id: Date.now().toString(),
-    type: "facture",
-    number,
-    date: todayISO,
-
-    // 🎯 Titre propre dans les factures
-    subject: `Entretien piscine – Échéance de ${moisLabel}${suffixClient}`,
-
-    contractId: contract.id,
-    client,
-    site: contract.site || {},
-
-    prestations: [
-      {
-        label: `Entretien piscine – échéance du ${dateLabel}`,
-        quantity: 1,
-        unitPrice: amountHT,
-        totalHT: amountHT
-      }
-    ],
-
-    totalHT: amountHT,
-    tvaRate,
-    tvaAmount: tva,
-    totalTTC,
-    paid: false,
-    paymentMode: "",
-    paymentDate: "",
-    meta: { autoFromContract: true },
-    createdAt: todayISO,
-    updatedAt: todayISO
-  };
-}
-
-
-
-
 function closeContractSchedulePopup() {
   const overlay = document.getElementById("contractSchedulePopup");
   if (!overlay) return;
@@ -8815,6 +8738,8 @@ if (airbnb) airbnb.addEventListener("change", recomputeContract);
   recomputeContract();
 }
 
+// ================== FACTURATION PRO – CONTRATS ==================
+
 // Nombre de mois entre deux factures selon le mode
 function getBillingStepMonths(mode) {
   if (mode === "mensuel")      return 1;
@@ -8825,12 +8750,12 @@ function getBillingStepMonths(mode) {
 }
 
 // Combien d'échéances pour ce contrat ?
-function getNumberOfInstallments(pr) {
-  const mode = pr.billingMode || "annuel";
+function getNumberOfInstallments(pricing) {
+  const mode = pricing.billingMode || "annuel";
 
   if (mode === "annuel") return 1;
 
-  const dur = Number(pr.durationMonths || 0);
+  const dur  = Number(pricing.durationMonths || 0);
   const step = getBillingStepMonths(mode);
 
   if (!dur || !step) return 1;
@@ -8838,6 +8763,8 @@ function getNumberOfInstallments(pr) {
   // ex : 6 mois / trimestriel → ceil(6/3) = 2
   return Math.max(1, Math.ceil(dur / step));
 }
+
+// ---------- FACTURE INITIALE À LA CRÉATION DU CONTRAT ----------
 
 function generateImmediateBilling(contract) {
   const pr = contract.pricing || {};
@@ -8848,27 +8775,17 @@ function generateImmediateBilling(contract) {
   const totalHT = Number(pr.totalHT) || 0;
   if (totalHT <= 0) return null;
 
-  // 💰 Part de contrat à facturer tout de suite
-  let amountHT = 0;
-
-  if (mode === "annuel") {
-    // 1 seule échéance : on facture tout
-    amountHT = totalHT;
-  } else {
-    // même logique que l'échéancier : nb d'échéances réelles
-    let n = 1;
-    if (typeof getNumberOfInstallments === "function") {
-      n = getNumberOfInstallments(pr);
-    }
-    if (!n || n <= 0) n = 1;
-    amountHT = totalHT / n;
-  }
+  // 💰 Montant par échéance cohérent avec la durée réelle du contrat
+  const n = mode === "annuel" ? 1 : getNumberOfInstallments(pr);
+  const amountHT = n > 1 ? totalHT / n : totalHT;
 
   const tvaRate   = Number(pr.tvaRate) || 0;
   const tvaAmount = amountHT * (tvaRate / 100);
   const totalTTC  = amountHT + tvaAmount;
 
-  const number   = getNextInvoiceNumber();
+  // ⚠️ IMPORTANT : on utilise la NUMÉROTATION GLOBALE
+  // -> FAC-2025-001, FAC-2025-002, ...
+  const number   = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // 📅 Mois de référence = mois de début du contrat (fallback : aujourd'hui)
@@ -8888,22 +8805,46 @@ function generateImmediateBilling(contract) {
     serviceLabel = "Entretien spa / jacuzzi";
   } else if (poolType === "piscine_chlore" || poolType === "piscine_sel") {
     serviceLabel = "Entretien piscine";
-  } else {
+  } else if (poolType) {
     serviceLabel = "Entretien piscine / spa";
   }
 
   // 🧾 Objet de la facture
   const subject = `${serviceLabel} – Facture initiale ${moisLabel}${suffixClient}`;
 
+  // 🧾 Conditions de paiement par défaut (en fonction du type de client)
+  const baseNotesLines =
+    pr.clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+        ]
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          "Des pénalités peuvent être appliquées en cas de retard."
+        ];
+
+  const notes = baseNotesLines
+    .concat([
+      "Cette facture correspond à la première échéance du contrat d’entretien.",
+      "Les Conditions Générales de Vente sont disponibles sur demande."
+    ])
+    .join("\n");
+
+  const conditionsType = pr.clientType === "syndic" ? "agence" : "particulier";
+
   return {
     id: Date.now().toString(),
     type: "facture",
     number,
     date: todayISO,
+    validityDate: "",
 
-    subject, // 👈 nouveau titre propre
+    subject,
 
-    contractId: contract.id,
+    contractId: contract.id || null,
     contractReference: c.reference || "",
 
     client: {
@@ -8920,30 +8861,160 @@ function generateImmediateBilling(contract) {
 
     prestations: [
       {
-        // 👇 ligne de détail lisible
-        desc: `${serviceLabel.toLowerCase()} – facture initiale ${moisLabel}`,
+        // ✅ plus de toLowerCase() ici
+        desc: `${serviceLabel} – facture initiale ${moisLabel}`,
+        detail: "",
         qty: 1,
         price: amountHT,
         total: amountHT,
         unit: "forfait",
+        dates: [],
         kind: "contrat_initial"
       }
     ],
 
     tvaRate,
     subtotal: amountHT,
+    discountRate: 0,
+    discountAmount: 0,
     tvaAmount,
     totalTTC,
 
-    notes:
-      "Facture générée automatiquement lors de la création du contrat " +
-      "(échéancier de facturation).",
-
+    notes,
     paid: false,
     paymentMode: "",
     paymentDate: "",
+    status: "",
+    conditionsType,
 
-    createdAt: new Date().toISOString()
+    createdAt: todayISO,
+    updatedAt: todayISO
+  };
+}
+
+// ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
+
+function createAutomaticInvoice(contract) {
+  const pr = contract.pricing || {};
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+
+  const totalHTContrat = Number(pr.totalHT || 0);
+  if (totalHTContrat <= 0) return null;
+
+  const tvaRate = Number(pr.tvaRate || 0);
+  const mode    = pr.billingMode || "annuel";
+
+  // 💰 Montant par échéance cohérent
+  const n = mode === "annuel" ? 1 : getNumberOfInstallments(pr);
+  const amountHT = n > 1 ? totalHTContrat / n : totalHTContrat;
+
+  const tvaAmount = amountHT * (tvaRate / 100);
+  const totalTTC  = amountHT + tvaAmount;
+
+  const number    = getNextNumber("facture");
+  const todayISO  = new Date().toISOString().slice(0,10);
+  const echeanceISO = pr.nextInvoiceDate || todayISO;
+
+  const moisLabel = monthYearFr(echeanceISO);
+  const dateLabel = new Date(echeanceISO + "T00:00:00").toLocaleDateString("fr-FR");
+
+  const clientName   = (c.name || "").trim();
+  const suffixClient = clientName ? " – " + clientName : "";
+
+  // 🏊 type pour libellé propre
+  const poolType = pr.mainService || (contract.pool && contract.pool.type) || "";
+  let serviceLabel = "Entretien piscine";
+  if (
+    poolType === "spa" ||
+    poolType === "spa_jacuzzi" ||
+    poolType === "entretien_jacuzzi"
+  ) {
+    serviceLabel = "Entretien spa / jacuzzi";
+  } else if (poolType === "piscine_chlore" || poolType === "piscine_sel") {
+    serviceLabel = "Entretien piscine";
+  } else if (poolType) {
+    serviceLabel = "Entretien piscine / spa";
+  }
+
+  const subject        = `${serviceLabel} – Échéance de ${moisLabel}${suffixClient}`;
+  const prestationDesc = `${serviceLabel} – échéance du ${dateLabel}`;
+
+  const baseNotesLines =
+    pr.clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+        ]
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          "Des pénalités peuvent être appliquées en cas de retard."
+        ];
+
+  const notes = baseNotesLines
+    .concat([
+      "Cette facture correspond à une échéance du contrat d’entretien.",
+      "Les Conditions Générales de Vente sont disponibles sur demande."
+    ])
+    .join("\n");
+
+  const conditionsType = pr.clientType === "syndic" ? "agence" : "particulier";
+
+  return {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+    validityDate: "",
+
+    subject,
+
+    contractId: contract.id || null,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations: [
+      {
+        desc: prestationDesc,
+        detail: "",
+        qty: 1,
+        price: amountHT,
+        total: amountHT,
+        unit: "forfait",
+        dates: [echeanceISO],
+        kind: "contrat_echeance"
+      }
+    ],
+
+    tvaRate,
+    subtotal: amountHT,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType,
+
+    createdAt: todayISO,
+    updatedAt: todayISO
   };
 }
 
@@ -8961,11 +9032,15 @@ function checkScheduledInvoices() {
     if (pr.nextInvoiceDate <= todayISO) {
       // Générer la facture
       const fac = createAutomaticInvoice(contract);
-      if (fac) {
-        docs.push(fac);
-        saveDocuments(docs);
-        saveSingleDocumentToFirestore(fac);
-      }
+if (fac) {
+  docs.push(fac);
+  saveDocuments(docs);
+
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(fac);
+  }
+}
+
 
       // Programmer la prochaine
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
@@ -8993,6 +9068,7 @@ window.onload = function () {
   updateButtonColors();
 checkScheduledInvoices();
 };
+
 
 
 
