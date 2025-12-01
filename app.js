@@ -264,7 +264,6 @@ let currentListType = "devis"; // "devis", "facture" ou "contrat"
 let db = null;
 
 // ================== FIREBASE / SYNC ==================
-
 async function initFirebase() {
   if (!window.firebase) {
     console.error("Firebase non disponible");
@@ -315,17 +314,20 @@ async function initFirebase() {
 
     // 3️⃣ SYNC CLIENTS
     await syncClientsWithFirestore();
+
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
 
-  // 🔄 4️⃣ UI initiale – TOUJOURS exécutée même si Firestore a merdé
-  loadYearFilter();
-  loadDocumentsList();
+  // 🔄 Quand la synchro est finie, on rafraîchit la liste & la datalist
+  if (typeof loadDocumentsList === "function") {
+    loadDocumentsList();
+  }
   if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
   }
 }
+
 
 
 
@@ -9140,28 +9142,41 @@ if (fac) {
   saveContracts(contracts);
 }
 
+window.onload = function () {
+  loadCustomTemplates();
+  loadCustomTexts();
 
-window.onload = async function () {
-  loadCustomTemplates();   // prestations perso
-  loadCustomTexts();       // textes détaillés
-
-  // TVA 0% par défaut partout
+  // TVA par défaut et datalist client tout de suite
   setTVA(0);
+  if (typeof refreshClientDatalist === "function") {
+    refreshClientDatalist();
+  }
 
-  // Datalist client de base (avec le local si présent)
-  refreshClientDatalist();
+  // 🧾 On affiche DIRECT l’onglet devis avec ce qu’il y a en localStorage
+  // (la 2ᵉ fois que tu viens, ce sera instantané)
+  if (typeof loadYearFilter === "function") {
+    loadYearFilter();
+  }
+  if (typeof switchListType === "function") {
+    switchListType("devis");
+  }
+  if (typeof updateButtonColors === "function") {
+    updateButtonColors();
+  }
+  if (typeof checkScheduledInvoices === "function") {
+    checkScheduledInvoices();
+  }
 
-  // 🔥 On ATTEND la synchro Firebase (documents + contrats + clients)
-  await initFirebase();
+  // 🛰 On lance Firebase en ARRIÈRE-PLAN, sans bloquer
+  initFirebase();   // ⚠️ on ne met PLUS "await" ici
 
-  // 🟦 Initialisation des contrats (listeners, calculs)
-  initContractsUI();
-
-  // ✅ Maintenant que tout est synchro, on affiche l’onglet DEVIS
-  switchListType("devis");
-  updateButtonColors();
-  checkScheduledInvoices();
+  // Init de la partie contrats (listeners, etc.)
+  if (typeof initContractsUI === "function") {
+    initContractsUI();
+  }
 };
+
+
 
 
 
