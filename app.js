@@ -330,50 +330,51 @@ async function initFirebase() {
 
 // ================== GESTION CLIENTS ==================
 
-// Lecture clients localStorage
 function getClients() {
   try {
     return JSON.parse(localStorage.getItem("clients") || "[]");
   } catch (e) {
+    console.error("Clients corrompus en localStorage", e);
     return [];
   }
 }
 
-// ID stable : nom + adresse
+// Génère un ID stable basé sur nom + adresse
 function getClientDocId(client) {
   const name = (client.name || "").toLowerCase().trim();
-  const addr = (client.address || "").toLowerCase().trim();
+  const address = (client.address || "").toLowerCase().trim();
 
-  let base = (name + "_" + addr).replace(/[^a-z0-9]+/g, "_");
+  let base = (name + "_" + address).replace(/[^a-z0-9]+/g, "_");
   base = base.replace(/^_+|_+$/g, "");
-  if (!base) base = "client_" + Date.now();
+  if (!base) base = "client_" + Date.now().toString();
 
   return base;
 }
 
-// Sauvegarde clients
 function saveClients(list) {
   try {
     localStorage.setItem("clients", JSON.stringify(list || []));
-  } catch (e) {}
+  } catch (e) {
+    console.error("Erreur saveClients", e);
+  }
 }
 
-// Recharge la datalist HTML
+// Recharge la datalist des clients (devis/facture/contrat)
 function refreshClientDatalist() {
-  const clients = getClients();
-  clients.sort((a, b) => a.name.localeCompare(b.name));
+  const clients = getClients().slice().sort((a, b) =>
+    (a.name || "").localeCompare(b.name || "", "fr", { sensitivity: "base" })
+  );
 
   const list = document.getElementById("clientsList");
   if (!list) return;
-  list.innerHTML = "";
 
-  clients.forEach(c => {
+  list.innerHTML = "";
+  clients.forEach((c) => {
     const opt = document.createElement("option");
-    opt.value = c.name;
+    opt.value = c.name || "";
     list.appendChild(opt);
   });
 }
-
 
 // ================== CLIENT (DEVIS / FACTURES) ==================
 
@@ -386,60 +387,39 @@ function onClientNameChange() {
 
   const clients = getClients();
   const client = clients.find(
-    c => (c.name || "").trim().toLowerCase() === value
+    (c) => (c.name || "").trim().toLowerCase() === value
   );
   if (!client) return;
 
-  // Remplit les champs
-  document.getElementById("clientAddress").value = client.address || "";
-  document.getElementById("clientPhone").value   = client.phone || "";
-  document.getElementById("clientEmail").value   = client.email || "";
+  const addr  = document.getElementById("clientAddress");
+  const phone = document.getElementById("clientPhone");
+  const email = document.getElementById("clientEmail");
+  const civ   = document.getElementById("clientCivility");
 
-  const civ = document.getElementById("clientCivility");
-  if (civ && !civ.value && client.civility) civ.value = client.civility;
+  if (addr)  addr.value  = client.address || "";
+  if (phone) phone.value = client.phone   || "";
+  if (email) email.value = client.email   || "";
+
+  // On ne modifie la civilité que si le champ est vide
+  if (civ && !civ.value && client.civility) {
+    civ.value = client.civility;
+  }
 }
 
-
-// ================== CLIENT (CONTRAT) ==================
-
-function fillContractClientFromObject(client) {
-  if (!client) return;
-
-  const civ = document.getElementById("ctClientCivility");
-  if (civ && !civ.value && client.civility) civ.value = client.civility;
-
-  document.getElementById("ctClientName").value    = client.name || "";
-  document.getElementById("ctClientAddress").value = client.address || "";
-  document.getElementById("ctClientPhone").value   = client.phone || "";
-  document.getElementById("ctClientEmail").value   = client.email || "";
-}
-
-function onContractClientNameChange() {
-  const input = document.getElementById("ctClientName");
-  if (!input) return;
-
-  const val = (input.value || "").trim().toLowerCase();
-  if (!val) return;
-
-  const clients = getClients();
-  const found = clients.find(
-    c => (c.name || "").trim().toLowerCase() === val
-  );
-  if (found) fillContractClientFromObject(found);
-}
-
-function addCurrentClientFromContract() {
-  const name    = document.getElementById("ctClientName").value.trim();
-  const address = document.getElementById("ctClientAddress").value.trim();
-  const phone   = document.getElementById("ctClientPhone").value.trim();
-  const email   = document.getElementById("ctClientEmail").value.trim();
-  const civ     = document.getElementById("ctClientCivility").value.trim();
+// Ajoute / met à jour le client depuis l'onglet devis/facture
+function addCurrentClient() {
+  const name    = (document.getElementById("clientName")?.value || "").trim();
+  const address = (document.getElementById("clientAddress")?.value || "").trim();
+  const phone   = (document.getElementById("clientPhone")?.value || "").trim();
+  const email   = (document.getElementById("clientEmail")?.value || "").trim();
+  const civ     = (document.getElementById("clientCivility")?.value || "").trim();
 
   if (!name || !address) {
     showConfirmDialog({
       title: "Client incomplet",
-      message: "Nom et adresse obligatoires.",
+      message: "Nom et adresse sont obligatoires pour enregistrer le client.",
       confirmLabel: "OK",
+      cancelLabel: "",
       variant: "warning",
       icon: "⚠️"
     });
@@ -447,35 +427,183 @@ function addCurrentClientFromContract() {
   }
 
   const clients = getClients();
-  let idx = clients.findIndex(
-    c => (c.name || "").trim().toLowerCase() === name.toLowerCase()
+  const existingIndex = clients.findIndex(
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
   );
 
-  let obj;
-
-  if (idx >= 0) {
-    obj = { ...clients[idx], name, address, phone, email, civility: civ };
-    clients[idx] = obj;
+  let clientObj;
+  if (existingIndex >= 0) {
+    const old = clients[existingIndex];
+    clientObj = {
+      ...old,
+      civility: civ,
+      name,
+      address,
+      phone,
+      email
+    };
+    clients[existingIndex] = clientObj;
   } else {
     const tmp = { civility: civ, name, address, phone, email };
-    const id = getClientDocId(tmp);
-    obj = { ...tmp, id };
-    clients.push(obj);
+    const id  = getClientDocId(tmp);
+    clientObj = { ...tmp, id };
+    clients.push(clientObj);
   }
 
   saveClients(clients);
   refreshClientDatalist();
 
   if (typeof saveSingleClientToFirestore === "function") {
-    saveSingleClientToFirestore(obj);
+    saveSingleClientToFirestore(clientObj);
   }
 
   showConfirmDialog({
     title: "Client enregistré",
-    message: "Ce client a été ajouté / mis à jour.",
+    message: "Ce client a été enregistré dans la base.",
     confirmLabel: "OK",
+    cancelLabel: "",
     variant: "success",
     icon: "✅"
+  });
+}
+
+// ================== CLIENTS POUR CONTRATS ==================
+
+function fillContractClientFromObject(client) {
+  if (!client) return;
+
+  const civ   = document.getElementById("ctClientCivility");
+  const name  = document.getElementById("ctClientName");
+  const addr  = document.getElementById("ctClientAddress");
+  const phone = document.getElementById("ctClientPhone");
+  const email = document.getElementById("ctClientEmail");
+
+  if (civ && !civ.value && client.civility) {
+    civ.value = client.civility;
+  }
+  if (name)  name.value  = client.name    || "";
+  if (addr)  addr.value  = client.address || "";
+  if (phone) phone.value = client.phone   || "";
+  if (email) email.value = client.email   || "";
+}
+
+// Auto-remplissage quand on choisit un client dans ctClientName
+function onContractClientNameChange() {
+  const input = document.getElementById("ctClientName");
+  if (!input) return;
+
+  const name = (input.value || "").trim();
+  if (!name) return;
+
+  const clients = getClients();
+  const found = clients.find(
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+  );
+
+  if (found) {
+    fillContractClientFromObject(found);
+  }
+}
+
+// Ajoute / met à jour le client depuis un contrat
+function addCurrentClientFromContract() {
+  const name    = (document.getElementById("ctClientName")?.value || "").trim();
+  const address = (document.getElementById("ctClientAddress")?.value || "").trim();
+  const phone   = (document.getElementById("ctClientPhone")?.value || "").trim();
+  const email   = (document.getElementById("ctClientEmail")?.value || "").trim();
+  const civ     = (document.getElementById("ctClientCivility")?.value || "").trim();
+
+  if (!name || !address) {
+    showConfirmDialog({
+      title: "Client incomplet",
+      message: "Nom et adresse sont obligatoires pour enregistrer le client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const clients = getClients();
+  const existingIdx = clients.findIndex(
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+  );
+
+  let clientObj;
+  if (existingIdx >= 0) {
+    const old = clients[existingIdx];
+    clientObj = {
+      ...old,
+      civility: civ,
+      name,
+      address,
+      phone,
+      email
+    };
+    clients[existingIdx] = clientObj;
+  } else {
+    const tmp = { civility: civ, name, address, phone, email };
+    const id  = getClientDocId(tmp);
+    clientObj = { ...tmp, id };
+    clients.push(clientObj);
+  }
+
+  saveClients(clients);
+  refreshClientDatalist();
+
+  if (typeof saveSingleClientToFirestore === "function") {
+    saveSingleClientToFirestore(clientObj);
+  }
+
+  showConfirmDialog({
+    title: "Client enregistré",
+    message: "Ce client a été enregistré dans la base.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+}
+
+// Supprime le client courant (depuis l'onglet contrat)
+function deleteCurrentClientFromContract() {
+  const name = (document.getElementById("ctClientName")?.value || "").trim();
+  if (!name) return;
+
+  const clients = getClients();
+  const existingIdx = clients.findIndex(
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+  );
+  if (existingIdx < 0) return;
+
+  const clientToDelete = clients[existingIdx];
+
+  showConfirmDialog({
+    title: "Supprimer ce client ?",
+    message: `Voulez-vous vraiment supprimer "${clientToDelete.name}" de la base clients ?`,
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: function () {
+      clients.splice(existingIdx, 1);
+      saveClients(clients);
+      refreshClientDatalist();
+
+      if (typeof deleteClientFromFirestore === "function" && clientToDelete.id) {
+        deleteClientFromFirestore(clientToDelete);
+      }
+
+      showConfirmDialog({
+        title: "Client supprimé",
+        message: "Le client a été supprimé de la base.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "success",
+        icon: "✅"
+      });
+    }
   });
 }
 
@@ -8968,6 +9096,7 @@ window.onload = function () {
   updateButtonColors();
 checkScheduledInvoices();
 };
+
 
 
 
