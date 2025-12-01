@@ -9542,6 +9542,53 @@ function createAutomaticInvoice(contract) {
   };
 }
 
+function createDevisFromCurrentContract() {
+  if (!currentContractId) {
+    showConfirmDialog({
+      title: "Aucun contrat",
+      message: "Enregistre d'abord le contrat avant de créer un devis.",
+      confirmLabel: "OK",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const contract = getContract(currentContractId);
+  if (!contract) return;
+
+  const devis = generateDevisFromContract(contract);
+  if (!devis) return;
+
+  // Sauvegarde local
+  const docs = getAllDocuments();
+  docs.push(devis);
+  saveDocuments(docs);
+
+  // Firestore
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(devis);
+  }
+
+  // Lier devis → contrat
+  if (!contract.meta) contract.meta = {};
+  contract.meta.sourceDevisId     = devis.id;
+  contract.meta.sourceDevisNumber = devis.number;
+
+  // Mise à jour contrat
+  const all = getAllContracts().map(c => c.id === contract.id ? contract : c);
+  saveContracts(all);
+
+  if (typeof saveSingleContractToFirestore === "function") {
+    saveSingleContractToFirestore(contract);
+  }
+
+  // Ouvrir le devis
+  if (typeof switchListType === "function") switchListType("devis");
+  if (typeof loadDocumentsList === "function") loadDocumentsList();
+  if (typeof loadDocument === "function") loadDocument(devis.id);
+}
+
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
@@ -9566,7 +9613,6 @@ if (fac) {
     saveSingleDocumentToFirestore(fac);
   }
 }
-
 
       // Programmer la prochaine
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
@@ -9608,6 +9654,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
