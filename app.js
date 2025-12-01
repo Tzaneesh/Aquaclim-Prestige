@@ -264,6 +264,7 @@ let currentListType = "devis"; // "devis", "facture" ou "contrat"
 let db = null;
 
 // ================== FIREBASE / SYNC ==================
+
 async function initFirebase() {
   if (!window.firebase) {
     console.error("Firebase non disponible");
@@ -276,7 +277,7 @@ async function initFirebase() {
     projectId: "aquaclim-prestige-e70d6",
     storageBucket: "aquaclim-prestige-e70d6.firebasestorage.app",
     messagingSenderId: "305566055348",
-    appId: "1:305566055348:web:175c174c115ca457bd50e1",
+    appId: "1:305566055348:web:175c174c115ca457bd50e1"
   };
 
   if (firebase.apps.length === 0) {
@@ -314,17 +315,18 @@ async function initFirebase() {
 
     // 3️⃣ SYNC CLIENTS
     await syncClientsWithFirestore();
-
-    // 4️⃣ UI initiale (sécurité)
-    loadYearFilter();
-    loadDocumentsList();
-    if (typeof refreshClientDatalist === "function") {
-      refreshClientDatalist();
-    }
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
+
+  // 🔄 4️⃣ UI initiale – TOUJOURS exécutée même si Firestore a merdé
+  loadYearFilter();
+  loadDocumentsList();
+  if (typeof refreshClientDatalist === "function") {
+    refreshClientDatalist();
+  }
 }
+
 
 
 
@@ -9162,6 +9164,7 @@ window.onload = async function () {
   updateButtonColors();
   checkScheduledInvoices();
 };
+
 
 
 
