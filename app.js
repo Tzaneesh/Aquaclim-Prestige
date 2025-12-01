@@ -6805,10 +6805,15 @@ function saveContract() {
 
 
   // -----------------------------------------------------
-  // 🔵 8️⃣ FACTURE IMMÉDIATE si NOUVEAU contrat
+  // 🔵 8️⃣ FACTURE IMMÉDIATE / PROCHAINE ÉCHÉANCE
   // -----------------------------------------------------
   if (isNew) {
+    const pr = contract.pricing || {};
+    const clientType = pr.clientType || "particulier";
+    const mode       = pr.billingMode || "annuel";
 
+    // 8.1 Facture initiale (PARTICULIER uniquement)
+    // generateImmediateBilling() renvoie déjà null pour les syndics
     const invoice = generateImmediateBilling(contract);
 
     if (invoice) {
@@ -6820,23 +6825,34 @@ function saveContract() {
         saveSingleDocumentToFirestore(invoice);
       }
 
-showConfirmDialog({
-  title: "Facture créée",
-  message: "La facture initiale a été générée automatiquement 💶",
-  confirmLabel: "OK",
-  cancelLabel: "",
-  variant: "success",
-  icon: "💶"
-});
-
+      showConfirmDialog({
+        title: "Facture créée",
+        message: "La facture initiale a été générée automatiquement 💶",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "success",
+        icon: "💶"
+      });
     }
 
-    // 9️⃣ Prochaine échéance
-    contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
+    // 8.2 Définition de la première date d'échéance
+    if (clientType === "syndic") {
+      // 🏢 SYNDIC
+      // - jamais de facture à la création
+      // - 1ʳᵉ facture auto à la date de début du contrat
+      contract.pricing.nextInvoiceDate = pr.startDate || "";
+    } else {
+      // 🏠 PARTICULIER
+      // - mode "annuel" : pas d'échéance → tout payé d'un coup
+      // - mode "mensuel" : prochaine facture = mois suivant
+      contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
+    }
 
-    // ⚠️ Il faut resave cette modif car on vient de modifier le contrat
+    // ⚠️ On resauvegarde car on vient de modifier le contrat (nextInvoiceDate)
     saveContracts(list);
-    saveSingleContractToFirestore(contract);
+    if (typeof saveSingleContractToFirestore === "function") {
+      saveSingleContractToFirestore(contract);
+    }
   }
 
 
@@ -8766,6 +8782,28 @@ function getNumberOfInstallments(pricing) {
 
 // ---------- FACTURE INITIALE À LA CRÉATION DU CONTRAT ----------
 
+// Période globale lisible pour le contrat (ex : "mai 2026 à octobre 2026")
+function formatContractGlobalPeriod(pr) {
+  const startISO = pr.startDate;
+  const duration = Number(pr.durationMonths || 0);
+  if (!startISO || !duration) return "";
+
+  const start = new Date(startISO + "T00:00:00");
+  if (isNaN(start.getTime())) return "";
+
+  const end = new Date(start);
+  end.setMonth(end.getMonth() + duration - 1);
+
+  const opts = { month: "long", year: "numeric" };
+  const startLabel = start.toLocaleDateString("fr-FR", opts);
+  const endLabel   = end.toLocaleDateString("fr-FR", opts);
+
+  if (startLabel === endLabel) return startLabel;
+  return `${startLabel} à ${endLabel}`;
+}
+
+
+
 function generateImmediateBilling(contract) {
   const pr = contract.pricing || {};
   const c  = contract.client  || {};
@@ -8973,6 +9011,7 @@ window.onload = function () {
   updateButtonColors();
 checkScheduledInvoices();
 };
+
 
 
 
