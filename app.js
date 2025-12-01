@@ -265,14 +265,8 @@ let db = null;
 
 // ================== FIREBASE / SYNC ==================
 async function initFirebase() {
-  // Si Firebase n'est pas dispo (ex: problème CDN sur GitHub) → mode local
   if (!window.firebase) {
-    console.warn("Firebase non disponible, mode local uniquement.");
-
-    // On charge quand même ce qu'on a en local
-    loadYearFilter();
-    loadDocumentsList();
-    refreshClientDatalist();
+    console.error("Firebase non disponible");
     return;
   }
 
@@ -291,7 +285,7 @@ async function initFirebase() {
   db = firebase.firestore();
 
   try {
-    // 1️⃣ SYNC DOCUMENTS
+    // 1️⃣ SYNC DOCUMENTS (devis / factures)
     const snapshot = await db.collection("documents").get();
     const cloudDocs = [];
     snapshot.forEach((docSnap) => {
@@ -318,20 +312,18 @@ async function initFirebase() {
 
     // 3️⃣ SYNC CLIENTS
     await syncClientsWithFirestore();
-
-    // 4️⃣ UI initiale
-    loadYearFilter();
-    loadDocumentsList();
-    refreshClientDatalist();
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
+  }
 
-    // En cas d'erreur Firestore → on s'appuie au moins sur le local
-    loadYearFilter();
-    loadDocumentsList();
+  // 4️⃣ UI initiale – TOUJOURS exécutée
+  loadYearFilter();
+  loadDocumentsList();
+  if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
   }
 }
+
 
 
 // ================== GESTION CLIENTS ==================
@@ -9176,6 +9168,7 @@ window.onload = async function () {
     checkScheduledInvoices();
   }
 };
+
 
 
 
