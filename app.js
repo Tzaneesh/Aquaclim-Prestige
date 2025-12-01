@@ -9127,49 +9127,36 @@ if (fac) {
 }
 
 
-// ------- Init -------
-window.onload = function () {
+window.onload = async function () {
   // 1️⃣ Modèles & textes
-  loadCustomTemplates();   // prestations perso
-  loadCustomTexts();       // textes détaillés
-
-  // 2️⃣ TVA 0% par défaut
+  loadCustomTemplates();
+  loadCustomTexts();
   setTVA(0);
 
-  // 3️⃣ Clients & documents dès le démarrage, **sans attendre Firebase**
-  refreshClientDatalist(); // datalist pour devis / factures / contrats
-  if (typeof loadYearFilter === "function") {
-    loadYearFilter();
-  }
-  if (typeof loadDocumentsList === "function") {
-    loadDocumentsList();
-  }
-
-  // 4️⃣ Firebase en "plus" (sync cloud si dispo)
+  // 2️⃣ Firebase d'abord (mode local si pas dispo)
   if (typeof initFirebase === "function") {
-    initFirebase().catch((e) =>
+    await initFirebase().catch((e) =>
       console.error("Erreur initFirebase (non bloquant) :", e)
     );
   }
 
-  // 5️⃣ Contrats & UI
+  // 3️⃣ Maintenant que Firebase / localStorage sont prêts → on charge
+  refreshClientDatalist();   // fonctionne même si Firebase off
+  loadYearFilter();          // filtre factures
+  loadDocumentsList();       // affiche devis / factures
   if (typeof initContractsUI === "function") {
     initContractsUI();
   }
 
-  if (typeof switchListType === "function") {
-    switchListType("devis"); // onglet par défaut
-  }
-  if (typeof updateButtonColors === "function") {
-    updateButtonColors();
-  }
+  // 4️⃣ Onglet par défaut
+  switchListType("devis");
+  updateButtonColors();
 
-  // 6️⃣ Factures d’échéance auto
+  // 5️⃣ Factures d’échéance automatique
   if (typeof checkScheduledInvoices === "function") {
     checkScheduledInvoices();
   }
 };
-
 
 
 
