@@ -276,7 +276,7 @@ async function initFirebase() {
     projectId: "aquaclim-prestige-e70d6",
     storageBucket: "aquaclim-prestige-e70d6.firebasestorage.app",
     messagingSenderId: "305566055348",
-    appId: "1:305566055348:web:175c174c115ca457bd50e1"
+    appId: "1:305566055348:web:175c174c115ca457bd50e1",
   };
 
   if (firebase.apps.length === 0) {
@@ -294,8 +294,10 @@ async function initFirebase() {
     });
 
     if (cloudDocs.length > 0) {
+      // Cloud -> local
       localStorage.setItem("documents", JSON.stringify(cloudDocs));
     } else {
+      // Cloud vide, on pousse le local si présent
       const local = localStorage.getItem("documents");
       if (local) {
         const docs = JSON.parse(local);
@@ -312,17 +314,18 @@ async function initFirebase() {
 
     // 3️⃣ SYNC CLIENTS
     await syncClientsWithFirestore();
+
+    // 4️⃣ UI initiale (sécurité)
+    loadYearFilter();
+    loadDocumentsList();
+    if (typeof refreshClientDatalist === "function") {
+      refreshClientDatalist();
+    }
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
-
-  // 4️⃣ UI initiale – TOUJOURS exécutée
-  loadYearFilter();
-  loadDocumentsList();
-  if (typeof refreshClientDatalist === "function") {
-    refreshClientDatalist();
-  }
 }
+
 
 
 
@@ -9139,35 +9142,27 @@ if (fac) {
 
 
 window.onload = async function () {
-  // 1️⃣ Modèles & textes
-  loadCustomTemplates();
-  loadCustomTexts();
+  loadCustomTemplates();   // prestations perso
+  loadCustomTexts();       // textes détaillés
+
+  // TVA 0% par défaut partout
   setTVA(0);
 
-  // 2️⃣ Firebase d'abord (mode local si pas dispo)
-  if (typeof initFirebase === "function") {
-    await initFirebase().catch((e) =>
-      console.error("Erreur initFirebase (non bloquant) :", e)
-    );
-  }
+  // Datalist client de base (avec le local si présent)
+  refreshClientDatalist();
 
-  // 3️⃣ Maintenant que Firebase / localStorage sont prêts → on charge
-  refreshClientDatalist();   // fonctionne même si Firebase off
-  loadYearFilter();          // filtre factures
-  loadDocumentsList();       // affiche devis / factures
-  if (typeof initContractsUI === "function") {
-    initContractsUI();
-  }
+  // 🔥 On ATTEND la synchro Firebase (documents + contrats + clients)
+  await initFirebase();
 
-  // 4️⃣ Onglet par défaut
+  // 🟦 Initialisation des contrats (listeners, calculs)
+  initContractsUI();
+
+  // ✅ Maintenant que tout est synchro, on affiche l’onglet DEVIS
   switchListType("devis");
   updateButtonColors();
-
-  // 5️⃣ Factures d’échéance automatique
-  if (typeof checkScheduledInvoices === "function") {
-    checkScheduledInvoices();
-  }
+  checkScheduledInvoices();
 };
+
 
 
 
