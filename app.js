@@ -6147,7 +6147,7 @@ async function syncContractsWithFirestore() {
   try {
     const snap = await db.collection("contracts").get();
     const cloudContracts = [];
-    snap.forEach(doc => {
+    snap.forEach((doc) => {
       const data = doc.data();
       if (data && data.id) {
         cloudContracts.push(data);
@@ -6155,29 +6155,25 @@ async function syncContractsWithFirestore() {
     });
 
     if (cloudContracts.length > 0) {
-      console.log("[Contracts] Chargement depuis Firestore :", cloudContracts.length, "contrats");
+      console.log(
+        "[Contracts] Chargement depuis Firestore :",
+        cloudContracts.length,
+        "contrats"
+      );
       saveContracts(cloudContracts);
     } else {
       const localContracts = getAllContracts();
       if (localContracts.length > 0) {
         console.log("[Contracts] Firestore vide, push des contrats locaux");
         for (const c of localContracts) {
-          await db.collection("contracts")
-            .doc(c.id)
-            .set(c, { merge: true });
+          await db.collection("contracts").doc(c.id).set(c, { merge: true });
         }
       }
     }
 
-    // 🔄 NOUVEAU : si on est déjà sur l'onglet contrats, on recharge la liste
+    // 🔄 Si on est déjà sur l'onglet contrats, on recharge la liste
     if (typeof loadContractsList === "function" && currentListType === "contrat") {
       loadContractsList();
-    }
-  } catch (e) {
-    console.error("Erreur sync contrats Firestore :", e);
-  }
-}
-
     }
   } catch (e) {
     console.error("Erreur sync contrats Firestore :", e);
@@ -9180,6 +9176,7 @@ window.onload = async function () {
     checkScheduledInvoices();
   }
 };
+
 
 
 
