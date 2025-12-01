@@ -9092,6 +9092,164 @@ function generateImmediateBilling(contract) {
   };
 }
 
+function createAutomaticInvoice(contract) {
+  const pr = contract.pricing || {};
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+
+  const clientType = pr.clientType || "particulier";
+  const mode       = pr.billingMode || "annuel";
+
+  const totalHT = Number(pr.totalHT) || 0;
+  if (totalHT <= 0) return null;
+
+  // Si mode "annuel", aucune facture échelonnée
+  if (mode === "annuel") {
+    return null;
+  }
+
+  const n = getNumberOfInstallments(pr);
+  const amountHT = totalHT / n;
+
+  const tvaRate   = Number(pr.tvaRate) || 0;
+  const tvaAmount = amountHT * (tvaRate / 100);
+  const totalTTC  = amountHT + tvaAmount;
+
+  const number = getNextNumber("facture");
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  // 🔢 BLOC DATE ÉCHÉANCE
+  const nextISO = pr.nextInvoiceDate;
+  if (!nextISO) return null;
+
+  const nextDate = new Date(nextISO + "T00:00:00");
+  if (isNaN(nextDate.getTime())) return null;
+
+  const moisLabel = monthYearFr(nextISO); 
+  const clientName = c.name ? ` – ${c.name}` : "";
+
+  // Type de service : piscine, spa, etc.
+  const poolType = pr.mainService || "";
+  let serviceLabel = "Entretien piscine";
+  if (poolType === "spa" || poolType === "spa_jacuzzi" || poolType === "entretien_jacuzzi") {
+    serviceLabel = "Entretien spa / jacuzzi";
+  }
+
+  // Période globale
+  const globalPeriod = formatContractGlobalPeriod(pr);
+
+  // --------------------------------------------------------------------
+  // 🎯 TEXTE DE FACTURATION SELON PARTICULIER / SYNDIC
+  // --------------------------------------------------------------------
+
+  let subject = "";
+  let lineDesc = "";
+
+  if (clientType === "particulier") {
+    // 👉 FACTURES ANTICIPÉES (à l’avance)
+    const numEcheance = computeEcheanceNumber(pr);
+    subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}${clientName}`;
+    lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
+  }
+
+  else {
+    // 👉 SYNDIC = FACTURE APRÈS PRESTATION
+    // période = mois précédent
+    const prevStart = new Date(nextDate);
+    prevStart.setDate(1);
+    const prevEnd = new Date(prevStart);
+    prevEnd.setMonth(prevStart.getMonth() + 1);
+    prevEnd.setDate(0);
+
+    const startLabel = prevStart.toLocaleDateString("fr-FR");
+    const endLabel   = prevEnd.toLocaleDateString("fr-FR");
+
+    subject  = `${serviceLabel} – prestations ${moisLabel}${clientName}`;
+    lineDesc = `${serviceLabel} – prestations du ${startLabel} au ${endLabel}`;
+  }
+
+  // --------------------------------------------------------------------
+  // NOTES selon type de client
+  // --------------------------------------------------------------------
+  const notes = (clientType === "syndic"
+    ? [
+        "Règlement à 30 jours fin de mois.",
+        "Aucun escompte pour paiement anticipé.",
+        "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € (art. L441-10 Code de commerce).",
+        "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
+        "Les Conditions Générales de Vente sont disponibles sur demande."
+      ]
+    : [
+        "Règlement à réception de facture.",
+        "Aucun escompte pour paiement anticipé.",
+        "Des pénalités peuvent être appliquées en cas de retard.",
+        "Cette facture correspond à une échéance du contrat d’entretien.",
+        "Les Conditions Générales de Vente sont disponibles sur demande."
+      ]
+  ).join("\n");
+
+  const conditionsType = clientType === "syndic" ? "agence" : "particulier";
+
+  // --------------------------------------------------------------------
+  // OBJET FINAL FACTURE
+  // --------------------------------------------------------------------
+  return {
+    id: Date.now().toString(),
+    type: "facture",
+    number,
+    date: todayISO,
+    validityDate: "",
+
+    subject,
+
+    contractId: contract.id || null,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations: [
+      {
+        desc: lineDesc,
+        detail: "",
+        qty: 1,
+        price: amountHT,
+        total: amountHT,
+        unit: "forfait",
+        dates: [],
+        kind: "contrat_echeance"
+      }
+    ],
+
+    tvaRate,
+    subtotal: amountHT,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType,
+
+    createdAt: todayISO,
+    updatedAt: todayISO
+  };
+}
+
+
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
 function checkScheduledInvoices() {
@@ -9157,6 +9315,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
