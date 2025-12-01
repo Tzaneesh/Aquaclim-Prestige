@@ -330,6 +330,7 @@ async function initFirebase() {
 
 // ================== GESTION CLIENTS ==================
 
+// Lecture clients localStorage
 function getClients() {
   try {
     return JSON.parse(localStorage.getItem("clients") || "[]");
@@ -338,30 +339,28 @@ function getClients() {
   }
 }
 
+// ID stable : nom + adresse
 function getClientDocId(client) {
   const name = (client.name || "").toLowerCase().trim();
-  const address = (client.address || "").toLowerCase().trim();
+  const addr = (client.address || "").toLowerCase().trim();
 
-  let base = (name + "_" + address).replace(/[^a-z0-9]+/g, "_");
+  let base = (name + "_" + addr).replace(/[^a-z0-9]+/g, "_");
   base = base.replace(/^_+|_+$/g, "");
-
-  if (!base) base = "client_" + Date.now().toString();
+  if (!base) base = "client_" + Date.now();
 
   return base;
 }
 
-
+// Sauvegarde clients
 function saveClients(list) {
   try {
     localStorage.setItem("clients", JSON.stringify(list || []));
   } catch (e) {}
 }
 
-// Met à jour la datalist
+// Recharge la datalist HTML
 function refreshClientDatalist() {
   const clients = getClients();
-
-  // 🔥 Tri alphabétique A → Z
   clients.sort((a, b) => a.name.localeCompare(b.name));
 
   const list = document.getElementById("clientsList");
@@ -387,88 +386,60 @@ function onClientNameChange() {
 
   const clients = getClients();
   const client = clients.find(
-    (c) => (c.name || "").trim().toLowerCase() === value
+    c => (c.name || "").trim().toLowerCase() === value
   );
   if (!client) return;
 
-  // Remplir adresse / téléphone / mail
-  const addr  = document.getElementById("clientAddress");
-  const phone = document.getElementById("clientPhone");
-  const email = document.getElementById("clientEmail");
+  // Remplit les champs
+  document.getElementById("clientAddress").value = client.address || "";
+  document.getElementById("clientPhone").value   = client.phone || "";
+  document.getElementById("clientEmail").value   = client.email || "";
 
-  if (addr)  addr.value  = client.address || "";
-  if (phone) phone.value = client.phone   || "";
-  if (email) email.value = client.email   || "";
-
-  // Civilité :
-  // 👉 on NE touche PAS à la civilité si elle est déjà choisie
-  // 👉 on ne la remplace que si le client a une civilité enregistrée
   const civ = document.getElementById("clientCivility");
-  if (civ && !civ.value && client.civility) {
-    civ.value = client.civility;
-  }
+  if (civ && !civ.value && client.civility) civ.value = client.civility;
 }
 
 
-// Remplit les champs du contrat à partir d'un objet client
+// ================== CLIENT (CONTRAT) ==================
 
 function fillContractClientFromObject(client) {
   if (!client) return;
 
-  const civ   = document.getElementById("ctClientCivility");
-  const name  = document.getElementById("ctClientName");
-  const addr  = document.getElementById("ctClientAddress");
-  const phone = document.getElementById("ctClientPhone");
-  const email = document.getElementById("ctClientEmail");
+  const civ = document.getElementById("ctClientCivility");
+  if (civ && !civ.value && client.civility) civ.value = client.civility;
 
-  // Même logique : on ne remplace la civilité
-  // que si le client a une valeur ET que le champ est vide
-  if (civ && !civ.value && client.civility) {
-    civ.value = client.civility;
-  }
-
-  if (name)  name.value  = client.name    || "";
-  if (addr)  addr.value  = client.address || "";
-  if (phone) phone.value = client.phone   || "";
-  if (email) email.value = client.email   || "";
+  document.getElementById("ctClientName").value    = client.name || "";
+  document.getElementById("ctClientAddress").value = client.address || "";
+  document.getElementById("ctClientPhone").value   = client.phone || "";
+  document.getElementById("ctClientEmail").value   = client.email || "";
 }
 
-
-
-// Quand on tape / choisit un nom dans ctClientName
 function onContractClientNameChange() {
   const input = document.getElementById("ctClientName");
   if (!input) return;
 
-  const name = (input.value || "").trim();
-  if (!name) return;
+  const val = (input.value || "").trim().toLowerCase();
+  if (!val) return;
 
-const clients = getClients();
-
+  const clients = getClients();
   const found = clients.find(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+    c => (c.name || "").trim().toLowerCase() === val
   );
-
-  if (found) {
-    fillContractClientFromObject(found);
-  }
+  if (found) fillContractClientFromObject(found);
 }
 
-// Ajoute le client du contrat dans la base clients 
-
 function addCurrentClientFromContract() {
-  const name = (document.getElementById("ctClientName")?.value || "").trim();
-  const address = (document.getElementById("ctClientAddress")?.value || "").trim();
-  const phone = (document.getElementById("ctClientPhone")?.value || "").trim();
-  const email = (document.getElementById("ctClientEmail")?.value || "").trim();
-  const civility = (document.getElementById("ctClientCivility")?.value || "").trim();
+  const name    = document.getElementById("ctClientName").value.trim();
+  const address = document.getElementById("ctClientAddress").value.trim();
+  const phone   = document.getElementById("ctClientPhone").value.trim();
+  const email   = document.getElementById("ctClientEmail").value.trim();
+  const civ     = document.getElementById("ctClientCivility").value.trim();
 
   if (!name || !address) {
     showConfirmDialog({
       title: "Client incomplet",
-      message: "Nom et adresse sont obligatoires pour enregistrer le client.",
+      message: "Nom et adresse obligatoires.",
       confirmLabel: "OK",
-      cancelLabel: "",
       variant: "warning",
       icon: "⚠️"
     });
@@ -476,52 +447,38 @@ function addCurrentClientFromContract() {
   }
 
   const clients = getClients();
-
-  // 🔎 On cherche s'il existe déjà (par nom)
-  const existingIdx = clients.findIndex(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+  let idx = clients.findIndex(
+    c => (c.name || "").trim().toLowerCase() === name.toLowerCase()
   );
 
-  let clientObj;
+  let obj;
 
-  if (existingIdx >= 0) {
-    // On met à jour en conservant l'id existant s'il existe
-    const old = clients[existingIdx];
-    clientObj = {
-      ...old,
-      civility,
-      name,
-      address,
-      phone,
-      email
-    };
-    clients[existingIdx] = clientObj;
+  if (idx >= 0) {
+    obj = { ...clients[idx], name, address, phone, email, civility: civ };
+    clients[idx] = obj;
   } else {
-    // Nouveau client : on lui génère un id stable (nom+adresse)
-    const tmp = { civility, name, address, phone, email };
+    const tmp = { civility: civ, name, address, phone, email };
     const id = getClientDocId(tmp);
-    clientObj = { ...tmp, id };
-    clients.push(clientObj);
+    obj = { ...tmp, id };
+    clients.push(obj);
   }
 
-  // 💾 LocalStorage
   saveClients(clients);
   refreshClientDatalist();
 
-  // ☁️ Firestore (si dispo)
   if (typeof saveSingleClientToFirestore === "function") {
-    saveSingleClientToFirestore(clientObj);
+    saveSingleClientToFirestore(obj);
   }
 
   showConfirmDialog({
     title: "Client enregistré",
-    message: "Ce client a été enregistré dans la base.",
+    message: "Ce client a été ajouté / mis à jour.",
     confirmLabel: "OK",
-    cancelLabel: "",
     variant: "success",
     icon: "✅"
   });
 }
+
 
 // Supprimer le client depuis la fiche contrat (en base clients)
 function deleteCurrentClientFromContract() {
@@ -9011,6 +8968,7 @@ window.onload = function () {
   updateButtonColors();
 checkScheduledInvoices();
 };
+
 
 
 
