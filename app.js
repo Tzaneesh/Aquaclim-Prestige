@@ -264,10 +264,15 @@ let currentListType = "devis"; // "devis", "facture" ou "contrat"
 let db = null;
 
 // ================== FIREBASE / SYNC ==================
-
 async function initFirebase() {
+  // Si Firebase n'est pas dispo (ex: problème CDN sur GitHub) → mode local
   if (!window.firebase) {
-    console.error("Firebase non disponible");
+    console.warn("Firebase non disponible, mode local uniquement.");
+
+    // On charge quand même ce qu'on a en local
+    loadYearFilter();
+    loadDocumentsList();
+    refreshClientDatalist();
     return;
   }
 
@@ -286,7 +291,7 @@ async function initFirebase() {
   db = firebase.firestore();
 
   try {
-    // 1️⃣ SYNC DOCUMENTS (devis / factures)
+    // 1️⃣ SYNC DOCUMENTS
     const snapshot = await db.collection("documents").get();
     const cloudDocs = [];
     snapshot.forEach((docSnap) => {
@@ -295,10 +300,8 @@ async function initFirebase() {
     });
 
     if (cloudDocs.length > 0) {
-      // Cloud -> local
       localStorage.setItem("documents", JSON.stringify(cloudDocs));
     } else {
-      // Cloud vide, on pousse le local si présent
       const local = localStorage.getItem("documents");
       if (local) {
         const docs = JSON.parse(local);
@@ -319,22 +322,23 @@ async function initFirebase() {
     // 4️⃣ UI initiale
     loadYearFilter();
     loadDocumentsList();
-    if (typeof refreshClientDatalist === "function") {
-      refreshClientDatalist();
-    }
+    refreshClientDatalist();
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
+
+    // En cas d'erreur Firestore → on s'appuie au moins sur le local
+    loadYearFilter();
+    loadDocumentsList();
+    refreshClientDatalist();
   }
 }
 
 
 // ================== GESTION CLIENTS ==================
-
 function getClients() {
   try {
     return JSON.parse(localStorage.getItem("clients") || "[]");
   } catch (e) {
-    console.error("Clients corrompus en localStorage", e);
     return [];
   }
 }
@@ -346,6 +350,7 @@ function getClientDocId(client) {
 
   let base = (name + "_" + address).replace(/[^a-z0-9]+/g, "_");
   base = base.replace(/^_+|_+$/g, "");
+
   if (!base) base = "client_" + Date.now().toString();
 
   return base;
@@ -354,48 +359,12 @@ function getClientDocId(client) {
 function saveClients(list) {
   try {
     localStorage.setItem("clients", JSON.stringify(list || []));
-  } catch (e) {
-    console.error("Erreur saveClients", e);
-  }
+  } catch (e) {}
 }
 
-// Recharge la datalist des clients (devis/facture/contrat)
-
+// Recharge la datalist des clients (devis + contrats)
 function refreshClientDatalist() {
-  let clients = [];
-
-  try {
-    clients = JSON.parse(localStorage.getItem("clients") || "[]");
-  } catch (e) {
-    clients = [];
-  }
-
-  // 🟦 FALLBACK : si aucune base "clients" -> on reconstruit depuis les devis/factures
-  if (!clients || clients.length === 0) {
-    const docs =
-      typeof getAllDocuments === "function" ? getAllDocuments() : [];
-
-    const mapByName = {};
-
-    docs.forEach((d) => {
-      if (d && d.client && d.client.name) {
-        const name = (d.client.name || "").trim();
-        if (!name) return;
-
-        if (!mapByName[name]) {
-          mapByName[name] = {
-            name,
-            address: d.client.address || "",
-            phone: d.client.phone || "",
-            email: d.client.email || "",
-            civility: d.client.civility || ""
-          };
-        }
-      }
-    });
-
-    clients = Object.values(mapByName);
-  }
+  const clients = getClients();
 
   // 🔤 Tri alphabétique
   clients.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
@@ -406,6 +375,7 @@ function refreshClientDatalist() {
   list.innerHTML = "";
 
   clients.forEach((c) => {
+    if (!c.name) return;
     const opt = document.createElement("option");
     opt.value = c.name;
     list.appendChild(opt);
@@ -431,25 +401,63 @@ function onClientNameChange() {
   const addr  = document.getElementById("clientAddress");
   const phone = document.getElementById("clientPhone");
   const email = document.getElementById("clientEmail");
-  const civ   = document.getElementById("clientCivility");
 
   if (addr)  addr.value  = client.address || "";
   if (phone) phone.value = client.phone   || "";
   if (email) email.value = client.email   || "";
 
-  // On ne modifie la civilité que si le champ est vide
+  const civ = document.getElementById("clientCivility");
   if (civ && !civ.value && client.civility) {
     civ.value = client.civility;
   }
 }
 
-// Ajoute / met à jour le client depuis l'onglet devis/facture
-function addCurrentClient() {
-  const name    = (document.getElementById("clientName")?.value || "").trim();
-  const address = (document.getElementById("clientAddress")?.value || "").trim();
-  const phone   = (document.getElementById("clientPhone")?.value || "").trim();
-  const email   = (document.getElementById("clientEmail")?.value || "").trim();
-  const civ     = (document.getElementById("clientCivility")?.value || "").trim();
+
+// Remplit les champs du contrat à partir d'un objet client
+function fillContractClientFromObject(client) {
+  if (!client) return;
+
+  const civ   = document.getElementById("ctClientCivility");
+  const name  = document.getElementById("ctClientName");
+  const addr  = document.getElementById("ctClientAddress");
+  const phone = document.getElementById("ctClientPhone");
+  const email = document.getElementById("ctClientEmail");
+
+  if (civ && !civ.value && client.civility) {
+    civ.value = client.civility;
+  }
+
+  if (name)  name.value  = client.name    || "";
+  if (addr)  addr.value  = client.address || "";
+  if (phone) phone.value = client.phone   || "";
+  if (email) email.value = client.email   || "";
+}
+
+// Quand on tape / choisit un nom dans ctClientName (contrat)
+function onContractClientNameChange() {
+  const input = document.getElementById("ctClientName");
+  if (!input) return;
+
+  const name = (input.value || "").trim();
+  if (!name) return;
+
+  const clients = getClients();
+  const found = clients.find(
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+  );
+
+  if (found) {
+    fillContractClientFromObject(found);
+  }
+}
+
+// Ajoute le client du contrat dans la base clients
+function addCurrentClientFromContract() {
+  const name = (document.getElementById("ctClientName")?.value || "").trim();
+  const address = (document.getElementById("ctClientAddress")?.value || "").trim();
+  const phone = (document.getElementById("ctClientPhone")?.value || "").trim();
+  const email = (document.getElementById("ctClientEmail")?.value || "").trim();
+  const civility = (document.getElementById("ctClientCivility")?.value || "").trim();
 
   if (!name || !address) {
     showConfirmDialog({
@@ -464,25 +472,27 @@ function addCurrentClient() {
   }
 
   const clients = getClients();
-  const existingIndex = clients.findIndex(
+
+  const existingIdx = clients.findIndex(
     (c) => (c.name || "").toLowerCase() === name.toLowerCase()
   );
 
   let clientObj;
-  if (existingIndex >= 0) {
-    const old = clients[existingIndex];
+
+  if (existingIdx >= 0) {
+    const old = clients[existingIdx];
     clientObj = {
       ...old,
-      civility: civ,
+      civility,
       name,
       address,
       phone,
       email
     };
-    clients[existingIndex] = clientObj;
+    clients[existingIdx] = clientObj;
   } else {
-    const tmp = { civility: civ, name, address, phone, email };
-    const id  = getClientDocId(tmp);
+    const tmp = { civility, name, address, phone, email };
+    const id = getClientDocId(tmp);
     clientObj = { ...tmp, id };
     clients.push(clientObj);
   }
@@ -503,6 +513,7 @@ function addCurrentClient() {
     icon: "✅"
   });
 }
+
 
 // ================== CLIENTS POUR CONTRATS ==================
 
@@ -9158,6 +9169,7 @@ window.onload = function () {
     checkScheduledInvoices();
   }
 };
+
 
 
 
