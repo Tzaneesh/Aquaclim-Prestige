@@ -206,7 +206,7 @@
       <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
       <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
-      <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+      <button id="transformButton" class="btn btn-success" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
   <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
@@ -286,7 +286,7 @@
 
   <div class="form-group">
    <label class="form-label">
-  TNom ou Société <span class="required-star">*</span>
+  Nom ou Société <span class="required-star">*</span>
 </label>
     <input
       type="text"
@@ -506,7 +506,7 @@
       <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
       <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
-      <button id="transformButton" class="btn action-button" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+      <button id="transformButton" class="btn btn-success" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
   <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
@@ -524,7 +524,9 @@
     <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
-<button id="transformButton" class="btn action-button" style="display:none;" onclick="transformContractToInvoice()">🔁 Facture</button>
+<button id="contractTransformButtonTop" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+
+
       <button class="btn btn-primary" onclick="createDevisFromCurrentContract()">🧾 Créer un devis</button>
 <button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
   <span class="icon">🔁</span> Renouveler
@@ -911,7 +913,9 @@
     <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
-<button id="transformButton" class="btn action-button" style="display:none;" onclick="transformContractToInvoice()">🔁 Facture</button>
+<button id="contractTransformButtonBottom" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+
+
      <button class="btn btn-primary" onclick="createDevisFromCurrentContract()">🧾 Créer un devis</button>
 
 <button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">

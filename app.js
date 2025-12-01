@@ -6046,115 +6046,96 @@ function generateDevisFromContract(contract) {
   };
 }
 
-function generateDevisFromContract(contract) {
-  if (!contract) return null;
+function maybeProposeDevisForContract(contract) {
+  if (!contract || !contract.pricing) {
+    console.log("[Devis] Pas de pricing sur le contrat, pas de popup.");
+    return false;
+  }
 
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
-  const p  = contract.pool    || {};
-  const pr = contract.pricing || {};
+  const pr         = contract.pricing;
+  const clientType = pr.clientType || "particulier";
 
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const number   = getNextNumber("devis");
+  let totalTTCraw = pr.totalTTC != null ? pr.totalTTC : pr.totalHT;
+  if (typeof totalTTCraw === "string") {
+    totalTTCraw = totalTTCraw.replace(",", ".");
+  }
+  const totalTTC = Number(totalTTCraw) || 0;
 
-  const poolType = pr.mainService || p.type || "";
-  const label    = getContractLabel(poolType);
+  console.log("[Devis] maybeProposeDevisForContract → clientType=", clientType, " totalTTC=", totalTTC);
 
-  // Période lisible ex : "mai 2026 à octobre 2026"
-  const globalPeriod = formatContractGlobalPeriod(pr);
-  const clientName   = (c.name || "").trim();
-  const suffixClient = clientName ? " – " + clientName : "";
+  if (clientType !== "particulier") {
+    console.log("[Devis] Client pas particulier → pas de popup.");
+    return false;
+  }
+  if (totalTTC < 150) {
+    console.log("[Devis] Total TTC < 150€ → pas de popup.");
+    return false;
+  }
 
-  const subjectBase = globalPeriod
-    ? `${label} – saison ${globalPeriod}`
-    : label;
+  const meta = contract.meta || {};
+  if (meta.sourceDevisId) {
+    console.log("[Devis] Contrat déjà lié au devis", meta.sourceDevisNumber, "→ pas de popup.");
+    return false;
+  }
 
-  const subject = subjectBase + suffixClient;
+  const message =
+    "Ce contrat dépasse 150 € pour un particulier.\n\n" +
+    "Un devis est obligatoire.\n\n" +
+    "Souhaites-tu créer un devis à partir de ce contrat ?";
 
-  const lineDesc = globalPeriod
-    ? `${label} pour la période ${globalPeriod}`
-    : label;
+  showConfirmDialog({
+    title: "Créer un devis ?",
+    message,
+    confirmLabel: "Créer un devis",
+    cancelLabel: "Continuer sans devis",
+    variant: "warning",
+    icon: "🧾",
+    onConfirm: function () {
+      const devis = generateDevisFromContract(contract);
+      if (!devis) return;
 
-  const totalHT  = Number(pr.totalHT)  || 0;
-  const tvaRate  = Number(pr.tvaRate)  || 0;
-  const tvaAmount = tvaRate > 0 ? totalHT * (tvaRate / 100) : 0;
-  const totalTTC  = tvaRate > 0 ? totalHT + tvaAmount : totalHT;
+      console.log("[Devis] Création du devis depuis contrat", contract.id, "→", devis.number);
 
-  const clientType     = pr.clientType || "particulier";
-  const conditionsType = clientType === "syndic" ? "agence" : "particulier";
+      const docs = getAllDocuments();
+      docs.push(devis);
+      saveDocuments(docs);
 
-  const baseNotesLines =
-    clientType === "syndic"
-      ? [
-          "Règlement à 30 jours fin de mois.",
-          "Aucun escompte pour paiement anticipé.",
-          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
-        ]
-      : [
-          "Règlement à réception de facture.",
-          "Aucun escompte pour paiement anticipé.",
-          "Des pénalités peuvent être appliquées en cas de retard."
-        ];
-
-  const notes = baseNotesLines
-    .concat([
-      "Ce devis est établi sur la base des informations communiquées et reste valable 30 jours.",
-      "Les Conditions Générales de Vente sont disponibles sur demande."
-    ])
-    .join("\n");
-
-  return {
-    id: Date.now().toString(),
-    type: "devis",
-    number,
-    date: todayISO,
-    validityDate: "",
-
-    subject,
-
-    client: {
-      civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
-    },
-
-    siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
-
-    prestations: [
-      {
-        desc:  lineDesc,
-        detail: "",
-        qty:    1,
-        price:  totalHT,
-        total:  totalHT,
-        unit:   "forfait",
-        dates:  [],
-        kind:   "contrat_entretien"
+      if (typeof saveSingleDocumentToFirestore === "function") {
+        saveSingleDocumentToFirestore(devis);
       }
-    ],
 
-    tvaRate,
-    subtotal:       totalHT,
-    discountRate:   0,
-    discountAmount: 0,
-    tvaAmount,
-    totalTTC,
+      const allContracts = getAllContracts();
+      const idx = allContracts.findIndex((c) => c.id === contract.id);
+      if (idx >= 0) {
+        const updated = allContracts[idx];
+        if (!updated.meta) updated.meta = {};
+        updated.meta.sourceDevisId     = devis.id;
+        updated.meta.sourceDevisNumber = devis.number;
 
-    notes,
-    paid:        false,
-    paymentMode: "",
-    paymentDate: "",
-    status: "",
-    conditionsType,
+        allContracts[idx] = updated;
+        saveContracts(allContracts);
 
-    createdAt: todayISO,
-    updatedAt: todayISO
-  };
+        if (typeof saveSingleContractToFirestore === "function") {
+          saveSingleContractToFirestore(updated);
+        }
+      }
+
+      if (typeof switchListType === "function") switchListType("devis");
+
+      const contractView = document.getElementById("contractView");
+      const formView     = document.getElementById("formView");
+      if (contractView) contractView.classList.add("hidden");
+      if (formView) formView.classList.remove("hidden");
+
+      if (typeof loadDocumentsList === "function") loadDocumentsList();
+      if (typeof loadDocument === "function")      loadDocument(devis.id);
+    }
+  });
+
+  console.log("[Devis] Popup 'Créer un devis ?' affichée.");
+  return true;
 }
+
 
 
 function newContract() {
@@ -6984,7 +6965,7 @@ function fillContractForm(contract) {
   const ctNotes = document.getElementById("ctNotes");
   if (ctNotes) ctNotes.value = p.notes || "";
 
-  // ---------- 4. TYPE CLIENT (radio + hidden) ----------
+  // ---------- 4. TYPE CLIENT ----------
   const ctHiddenType = document.getElementById("ctClientType");
   const ctPartRadio  = document.getElementById("ctClientParticulier");
   const ctSynRadio   = document.getElementById("ctClientSyndic");
@@ -6998,7 +6979,6 @@ function fillContractForm(contract) {
     ctPartRadio.checked = true;
   }
 
-  // on applique le type (affiche/masque le bloc lieu + prix syndic/particulier)
   updateContractClientType(type);
 
   // ---------- 5. FRÉQUENCE & DATES ----------
@@ -7008,15 +6988,13 @@ function fillContractForm(contract) {
   const ctPassHiver = document.getElementById("ctPassHiver");
   if (ctPassHiver) {
     const valH = pr.passHiver != null ? pr.passHiver : 1;
-    ctPassHiver.value = String(valH);
-    if (!ctPassHiver.value) ctPassHiver.value = "1";
+    ctPassHiver.value = String(valH) || "1";
   }
 
   const ctPassEte = document.getElementById("ctPassEte");
   if (ctPassEte) {
     const valE = pr.passEte != null ? pr.passEte : 2;
-    ctPassEte.value = String(valE);
-    if (!ctPassEte.value) ctPassEte.value = "2";
+    ctPassEte.value = String(valE) || "2";
   }
 
   const ctStartDate = document.getElementById("ctStartDate");
@@ -7025,8 +7003,7 @@ function fillContractForm(contract) {
   const ctDuration = document.getElementById("ctDuration");
   if (ctDuration) {
     const dur = pr.durationMonths || 12;
-    ctDuration.value = String(dur);
-    if (!ctDuration.value) ctDuration.value = "12";
+    ctDuration.value = String(dur) || "12";
   }
 
   const ctEndDate = document.getElementById("ctEndDate");
@@ -7041,15 +7018,15 @@ function fillContractForm(contract) {
       pr.totalPassages != null ? String(pr.totalPassages) : "0";
   }
 
-  // ---------- 6. OPTIONS FORFAITAIRES ----------
+  // ---------- 6. OPTIONS ----------
   const openingEl = document.getElementById("ctIncludeOpening");
   if (openingEl) openingEl.checked = !!pr.includeOpening;
 
   const winterEl = document.getElementById("ctIncludeWinter");
   if (winterEl) winterEl.checked = !!pr.includeWinter;
-const airbnbEl = document.getElementById("ctAirbnb");
-if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
 
+  const airbnbEl = document.getElementById("ctAirbnb");
+  if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
 
   // ---------- 7. TVA ----------
   if (typeof pr.tvaRate === "number") {
@@ -7069,7 +7046,7 @@ if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
     }
   }
 
-  // ---------- 8. PRIX UNITAIRE / TOTAL (on remet les valeurs brutes) ----------
+  // ---------- 8. PRIX ----------
   const unitInput  = document.getElementById("ctUnitPrice");
   const totalHTInp = document.getElementById("ctTotalHT");
 
@@ -7080,16 +7057,22 @@ if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
     totalHTInp.value = pr.totalHT != null ? pr.totalHT : "";
   }
 
-  // ---------- 9. Type de bassin -> prestation principale ----------
+  // ---------- 9. Type de bassin -> prestation ----------
   const ctMainService = document.getElementById("ctMainService");
-  if (ctPoolType && ctMainService) {
-    // on laisse la logique centralisée dans l'event "change"
-    ctPoolType.dispatchEvent(new Event("change"));
+  const ctPoolTypeEl  = document.getElementById("ctPoolType");
+  if (ctPoolTypeEl && ctMainService) {
+    ctPoolTypeEl.dispatchEvent(new Event("change"));
   }
 
   // ---------- 10. Recalcul complet ----------
   recomputeContract();
+
+  // ---------- 11. Mise à jour bouton "Facturer" ----------
+  if (typeof updateContractTransformButtonVisibility === "function") {
+    updateContractTransformButtonVisibility();
+  }
 }
+
 
 function rebuildContractInvoices(contract) {
   let docs = getAllDocuments();
@@ -7129,8 +7112,27 @@ function rebuildContractInvoices(contract) {
   );
   saveContracts(allContracts);
 
+  // 6️⃣ Mettre à jour l'affichage du bouton Facturer
+  if (typeof updateContractTransformButtonVisibility === "function") {
+    updateContractTransformButtonVisibility();
+  }
+
   return true;
 }
+
+function updateContractTransformButtonVisibility() {
+  const btnTop    = document.getElementById("contractTransformButtonTop");
+  const btnBottom = document.getElementById("contractTransformButtonBottom");
+  const visible   = !!currentContractId;
+
+  if (btnTop) {
+    btnTop.style.display = visible ? "inline-block" : "none";
+  }
+  if (btnBottom) {
+    btnBottom.style.display = visible ? "inline-block" : "none";
+  }
+}
+
 
 
 // ----- Sauvegarde -----
