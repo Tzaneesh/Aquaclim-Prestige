@@ -6870,6 +6870,46 @@ if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
   recomputeContract();
 }
 
+function rebuildContractInvoices(contract) {
+  let docs = getAllDocuments();
+
+  // 1️⃣ Supprimer toutes les anciennes factures liées à ce contrat
+  docs = docs.filter(d => d.contractId !== contract.id);
+
+  const pr = contract.pricing || {};
+
+  // 2️⃣ Réinitialiser nextInvoiceDate selon le mode
+  if (pr.billingMode === "annuel") {
+    pr.nextInvoiceDate = "";
+  } else {
+    const start = new Date(pr.startDate + "T00:00:00");
+    const step  = getBillingStepMonths(pr.billingMode);
+
+    const next = new Date(start);
+    next.setMonth(next.getMonth() + step);
+    pr.nextInvoiceDate = next.toISOString().slice(0, 10);
+  }
+
+  // 3️⃣ Générer à nouveau la facture initiale (uniquement particulier)
+  const facInit = generateImmediateBilling(contract);
+  if (facInit) {
+    docs.push(facInit);
+    if (typeof saveSingleDocumentToFirestore === "function") {
+      saveSingleDocumentToFirestore(facInit);
+    }
+  }
+
+  // 4️⃣ Sauvegarder les documents
+  saveDocuments(docs);
+
+  // 5️⃣ Sauvegarder le contrat mis à jour
+  const allContracts = getAllContracts().map(c => 
+    c.id === contract.id ? contract : c
+  );
+  saveContracts(allContracts);
+
+  return true;
+}
 
 
 // ----- Sauvegarde -----
@@ -6879,7 +6919,7 @@ function saveContract() {
   const startDateEl   = document.getElementById("ctStartDate");
   const billingModeEl = document.getElementById("ctBillingMode");
 
-  if (startDateEl && !startDateEl.value) {
+  if (!startDateEl.value) {
     showConfirmDialog({
       title: "Champ manquant",
       message: "Veuillez renseigner la date de début du contrat.",
@@ -6890,7 +6930,7 @@ function saveContract() {
     return;
   }
 
-  if (billingModeEl && !billingModeEl.value) {
+  if (!billingModeEl.value) {
     showConfirmDialog({
       title: "Mode de facturation manquant",
       message: "Merci de sélectionner un mode de facturation.",
@@ -6901,53 +6941,48 @@ function saveContract() {
     return;
   }
 
-
-
-  // 1️⃣ Recalcul d'abord
+  // 1️⃣ Recalcul préalable (passages, total, labels)
   recomputeContract();
 
-  // 2️⃣ Construction du contrat
+  // 2️⃣ Construction complète depuis le formulaire
   let contract = buildContractFromForm(true);
   if (!contract) return;
 
-  // 3️⃣ Normalisation (statut, meta, etc.)
+  // 3️⃣ Normalisation du contrat (statut, meta, etc.)
   contract = normalizeContractBeforeSave(contract);
 
-  // 4️⃣ Est-ce un nouveau contrat ?
-  // 👉 Un contrat est "nouveau" s’il n’existe PAS encore dans la liste
-  const isNew = !getContract(contract.id);
-
-  // 5️⃣ Sauvegarde du contrat dans la liste locale
   const list = getAllContracts();
-  const idx = list.findIndex((c) => c.id === contract.id);
+  const idx = list.findIndex(c => c.id === contract.id);
 
-  if (idx >= 0) {
-    list[idx] = contract;       // mise à jour
+  const isNew = idx === -1;
+
+  // 4️⃣ Insert ou update local
+  if (isNew) {
+    list.push(contract);
   } else {
-    list.push(contract);        // nouveau
+    list[idx] = contract;
   }
 
   saveContracts(list);
 
-  // 6️⃣ Sauvegarde Firestore
+  // 5️⃣ Sauvegarde Firestore
   if (typeof saveSingleContractToFirestore === "function") {
     saveSingleContractToFirestore(contract);
   }
 
-  // 7️⃣ Mise à jour de l'ID courant
   currentContractId = contract.id;
 
+  // -----------------------------------------------------
+  // 🔵 FACTURATION AUTOMATIQUE
+  // -----------------------------------------------------
 
-  // -----------------------------------------------------
-  // 🔵 8️⃣ FACTURE IMMÉDIATE / PROCHAINE ÉCHÉANCE
-  // -----------------------------------------------------
   if (isNew) {
-    const pr = contract.pricing || {};
-    const clientType = pr.clientType || "particulier";
-    const mode       = pr.billingMode || "annuel";
+    // ======= NOUVEAU CONTRAT =======
 
-    // 8.1 Facture initiale (PARTICULIER uniquement)
-    // generateImmediateBilling() renvoie déjà null pour les syndics
+    const pr = contract.pricing;
+    const clientType = pr.clientType || "particulier";
+
+    // 1) Facture initiale (PARTICULIER uniquement)
     const invoice = generateImmediateBilling(contract);
 
     if (invoice) {
@@ -6963,43 +6998,53 @@ function saveContract() {
         title: "Facture créée",
         message: "La facture initiale a été générée automatiquement 💶",
         confirmLabel: "OK",
-        cancelLabel: "",
         variant: "success",
         icon: "💶"
       });
     }
 
-    // 8.2 Définition de la première date d'échéance
+    // 2) Définition de la première échéance
     if (clientType === "syndic") {
-      // 🏢 SYNDIC
-      // - jamais de facture à la création
-      // - 1ʳᵉ facture auto à la date de début du contrat
       contract.pricing.nextInvoiceDate = pr.startDate || "";
     } else {
-      // 🏠 PARTICULIER
-      // - mode "annuel" : pas d'échéance → tout payé d'un coup
-      // - mode "mensuel" : prochaine facture = mois suivant
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
     }
 
-    // ⚠️ On resauvegarde car on vient de modifier le contrat (nextInvoiceDate)
+    // Re-sauvegarde du contrat mise à jour
     saveContracts(list);
     if (typeof saveSingleContractToFirestore === "function") {
       saveSingleContractToFirestore(contract);
     }
+
+  } else {
+    // ======= CONTRAT EXISTANT =======
+
+    // Tout recalculer proprement
+    rebuildContractInvoices(contract);
+
+    showConfirmDialog({
+      title: "Contrat mis à jour",
+      message: "Le contrat et toute la facturation ont été recalculés ✔️",
+      confirmLabel: "OK",
+      variant: "success",
+      icon: "🔁"
+    });
+
+    return;
   }
 
-
-  // 🔟 Popup de confirmation
+  // -----------------------------------------------------
+  // 🔟 FIN
+  // -----------------------------------------------------
   showConfirmDialog({
     title: "Contrat enregistré",
     message: "Le contrat d'entretien a été enregistré avec succès.",
     confirmLabel: "OK",
-    cancelLabel: "",
     variant: "success",
     icon: "✅"
   });
 }
+
 
 function resetContractFormToDefaults() {
   const root = document.getElementById("contractView");
@@ -8900,6 +8945,7 @@ function getBillingStepMonths(mode) {
 }
 
 // Combien d'échéances pour ce contrat ?
+
 function getNumberOfInstallments(pricing) {
   const mode = pricing.billingMode || "annuel";
 
@@ -8913,6 +8959,22 @@ function getNumberOfInstallments(pricing) {
   // ex : 6 mois / trimestriel → ceil(6/3) = 2
   return Math.max(1, Math.ceil(dur / step));
 }
+
+function computeEcheanceNumber(pricing) {
+  const total = getNumberOfInstallments(pricing); 
+
+  const start = new Date(pricing.startDate + "T00:00:00");
+  const step  = getBillingStepMonths(pricing.billingMode);
+
+  const next  = new Date(pricing.nextInvoiceDate + "T00:00:00");
+
+  const diffMonths =
+    (next.getFullYear() - start.getFullYear()) * 12 +
+    (next.getMonth() - start.getMonth());
+
+  return Math.min(total, Math.max(1, Math.floor(diffMonths / step) + 1));
+}
+
 
 // ---------- FACTURE INITIALE À LA CRÉATION DU CONTRAT ----------
 
@@ -9091,22 +9153,6 @@ function generateImmediateBilling(contract) {
     updatedAt: todayISO
   };
 }
-
-function computeEcheanceNumber(pricing) {
-  const total = getNumberOfInstallments(pricing); 
-
-  const start = new Date(pricing.startDate + "T00:00:00");
-  const step  = getBillingStepMonths(pricing.billingMode);
-
-  const next  = new Date(pricing.nextInvoiceDate + "T00:00:00");
-
-  const diffMonths =
-    (next.getFullYear() - start.getFullYear()) * 12 +
-    (next.getMonth() - start.getMonth());
-
-  return Math.min(total, Math.max(1, Math.floor(diffMonths / step) + 1));
-}
-
 
 function createAutomaticInvoice(contract) {
   const pr = contract.pricing || {};
@@ -9331,6 +9377,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
