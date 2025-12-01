@@ -360,21 +360,58 @@ function saveClients(list) {
 }
 
 // Recharge la datalist des clients (devis/facture/contrat)
+
 function refreshClientDatalist() {
-  const clients = getClients().slice().sort((a, b) =>
-    (a.name || "").localeCompare(b.name || "", "fr", { sensitivity: "base" })
-  );
+  let clients = [];
+
+  try {
+    clients = JSON.parse(localStorage.getItem("clients") || "[]");
+  } catch (e) {
+    clients = [];
+  }
+
+  // 🟦 FALLBACK : si aucune base "clients" -> on reconstruit depuis les devis/factures
+  if (!clients || clients.length === 0) {
+    const docs =
+      typeof getAllDocuments === "function" ? getAllDocuments() : [];
+
+    const mapByName = {};
+
+    docs.forEach((d) => {
+      if (d && d.client && d.client.name) {
+        const name = (d.client.name || "").trim();
+        if (!name) return;
+
+        if (!mapByName[name]) {
+          mapByName[name] = {
+            name,
+            address: d.client.address || "",
+            phone: d.client.phone || "",
+            email: d.client.email || "",
+            civility: d.client.civility || ""
+          };
+        }
+      }
+    });
+
+    clients = Object.values(mapByName);
+  }
+
+  // 🔤 Tri alphabétique
+  clients.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
 
   const list = document.getElementById("clientsList");
   if (!list) return;
 
   list.innerHTML = "";
+
   clients.forEach((c) => {
     const opt = document.createElement("option");
-    opt.value = c.name || "";
+    opt.value = c.name;
     list.appendChild(opt);
   });
 }
+
 
 // ================== CLIENT (DEVIS / FACTURES) ==================
 
@@ -9081,21 +9118,48 @@ if (fac) {
 
 // ------- Init -------
 window.onload = function () {
+  // 1️⃣ Modèles & textes
   loadCustomTemplates();   // prestations perso
   loadCustomTexts();       // textes détaillés
 
-  // 👉 TVA 0% par défaut partout (devis / factures / contrats)
+  // 2️⃣ TVA 0% par défaut
   setTVA(0);
 
-  refreshClientDatalist();
+  // 3️⃣ Clients & documents dès le démarrage, **sans attendre Firebase**
+  refreshClientDatalist(); // datalist pour devis / factures / contrats
+  if (typeof loadYearFilter === "function") {
+    loadYearFilter();
+  }
+  if (typeof loadDocumentsList === "function") {
+    loadDocumentsList();
+  }
 
-  initFirebase();          // 🔥 Firestore
-  initContractsUI();       // 🟦 Contrats (écouteurs + calculs)
+  // 4️⃣ Firebase en "plus" (sync cloud si dispo)
+  if (typeof initFirebase === "function") {
+    initFirebase().catch((e) =>
+      console.error("Erreur initFirebase (non bloquant) :", e)
+    );
+  }
 
-  switchListType("devis"); // onglet par défaut
-  updateButtonColors();
-checkScheduledInvoices();
+  // 5️⃣ Contrats & UI
+  if (typeof initContractsUI === "function") {
+    initContractsUI();
+  }
+
+  if (typeof switchListType === "function") {
+    switchListType("devis"); // onglet par défaut
+  }
+  if (typeof updateButtonColors === "function") {
+    updateButtonColors();
+  }
+
+  // 6️⃣ Factures d’échéance auto
+  if (typeof checkScheduledInvoices === "function") {
+    checkScheduledInvoices();
+  }
 };
+
+
 
 
 
