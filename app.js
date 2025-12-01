@@ -5935,6 +5935,227 @@ function createContractFromDevis() {
   });
 }
 
+function generateDevisFromContract(contract) {
+  if (!contract) return null;
+
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+  const p  = contract.pool    || {};
+  const pr = contract.pricing || {};
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const number   = getNextNumber("devis");
+
+  const poolType = pr.mainService || p.type || "";
+  const label    = getContractLabel(poolType);
+
+  const globalPeriod = formatContractGlobalPeriod(pr);
+  const clientName   = (c.name || "").trim();
+  const suffixClient = clientName ? " – " + clientName : "";
+
+  const subjectBase = globalPeriod
+    ? `${label} – saison ${globalPeriod}`
+    : label;
+
+  const subject = subjectBase + suffixClient;
+
+  const lineDesc = globalPeriod
+    ? `${label} pour la période ${globalPeriod}`
+    : label;
+
+  const totalHT   = Number(pr.totalHT)  || 0;
+  const tvaRate   = Number(pr.tvaRate)  || 0;
+  const tvaAmount = tvaRate > 0 ? totalHT * (tvaRate / 100) : 0;
+  const totalTTC  = tvaRate > 0 ? totalHT + tvaAmount : totalHT;
+
+  const clientType     = pr.clientType || "particulier";
+  const conditionsType = clientType === "syndic" ? "agence" : "particulier";
+
+  const baseNotesLines =
+    clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+        ]
+      : [
+          "Paiement à réception de facture.",
+          "Aucun acompte demandé sauf mention contraire.",
+          "Aucun escompte pour paiement anticipé."
+        ];
+
+  const notes = baseNotesLines
+    .concat([
+      "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire.",
+      "Les tarifs des pièces détachées et produits sont susceptibles d’évoluer selon les fournisseurs.",
+      "Toute prestation non mentionnée fera l’objet d’un devis complémentaire.",
+      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
+    ])
+    .join("\n");
+
+  return {
+    id: Date.now().toString(),
+    type: "devis",
+    number,
+    date: todayISO,
+    validityDate: "",
+
+    subject,
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations: [
+      {
+        desc:  lineDesc,
+        detail: "",
+        qty:    1,
+        price:  totalHT,
+        total:  totalHT,
+        unit:   "forfait",
+        dates:  [],
+        kind:   "contrat_entretien"
+      }
+    ],
+
+    tvaRate,
+    subtotal:       totalHT,
+    discountRate:   0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType,
+
+    createdAt: todayISO,
+    updatedAt: todayISO
+  };
+}
+
+function generateDevisFromContract(contract) {
+  if (!contract) return null;
+
+  const c  = contract.client  || {};
+  const s  = contract.site    || {};
+  const p  = contract.pool    || {};
+  const pr = contract.pricing || {};
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const number   = getNextNumber("devis");
+
+  const poolType = pr.mainService || p.type || "";
+  const label    = getContractLabel(poolType);
+
+  // Période lisible ex : "mai 2026 à octobre 2026"
+  const globalPeriod = formatContractGlobalPeriod(pr);
+  const clientName   = (c.name || "").trim();
+  const suffixClient = clientName ? " – " + clientName : "";
+
+  const subjectBase = globalPeriod
+    ? `${label} – saison ${globalPeriod}`
+    : label;
+
+  const subject = subjectBase + suffixClient;
+
+  const lineDesc = globalPeriod
+    ? `${label} pour la période ${globalPeriod}`
+    : label;
+
+  const totalHT  = Number(pr.totalHT)  || 0;
+  const tvaRate  = Number(pr.tvaRate)  || 0;
+  const tvaAmount = tvaRate > 0 ? totalHT * (tvaRate / 100) : 0;
+  const totalTTC  = tvaRate > 0 ? totalHT + tvaAmount : totalHT;
+
+  const clientType     = pr.clientType || "particulier";
+  const conditionsType = clientType === "syndic" ? "agence" : "particulier";
+
+  const baseNotesLines =
+    clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+        ]
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          "Des pénalités peuvent être appliquées en cas de retard."
+        ];
+
+  const notes = baseNotesLines
+    .concat([
+      "Ce devis est établi sur la base des informations communiquées et reste valable 30 jours.",
+      "Les Conditions Générales de Vente sont disponibles sur demande."
+    ])
+    .join("\n");
+
+  return {
+    id: Date.now().toString(),
+    type: "devis",
+    number,
+    date: todayISO,
+    validityDate: "",
+
+    subject,
+
+    client: {
+      civility: c.civility || "",
+      name:     c.name     || "",
+      address:  c.address  || "",
+      phone:    c.phone    || "",
+      email:    c.email    || ""
+    },
+
+    siteCivility: s.civility || "",
+    siteName:     s.name     || "",
+    siteAddress:  s.address  || "",
+
+    prestations: [
+      {
+        desc:  lineDesc,
+        detail: "",
+        qty:    1,
+        price:  totalHT,
+        total:  totalHT,
+        unit:   "forfait",
+        dates:  [],
+        kind:   "contrat_entretien"
+      }
+    ],
+
+    tvaRate,
+    subtotal:       totalHT,
+    discountRate:   0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+    paid:        false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType,
+
+    createdAt: todayISO,
+    updatedAt: todayISO
+  };
+}
+
 
 function newContract() {
   currentContractId = null;
@@ -7033,17 +7254,27 @@ function saveContract() {
     return;
   }
 
-  // -----------------------------------------------------
-  // 🔟 FIN
-  // -----------------------------------------------------
+  // 9️⃣ Si besoin, proposer la création d'un devis (particulier > 150 €)
+  if (typeof maybeProposeDevisForContract === "function") {
+    const popupShown = maybeProposeDevisForContract(contract);
+    if (popupShown) {
+      // La popup "Créer un devis ?" a été affichée,
+      // on ne rajoute pas une deuxième popup "Contrat enregistré".
+      return;
+    }
+  }
+
+  // 🔟 Popup de confirmation standard
   showConfirmDialog({
     title: "Contrat enregistré",
     message: "Le contrat d'entretien a été enregistré avec succès.",
     confirmLabel: "OK",
+    cancelLabel: "",
     variant: "success",
     icon: "✅"
   });
 }
+
 
 
 function resetContractFormToDefaults() {
@@ -9377,6 +9608,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
