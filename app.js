@@ -264,6 +264,7 @@ let currentListType = "devis"; // "devis", "facture" ou "contrat"
 let db = null;
 
 // ================== FIREBASE / SYNC ==================
+
 async function initFirebase() {
   if (!window.firebase) {
     console.error("Firebase non disponible");
@@ -294,10 +295,8 @@ async function initFirebase() {
     });
 
     if (cloudDocs.length > 0) {
-      // Cloud -> local
       localStorage.setItem("documents", JSON.stringify(cloudDocs));
     } else {
-      // Cloud vide, on pousse le local si présent
       const local = localStorage.getItem("documents");
       if (local) {
         const docs = JSON.parse(local);
@@ -319,7 +318,7 @@ async function initFirebase() {
     console.error("Erreur de synchronisation Firestore :", e);
   }
 
-  // 🔄 Quand la synchro est finie, on rafraîchit la liste & la datalist
+  // 🔄 Rafraîchissement UI
   if (typeof loadDocumentsList === "function") {
     loadDocumentsList();
   }
@@ -327,11 +326,6 @@ async function initFirebase() {
     refreshClientDatalist();
   }
 }
-
-
-
-
-
 
 // ================== GESTION CLIENTS ==================
 function getClients() {
@@ -2247,7 +2241,6 @@ function newDocument(type) {
   document.getElementById("clientEmail").value = "";
   document.getElementById("notes").value = "";
 
-  // 🔥 Reset civilité client
   const clientCivilityEl = document.getElementById("clientCivility");
   if (clientCivilityEl) clientCivilityEl.value = "";
 
@@ -2258,7 +2251,6 @@ function newDocument(type) {
   if (siteAddrInp) siteAddrInp.value = "";
   if (siteBlock) siteBlock.style.display = "none";
 
-  // 🔥 Reset civilité lieu d’intervention
   const siteCivilityEl = document.getElementById("siteCivility");
   if (siteCivilityEl) siteCivilityEl.value = "";
 
@@ -2298,14 +2290,14 @@ function newDocument(type) {
 
   document.getElementById("formTitle").textContent =
     type === "devis" ? "Nouveau devis" : "Nouvelle facture";
+
   calculateTotals();
 
-  // 🔁 IMPORTANT : on recharge la datalist clients
+  // 🔁 IMPORTANT : recharge de la datalist clients
   if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
   }
 }
-
 
 function loadDocument(id) {
   const doc = getDocument(id);
@@ -5952,12 +5944,10 @@ function newContract() {
   if (listView) listView.classList.add("hidden");
   if (contractView) contractView.classList.remove("hidden");
 
-  // On remet tout le formulaire contrat "propre"
   const root = document.getElementById("contractView");
   if (root) {
     root.querySelectorAll("input, textarea, select").forEach((el) => {
       const id = el.id || "";
-      // On ne touche pas au champ TVA global
       if (id === "tvaRate") return;
 
       if (el.type === "checkbox" || el.type === "radio") {
@@ -5968,7 +5958,6 @@ function newContract() {
     });
   }
 
-  // Valeurs par défaut principales
   const ctClientType = document.getElementById("ctClientType");
   if (ctClientType) ctClientType.value = "particulier";
 
@@ -5990,19 +5979,17 @@ function newContract() {
   const ctMainService = document.getElementById("ctMainService");
   if (ctMainService) ctMainService.value = "piscine_chlore";
 
-  // Options par défaut
   const openingEl = document.getElementById("ctIncludeOpening");
   if (openingEl) openingEl.checked = false;
+
   const winterEl = document.getElementById("ctIncludeWinter");
   if (winterEl) winterEl.checked = false;
 
-  // Numéro de contrat auto
   const ctRef = document.getElementById("ctReference");
   if (ctRef && typeof getNextContractReference === "function") {
     ctRef.value = getNextContractReference();
   }
 
-  // TVA par défaut à 0 % pour un nouveau contrat
   const tvaRateInput = document.getElementById("tvaRate");
   if (tvaRateInput) tvaRateInput.value = "0";
 
@@ -6017,17 +6004,16 @@ function newContract() {
     setTVA(0);
   }
 
-  // 🔁 On recharge la liste des clients pour la datalist
+  // 🔁 datalist clients
   if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
   }
 
-  // 🔢 On recalcule le contrat (totaux, texte, etc.)
+  // 🔢 recalcul du contrat
   if (typeof recomputeContract === "function") {
     recomputeContract();
   }
 }
-
 
 function openContractFromList(id) {
   const contract = getContract(id);
@@ -6174,10 +6160,12 @@ async function syncContractsWithFirestore() {
     if (typeof loadContractsList === "function" && currentListType === "contrat") {
       loadContractsList();
     }
+
   } catch (e) {
     console.error("Erreur sync contrats Firestore :", e);
   }
 }
+
 
 // ----- Firestore clients -----
 
@@ -6224,31 +6212,26 @@ async function syncClientsWithFirestore() {
     });
 
     if (cloudClients.length > 0) {
-      // 🔵 Firestore devient la vérité → on recharge le local
       console.log("[Clients] Chargement depuis Firestore :", cloudClients.length, "clients");
       saveClients(cloudClients);
       refreshClientDatalist();
     } else {
-      // ☁️ vide → on pousse le local vers Firestore si on a déjà des clients
       const localClients = getClients();
       if (localClients.length > 0) {
         console.log("[Clients] Firestore vide, push des clients locaux");
         for (const c of localClients) {
           const id = c.id || getClientDocId(c);
           c.id = id;
-          await db.collection("clients")
-            .doc(id)
-            .set(c, { merge: true });
+          await db.collection("clients").doc(id).set(c, { merge: true });
         }
       }
-      // et on rafraîchit quand même la datalist
       refreshClientDatalist();
     }
+
   } catch (e) {
     console.error("Erreur sync clients Firestore :", e);
   }
 }
-
 
 // ----- Récupération d'un tarif dans PRESTATION_TEMPLATES -----
 
@@ -9146,17 +9129,16 @@ window.onload = function () {
   loadCustomTemplates();
   loadCustomTexts();
 
-  // TVA par défaut et datalist client tout de suite
   setTVA(0);
   if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
   }
 
-  // 🧾 On affiche DIRECT l’onglet devis avec ce qu’il y a en localStorage
-  // (la 2ᵉ fois que tu viens, ce sera instantané)
   if (typeof loadYearFilter === "function") {
     loadYearFilter();
   }
+
+  // ⚡ Affichage immédiat des devis depuis localStorage
   if (typeof switchListType === "function") {
     switchListType("devis");
   }
@@ -9167,14 +9149,16 @@ window.onload = function () {
     checkScheduledInvoices();
   }
 
-  // 🛰 On lance Firebase en ARRIÈRE-PLAN, sans bloquer
-  initFirebase();   // ⚠️ on ne met PLUS "await" ici
+  // 🛰 Synchro Firebase en arrière-plan
+  initFirebase();
 
-  // Init de la partie contrats (listeners, etc.)
+  // Contrats UI
   if (typeof initContractsUI === "function") {
     initContractsUI();
   }
 };
+
+
 
 
 
