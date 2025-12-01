@@ -2300,7 +2300,13 @@ function newDocument(type) {
   document.getElementById("formTitle").textContent =
     type === "devis" ? "Nouveau devis" : "Nouvelle facture";
   calculateTotals();
+
+  // 🔁 IMPORTANT : on recharge la datalist clients
+  if (typeof refreshClientDatalist === "function") {
+    refreshClientDatalist();
+  }
 }
+
 
 function loadDocument(id) {
   const doc = getDocument(id);
@@ -6012,7 +6018,15 @@ function newContract() {
     setTVA(0);
   }
 
-  recomputeContract();
+  // 🔁 On recharge la liste des clients pour la datalist
+  if (typeof refreshClientDatalist === "function") {
+    refreshClientDatalist();
+  }
+
+  // 🔢 On recalcule le contrat (totaux, texte, etc.)
+  if (typeof recomputeContract === "function") {
+    recomputeContract();
+  }
 }
 
 
@@ -6141,11 +6155,9 @@ async function syncContractsWithFirestore() {
     });
 
     if (cloudContracts.length > 0) {
-      // 🟦 On prend la vérité Firestore pour remplir localStorage
       console.log("[Contracts] Chargement depuis Firestore :", cloudContracts.length, "contrats");
       saveContracts(cloudContracts);
     } else {
-      // 🔁 Si Firestore est vide mais qu’on a des contrats en local → on les pousse
       const localContracts = getAllContracts();
       if (localContracts.length > 0) {
         console.log("[Contracts] Firestore vide, push des contrats locaux");
@@ -6155,6 +6167,17 @@ async function syncContractsWithFirestore() {
             .set(c, { merge: true });
         }
       }
+    }
+
+    // 🔄 NOUVEAU : si on est déjà sur l'onglet contrats, on recharge la liste
+    if (typeof loadContractsList === "function" && currentListType === "contrat") {
+      loadContractsList();
+    }
+  } catch (e) {
+    console.error("Erreur sync contrats Firestore :", e);
+  }
+}
+
     }
   } catch (e) {
     console.error("Erreur sync contrats Firestore :", e);
@@ -9157,6 +9180,7 @@ window.onload = async function () {
     checkScheduledInvoices();
   }
 };
+
 
 
 
