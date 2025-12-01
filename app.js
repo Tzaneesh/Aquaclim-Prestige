@@ -9092,6 +9092,22 @@ function generateImmediateBilling(contract) {
   };
 }
 
+function computeEcheanceNumber(pricing) {
+  const total = getNumberOfInstallments(pricing); 
+
+  const start = new Date(pricing.startDate + "T00:00:00");
+  const step  = getBillingStepMonths(pricing.billingMode);
+
+  const next  = new Date(pricing.nextInvoiceDate + "T00:00:00");
+
+  const diffMonths =
+    (next.getFullYear() - start.getFullYear()) * 12 +
+    (next.getMonth() - start.getMonth());
+
+  return Math.min(total, Math.max(1, Math.floor(diffMonths / step) + 1));
+}
+
+
 function createAutomaticInvoice(contract) {
   const pr = contract.pricing || {};
   const c  = contract.client  || {};
@@ -9315,6 +9331,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
