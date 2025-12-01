@@ -9109,8 +9109,6 @@ function generateImmediateBilling(contract) {
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
-v
-
 function checkScheduledInvoices() {
   const docs = getAllDocuments();
   const contracts = getAllContracts();
@@ -9164,6 +9162,7 @@ window.onload = async function () {
   updateButtonColors();
   checkScheduledInvoices();
 };
+
 
 
 
