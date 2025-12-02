@@ -9389,124 +9389,65 @@ function formatContractGlobalPeriod(pr) {
 }
 
 function generateImmediateBilling(contract) {
-  const pr = contract.pricing || {};
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
+  const mode = contract.pricing.billingMode;
+  const clientType = contract.pricing.clientType;
 
-  const clientType = pr.clientType || "particulier";
-  const mode       = pr.billingMode || "annuel";
+  // ❌ Syndic : jamais de facturation immédiate
+  if (clientType === "syndic") return;
 
-  const totalHT = Number(pr.totalHT) || 0;
-  if (totalHT <= 0) return null;
+  const startDate = contract.pricing.startDate;
+  const totalHT = Number(contract.pricing.totalHT || 0);
+  const tvaRate = Number(contract.pricing.tvaRate || 0);
 
-  // 🏢 SYNDIC → jamais de facture immédiate
-  if (clientType === "syndic") {
-    return null;
-  }
+  let factureHT = 0;
+  let label = "";
 
-  // Cas particulier
-  let n = 1;
+  // 🎯 PARTICULIER : règles
   if (mode === "mensuel") {
-    n = getNumberOfInstallments(pr);
-  } else if (mode === "annuel_50_50") {
-    n = 2;
+    factureHT = totalHT / contract.pricing.durationMonths;
+    label = "1ère échéance (1/" + contract.pricing.durationMonths + ")";
   }
-
-  if (!n || n < 1) n = 1;
-
-  let amountHT = totalHT;
-  if (mode === "mensuel") amountHT = totalHT / n;
-  if (mode === "annuel_50_50") amountHT = totalHT / 2;
-
-  const tvaRate   = Number(pr.tvaRate) || 0;
-  const tvaAmount = amountHT * (tvaRate / 100);
-  const totalTTC  = amountHT + tvaAmount;
-
-  const number = getNextNumber("facture");
-
-  // 👉 Correction majeure : date de la facture initiale
-  let invoiceDateISO = new Date().toISOString().slice(0, 10);
-  if (mode === "annuel_50_50") {
-    invoiceDateISO = pr.startDate; // acompte à la date du début du contrat
-  }
-
-  const moisLabel  = monthYearFr(invoiceDateISO);
-  const clientName = (c.name || "").trim();
-  const suffixClient = clientName ? " – " + clientName : "";
-
-  const poolType = pr.mainService || "";
-  let serviceLabel = poolType.includes("spa") ? "Entretien spa / jacuzzi" : "Entretien piscine";
-
-  const globalPeriod = formatContractGlobalPeriod(pr);
-
-  let subject;
-  let lineDesc;
 
   if (mode === "annuel_50_50") {
-    subject = `${serviceLabel} – 1er paiement 50 % – saison ${globalPeriod}${suffixClient}`;
-    lineDesc = `${serviceLabel} – 1er paiement (50 %) pour la saison ${globalPeriod}`;
-  } else {
-    subject = `${serviceLabel} – échéance 1/${n} – mois de ${moisLabel}${suffixClient}`;
-    lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance 1/${n} sur la période ${globalPeriod}`;
+    factureHT = totalHT / 2;
+    label = "1er paiement 50%";
   }
 
-  const notes = [
-    "Règlement à réception de facture.",
-    "Aucun escompte pour paiement anticipé.",
-    "Des pénalités peuvent être appliquées en cas de retard.",
-    mode === "annuel_50_50"
-      ? "Cette facture correspond au 1er paiement (50 %) du contrat d’entretien."
-      : "Cette facture correspond à la première échéance du contrat d’entretien.",
-    "Les Conditions Générales de Vente sont disponibles sur demande."
-  ].join("\n");
+  // Si rien à facturer
+  if (factureHT <= 0) return;
 
-  return {
-    id: Date.now().toString(),
+  const factureTTC = factureHT * (1 + tvaRate / 100);
+
+  const doc = {
+    id: generateId("FAC"),
     type: "facture",
-    number,
-    date: invoiceDateISO,
+    number: getNextNumber("facture"),
+   date: (mode === "mensuel" || mode === "annuel_50_50")
+  ? startDate
+  : new Date().toISOString().slice(0, 10),
 
-    validityDate: "",
-    subject,
-
-    contractId: contract.id || null,
-    contractReference: c.reference || "",
-
-    client: {
-      civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
-    },
-
-    siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
-
+    contractId: contract.id,
+    client: contract.client,
     prestations: [
       {
-        desc: lineDesc,
-        qty: 1,
-        price: amountHT,
-        total: amountHT,
-        unit: "forfait",
-        dates: [],
-        kind: "contrat_initial"
+        description: label,
+        quantity: 1,
+        unitPrice: factureHT,
+        total: factureHT
       }
     ],
-
-    tvaRate,
-    subtotal: amountHT,
-    tvaAmount,
-    totalTTC,
-    notes,
-    paid: false,
-    status: "",
-    conditionsType: "particulier",
-    createdAt: invoiceDateISO,
-    updatedAt: invoiceDateISO
+    totalHT: factureHT,
+    totalTTC: factureTTC,
+    tvaRate: tvaRate,
+    notes: ""
   };
+
+  saveSingleDocumentToFirestore(doc);
+
+  // Ajouter au localStorage
+  const docs = getAllDocuments();
+  docs.push(doc);
+  saveDocuments(docs);
 }
 
 
@@ -9868,6 +9809,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
