@@ -7170,53 +7170,61 @@ function rebuildContractInvoices(contract) {
   const pr = contract.pricing || {};
   let docs = getAllDocuments();
 
-  // 1️⃣ Supprimer anciennes factures du contrat
+  // 1️⃣ Supprimer toutes les factures liées à ce contrat
   docs = docs.filter(doc => doc.contractId !== contract.id);
 
-  // 2️⃣ Remettre nextInvoiceDate à zéro et calculer la première
+  // 2️⃣ Réinitialiser la prochaine échéance
   pr.nextInvoiceDate = "";
-  pr.nextInvoiceDate = computeNextInvoiceDate(contract);
 
-  // 3️⃣ Re-créer facture initiale (only particulier)
+  const today = new Date();
+
+  // 3️⃣ Re-créer la facture initiale (PARTICULIER uniquement)
   const immediate = generateImmediateBilling(contract);
   if (immediate) {
     docs.push(immediate);
-    saveSingleDocumentToFirestore(immediate);
-    pr.nextInvoiceDate = computeNextInvoiceDate(contract);
+    if (typeof saveSingleDocumentToFirestore === "function") {
+      saveSingleDocumentToFirestore(immediate);
+    }
   }
 
-  // 4️⃣ Rattrapage automatique : créer toutes les échéances manquantes
-  let next = pr.nextInvoiceDate;
-  const today = new Date();
+  // 4️⃣ Calculer la 1ère prochaine échéance (particulier + syndic)
+  pr.nextInvoiceDate = computeNextInvoiceDate(contract);
 
-  while (next && new Date(next) <= today) {
+  // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui
+  while (pr.nextInvoiceDate) {
+    const nextDateObj = new Date(pr.nextInvoiceDate + "T00:00:00");
+    if (isNaN(nextDateObj.getTime()) || nextDateObj > today) break;
+
     const inv = createAutomaticInvoice(contract);
     if (!inv) break;
 
-    inv.date = next; // La facture doit être datée à la vraie échéance
-
     docs.push(inv);
-    saveSingleDocumentToFirestore(inv);
+    if (typeof saveSingleDocumentToFirestore === "function") {
+      saveSingleDocumentToFirestore(inv);
+    }
 
+    // Recalcul de la prochaine échéance après cette facture
     pr.nextInvoiceDate = computeNextInvoiceDate(contract);
-    next = pr.nextInvoiceDate;
   }
 
-  // 5️⃣ Sauvegardes
+  // 6️⃣ Sauvegarde des documents & du contrat
   saveDocuments(docs);
+
+  contract.pricing = pr;
 
   const allContracts = getAllContracts().map(c =>
     c.id === contract.id ? contract : c
   );
   saveContracts(allContracts);
 
-  // 6️⃣ UI (bouton Facturer)
+  // 7️⃣ Mise à jour de l'UI (bouton "Facturer ce contrat")
   if (typeof updateContractTransformButtonVisibility === "function") {
     updateContractTransformButtonVisibility();
   }
 
   return true;
 }
+
 
 
 function updateContractTransformButtonVisibility() {
@@ -9819,6 +9827,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
