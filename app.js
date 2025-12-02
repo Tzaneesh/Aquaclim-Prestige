@@ -1,3 +1,61 @@
+/********************************************************************
+ * 🔥  SYSTEME DE DATES (OBLIGATOIRE)
+ * Format interne : YYYY-MM-DD
+ * Format affiché : DD-MM-YYYY
+ ********************************************************************/
+
+// Vérifie si une date ISO YYYY-MM-DD est valide
+function isISO(date) {
+    return /^\d{4}-\d{2}-\d{2}$/.test(date);
+}
+
+// Vérifie si une date FR DD-MM-YYYY est valide
+function isFR(date) {
+    return /^\d{2}-\d{2}-\d{4}$/.test(date);
+}
+
+// Convertit DD-MM-YYYY → YYYY-MM-DD
+function toISO(fr) {
+    if (!fr || !isFR(fr)) return fr;
+    const [d, m, y] = fr.split("-");
+    return `${y}-${m}-${d}`;
+}
+
+// Convertit YYYY-MM-DD → DD-MM-YYYY
+function fromISO(iso) {
+    if (!iso || !isISO(iso)) return iso;
+    const [y, m, d] = iso.split("-");
+    return `${d}-${m}-${y}`;
+}
+
+// Ajoute N mois à une date ISO
+function addMonths(iso, n) {
+    if (!isISO(iso)) return iso;
+    const d = new Date(iso + "T00:00:00");
+    d.setMonth(d.getMonth() + n);
+    return d.toISOString().slice(0, 10);
+}
+
+// Renvoie la date de fin de mois
+function endOfMonthISO(iso) {
+    if (!isISO(iso)) return iso;
+    const d = new Date(iso + "T00:00:00");
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    return d.toISOString().slice(0, 10);
+}
+
+// Compare deux ISO (retourne -1, 0, 1)
+function compareISO(a, b) {
+    return new Date(a) - new Date(b);
+}
+
+// Date d’aujourd’hui au format ISO
+function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+
 // ================== CONSTANTES / MODÈLES ==================
 
 // Modèles de prestations (Particulier / Syndic + descriptions + types)
@@ -9827,6 +9885,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
