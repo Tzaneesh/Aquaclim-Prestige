@@ -9749,28 +9749,62 @@ function createDevisFromCurrentContract() {
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
 function checkScheduledInvoices() {
-  const docs = getAllDocuments();
+  let docs = getAllDocuments();
   const contracts = getAllContracts();
-  const todayISO = new Date().toISOString().slice(0,10);
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   contracts.forEach(contract => {
     const pr = contract.pricing || {};
+    const clientType = pr.clientType || "particulier";
+    const mode = pr.billingMode || "annuel";
 
+    // -----------------------------
+    // 🧾 CAS SPÉCIAL : SYNDIC + ANNUEL
+    // → Facture de fin de contrat
+    // -----------------------------
+    const status = computeContractStatus(contract);
+
+    if (clientType === "syndic" &&
+        mode === "annuel" &&
+        status === CONTRACT_STATUS.TERMINE) {
+
+      // On vérifie s'il existe déjà une facture pour ce contrat
+      const hasInvoice = docs.some(d =>
+        d.type === "facture" && d.contractId === contract.id
+      );
+
+      if (!hasInvoice) {
+        const fac = createTerminationInvoiceForContract(contract);
+        if (fac) {
+          docs.push(fac);
+          saveDocuments(docs);
+
+          if (typeof saveSingleDocumentToFirestore === "function") {
+            saveSingleDocumentToFirestore(fac);
+          }
+        }
+      }
+
+      // Pour ce contrat, on s'arrête là (pas d'échéancier classique)
+      return;
+    }
+
+    // -----------------------------
+    // 💶 CAS GÉNÉRAL (échéances)
+    // -----------------------------
     if (!pr.billingMode || !pr.nextInvoiceDate) return;
 
     if (pr.nextInvoiceDate <= todayISO) {
-      // Générer la facture
       const fac = createAutomaticInvoice(contract);
-if (fac) {
-  docs.push(fac);
-  saveDocuments(docs);
+      if (fac) {
+        docs.push(fac);
+        saveDocuments(docs);
 
-  if (typeof saveSingleDocumentToFirestore === "function") {
-    saveSingleDocumentToFirestore(fac);
-  }
-}
+        if (typeof saveSingleDocumentToFirestore === "function") {
+          saveSingleDocumentToFirestore(fac);
+        }
+      }
 
-      // Programmer la prochaine
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
     }
   });
@@ -9810,6 +9844,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
