@@ -5747,7 +5747,14 @@ function computeNextInvoiceDate(contract) {
     return "";
   }
 
-  const stepMonths = getBillingStepMonths(mode); // 1 / 3 / 6
+  let stepMonths;
+  if (mode === "annuel_50_50") {
+    // 2ᵉ facture à la mi-contrat
+    stepMonths = duration > 0 ? Math.round(duration / 2) : 0;
+  } else {
+    stepMonths = getBillingStepMonths(mode); // 1 / 3 / 6
+  }
+
   if (!stepMonths) return "";
 
   let base;
@@ -5772,6 +5779,7 @@ function computeNextInvoiceDate(contract) {
 
   return next.toISOString().slice(0, 10);
 }
+
 
 
 
@@ -6904,9 +6912,6 @@ const pricing = {
     meta: existing?.meta || {},
     createdAt: existing?.createdAt || new Date().toISOString()
   };
-
-contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
-
 
   return contract;
 }
@@ -8782,11 +8787,50 @@ function updateContractClientType(type) {
     }
   }
 
+  // 🔧 Modes de facturation disponibles selon le type de client
+  const billingSelect = document.getElementById("ctBillingMode");
+  if (billingSelect) {
+    const options = Array.from(billingSelect.options);
+
+    options.forEach((opt) => {
+      const val = opt.value;
+
+      if (type === "particulier") {
+        // ✅ Particulier : seulement Mensuel + Annuel 50/50
+        if (val === "mensuel" || val === "annuel_50_50") {
+          opt.disabled = false;
+        } else {
+          opt.disabled = true; // trimestriel / semestriel / annuel = interdits
+        }
+      } else {
+        // ✅ Syndic : mensuel / trimestriel / semestriel / annuel
+        if (val === "annuel_50_50") {
+          opt.disabled = true; // réservé aux particuliers
+        } else {
+          opt.disabled = false;
+        }
+      }
+    });
+
+    // Si la valeur actuelle est devenue invalide, on force une valeur cohérente
+    if (billingSelect.selectedOptions.length) {
+      const current = billingSelect.selectedOptions[0];
+      if (current.disabled) {
+        if (type === "particulier") {
+          billingSelect.value = "mensuel";       // défaut particulier
+        } else {
+          billingSelect.value = "annuel";        // défaut syndic (pour la suite)
+        }
+      }
+    }
+  }
+
   // recalcul (tarifs particuliers / syndic)
   if (typeof recomputeContract === "function") {
     recomputeContract();
   }
 }
+
 function renewContract(id) {
   const oldContract = getContract(id);
   if (!oldContract) return;
@@ -8967,6 +9011,7 @@ function buildContractSchedule(contract) {
 
   const totalHT = Number(pr.totalHT || 0);
   const tvaRate = Number(pr.tvaRate || 0);
+  const duration = Number(pr.durationMonths || 0);
 
   let n = 1;
   let stepMonths = 0;
@@ -8974,14 +9019,25 @@ function buildContractSchedule(contract) {
   if (mode === "annuel") {
     n = 1;
     stepMonths = 0;
+  } else if (mode === "annuel_50_50") {
+    n = 2;
+    stepMonths = duration > 0 ? Math.round(duration / 2) : 0;
   } else {
-    n = getNumberOfInstallments(pr);      // 👈 basé sur durationMonths
+    n = getNumberOfInstallments(pr);      // basé sur durationMonths
     stepMonths = getBillingStepMonths(mode);
   }
 
   if (n < 1) n = 1;
 
-  const amountHT = mode === "annuel" ? totalHT : totalHT / n;
+  let amountHT;
+  if (mode === "annuel") {
+    amountHT = totalHT;
+  } else if (mode === "annuel_50_50") {
+    amountHT = totalHT / 2;
+  } else {
+    amountHT = totalHT / n;
+  }
+
   const amountTVA = amountHT * (tvaRate / 100);
   const amountTTC = amountHT + amountTVA;
 
@@ -9007,6 +9063,7 @@ function buildContractSchedule(contract) {
 
   return rows;
 }
+
 
 
 function renderContractScheduleHTML(rows) {
@@ -9173,16 +9230,18 @@ function getBillingStepMonths(mode) {
   if (mode === "mensuel")      return 1;
   if (mode === "trimestriel")  return 3;
   if (mode === "semestriel")   return 6;
-  // annuel = tout en une fois
+  // "annuel_50_50" et "annuel" auront un traitement spécifique ailleurs
   return 0;
 }
+
 
 // Combien d'échéances pour ce contrat ?
 
 function getNumberOfInstallments(pricing) {
   const mode = pricing.billingMode || "annuel";
 
-  if (mode === "annuel") return 1;
+  if (mode === "annuel")       return 1;
+  if (mode === "annuel_50_50") return 2;
 
   const dur  = Number(pricing.durationMonths || 0);
   const step = getBillingStepMonths(mode);
@@ -9193,11 +9252,19 @@ function getNumberOfInstallments(pricing) {
   return Math.max(1, Math.ceil(dur / step));
 }
 
+
 function computeEcheanceNumber(pricing) {
   const total = getNumberOfInstallments(pricing); 
 
   const start = new Date(pricing.startDate + "T00:00:00");
-  const step  = getBillingStepMonths(pricing.billingMode);
+  let step;
+
+  if (pricing.billingMode === "annuel_50_50") {
+    const dur = Number(pricing.durationMonths || 0);
+    step = dur > 0 ? Math.round(dur / 2) : 1;
+  } else {
+    step = getBillingStepMonths(pricing.billingMode);
+  }
 
   const next  = new Date(pricing.nextInvoiceDate + "T00:00:00");
 
@@ -9207,6 +9274,7 @@ function computeEcheanceNumber(pricing) {
 
   return Math.min(total, Math.max(1, Math.floor(diffMonths / step) + 1));
 }
+
 
 
 // ---------- FACTURE INITIALE À LA CRÉATION DU CONTRAT ----------
@@ -9231,8 +9299,6 @@ function formatContractGlobalPeriod(pr) {
   return `${startLabel} à ${endLabel}`;
 }
 
-
-
 function generateImmediateBilling(contract) {
   const pr = contract.pricing || {};
   const c  = contract.client  || {};
@@ -9251,31 +9317,40 @@ function generateImmediateBilling(contract) {
 
   // 🏠 PARTICULIER
   // On considère :
-  // - "annuel" = règlement forfaitaire unique
-  // - "mensuel" = paiement échelonné par mois
+  // - "mensuel"       = paiement échelonné
+  // - "annuel_50_50"  = 2 paiements de 50 %
+  // - "annuel"        = théoriquement forfaitaire, mais pour les particuliers
+  //                     l’UI va empêcher de choisir ce mode.
   let n = 1;
   if (mode === "mensuel") {
     n = getNumberOfInstallments(pr); // = nb de mois de contrat
+  } else if (mode === "annuel_50_50") {
+    n = 2;
   }
 
   if (!n || n < 1) n = 1;
 
-  const amountHT = (mode === "mensuel") ? (totalHT / n) : totalHT;
+  let amountHT;
+  if (mode === "mensuel") {
+    amountHT = totalHT / n;
+  } else if (mode === "annuel_50_50") {
+    amountHT = totalHT / 2;
+  } else {
+    amountHT = totalHT;
+  }
 
   const tvaRate   = Number(pr.tvaRate) || 0;
   const tvaAmount = amountHT * (tvaRate / 100);
   const totalTTC  = amountHT + tvaAmount;
 
-  // 👉 Numérotation globale : FAC-2025-001, etc.
   const number   = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const refDateISO = pr.startDate || todayISO;
-  const moisLabel  = monthYearFr(refDateISO); // ex "mai 2026"
+  const moisLabel  = monthYearFr(refDateISO);
   const clientName = (c.name || "").trim();
   const suffixClient = clientName ? " – " + clientName : "";
 
-  // 🏊 type : piscine / spa / etc.
   const poolType = pr.mainService || (contract.pool && contract.pool.type) || "";
   let serviceLabel = "Entretien piscine";
   if (
@@ -9290,19 +9365,18 @@ function generateImmediateBilling(contract) {
     serviceLabel = "Entretien piscine / spa";
   }
 
-  // 🗓️ Période globale
-  const globalPeriod = formatContractGlobalPeriod(pr); // "mai 2026 à octobre 2026"
+  const globalPeriod = formatContractGlobalPeriod(pr);
 
-  // 🧾 Objet de la facture
   let subject;
   let lineDesc;
 
   if (mode === "annuel") {
-    // Forfait unique
     subject  = `${serviceLabel} – règlement forfaitaire unique – saison ${globalPeriod}${suffixClient}`;
     lineDesc = `${serviceLabel} – règlement forfaitaire unique pour la saison ${globalPeriod}`;
+  } else if (mode === "annuel_50_50") {
+    subject  = `${serviceLabel} – 1er paiement 50 % – saison ${globalPeriod}${suffixClient}`;
+    lineDesc = `${serviceLabel} – 1er paiement 50 % (acompte) pour la saison ${globalPeriod}`;
   } else {
-    // Mensuel échelonné : échéance 1/n pour le mois de début
     subject  = `${serviceLabel} – échéance 1/${n} – mois de ${moisLabel}${suffixClient}`;
     lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance 1/${n} sur la période ${globalPeriod}`;
   }
@@ -9324,7 +9398,9 @@ function generateImmediateBilling(contract) {
     .concat([
       mode === "annuel"
         ? "Cette facture correspond au règlement forfaitaire du contrat d’entretien."
-        : "Cette facture correspond à la première échéance du contrat d’entretien.",
+        : mode === "annuel_50_50"
+          ? "Cette facture correspond au 1er paiement (50 %) du contrat d’entretien."
+          : "Cette facture correspond à la première échéance du contrat d’entretien.",
       "Les Conditions Générales de Vente sont disponibles sur demande."
     ])
     .join("\n");
@@ -9387,6 +9463,7 @@ function generateImmediateBilling(contract) {
   };
 }
 
+
 function createAutomaticInvoice(contract) {
   const pr = contract.pricing || {};
   const c  = contract.client  || {};
@@ -9413,7 +9490,6 @@ function createAutomaticInvoice(contract) {
   const number = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  // 🔢 BLOC DATE ÉCHÉANCE
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
 
@@ -9423,33 +9499,31 @@ function createAutomaticInvoice(contract) {
   const moisLabel = monthYearFr(nextISO); 
   const clientName = c.name ? ` – ${c.name}` : "";
 
-  // Type de service : piscine, spa, etc.
   const poolType = pr.mainService || "";
   let serviceLabel = "Entretien piscine";
   if (poolType === "spa" || poolType === "spa_jacuzzi" || poolType === "entretien_jacuzzi") {
     serviceLabel = "Entretien spa / jacuzzi";
   }
 
-  // Période globale
   const globalPeriod = formatContractGlobalPeriod(pr);
-
-  // --------------------------------------------------------------------
-  // 🎯 TEXTE DE FACTURATION SELON PARTICULIER / SYNDIC
-  // --------------------------------------------------------------------
 
   let subject = "";
   let lineDesc = "";
 
   if (clientType === "particulier") {
-    // 👉 FACTURES ANTICIPÉES (à l’avance)
     const numEcheance = computeEcheanceNumber(pr);
-    subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}${clientName}`;
-    lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
+
+    if (mode === "annuel_50_50") {
+      subject  = `${serviceLabel} – 2ᵉ paiement 50 % – saison ${globalPeriod}${clientName}`;
+      lineDesc = `${serviceLabel} – 2ᵉ paiement 50 % (solde) pour la saison ${globalPeriod}`;
+    } else {
+      subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}${clientName}`;
+      lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
+    }
   }
 
   else {
-    // 👉 SYNDIC = FACTURE APRÈS PRESTATION
-    // période = mois précédent
+    // SYNDIC = facturation post-payée
     const prevStart = new Date(nextDate);
     prevStart.setDate(1);
     const prevEnd = new Date(prevStart);
@@ -9463,9 +9537,6 @@ function createAutomaticInvoice(contract) {
     lineDesc = `${serviceLabel} – prestations du ${startLabel} au ${endLabel}`;
   }
 
-  // --------------------------------------------------------------------
-  // NOTES selon type de client
-  // --------------------------------------------------------------------
   const notes = (clientType === "syndic"
     ? [
         "Règlement à 30 jours fin de mois.",
@@ -9478,16 +9549,15 @@ function createAutomaticInvoice(contract) {
         "Règlement à réception de facture.",
         "Aucun escompte pour paiement anticipé.",
         "Des pénalités peuvent être appliquées en cas de retard.",
-        "Cette facture correspond à une échéance du contrat d’entretien.",
+        mode === "annuel_50_50"
+          ? "Cette facture correspond au 2ᵉ paiement (50 %) du contrat d’entretien."
+          : "Cette facture correspond à une échéance du contrat d’entretien.",
         "Les Conditions Générales de Vente sont disponibles sur demande."
       ]
   ).join("\n");
 
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
-  // --------------------------------------------------------------------
-  // OBJET FINAL FACTURE
-  // --------------------------------------------------------------------
   return {
     id: Date.now().toString(),
     type: "facture",
@@ -9543,6 +9613,7 @@ function createAutomaticInvoice(contract) {
     updatedAt: todayISO
   };
 }
+
 
 function createDevisFromCurrentContract() {
   if (!currentContractId) {
@@ -9656,6 +9727,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
