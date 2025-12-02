@@ -1248,6 +1248,16 @@ function getNextNumber(type) {
   }
   return prefix + "-" + year + "-" + String(next).padStart(3, "0");
 }
+
+function generateId(prefix) {
+  // ID du style "FAC-1735665123456-042381"
+  const rnd = Math.floor(Math.random() * 1e6)
+    .toString()
+    .padStart(6, "0");
+  return `${prefix}-${Date.now()}-${rnd}`;
+}
+
+
 function getNextContractReference() {
   const year = new Date().getFullYear();
   const prefix = "CTR"; // comme DEV / FAC mais pour les contrats
@@ -4028,7 +4038,7 @@ function transformToInvoice() {
   const docs = getAllDocuments();
   const facture = JSON.parse(JSON.stringify(devis));
 
-  facture.id = Date.now().toString();
+ facture.id = generateId("FAC");
   facture.type = "facture";
   facture.number = getNextNumber("facture");
   facture.date = new Date().toISOString().split("T")[0];
@@ -5812,18 +5822,29 @@ function computeNextInvoiceDate(contract) {
   const start = new Date(startISO + "T00:00:00");
   if (isNaN(start.getTime())) return "";
 
-  // Début du mois suivant une date
+  // 🔧 Fin de mois propre
   function endOfMonth(d) {
     const x = new Date(d);
     x.setMonth(x.getMonth() + 1);
     x.setDate(0);
+    x.setHours(0, 0, 0, 0);
     return x;
   }
 
-  // Date de fin du contrat
+  // 🔧 Fin de période n (n = 1, 2, 3...) pour un syndic
+  function getInstallmentEnd(startDate, stepMonths, index) {
+    const d = new Date(startDate);
+    d.setMonth(d.getMonth() + stepMonths * index);
+    d.setDate(0); // dernier jour du mois précédent
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }
+
+  // Date de fin de contrat (fin du dernier mois)
   const contractEnd = new Date(start);
   contractEnd.setMonth(contractEnd.getMonth() + duration);
   contractEnd.setDate(0);
+  contractEnd.setHours(0, 0, 0, 0);
 
   // =======================================================
   // 🔵 SYNDIC = POST-PAYÉ (factures après prestation)
@@ -5833,8 +5854,10 @@ function computeNextInvoiceDate(contract) {
     // Annuel syndic → facture uniquement à la FIN du contrat
     if (mode === "annuel") {
       if (!pr.nextInvoiceDate) {
+        // on donne la date de fin de contrat
         return contractEnd.toISOString().slice(0, 10);
       }
+      // s'il y a déjà eu une facture (ou une tentative), plus d'autre
       return "";
     }
 
@@ -5845,21 +5868,37 @@ function computeNextInvoiceDate(contract) {
 
     // 1ʳᵉ échéance → fin de la 1ʳᵉ période
     if (!pr.nextInvoiceDate) {
-      const end1 = endOfMonth(new Date(start));
-      end1.setMonth(end1.getMonth() + stepMonths - 1);
-      if (end1 > contractEnd) return contractEnd.toISOString().slice(0, 10);
+      let end1 = getInstallmentEnd(start, stepMonths, 1);
+      if (end1 > contractEnd) end1 = new Date(contractEnd);
       return end1.toISOString().slice(0, 10);
     }
 
-    const currentIndex = computeEcheanceNumber(pr);
-    const nextIndex = currentIndex + 1;
+    // On cherche à quel index correspond la dernière nextInvoiceDate
+    const currentISO = pr.nextInvoiceDate;
+    let currentIndex = null;
 
+    for (let i = 1; i <= totalInstallments; i++) {
+      let endI = getInstallmentEnd(start, stepMonths, i);
+      if (endI > contractEnd) {
+        endI = new Date(contractEnd);
+      }
+      const isoI = endI.toISOString().slice(0, 10);
+      if (isoI === currentISO) {
+        currentIndex = i;
+        break;
+      }
+    }
+
+    if (!currentIndex) {
+      // si la date ne correspond à aucune période -> on arrête
+      return "";
+    }
+
+    const nextIndex = currentIndex + 1;
     if (nextIndex > totalInstallments) return "";
 
-    const nextEnd = endOfMonth(new Date(start));
-    nextEnd.setMonth(nextEnd.getMonth() + stepMonths * nextIndex - 1);
-
-    if (nextEnd > contractEnd) return "";
+    let nextEnd = getInstallmentEnd(start, stepMonths, nextIndex);
+    if (nextEnd > contractEnd) nextEnd = new Date(contractEnd);
     return nextEnd.toISOString().slice(0, 10);
   }
 
@@ -5867,19 +5906,15 @@ function computeNextInvoiceDate(contract) {
   // 🔴 PARTICULIER = FACTURATION ANTICIPÉE
   // =======================================================
 
-  // Cas ANNUL
+  // Cas "annuel" simple → pas d'échéancier ici
   if (mode === "annuel") {
     return "";
   }
 
-  // ========================================
   // 🟣 PARTICULIER ANNÉE 50/50
-  // ========================================
   if (mode === "annuel_50_50") {
-
     // 1ʳᵉ facture → immédiate (déjà faite ailleurs)
-    // On calcule ici la 2e facture (solde 50%)
-
+    // Ici on ne calcule que la 2e facture (solde 50%)
     if (!pr.nextInvoiceDate) {
       const mid = new Date(start);
 
@@ -5887,21 +5922,44 @@ function computeNextInvoiceDate(contract) {
       const half = Math.floor(duration / 2);
       mid.setMonth(mid.getMonth() + half);
 
-      // Fin du mois de la date calculée
       const midEnd = endOfMonth(mid);
 
       if (midEnd > contractEnd) return contractEnd.toISOString().slice(0, 10);
       return midEnd.toISOString().slice(0, 10);
     }
 
-    // Si nextInvoiceDate est déjà défini → 
-    // cela veut dire que la facture de solde existe déjà
+    // Si nextInvoiceDate déjà défini → 2e facture déjà émise
     return "";
   }
 
   // ========================================
   // 🟢 PARTICULIER MENSUEL / TRIMESTRIEL / SEMESTRIEL
   // ========================================
+
+  // Cas spécial : particulier mensuel → toujours 1er de chaque mois
+  if (mode === "mensuel") {
+    let base;
+
+    if (pr.nextInvoiceDate) {
+      // On part de la dernière échéance déjà programmée
+      base = new Date(pr.nextInvoiceDate + "T00:00:00");
+      if (isNaN(base.getTime())) return "";
+    } else {
+      // 1ʳʳᵉ échéance mensuelle : 1er mois du contrat
+      const firstISO = firstDayOfMonthISO(startISO);
+      if (!firstISO) return "";
+      base = new Date(firstISO + "T00:00:00");
+    }
+
+    const next = new Date(base);
+    next.setMonth(next.getMonth() + 1);
+    next.setDate(1); // on reste au 1er du mois
+
+    if (next > contractEnd) return "";
+    return next.toISOString().slice(0, 10);
+  }
+
+  // Autres modes (trimestriel/semestriel si un jour pour particulier)
   const stepMonths = getBillingStepMonths(mode);
   if (!stepMonths) return "";
 
@@ -5917,7 +5975,8 @@ function computeNextInvoiceDate(contract) {
 
   if (next > contractEnd) return "";
   return next.toISOString().slice(0, 10);
-}
+
+
 
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
@@ -7223,16 +7282,38 @@ function fillContractForm(contract) {
   }
 }
 
+// Combien de factures d'échéance existent déjà pour ce contrat ?
+function countContractInstallmentInvoices(contractId) {
+  const docs = getAllDocuments();
+  return docs.filter(d =>
+    d.type === "facture" &&
+    d.contractId === contractId &&
+    d.prestations &&
+    d.prestations.some(p =>
+      p.kind === "contrat_echeance" ||
+      p.kind === "contrat_echeance_initiale"
+    )
+  ).length;
+}
+
+
 function rebuildContractInvoices(contract) {
   const pr = contract.pricing || {};
   let docs = getAllDocuments();
   const todayISO = new Date().toISOString().slice(0, 10);
+  const todayObj = new Date(todayISO + "T00:00:00");
+
+  // Nombre d'échéances prévues au total
+  const totalInstallments = getNumberOfInstallments(pr);
 
   // 1️⃣ Supprimer toutes les factures liées à ce contrat
   docs = docs.filter(doc => doc.contractId !== contract.id);
 
   // 2️⃣ Réinitialiser la prochaine échéance
   pr.nextInvoiceDate = "";
+
+  // Compteur de factures d'échéance déjà créées
+  let installmentsCount = 0;
 
   // 3️⃣ Re-créer la facture initiale (PARTICULIER uniquement)
   const immediate = generateImmediateBilling(contract);
@@ -7241,16 +7322,22 @@ function rebuildContractInvoices(contract) {
     if (typeof saveSingleDocumentToFirestore === "function") {
       saveSingleDocumentToFirestore(immediate);
     }
+    // première échéance déjà créée
+    installmentsCount = 1;
+    saveDocuments(docs); // pour la numérotation
   }
 
   // 4️⃣ Calculer la 1re prochaine échéance (particulier + syndic)
   pr.nextInvoiceDate = computeNextInvoiceDate(contract);
 
-  // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui
-  while (pr.nextInvoiceDate) {
-    const nextISO = pr.nextInvoiceDate;
+  // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui,
+  //    SANS dépasser le nombre d'échéances prévues
+  while (pr.nextInvoiceDate &&
+         installmentsCount < totalInstallments) {
+
+    const nextISO  = pr.nextInvoiceDate;
     const nextDate = new Date(nextISO + "T00:00:00");
-    if (isNaN(nextDate.getTime()) || nextDate > new Date(todayISO + "T00:00:00")) {
+    if (isNaN(nextDate.getTime()) || nextDate > todayObj) {
       break;
     }
 
@@ -7259,16 +7346,22 @@ function rebuildContractInvoices(contract) {
       break;
     }
 
+    // On force la date de la facture à la vraie échéance
+    inv.date = nextISO;
+
     docs.push(inv);
     if (typeof saveSingleDocumentToFirestore === "function") {
       saveSingleDocumentToFirestore(inv);
     }
+    saveDocuments(docs);  // pour que getNextNumber voie ce numéro
+
+    installmentsCount++;
 
     // Recalcul de la prochaine échéance après cette facture
     pr.nextInvoiceDate = computeNextInvoiceDate(contract);
   }
 
-  // 6️⃣ Sauvegarde des documents & du contrat
+  // 6️⃣ Sauvegarde finale des documents & du contrat
   saveDocuments(docs);
 
   contract.pricing = pr;
@@ -7285,6 +7378,7 @@ function rebuildContractInvoices(contract) {
 
   return true;
 }
+
 
 
 
@@ -7418,11 +7512,21 @@ if (pr.clientType === "syndic") {
       saveSingleContractToFirestore(contract);
     }
 
-  } else {
+   if (typeof checkScheduledInvoices === "function") {
+      checkScheduledInvoices();
+    }
+
+   } else {
     // ======= CONTRAT EXISTANT =======
 
-    // Tout recalculer proprement
+    // Tout recalculer proprement (échéances déjà passées, etc.)
     rebuildContractInvoices(contract);
+
+    // 🔄 Lancer aussi le moteur de facturation automatique
+    //    → c'est là que l'annuel syndic va créer sa facture de clôture
+    if (typeof checkScheduledInvoices === "function") {
+      checkScheduledInvoices();
+    }
 
     showConfirmDialog({
       title: "Contrat mis à jour",
@@ -7435,14 +7539,24 @@ if (pr.clientType === "syndic") {
     return;
   }
 
+
   // 9️⃣ Si besoin, proposer la création d'un devis (particulier > 150 €)
   if (typeof maybeProposeDevisForContract === "function") {
     const popupShown = maybeProposeDevisForContract(contract);
     if (popupShown) {
       // La popup "Créer un devis ?" a été affichée,
       // on ne rajoute pas une deuxième popup "Contrat enregistré".
+      // MAIS on peut quand même lancer le rattrapage de factures.
+      if (typeof checkScheduledInvoices === "function") {
+        checkScheduledInvoices();
+      }
       return;
     }
+  }
+
+  // 🔄 Après la sauvegarde du contrat, on lance le moteur de facturation automatique
+  if (typeof checkScheduledInvoices === "function") {
+    checkScheduledInvoices();
   }
 
   // 🔟 Popup de confirmation standard
@@ -7455,6 +7569,7 @@ if (pr.clientType === "syndic") {
     icon: "✅"
   });
 }
+
 
 
 
@@ -7531,6 +7646,15 @@ function parseFrenchDate(str) {
   if (parts.length !== 3) return null;
   return `${parts[2]}-${parts[1]}-${parts[0]}`;
 }
+
+function firstDayOfMonthISO(isoDate) {
+  if (!isoDate) return "";
+  const d = new Date(isoDate + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
+  d.setDate(1);
+  return d.toISOString().slice(0, 10);
+}
+
 
 function monthYearFr(isoDate) {
   if (!isoDate) return "";
@@ -7773,7 +7897,7 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
   ];
 
   const facture = {
-    id: Date.now().toString(),
+      id: generateId("FAC"),
     type: "facture",
     number,
     date: todayISO,
@@ -7870,7 +7994,7 @@ function createTerminationInvoiceSimple(contract) {
   ].join("\n");
 
   const facture = {
-    id: Date.now().toString(),
+   id: generateId("FAC"),
     type: "facture",
     number,
     date: todayISO,
@@ -8137,7 +8261,7 @@ const number = getNextNumber("facture");
     .join("\n");
 
   const facture = {
-    id: Date.now().toString(),
+       id: generateId("FAC"),
     type: "facture",
     number,
     date: todayISO,
@@ -9524,10 +9648,19 @@ function generateImmediateBilling(contract) {
   const start    = new Date(startISO + "T00:00:00");
   if (isNaN(start.getTime())) return null;
 
-  // 📌 Nombre d’échéances
+  // 📅 Date de la facture initiale
+  let invoiceDateISO = startISO;
+
+  // Particulier mensuel → on force au 1er du mois
+  if (clientType === "particulier" && mode === "mensuel") {
+    const firstISO = firstDayOfMonthISO(startISO);
+    if (firstISO) invoiceDateISO = firstISO;
+  }
+
+  // 📌 Nombre d’échéances prévues
   let n = 1;
   if (mode === "mensuel") {
-    n = getNumberOfInstallments(pr); // ex : 12 mois -> 12
+    n = getNumberOfInstallments(pr);      // ex : 12 mois -> 12
   } else if (mode === "annuel_50_50") {
     n = 2;
   }
@@ -9548,10 +9681,6 @@ function generateImmediateBilling(contract) {
   const totalTTC  = amountHT + tvaAmount;
 
   const number = getNextNumber("facture");
-
-  // 📅 Date de la facture initiale
-  // Particulier mensuel & 50/50 : facture à la date de début du contrat
-  const invoiceDateISO = startISO;
 
   const moisLabel   = monthYearFr(invoiceDateISO); // "mai 2026"
   const clientName  = (c.name || "").trim();
@@ -9592,7 +9721,7 @@ function generateImmediateBilling(contract) {
   ].join("\n");
 
   return {
-    id: Date.now().toString(),
+    id: generateId("FAC"),
     type: "facture",
     number,
     date: invoiceDateISO,
@@ -9646,7 +9775,6 @@ function generateImmediateBilling(contract) {
     createdAt: new Date().toISOString()
   };
 }
-
 
 function createAutomaticInvoice(contract) {
   const pr = contract.pricing || {};
@@ -9716,13 +9844,18 @@ function createAutomaticInvoice(contract) {
       lineDesc = `${serviceLabel} – 2e paiement (50 %) (2/2) – solde du contrat d’entretien pour la saison ${globalPeriod}`;
     } else {
       // Mensuel anticipé (échéance i/n)
+
+      // 💡 IMPORTANT :
+      // numéro d’échéance = nb de factures d’échéance déjà existantes + 1
+      const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
+
       amountHT = totalHT / n;
-      const numEcheance = computeEcheanceNumber(pr);
 
       subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}${clientName}`;
       lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
     }
   }
+
 
   // ============================
   // 🔵 SYNDIC (post-payé)
@@ -9809,7 +9942,7 @@ function createAutomaticInvoice(contract) {
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
   return {
-    id: Date.now().toString(),
+      id: generateId("FAC"),
     type: "facture",
     number,
     date: nextISO,
@@ -9922,38 +10055,78 @@ function checkScheduledInvoices() {
   const contracts = getAllContracts();
   const todayISO  = new Date().toISOString().slice(0, 10);
 
-  contracts.forEach(contract => {
+  contracts.forEach((contract) => {
     const pr = contract.pricing || {};
     const clientType = pr.clientType || "particulier";
     const mode       = pr.billingMode || "annuel";
 
-    // 🔴 Cas spécial : Syndic + Annuel → facture de clôture
+    // On recalcule le statut à chaque passage (au cas où)
     const status = computeContractStatus(contract);
 
-    if (
-      clientType === "syndic" &&
-      mode === "annuel" &&
-      status === CONTRACT_STATUS.TERMINE
-    ) {
-      const hasInvoice = docs.some(d =>
-        d.type === "facture" && d.contractId === contract.id
+    // =====================================================
+    // 🔵 CAS SPÉCIAL : ANNUEL NON-PARTICULIER (Syndic / Agence)
+    // → une seule facture de clôture quand le contrat est terminé
+    // =====================================================
+    if (mode === "annuel" && clientType !== "particulier") {
+      // vérifie s'il existe DÉJÀ une facture de clôture
+      const hasClosureInvoice = docs.some((d) =>
+        d.type === "facture" &&
+        d.contractId === contract.id &&
+        d.prestations &&
+        d.prestations.some((p) => p.kind === "contrat_resiliation")
       );
 
-      if (!hasInvoice) {
+      console.log(
+        "[Billing] Annuel non-particulier",
+        contract.id,
+        "clientType=", clientType,
+        "status=", status,
+        "hasClosureInvoice=", hasClosureInvoice
+      );
+
+      // contrat terminé + aucune facture de clôture → on la crée
+      if (status === CONTRACT_STATUS.TERMINE && !hasClosureInvoice) {
         const fac = createTerminationInvoiceForContract(contract);
         if (fac) {
-          // createTerminationInvoiceForContract SAUVE déjà dans docs
+          console.log(
+            "[Billing] Facture de clôture créée pour",
+            contract.id,
+            "facture", fac.number
+          );
+
+          // la fonction push déjà dans docs + saveDocuments,
+          // on relit la liste à jour au cas où
           docs = getAllDocuments();
+
+          if (typeof saveSingleDocumentToFirestore === "function") {
+            saveSingleDocumentToFirestore(fac);
+          }
+        } else {
+          console.log(
+            "[Billing] createTerminationInvoiceForContract() a renvoyé null pour",
+            contract.id
+          );
         }
       }
+
+      // pas d’échéancier classique pour l’annuel non-particulier
       return;
     }
 
-    // 💶 Cas général (échéances)
+    // =====================================================
+    // 💶 CAS GÉNÉRAL (particulier + syndic mensuel/trimestriel/semestriel)
+    // =====================================================
     if (!pr.billingMode) return;
 
-    // Rattrapage : tant qu’une échéance est en retard, on génère
-    while (pr.nextInvoiceDate && pr.nextInvoiceDate <= todayISO) {
+    const totalInstallments = getNumberOfInstallments(pr);
+    let installmentsCount   = countContractInstallmentInvoices(contract.id);
+
+    // Rattrapage : tant qu’une échéance est en retard,
+    // et qu'on n'a pas dépassé le nombre prévu
+    while (pr.nextInvoiceDate &&
+           pr.nextInvoiceDate <= todayISO &&
+           installmentsCount < totalInstallments) {
+
       const fac = createAutomaticInvoice(contract);
       if (!fac) break;
 
@@ -9964,16 +10137,20 @@ function checkScheduledInvoices() {
         saveSingleDocumentToFirestore(fac);
       }
 
+      installmentsCount++;
+
       // Prochaine échéance
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
 
-      // Si plus d'échéance à venir → on sort
+      // Si plus d'échéance à venir → on sort de la boucle
       if (!contract.pricing.nextInvoiceDate) break;
     }
+
   });
 
   saveContracts(contracts);
 }
+
 
 function runBillingTestSuite() {
   console.log("=== 🔥 TEST FACTURATION AUTOMATIQUE AQUACLIM ===");
