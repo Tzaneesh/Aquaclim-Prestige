@@ -6213,8 +6213,6 @@ function maybeProposeDevisForContract(contract) {
   return true;
 }
 
-
-
 function newContract() {
   currentContractId = null;
 
@@ -6237,8 +6235,18 @@ function newContract() {
     });
   }
 
+  // Type client par défaut : PARTICULIER
   const ctClientType = document.getElementById("ctClientType");
   if (ctClientType) ctClientType.value = "particulier";
+
+  // 👉 forcer aussi les radios en cohérence
+  const ctPartRadio = document.getElementById("ctClientParticulier");
+  const ctSynRadio  = document.getElementById("ctClientSyndic");
+  if (ctPartRadio) ctPartRadio.checked = true;
+  if (ctSynRadio)  ctSynRadio.checked  = false;
+
+  // 👉 et appliquer toute la logique UI (billing modes, section site, etc.)
+  updateContractClientType("particulier");
 
   const ctMode = document.getElementById("ctMode");
   if (ctMode) ctMode.value = "standard";
@@ -6293,6 +6301,7 @@ function newContract() {
     recomputeContract();
   }
 }
+
 
 function openContractFromList(id) {
   const contract = getContract(id);
@@ -7387,7 +7396,12 @@ function resetContractFormToDefaults() {
 
   const ctMainService = document.getElementById("ctMainService");
   if (ctMainService) ctMainService.value = "piscine_chlore";
+  const ctPartRadio = document.getElementById("ctClientParticulier");
+  const ctSynRadio  = document.getElementById("ctClientSyndic");
+  if (ctPartRadio) ctPartRadio.checked = true;
+  if (ctSynRadio)  ctSynRadio.checked  = false;
 
+  updateContractClientType("particulier");
   const ctMode = document.getElementById("ctMode");
   if (ctMode) ctMode.value = "standard";
 
@@ -8905,11 +8919,6 @@ function updateContractClientType(type) {
   }
 }
 
-// 🔗 appelé par le HTML : onchange="selectClientType('particulier')" / "selectClientType('syndic')"
-function selectClientType(type) {
-  updateContractClientType(type);
-}
-
 
 function renewContract(id) {
   const oldContract = getContract(id);
@@ -9859,6 +9868,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
