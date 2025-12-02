@@ -5727,12 +5727,11 @@ function normalizeContractBeforeSave(contract) {
 
 function computeNextInvoiceDate(contract) {
   const pr = contract.pricing || {};
-  const mode = pr.billingMode || "annuel";
   const clientType = pr.clientType || "particulier";
+  const mode       = pr.billingMode || "annuel";
 
   const startISO = pr.startDate;
   const duration = Number(pr.durationMonths || 0);
-
   if (!startISO || !duration) return "";
 
   const start = new Date(startISO + "T00:00:00");
@@ -5743,75 +5742,92 @@ function computeNextInvoiceDate(contract) {
   contractEnd.setMonth(contractEnd.getMonth() + duration);
   contractEnd.setDate(contractEnd.getDate() - 1);
 
-  // ============= CAS PARTICULIER =============
-  if (clientType === "particulier") {
-    // Annuel : tout est géré par la facture initiale, pas d'échéancier
+  // ===================== CAS SYNDIC =====================
+  if (clientType === "syndic") {
+    // Annuel syndic : pas d'échéancier, seulement facture de fin (createTerminationInvoiceForContract)
     if (mode === "annuel") {
       return "";
     }
 
-    const stepMonths = getBillingStepMonths(mode); // 1 / 3 / 6
+    const stepMonths = getBillingStepMonths(mode);
     if (!stepMonths) return "";
 
-    let base;
-    if (pr.nextInvoiceDate) {
-      base = new Date(pr.nextInvoiceDate + "T00:00:00");
-      if (isNaN(base.getTime())) base = new Date(start);
-    } else {
-      base = new Date(start);
+    const totalInstallments = getNumberOfInstallments(pr);
+
+    // 🟢 1ʳᵉ échéance : aucune date programmée, on calcule la fin de la 1ʳᵉ période
+    if (!pr.nextInvoiceDate) {
+      const end1 = new Date(start);
+      end1.setMonth(end1.getMonth() + stepMonths);
+      end1.setDate(0); // dernier jour du mois précédent
+
+      if (end1 > contractEnd) {
+        return contractEnd.toISOString().slice(0, 10);
+      }
+      return end1.toISOString().slice(0, 10);
     }
 
-    const next = new Date(base);
-    next.setMonth(next.getMonth() + stepMonths);
+    // 🟢 Échéances suivantes : on se base sur le numéro d'échéance actuel
+    const currentIndex = computeEcheanceNumber(pr); // 1, 2, 3...
+    const nextIndex    = currentIndex + 1;
 
-    if (next > contractEnd) {
+    if (nextIndex > totalInstallments) {
       return "";
     }
 
-    return next.toISOString().slice(0, 10);
+    const nextEnd = new Date(start);
+    nextEnd.setMonth(nextEnd.getMonth() + stepMonths * nextIndex);
+    nextEnd.setDate(0);
+
+    if (nextEnd > contractEnd) {
+      return "";
+    }
+
+    return nextEnd.toISOString().slice(0, 10);
   }
 
-  // ============= CAS SYNDIC =============
+  // ===================== CAS PARTICULIER =====================
 
-  // Annuel syndic : une seule facture de fin (gérée par createTerminationInvoiceForContract)
+  // Annuel : pas d'échéancier (facture initiale uniquement)
   if (mode === "annuel") {
-    if (!pr.nextInvoiceDate) {
-      // première programmation : fin de contrat
-      return contractEnd.toISOString().slice(0, 10);
-    }
-    // après la facture de fin, plus d'échéances
     return "";
   }
 
-  let stepMonths = getBillingStepMonths(mode);
+  // Annuel 50/50 : 2e facture au milieu du contrat
+  if (mode === "annuel_50_50") {
+    if (!pr.nextInvoiceDate) {
+      const halfMonths = Math.max(1, Math.round(duration / 2));
+      const mid = new Date(start);
+      mid.setMonth(mid.getMonth() + halfMonths);
+      if (mid > contractEnd) {
+        mid.setTime(contractEnd.getTime());
+      }
+      return mid.toISOString().slice(0, 10);
+    }
+    // 2ᵉ facture déjà programmée / faite → plus rien
+    return "";
+  }
+
+  // Mensuel / Trimestriel / Semestriel (particulier) : facturation anticipée
+  const stepMonths = getBillingStepMonths(mode); // 1 / 3 / 6
   if (!stepMonths) return "";
 
-  // 1ʳᵉ échéance : fin de la première période à partir du début
-  if (!pr.nextInvoiceDate) {
-    const firstEnd = new Date(start);
-    firstEnd.setMonth(firstEnd.getMonth() + stepMonths);
-    // dernier jour du mois précédent
-    firstEnd.setDate(0);
-
-    if (firstEnd > contractEnd) {
-      return contractEnd.toISOString().slice(0, 10);
-    }
-    return firstEnd.toISOString().slice(0, 10);
+  let base;
+  if (pr.nextInvoiceDate) {
+    base = new Date(pr.nextInvoiceDate + "T00:00:00");
+    if (isNaN(base.getTime())) base = new Date(start);
+  } else {
+    // 1ʳᵉ échéance = un “step” après le début
+    base = new Date(start);
   }
 
-  // Échéances suivantes : on repart de la dernière date d'échéance
-  const prevEnd = new Date(pr.nextInvoiceDate + "T00:00:00");
-  if (isNaN(prevEnd.getTime())) return "";
+  const next = new Date(base);
+  next.setMonth(next.getMonth() + stepMonths);
 
-  const nextEnd = new Date(prevEnd);
-  nextEnd.setMonth(nextEnd.getMonth() + stepMonths);
-  nextEnd.setDate(0);
-
-  if (nextEnd > contractEnd) {
+  if (next > contractEnd) {
     return "";
   }
 
-  return nextEnd.toISOString().slice(0, 10);
+  return next.toISOString().slice(0, 10);
 }
 
 
@@ -7256,8 +7272,10 @@ function saveContract() {
       });
     }
 
-// 2) Définition de la première échéance (Particulier + Syndic)
-contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
+
+    // 2) Définition de la première échéance (particulier + syndic)
+    contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
+
 
 
     // Re-sauvegarde du contrat mise à jour
@@ -9521,7 +9539,6 @@ function createAutomaticInvoice(contract) {
   const number   = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  // 🔢 Date d'échéance actuelle (pilotée par nextInvoiceDate)
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
 
@@ -9551,18 +9568,19 @@ function createAutomaticInvoice(contract) {
   let lineDesc = "";
 
   if (clientType === "particulier") {
-    // 👉 FACTURES ANTICIPÉES
+    // 👉 FACTURE ÉCHÉANCE PARTICULIER (anticipée)
     const numEcheance = computeEcheanceNumber(pr);
     subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}${clientName}`;
     lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
   } else {
     // 👉 SYNDIC = FACTURATION APRÈS PRESTATION (post-payé)
-    let stepMonths = getBillingStepMonths(mode);
-
-    // Pour un contrat annuel syndic, on facture toute la durée en une fois
-    if (!stepMonths || mode === "annuel") {
-      stepMonths = duration;
+    // Pour un contrat annuel syndic, on ne passe pas ici (facture de fin gérée ailleurs)
+    if (mode === "annuel") {
+      return null;
     }
+
+    let stepMonths = getBillingStepMonths(mode);
+    if (!stepMonths) stepMonths = duration;
 
     const totalInstallments = getNumberOfInstallments(pr);
 
@@ -9620,7 +9638,7 @@ function createAutomaticInvoice(contract) {
     ? [
         "Règlement à 30 jours fin de mois.",
         "Aucun escompte pour paiement anticipé.",
-        "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € (art. L441-10 Code de commerce).",
+        "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
         "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
         "Les Conditions Générales de Vente sont disponibles sur demande."
       ]
@@ -9747,18 +9765,18 @@ function createDevisFromCurrentContract() {
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
 function checkScheduledInvoices() {
-  let docs = getAllDocuments();
+  let docs       = getAllDocuments();
   const contracts = getAllContracts();
-  const todayISO = new Date().toISOString().slice(0, 10);
+  const todayISO  = new Date().toISOString().slice(0, 10);
 
   contracts.forEach(contract => {
     const pr = contract.pricing || {};
     const clientType = pr.clientType || "particulier";
-    const mode = pr.billingMode || "annuel";
+    const mode       = pr.billingMode || "annuel";
 
     // -----------------------------
     // 🧾 CAS SPÉCIAL : SYNDIC + ANNUEL
-    // → Facture de fin de contrat
+    // → Facture de fin de contrat (clôture)
     // -----------------------------
     const status = computeContractStatus(contract);
 
@@ -9766,7 +9784,6 @@ function checkScheduledInvoices() {
         mode === "annuel" &&
         status === CONTRACT_STATUS.TERMINE) {
 
-      // On vérifie s'il existe déjà une facture pour ce contrat
       const hasInvoice = docs.some(d =>
         d.type === "facture" && d.contractId === contract.id
       );
@@ -9783,7 +9800,7 @@ function checkScheduledInvoices() {
         }
       }
 
-      // Pour ce contrat, on s'arrête là (pas d'échéancier classique)
+      // Pour ce contrat, on ne fait pas d’échéancier classique
       return;
     }
 
@@ -9803,12 +9820,14 @@ function checkScheduledInvoices() {
         }
       }
 
-      contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract);
+      // Programme la prochaine échéance
+      contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
     }
   });
 
   saveContracts(contracts);
 }
+
 
 window.onload = function () {
   loadCustomTemplates();
@@ -9842,6 +9861,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
