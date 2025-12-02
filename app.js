@@ -5720,17 +5720,27 @@ if (contract.meta && contract.meta.forceStatus === "termine_renouvele") {
 function normalizeContractBeforeSave(contract) {
   if (!contract.meta) contract.meta = {};
 
+  // 1️⃣ Statut calculé proprement
   contract.status = computeContractStatus(contract);
 
-  // 🔧 PATCH RÉTROCOMPATIBILITÉ :
-  // Si l'ancien système avait stocké le type dans contract.client.type
-  // mais pas dans contract.pricing.clientType → on corrige automatiquement.
-  if (!contract.pricing?.clientType && contract.client?.type) {
-    contract.pricing.clientType = contract.client.type;
+  const pr = contract.pricing || {};
+  const cl = contract.client  || {};
+
+  // 2️⃣ Rétrocompat : recopie du type client si ancien schéma
+  if (!pr.clientType && cl.type) {
+    pr.clientType = cl.type;
   }
+
+  // 3️⃣ Sécurisation : un SYNDIC ne doit jamais être en 50/50
+  if (pr.clientType === "syndic" && pr.billingMode === "annuel_50_50") {
+    pr.billingMode = "annuel";
+  }
+
+  contract.pricing = pr;
 
   return contract;
 }
+
 
 
 function computeNextInvoiceDate(contract) {
@@ -9608,7 +9618,7 @@ function createAutomaticInvoice(contract) {
     id: Date.now().toString(),
     type: "facture",
     number,
-    date: todayISO,
+    date: nextISO,
     validityDate: "",
 
     subject,
@@ -9809,6 +9819,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
