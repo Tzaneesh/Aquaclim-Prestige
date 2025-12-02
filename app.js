@@ -8244,12 +8244,14 @@ function openContractPDF(previewOnly = false) {
       : (v) => (v && v.toFixed ? v.toFixed(2) + " €" : (v || 0) + " €");
 
   const logoSrc = "logo.png";
-  const today   = new Date();
-  const pdfDateStr = today.toLocaleDateString("fr-FR");
+const today   = new Date();
+const pdfDateStr = today.toLocaleDateString("fr-FR");
 
-  const startDateFR = formatDateFr(fromISO(pr.startDate;
+const startDateFR = formatDateFr(pr.startDate);
+const endDateFR   = formatDateFr(pr.endDateLabel);
 
-  const endDateFR   = formatDateFR(pr.endDateLabel);
+// Libellé du bassin
+
 
   // Libellé du bassin
   const poolLabel =
@@ -9141,7 +9143,8 @@ function openContractSchedulePopup() {
     endISO = d.toISOString().slice(0, 10);
   }
 
-  const startLabel = formatDateFr(fromISO(pr.startDate));
+const startLabel = formatDateFr(pr.startDate);
+
   const endLabel   = formatDateFr(endISO);
 
   let periodText = "";
@@ -10074,6 +10077,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
