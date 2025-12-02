@@ -5722,8 +5722,16 @@ function normalizeContractBeforeSave(contract) {
 
   contract.status = computeContractStatus(contract);
 
+  // 🔧 PATCH RÉTROCOMPATIBILITÉ :
+  // Si l'ancien système avait stocké le type dans contract.client.type
+  // mais pas dans contract.pricing.clientType → on corrige automatiquement.
+  if (!contract.pricing?.clientType && contract.client?.type) {
+    contract.pricing.clientType = contract.client.type;
+  }
+
   return contract;
 }
+
 
 function computeNextInvoiceDate(contract) {
   const pr = contract.pricing || {};
@@ -9861,6 +9869,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
