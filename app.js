@@ -5728,8 +5728,7 @@ function normalizeContractBeforeSave(contract) {
 function computeNextInvoiceDate(contract) {
   const pr = contract.pricing || {};
   const mode = pr.billingMode || "annuel";
-  // 🔹 ICI la seule vraie modif : on lit le type sur contract.client.type
-  const clientType = contract?.client?.type || "particulier";
+  const clientType = pr.clientType || "particulier";
 
   const startISO = pr.startDate;
   const duration = Number(pr.durationMonths || 0);
@@ -5746,7 +5745,7 @@ function computeNextInvoiceDate(contract) {
 
   // ============= CAS PARTICULIER =============
   if (clientType === "particulier") {
-    // Annuel : tout est facturé d'un coup (facture initiale), pas d'échéancier
+    // Annuel : tout est géré par la facture initiale, pas d'échéancier
     if (mode === "annuel") {
       return "";
     }
@@ -5759,7 +5758,6 @@ function computeNextInvoiceDate(contract) {
       base = new Date(pr.nextInvoiceDate + "T00:00:00");
       if (isNaN(base.getTime())) base = new Date(start);
     } else {
-      // 1ʳᵉ échéance : un "step" après le début
       base = new Date(start);
     }
 
@@ -5775,25 +5773,24 @@ function computeNextInvoiceDate(contract) {
 
   // ============= CAS SYNDIC =============
 
-  // Annuel : une seule facture finale à la fin du contrat
+  // Annuel syndic : une seule facture de fin (gérée par createTerminationInvoiceForContract)
   if (mode === "annuel") {
-    // Si aucune échéance programmée → fin de contrat
     if (!pr.nextInvoiceDate) {
+      // première programmation : fin de contrat
       return contractEnd.toISOString().slice(0, 10);
     }
-    // Si on a déjà une échéance (donc déjà facturé une fois) → plus rien
+    // après la facture de fin, plus d'échéances
     return "";
   }
 
-  // Syndic mensuel / trimestriel / semestriel : facturation POST-PAYÉE
   let stepMonths = getBillingStepMonths(mode);
   if (!stepMonths) return "";
 
-  // 1ʳᵉ échéance : fin de la première période à partir de start
+  // 1ʳᵉ échéance : fin de la première période à partir du début
   if (!pr.nextInvoiceDate) {
     const firstEnd = new Date(start);
     firstEnd.setMonth(firstEnd.getMonth() + stepMonths);
-    // dernier jour du mois correspondant
+    // dernier jour du mois précédent
     firstEnd.setDate(0);
 
     if (firstEnd > contractEnd) {
@@ -9493,8 +9490,7 @@ function createAutomaticInvoice(contract) {
   const c  = contract.client  || {};
   const s  = contract.site    || {};
 
-  // 🔹 Modif ici : on lit le type sur contract.client.type
-  const clientType = contract?.client?.type || "particulier";
+  const clientType = pr.clientType || "particulier";
   const mode       = pr.billingMode || "annuel";
 
   const totalHT = Number(pr.totalHT) || 0;
@@ -9561,11 +9557,10 @@ function createAutomaticInvoice(contract) {
     lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
   } else {
     // 👉 SYNDIC = FACTURATION APRÈS PRESTATION (post-payé)
-    const stepMode = mode;
-    let stepMonths = getBillingStepMonths(stepMode);
+    let stepMonths = getBillingStepMonths(mode);
 
     // Pour un contrat annuel syndic, on facture toute la durée en une fois
-    if (!stepMonths || stepMode === "annuel") {
+    if (!stepMonths || mode === "annuel") {
       stepMonths = duration;
     }
 
@@ -9698,7 +9693,6 @@ function createAutomaticInvoice(contract) {
     updatedAt: todayISO
   };
 }
-
 
 
 
@@ -9848,6 +9842,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
