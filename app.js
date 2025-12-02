@@ -5745,15 +5745,29 @@ function computeNextInvoiceDate(contract) {
   const start = new Date(startISO + "T00:00:00");
   if (isNaN(start.getTime())) return "";
 
-  // Date de fin de contrat (fin inclusive)
+  // Début du mois suivant une date
+  function endOfMonth(d) {
+    const x = new Date(d);
+    x.setMonth(x.getMonth() + 1);
+    x.setDate(0);
+    return x;
+  }
+
+  // Date de fin du contrat
   const contractEnd = new Date(start);
   contractEnd.setMonth(contractEnd.getMonth() + duration);
-  contractEnd.setDate(contractEnd.getDate() - 1);
+  contractEnd.setDate(0);
 
-  // ===================== CAS SYNDIC =====================
+  // =======================================================
+  // 🔵 SYNDIC = POST-PAYÉ (factures après prestation)
+  // =======================================================
   if (clientType === "syndic") {
-    // Annuel syndic : pas d'échéancier, seulement facture de fin (createTerminationInvoiceForContract)
+
+    // Annuel syndic → facture uniquement à la FIN du contrat
     if (mode === "annuel") {
+      if (!pr.nextInvoiceDate) {
+        return contractEnd.toISOString().slice(0, 10);
+      }
       return "";
     }
 
@@ -5762,83 +5776,81 @@ function computeNextInvoiceDate(contract) {
 
     const totalInstallments = getNumberOfInstallments(pr);
 
-    // 🟢 1ʳᵉ échéance : aucune date programmée, on calcule la fin de la 1ʳᵉ période
+    // 1ʳᵉ échéance → fin de la 1ʳᵉ période
     if (!pr.nextInvoiceDate) {
-      const end1 = new Date(start);
-      end1.setMonth(end1.getMonth() + stepMonths);
-      end1.setDate(0); // dernier jour du mois précédent
-
-      if (end1 > contractEnd) {
-        return contractEnd.toISOString().slice(0, 10);
-      }
+      const end1 = endOfMonth(new Date(start));
+      end1.setMonth(end1.getMonth() + stepMonths - 1);
+      if (end1 > contractEnd) return contractEnd.toISOString().slice(0, 10);
       return end1.toISOString().slice(0, 10);
     }
 
-    // 🟢 Échéances suivantes : on se base sur le numéro d'échéance actuel
-    const currentIndex = computeEcheanceNumber(pr); // 1, 2, 3...
-    const nextIndex    = currentIndex + 1;
+    const currentIndex = computeEcheanceNumber(pr);
+    const nextIndex = currentIndex + 1;
 
-    if (nextIndex > totalInstallments) {
-      return "";
-    }
+    if (nextIndex > totalInstallments) return "";
 
-    const nextEnd = new Date(start);
-    nextEnd.setMonth(nextEnd.getMonth() + stepMonths * nextIndex);
-    nextEnd.setDate(0);
+    const nextEnd = endOfMonth(new Date(start));
+    nextEnd.setMonth(nextEnd.getMonth() + stepMonths * nextIndex - 1);
 
-    if (nextEnd > contractEnd) {
-      return "";
-    }
-
+    if (nextEnd > contractEnd) return "";
     return nextEnd.toISOString().slice(0, 10);
   }
 
-  // ===================== CAS PARTICULIER =====================
+  // =======================================================
+  // 🔴 PARTICULIER = FACTURATION ANTICIPÉE
+  // =======================================================
 
-  // Annuel : pas d'échéancier (facture initiale uniquement)
+  // Cas ANNUL
   if (mode === "annuel") {
     return "";
   }
 
-  // Annuel 50/50 : 2e facture au milieu du contrat
+  // ========================================
+  // 🟣 PARTICULIER ANNÉE 50/50
+  // ========================================
   if (mode === "annuel_50_50") {
+
+    // 1ʳᵉ facture → immédiate (déjà faite ailleurs)
+    // On calcule ici la 2e facture (solde 50%)
+
     if (!pr.nextInvoiceDate) {
-      const halfMonths = Math.max(1, Math.round(duration / 2));
       const mid = new Date(start);
-      mid.setMonth(mid.getMonth() + halfMonths);
-      if (mid > contractEnd) {
-        mid.setTime(contractEnd.getTime());
-      }
-      return mid.toISOString().slice(0, 10);
+
+      // Milieu du contrat → durée / 2
+      const half = Math.floor(duration / 2);
+      mid.setMonth(mid.getMonth() + half);
+
+      // Fin du mois de la date calculée
+      const midEnd = endOfMonth(mid);
+
+      if (midEnd > contractEnd) return contractEnd.toISOString().slice(0, 10);
+      return midEnd.toISOString().slice(0, 10);
     }
-    // 2ᵉ facture déjà programmée / faite → plus rien
+
+    // Si nextInvoiceDate est déjà défini → 
+    // cela veut dire que la facture de solde existe déjà
     return "";
   }
 
-  // Mensuel / Trimestriel / Semestriel (particulier) : facturation anticipée
-  const stepMonths = getBillingStepMonths(mode); // 1 / 3 / 6
+  // ========================================
+  // 🟢 PARTICULIER MENSUEL / TRIMESTRIEL / SEMESTRIEL
+  // ========================================
+  const stepMonths = getBillingStepMonths(mode);
   if (!stepMonths) return "";
 
   let base;
   if (pr.nextInvoiceDate) {
     base = new Date(pr.nextInvoiceDate + "T00:00:00");
-    if (isNaN(base.getTime())) base = new Date(start);
   } else {
-    // 1ʳᵉ échéance = un “step” après le début
     base = new Date(start);
   }
 
   const next = new Date(base);
   next.setMonth(next.getMonth() + stepMonths);
 
-  if (next > contractEnd) {
-    return "";
-  }
-
+  if (next > contractEnd) return "";
   return next.toISOString().slice(0, 10);
 }
-
-
 
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
@@ -9875,6 +9887,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
