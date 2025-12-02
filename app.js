@@ -5800,7 +5800,6 @@ function normalizeContractBeforeSave(contract) {
 }
 
 
-
 function computeNextInvoiceDate(contract) {
   const pr = contract.pricing || {};
   const clientType = pr.clientType || "particulier";
@@ -7227,14 +7226,13 @@ function fillContractForm(contract) {
 function rebuildContractInvoices(contract) {
   const pr = contract.pricing || {};
   let docs = getAllDocuments();
+  const todayISO = new Date().toISOString().slice(0, 10);
 
   // 1️⃣ Supprimer toutes les factures liées à ce contrat
   docs = docs.filter(doc => doc.contractId !== contract.id);
 
   // 2️⃣ Réinitialiser la prochaine échéance
   pr.nextInvoiceDate = "";
-
-  const today = new Date();
 
   // 3️⃣ Re-créer la facture initiale (PARTICULIER uniquement)
   const immediate = generateImmediateBilling(contract);
@@ -7245,16 +7243,21 @@ function rebuildContractInvoices(contract) {
     }
   }
 
-  // 4️⃣ Calculer la 1ère prochaine échéance (particulier + syndic)
+  // 4️⃣ Calculer la 1re prochaine échéance (particulier + syndic)
   pr.nextInvoiceDate = computeNextInvoiceDate(contract);
 
   // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui
   while (pr.nextInvoiceDate) {
-    const nextDateObj = new Date(pr.nextInvoiceDate + "T00:00:00");
-    if (isNaN(nextDateObj.getTime()) || nextDateObj > today) break;
+    const nextISO = pr.nextInvoiceDate;
+    const nextDate = new Date(nextISO + "T00:00:00");
+    if (isNaN(nextDate.getTime()) || nextDate > new Date(todayISO + "T00:00:00")) {
+      break;
+    }
 
     const inv = createAutomaticInvoice(contract);
-    if (!inv) break;
+    if (!inv) {
+      break;
+    }
 
     docs.push(inv);
     if (typeof saveSingleDocumentToFirestore === "function") {
@@ -7275,7 +7278,7 @@ function rebuildContractInvoices(contract) {
   );
   saveContracts(allContracts);
 
-  // 7️⃣ Mise à jour de l'UI (bouton "Facturer ce contrat")
+  // 7️⃣ Mise à jour du bouton "Facturer ce contrat"
   if (typeof updateContractTransformButtonVisibility === "function") {
     updateContractTransformButtonVisibility();
   }
@@ -9980,6 +9983,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
