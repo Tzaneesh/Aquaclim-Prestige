@@ -8879,6 +8879,12 @@ function updateContractClientType(type) {
   }
 }
 
+// 🔗 appelé par le HTML : onchange="selectClientType('particulier')" / "selectClientType('syndic')"
+function selectClientType(type) {
+  updateContractClientType(type);
+}
+
+
 function renewContract(id) {
   const oldContract = getContract(id);
   if (!oldContract) return;
@@ -9869,6 +9875,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
