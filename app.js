@@ -5728,7 +5728,8 @@ function normalizeContractBeforeSave(contract) {
 function computeNextInvoiceDate(contract) {
   const pr = contract.pricing || {};
   const mode = pr.billingMode || "annuel";
-  const clientType = pr.clientType || "particulier";
+  // 🔹 ICI la seule vraie modif : on lit le type sur contract.client.type
+  const clientType = contract?.client?.type || "particulier";
 
   const startISO = pr.startDate;
   const duration = Number(pr.durationMonths || 0);
@@ -5815,6 +5816,7 @@ function computeNextInvoiceDate(contract) {
 
   return nextEnd.toISOString().slice(0, 10);
 }
+
 
 
 function getContractLabel(type) {
@@ -9491,7 +9493,8 @@ function createAutomaticInvoice(contract) {
   const c  = contract.client  || {};
   const s  = contract.site    || {};
 
-  const clientType = pr.clientType || "particulier";
+  // 🔹 Modif ici : on lit le type sur contract.client.type
+  const clientType = contract?.client?.type || "particulier";
   const mode       = pr.billingMode || "annuel";
 
   const totalHT = Number(pr.totalHT) || 0;
@@ -9698,6 +9701,7 @@ function createAutomaticInvoice(contract) {
 
 
 
+
 function createDevisFromCurrentContract() {
   if (!currentContractId) {
     showConfirmDialog({
@@ -9844,6 +9848,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
