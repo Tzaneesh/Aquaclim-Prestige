@@ -7338,6 +7338,18 @@ function saveContract() {
   // 2️⃣ Construction complète depuis le formulaire
   let contract = buildContractFromForm(true);
   if (!contract) return;
+// Sécurité supplémentaire modes client
+const pr = contract.pricing;
+if (pr.clientType === "particulier") {
+    if (!["mensuel", "annuel_50_50"].includes(pr.billingMode)) {
+        pr.billingMode = "mensuel";
+    }
+}
+if (pr.clientType === "syndic") {
+    if (!["mensuel", "trimestriel", "semestriel", "annuel"].includes(pr.billingMode)) {
+        pr.billingMode = "annuel";
+    }
+}
 
   // 3️⃣ Normalisation du contrat (statut, meta, etc.)
   contract = normalizeContractBeforeSave(contract);
@@ -8235,7 +8247,8 @@ function openContractPDF(previewOnly = false) {
   const today   = new Date();
   const pdfDateStr = today.toLocaleDateString("fr-FR");
 
-  const startDateFR = formatDateFR(pr.startDate);
+  const startDateFR = formatDateFr(fromISO(pr.startDate;
+
   const endDateFR   = formatDateFR(pr.endDateLabel);
 
   // Libellé du bassin
@@ -9080,10 +9093,17 @@ function renewCurrentContract() {
 
 function formatDateFr(iso) {
   if (!iso) return "";
-  const d = new Date(iso + "T00:00:00");
-  if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-FR");
+  // On attend du YYYY-MM-DD
+  const parts = iso.split("-");
+  if (parts.length !== 3) return iso;
+
+  const [year, month, day] = parts;
+  if (!year || !month || !day) return iso;
+
+  // Affichage demandé : DD-MM-YYYY
+  return `${day}-${month}-${year}`;
 }
+
 
 function openContractSchedulePopup() {
   let contract = null;
@@ -9949,6 +9969,71 @@ function checkScheduledInvoices() {
 
   saveContracts(contracts);
 }
+function runBillingTestSuite() {
+    console.log("=== 🔥 TEST FACTURATION AUTOMATIQUE AQUACLIM ===");
+
+    const tests = [];
+
+    // Helper pour faire un pseudo-contrat minimal
+    function C(clientType, mode, start, months, totalHT) {
+        return {
+            id: "TESTCTR-" + Math.random().toString().slice(2),
+            client: { type: clientType, name: "Test Client" },
+            pricing: {
+                clientType,
+                billingMode: mode,
+                startDate: start,
+                durationMonths: months,
+                totalHT,
+                tvaRate: 0,
+                nextInvoiceDate: ""
+            }
+        };
+    }
+
+    // --- PARTICULAR MENSUEL ---
+    tests.push(C("particulier","mensuel","2024-01-01",12,1200));
+
+    // --- PARTICULIER 50/50 ---
+    tests.push(C("particulier","annuel_50_50","2024-04-01",12,2000));
+
+    // --- SYNDIC MENSUEL ---
+    tests.push(C("syndic","mensuel","2024-01-01",12,1800));
+
+    // --- SYNDIC TRIMESTRIEL ---
+    tests.push(C("syndic","trimestriel","2024-01-01",12,2400));
+
+    // --- SYNDIC SEMESTRIEL ---
+    tests.push(C("syndic","semestriel","2024-01-01",12,2400));
+
+    // --- SYNDIC ANNUEL ---
+    tests.push(C("syndic","annuel","2024-01-01",12,2400));
+
+    for (let ctr of tests) {
+        console.log("\n--------------------------------------------");
+        console.log("🧪 Test contrat :", ctr.client.type, ctr.pricing.billingMode, ctr.pricing.startDate);
+
+        ctr = normalizeContractBeforeSave(ctr);
+
+        // facture initiale
+        const init = generateImmediateBilling(ctr);
+        console.log("→ initial billing:", init ? init.date : "null");
+
+        // prochaine échéance
+        ctr.pricing.nextInvoiceDate = computeNextInvoiceDate(ctr);
+        console.log("→ nextInvoiceDate:", ctr.pricing.nextInvoiceDate);
+
+        // simulation d'une facture automatique
+        if (ctr.pricing.nextInvoiceDate) {
+            const fac = createAutomaticInvoice(ctr);
+            if (fac) console.log("→ auto invoice:", fac.date);
+        }
+
+        console.log("--------------------------------------------");
+    }
+
+    console.log("=== 🔥 FIN DES TESTS ===");
+}
 
 
 window.onload = function () {
@@ -9983,6 +10068,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
