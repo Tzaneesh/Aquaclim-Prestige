@@ -9141,7 +9141,7 @@ function openContractSchedulePopup() {
     endISO = d.toISOString().slice(0, 10);
   }
 
-  const startLabel = formatDateFr(startISO);
+  const startLabel = formatDateFr(fromISO(pr.startDate));
   const endLabel   = formatDateFr(endISO);
 
   let periodText = "";
@@ -10068,6 +10068,7 @@ window.onload = function () {
     initContractsUI();
   }
 };
+
 
 
 
