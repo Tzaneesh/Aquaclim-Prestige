@@ -5976,7 +5976,7 @@ function computeNextInvoiceDate(contract) {
   if (next > contractEnd) return "";
   return next.toISOString().slice(0, 10);
 
-
+} 
 
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
@@ -9604,8 +9604,6 @@ function computeEcheanceNumber(pricing) {
   return Math.min(total, Math.max(1, Math.floor(diffMonths / step) + 1));
 }
 
-
-
 // ---------- FACTURE INITIALE À LA CRÉATION DU CONTRAT ----------
 
 // Période globale lisible pour le contrat (ex : "mai 2026 à octobre 2026")
@@ -10151,79 +10149,7 @@ function checkScheduledInvoices() {
   saveContracts(contracts);
 }
 
-
-function runBillingTestSuite() {
-  console.log("=== 🔥 TEST FACTURATION AUTOMATIQUE AQUACLIM ===");
-
-  const tests = [];
-
-  // Helper pour faire un pseudo-contrat minimal
-  function C(clientType, mode, start, months, totalHT) {
-    return {
-      id: "TESTCTR-" + Math.random().toString().slice(2),
-      client: { type: clientType, name: "Test Client" },
-      pricing: {
-        clientType,
-        billingMode: mode,
-        startDate: start,          // "YYYY-MM-DD"
-        durationMonths: months,
-        totalHT,
-        tvaRate: 0,
-        nextInvoiceDate: ""
-      }
-    };
-  }
-
-  // --- PARTICULIER MENSUEL ---
-  tests.push(C("particulier", "mensuel", "2024-01-01", 12, 1200));
-
-  // --- PARTICULIER 50/50 ---
-  tests.push(C("particulier", "annuel_50_50", "2024-04-01", 12, 2000));
-
-  // --- SYNDIC MENSUEL ---
-  tests.push(C("syndic", "mensuel", "2024-01-01", 12, 1800));
-
-  // --- SYNDIC TRIMESTRIEL ---
-  tests.push(C("syndic", "trimestriel", "2024-01-01", 12, 2400));
-
-  // --- SYNDIC SEMESTRIEL ---
-  tests.push(C("syndic", "semestriel", "2024-01-01", 12, 2400));
-
-  // --- SYNDIC ANNUEL ---
-  tests.push(C("syndic", "annuel", "2024-01-01", 12, 2400));
-
-  for (let ctr of tests) {
-    console.log("\n--------------------------------------------");
-    console.log("🧪 Test contrat :", ctr.client.type, ctr.pricing.billingMode, ctr.pricing.startDate);
-
-    // Normalisation éventuelle
-    ctr = normalizeContractBeforeSave(ctr);
-
-    // Facture initiale
-    const init = generateImmediateBilling(ctr);
-    console.log("→ initial billing:", init ? init.date : "null");
-
-    // Prochaine échéance
-    ctr.pricing.nextInvoiceDate = computeNextInvoiceDate(ctr);
-    console.log("→ nextInvoiceDate:", ctr.pricing.nextInvoiceDate);
-
-    // Simulation d'une facture automatique
-    if (ctr.pricing.nextInvoiceDate) {
-      const fac = createAutomaticInvoice(ctr);
-      if (fac) {
-        console.log("→ auto invoice:", fac.date);
-      } else {
-        console.log("→ auto invoice: null");
-      }
-    }
-
-    console.log("--------------------------------------------");
-  }
-
-  console.log("=== 🔥 FIN DES TESTS ===");
-}
-
-
+// ================== INIT ==================
 
 window.onload = function () {
   loadCustomTemplates();
@@ -10257,76 +10183,3 @@ window.onload = function () {
     initContractsUI();
   }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
