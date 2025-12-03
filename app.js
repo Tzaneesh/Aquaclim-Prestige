@@ -6217,10 +6217,9 @@ function generateDevisFromContract(contract) {
     ? `${label} pour la période ${globalPeriod}`
     : label;
 
-  const totalHT   = Number(pr.totalHT)  || 0;
-  const tvaRate   = Number(pr.tvaRate)  || 0;
-  const tvaAmount = tvaRate > 0 ? totalHT * (tvaRate / 100) : 0;
-  const totalTTC  = tvaRate > 0 ? totalHT + tvaAmount : totalHT;
+  // ----- 💶 Données prix venant du contrat -----
+  const totalHTContract = Number(pr.totalHT)  || 0;
+  const tvaRate         = Number(pr.tvaRate)  || 0;
 
   const clientType     = pr.clientType || "particulier";
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
@@ -6247,6 +6246,68 @@ function generateDevisFromContract(contract) {
     ])
     .join("\n");
 
+  // ====== 🧮 Construction AUTOMATIQUE de la prestation ======
+
+  // 1️⃣ Nombre total de passages
+  const totalPassages = Number(pr.totalPassages || 0) || 1;
+
+  // 2️⃣ Prix unitaire (prix d’un entretien)
+  let unitPrice = Number(pr.unitPrice || 0);
+
+  // Si pas de unitPrice stocké, on répartit le total du contrat sur les passages
+  if (!unitPrice && totalPassages > 0 && totalHTContract > 0) {
+    unitPrice = totalHTContract / totalPassages;
+  }
+  if (!unitPrice) {
+    unitPrice = totalHTContract;
+  }
+
+  // 3️⃣ Total de la ligne = quantité × prix
+  let lineQty   = totalPassages;
+  let lineTotal = unitPrice * lineQty;
+
+  // Sécurité : si tout est à 0 mais qu’on a un total contrat, on retombe sur l’ancien comportement
+  if (!lineTotal && totalHTContract > 0) {
+    lineQty   = 1;
+    lineTotal = totalHTContract;
+    unitPrice = totalHTContract;
+  }
+
+  // 4️⃣ Choix du "kind" pour que le Modèle se mette tout seul
+  const mainService = pr.mainService || poolType;
+  let prestationKind;
+
+  if (mainService === "piscine_sel") {
+    prestationKind = "piscine_sel";              // modèle Entretien piscine sel
+  } else if (
+    mainService === "spa" ||
+    mainService === "spa_jacuzzi" ||
+    mainService === "entretien_jacuzzi"
+  ) {
+    prestationKind = "entretien_jacuzzi";        // modèle Entretien jacuzzi / spa
+  } else {
+    prestationKind = "piscine_chlore";           // défaut : Entretien piscine chlore
+  }
+
+  const prestations = [
+    {
+      desc:  lineDesc,
+      detail: "",
+      qty:    lineQty,
+      price:  unitPrice,
+      total:  lineTotal,
+      unit: "passage",
+      dates:  [],
+      kind:   prestationKind
+    }
+  ];
+
+  // 5️⃣ Totaux du devis calculés à partir de la prestation
+  const subtotal   = lineTotal;
+  const tvaAmount  = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
+  const totalTTC   = tvaRate > 0 ? subtotal + tvaAmount : subtotal;
+
+  // ====== ✅ Objet devis final ======
   return {
     id: Date.now().toString(),
     type: "devis",
@@ -6268,21 +6329,10 @@ function generateDevisFromContract(contract) {
     siteName:     s.name     || "",
     siteAddress:  s.address  || "",
 
-    prestations: [
-      {
-        desc:  lineDesc,
-        detail: "",
-        qty:    1,
-        price:  totalHT,
-        total:  totalHT,
-        unit:   "forfait",
-        dates:  [],
-        kind:   "contrat_entretien"
-      }
-    ],
+    prestations,
 
     tvaRate,
-    subtotal:       totalHT,
+    subtotal,
     discountRate:   0,
     discountAmount: 0,
     tvaAmount,
@@ -9438,6 +9488,28 @@ const startLabel = formatDateFr(pr.startDate);
   }
 }
 
+function openInvoiceFromSchedule(invoiceId) {
+  if (!invoiceId) return;
+
+  // On bascule sur l’onglet "Factures"
+  if (typeof switchListType === "function") {
+    switchListType("facture");
+  }
+
+  // On ferme la popup d’échéancier
+  const overlay = document.getElementById("contractSchedulePopup");
+  if (overlay) {
+    overlay.classList.add("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) popup.classList.remove("show");
+  }
+
+  // On charge la facture correspondante
+  if (typeof loadDocument === "function") {
+    loadDocument(invoiceId);
+  }
+}
+
 
 function monthYearFr(dateISO) {
   const d = new Date(dateISO + "T00:00:00");
@@ -9512,8 +9584,73 @@ function buildContractSchedule(contract) {
     }
   }
 
+  // ----- 🔍 On croise avec les factures réelles du contrat -----
+
+  const docs = getAllDocuments();
+  const invoices = docs.filter(d =>
+    d.type === "facture" &&
+    d.contractId === contract.id &&
+    d.prestations &&
+    d.prestations.some(p =>
+      p.kind === "contrat_echeance" ||
+      p.kind === "contrat_echeance_initiale"
+    )
+  );
+
+  // Marquer les échéances déjà facturées
+rows.forEach((r) => {
+  const inv = invoices.find(d =>
+    d.date &&
+    d.date.slice(0, 10) === r.date
+  );
+
+  if (inv) {
+    const invHT  = Number(inv.subtotal || inv.total || 0);
+    const invTVA = Number(inv.tvaAmount || 0);
+    const invTTC = Number(inv.totalTTC || inv.total || invHT + invTVA);
+
+    r.amountHT  = invHT || r.amountHT;
+    r.amountTVA = invTVA;
+    r.amountTTC = invTTC;
+
+    const baseStatus   = inv.paid ? "facturée (payée)" : "facturée (à payer)";
+    const invoiceNum   = inv.number ? ` – ${inv.number}` : "";
+
+    r.status        = baseStatus + invoiceNum;
+    r.invoiceId     = inv.id || null;        // 🔹 pour le bouton "Voir"
+    r.invoiceNumber = inv.number || "";      // 🔹 au cas où tu veux le réutiliser
+  }
+});
+
+
+  // Facture de résiliation éventuelle
+  const closureInvoice = docs.find(d =>
+    d.type === "facture" &&
+    d.contractId === contract.id &&
+    d.prestations &&
+    d.prestations.some(p => p.kind === "contrat_resiliation")
+  );
+
+  if (closureInvoice) {
+    const invHT  = Number(closureInvoice.subtotal || closureInvoice.total || 0);
+    const invTVA = Number(closureInvoice.tvaAmount || 0);
+    const invTTC = Number(closureInvoice.totalTTC || closureInvoice.total || invHT + invTVA);
+
+    rows.push({
+      index: rows.length + 1,
+      date:  closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
+      amountHT:  invHT,
+      amountTVA: invTVA,
+      amountTTC: invTTC,
+       status: "facture de résiliation" + (closureInvoice.number ? ` – ${closureInvoice.number}` : ""),
+  invoiceId: closureInvoice.id || null,
+  invoiceNumber: closureInvoice.number || ""
+    });
+  }
+
   return rows;
 }
+
 
 
 
@@ -9556,27 +9693,66 @@ function renderContractScheduleHTML(rows) {
         <tbody>
   `;
 
-  rows.forEach((r) => {
-    const d = new Date(r.date + "T00:00:00");
-    const dateFr = isNaN(d.getTime()) ? r.date : d.toLocaleDateString("fr-FR");
+ rows.forEach((r) => {
+  const d = new Date(r.date + "T00:00:00");
+  const dateFr = isNaN(d.getTime()) ? r.date : d.toLocaleDateString("fr-FR");
 
-    html += `
-      <tr>
-        <td>${r.index}</td>
-        <td>${dateFr}</td>
-        <td class="amount-cell">${r.amountHT.toFixed(2)} €</td>`;
+  // ---- Construction de la cellule "Statut" bien maquettée ----
+  let statusHtml = "";
 
-    if (hasTVA) {
-      html += `
-        <td class="amount-cell">${r.amountTVA.toFixed(2)} €</td>
-        <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>`;
-    }
+  // Cas où il y a une facture liée (échéance facturée)
+  if (r.invoiceId) {
+    const mainLabel = (r.status || "").split("–")[0].trim() || "facturée";
+    const invNumber = r.invoiceNumber || (
+      (r.status || "").includes("FAC-")
+        ? r.status.split("FAC-").slice(1).join("FAC-").trim()
+        : ""
+    );
 
-    html += `
-        <td>${r.status}</td>
-      </tr>
+    statusHtml = `
+      <div class="schedule-status">
+        <div class="schedule-status-text">
+          <div class="schedule-status-main">${mainLabel}</div>
+          ${invNumber ? `<div class="schedule-status-meta">${invNumber}</div>` : ""}
+        </div>
+        <button type="button"
+                class="schedule-status-btn"
+                onclick="openInvoiceFromSchedule('${r.invoiceId}')">
+          Voir
+        </button>
+      </div>
     `;
-  });
+  } else {
+    // Cas prévisionnel (aucune facture)
+    statusHtml = `
+      <div class="schedule-status">
+        <div class="schedule-status-text">
+          <div class="schedule-status-main">${r.status || "prévisionnel"}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  // ---- Ligne du tableau ----
+  html += `
+    <tr>
+      <td>${r.index}</td>
+      <td>${dateFr}</td>
+      <td class="amount-cell">${r.amountHT.toFixed(2)} €</td>`;
+
+  if (hasTVA) {
+    html += `
+      <td class="amount-cell">${r.amountTVA.toFixed(2)} €</td>
+      <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>`;
+  }
+
+  html += `
+      <td>${statusHtml}</td>
+    </tr>
+  `;
+});
+
+
 
   html += `
         </tbody>
@@ -10167,6 +10343,20 @@ function createDevisFromCurrentContract() {
 }
 
 
+// Combien de factures d'échéance existent déjà pour ce contrat ?
+function countContractInstallmentInvoices(contractId) {
+  const docs = getAllDocuments();
+  return docs.filter(d =>
+    d.type === "facture" &&
+    d.contractId === contractId &&
+    d.prestations &&
+    d.prestations.some(p =>
+      p.kind === "contrat_echeance" ||
+      p.kind === "contrat_echeance_initiale"
+    )
+  ).length;
+}
+
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
 function checkScheduledInvoices() {
@@ -10280,12 +10470,16 @@ window.onload = function () {
   if (typeof updateButtonColors === "function") {
     updateButtonColors();
   }
-  if (typeof checkScheduledInvoices === "function") {
+
+  // 🔁 Factures d’échéance auto : seulement si TOUT est défini
+  if (typeof checkScheduledInvoices === "function"
+      && typeof countContractInstallmentInvoices === "function") {
     checkScheduledInvoices();
   }
 
   // 🛰 Synchro Firebase en arrière-plan
   initFirebase();
+
 
   // Contrats UI
   if (typeof initContractsUI === "function") {

@@ -1777,3 +1777,52 @@ textarea {
   font-weight: 700;
 }
 
+/* ====== Échéancier contrat : cellule Statut ====== */
+
+.schedule-table td {
+  vertical-align: middle;
+}
+
+/* Container complet de la cellule statut */
+.schedule-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Bloc texte (statut + numéro) */
+.schedule-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Ligne principale : "prévisionnel" / "facturée (payée)"... */
+.schedule-status-main {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Ligne secondaire : numéro FAC-2025-005 */
+.schedule-status-meta {
+  font-size: 12px;
+  color: #666;
+}
+
+/* Bouton "Voir" compact */
+.schedule-status-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 11px;
+  cursor: pointer;
+  background: #555;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.schedule-status-btn:hover {
+  opacity: 0.9;
+}
+
+
