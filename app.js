@@ -5932,34 +5932,36 @@ function computeNextInvoiceDate(contract) {
     return "";
   }
 
-  // ========================================
-  // 🟢 PARTICULIER MENSUEL / TRIMESTRIEL / SEMESTRIEL
-  // ========================================
+  // =============================
+  // 🟢 PARTICULIER MENSUEL
+  // → 1 facture initiale (déjà faite)
+  // → puis 1 facture / mois à la date d'anniversaire
+  // =============================
+  if (clientType === "particulier" && mode === "mensuel") {
+    const totalInstallments = getNumberOfInstallments(pr);
+    const already = countContractInstallmentInvoices(contract.id); 
+    // (inclut l’échéance initiale)
 
-  // Cas spécial : particulier mensuel → toujours 1er de chaque mois
-  if (mode === "mensuel") {
-    let base;
-
-    if (pr.nextInvoiceDate) {
-      // On part de la dernière échéance déjà programmée
-      base = new Date(pr.nextInvoiceDate + "T00:00:00");
-      if (isNaN(base.getTime())) return "";
-    } else {
-      // 1ʳʳᵉ échéance mensuelle : 1er mois du contrat
-      const firstISO = firstDayOfMonthISO(startISO);
-      if (!firstISO) return "";
-      base = new Date(firstISO + "T00:00:00");
+    // Toutes les échéances prévues sont déjà facturées
+    if (already >= totalInstallments) {
+      return "";
     }
 
-    const next = new Date(base);
-    next.setMonth(next.getMonth() + 1);
-    next.setDate(1); // on reste au 1er du mois
+    // index 0 = 1ère facture (déjà émise à startISO)
+    // index 1 = +1 mois, etc.
+    const index = already;
 
-    if (next > contractEnd) return "";
-    return next.toISOString().slice(0, 10);
+    const d = new Date(start);
+    d.setMonth(d.getMonth() + index);
+
+    if (d > contractEnd) {
+      return "";
+    }
+
+    return d.toISOString().slice(0, 10);
   }
 
-  // Autres modes (trimestriel/semestriel si un jour pour particulier)
+  // Autres modes (trimestriel / semestriel si un jour pour particulier)
   const stepMonths = getBillingStepMonths(mode);
   if (!stepMonths) return "";
 
@@ -5975,8 +5977,7 @@ function computeNextInvoiceDate(contract) {
 
   if (next > contractEnd) return "";
   return next.toISOString().slice(0, 10);
-
-} 
+}
 
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
@@ -6338,6 +6339,41 @@ function maybeProposeDevisForContract(contract) {
   console.log("[Devis] Popup 'Créer un devis ?' affichée.");
   return true;
 }
+
+function getLinkedDevisForContract(contract) {
+  if (!contract) return null;
+  const meta = contract.meta || {};
+  if (!meta.sourceDevisId) return null;
+
+  const docs = getAllDocuments();
+  return docs.find(
+    d => d.type === "devis" && d.id === meta.sourceDevisId
+  ) || null;
+}
+
+function isDevisObligatoireForContract(contract) {
+  if (!contract || !contract.pricing) return false;
+
+  const pr         = contract.pricing;
+  const clientType = pr.clientType || "particulier";
+
+  let totalTTCraw = pr.totalTTC != null ? pr.totalTTC : pr.totalHT;
+  if (typeof totalTTCraw === "string") {
+    totalTTCraw = totalTTCraw.replace(",", ".");
+  }
+  const totalTTC = Number(totalTTCraw) || 0;
+
+  return (clientType === "particulier" && totalTTC >= 150);
+}
+
+function isDevisAcceptedForContract(contract) {
+  const devis = getLinkedDevisForContract(contract);
+  if (!devis) return false;
+
+  const status = devis.status || "en_attente";
+  return status === "accepte";
+}
+
 
 function newContract() {
   currentContractId = null;
@@ -7432,13 +7468,20 @@ function saveContract() {
   // 2️⃣ Construction complète depuis le formulaire
   let contract = buildContractFromForm(true);
   if (!contract) return;
-// Sécurité supplémentaire modes client
-const pr = contract.pricing;
-if (pr.clientType === "particulier") {
+
+  // Sécurité supplémentaire modes client
+  const pr = contract.pricing || {};
+  if (pr.clientType === "particulier") {
     if (!["mensuel", "annuel_50_50"].includes(pr.billingMode)) {
-        pr.billingMode = "mensuel";
+      pr.billingMode = "mensuel";
     }
-}
+  }
+  if (pr.clientType === "syndic") {
+    if (!["mensuel", "trimestriel", "semestriel", "annuel"].includes(pr.billingMode)) {
+      pr.billingMode = "annuel";
+    }
+  }
+
 if (pr.clientType === "syndic") {
     if (!["mensuel", "trimestriel", "semestriel", "annuel"].includes(pr.billingMode)) {
         pr.billingMode = "annuel";
@@ -7470,16 +7513,81 @@ if (pr.clientType === "syndic") {
   currentContractId = contract.id;
 
   // -----------------------------------------------------
-  // 🔵 FACTURATION AUTOMATIQUE
+  // 🔵 FACTURATION & DEVIS OBLIGATOIRE
   // -----------------------------------------------------
 
+  // ⚠️ pr est DÉJÀ défini plus haut dans saveContract()
+  // on ne le redéclare pas ici, on se contente de lire clientType
+  const clientType  =
+    (contract.pricing && contract.pricing.clientType) || "particulier";
+  const devisNeeded = isDevisObligatoireForContract(contract);
+  const devisOK     = isDevisAcceptedForContract(contract);
+  const linkedDevis = getLinkedDevisForContract(contract);
+
+  // ️⛔ Cas 1 : devis OBLIGATOIRE mais PAS encore accepté
+  if (devisNeeded && !devisOK) {
+
+    const devisNum = linkedDevis ? linkedDevis.number : null;
+
+    let msg;
+    if (linkedDevis && devisNum) {
+      msg =
+        `Le devis ${devisNum} est obligatoire pour ce contrat ` +
+        `et n’est pas marqué comme "Accepté".\n\n` +
+        `Le contrat a été enregistré, mais aucune facture ne sera générée tant que ce devis n’aura pas été accepté.`;
+    } else {
+      msg =
+        `Ce contrat dépasse 150 € TTC pour un particulier.\n\n` +
+        `Un devis est obligatoire avant toute facturation.\n\n` +
+        `Le contrat a été enregistré, mais aucune facture ne sera générée tant qu’un devis n’aura pas été créé puis accepté.`;
+    }
+
+    showConfirmDialog({
+      title: "Devis obligatoire non accepté",
+      message: msg,
+      confirmLabel: linkedDevis ? "Ouvrir le devis" : "Créer un devis",
+      cancelLabel: "OK",
+      variant: "warning",
+      icon: "🧾",
+      onConfirm: function () {
+        // 👉 S'il y a déjà un devis lié : on l'ouvre
+        if (linkedDevis) {
+          if (typeof switchListType === "function") {
+            switchListType("devis");
+          }
+
+          const contractView = document.getElementById("contractView");
+          const formView     = document.getElementById("formView");
+          if (contractView) contractView.classList.add("hidden");
+          if (formView)     formView.classList.remove("hidden");
+
+          if (typeof loadDocumentsList === "function") {
+            loadDocumentsList();
+          }
+          if (typeof loadDocument === "function") {
+            loadDocument(linkedDevis.id);
+          }
+        } else {
+          // 👉 Sinon : on crée un devis pré-rempli à partir du contrat
+          if (typeof createDevisFromCurrentContract === "function") {
+            createDevisFromCurrentContract();
+          } else if (typeof maybeProposeDevisForContract === "function") {
+            // fallback si jamais tu renommes la fonction
+            maybeProposeDevisForContract(contract);
+          }
+        }
+      }
+    });
+
+    // ❗Important : pas de facturation tant que devis pas accepté
+    return;
+  }
+
+  // ✅ Cas 2 : Pas de devis obligatoire OU devis déjà accepté
   if (isNew) {
     // ======= NOUVEAU CONTRAT =======
 
-    const pr = contract.pricing;
-    const clientType = pr.clientType || "particulier";
-
-    // 1) Facture initiale (PARTICULIER uniquement)
+    // 1️⃣ Facture initiale (PARTICULIER uniquement)
     const invoice = generateImmediateBilling(contract);
 
     if (invoice) {
@@ -7500,33 +7608,23 @@ if (pr.clientType === "syndic") {
       });
     }
 
-
-    // 2) Définition de la première échéance (particulier + syndic)
+    // 2️⃣ Définition de la première échéance (particulier + syndic)
     contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
 
-
-
-    // Re-sauvegarde du contrat mise à jour
+    // 3️⃣ Re-sauvegarde du contrat mis à jour
     saveContracts(list);
     if (typeof saveSingleContractToFirestore === "function") {
       saveSingleContractToFirestore(contract);
     }
 
-   if (typeof checkScheduledInvoices === "function") {
-      checkScheduledInvoices();
-    }
-
-   } else {
-    // ======= CONTRAT EXISTANT =======
-
-    // Tout recalculer proprement (échéances déjà passées, etc.)
-    rebuildContractInvoices(contract);
-
-    // 🔄 Lancer aussi le moteur de facturation automatique
-    //    → c'est là que l'annuel syndic va créer sa facture de clôture
+    // 4️⃣ Rattrapage éventuel (contrats dans le passé)
     if (typeof checkScheduledInvoices === "function") {
       checkScheduledInvoices();
     }
+
+  } else {
+    // ======= CONTRAT EXISTANT =======
+    rebuildContractInvoices(contract);
 
     showConfirmDialog({
       title: "Contrat mis à jour",
@@ -7539,27 +7637,7 @@ if (pr.clientType === "syndic") {
     return;
   }
 
-
-  // 9️⃣ Si besoin, proposer la création d'un devis (particulier > 150 €)
-  if (typeof maybeProposeDevisForContract === "function") {
-    const popupShown = maybeProposeDevisForContract(contract);
-    if (popupShown) {
-      // La popup "Créer un devis ?" a été affichée,
-      // on ne rajoute pas une deuxième popup "Contrat enregistré".
-      // MAIS on peut quand même lancer le rattrapage de factures.
-      if (typeof checkScheduledInvoices === "function") {
-        checkScheduledInvoices();
-      }
-      return;
-    }
-  }
-
-  // 🔄 Après la sauvegarde du contrat, on lance le moteur de facturation automatique
-  if (typeof checkScheduledInvoices === "function") {
-    checkScheduledInvoices();
-  }
-
-  // 🔟 Popup de confirmation standard
+  // 🔟 Popup de confirmation standard (si on n’est pas sorti avant)
   showConfirmDialog({
     title: "Contrat enregistré",
     message: "Le contrat d'entretien a été enregistré avec succès.",
@@ -7568,10 +7646,8 @@ if (pr.clientType === "syndic") {
     variant: "success",
     icon: "✅"
   });
+
 }
-
-
-
 
 function resetContractFormToDefaults() {
   const root = document.getElementById("contractView");
@@ -8117,7 +8193,12 @@ function resiliateCurrentContract() {
       contract.status = CONTRACT_STATUS.RESILIE;
       if (!contract.meta) contract.meta = {};
       contract.meta.resiliationDate = resISO;
-      contract.meta.resiliationWho  = "prestataire"; // ou "client" si tu veux gérer le cas
+      contract.meta.resiliationWho  = "prestataire"; // ou "client" 
+
+     // 🧹 On arrête l'échéancier : plus de prochaine facture
+      if (contract.pricing) {
+        contract.pricing.nextInvoiceDate = "";
+      }
 
       // 2) Sauvegarde du contrat modifié
       const list = getAllContracts();
@@ -9642,18 +9723,18 @@ function generateImmediateBilling(contract) {
     return null;
   }
 
-  const startISO = pr.startDate || new Date().toISOString().slice(0, 10);
-  const start    = new Date(startISO + "T00:00:00");
-  if (isNaN(start.getTime())) return null;
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const startISO = pr.startDate || todayISO;
 
-  // 📅 Date de la facture initiale
-  let invoiceDateISO = startISO;
-
-  // Particulier mensuel → on force au 1er du mois
-  if (clientType === "particulier" && mode === "mensuel") {
-    const firstISO = firstDayOfMonthISO(startISO);
-    if (firstISO) invoiceDateISO = firstISO;
+  // ⛔ Si le contrat commence dans le futur -> pas de facture immédiate
+  if (startISO > todayISO) {
+    return null;
   }
+
+  // 📅 Date de la facture initiale = date exacte de début
+  const invoiceDateISO = startISO;
+  const start = new Date(startISO + "T00:00:00");
+  if (isNaN(start.getTime())) return null;
 
   // 📌 Nombre d’échéances prévues
   let n = 1;
@@ -9680,8 +9761,8 @@ function generateImmediateBilling(contract) {
 
   const number = getNextNumber("facture");
 
-  const moisLabel   = monthYearFr(invoiceDateISO); // "mai 2026"
-  const clientName  = (c.name || "").trim();
+  const moisLabel    = monthYearFr(invoiceDateISO); // "décembre 2025"
+  const clientName   = (c.name || "").trim();
   const suffixClient = clientName ? " – " + clientName : "";
 
   // Type de service
@@ -9707,7 +9788,6 @@ function generateImmediateBilling(contract) {
     lineDesc = `${serviceLabel} – acompte sur contrat d’entretien (${globalPeriod})`;
   }
 
-  // Notes
   const notes = [
     "Règlement à réception de facture.",
     "Aucun escompte pour paiement anticipé.",
@@ -10053,20 +10133,18 @@ function checkScheduledInvoices() {
   const contracts = getAllContracts();
   const todayISO  = new Date().toISOString().slice(0, 10);
 
-  contracts.forEach((contract) => {
+  contracts.forEach(contract => {
+    if (contract.status === CONTRACT_STATUS.RESILIE) {
+      return;
+    }
     const pr = contract.pricing || {};
     const clientType = pr.clientType || "particulier";
     const mode       = pr.billingMode || "annuel";
 
-    // On recalcule le statut à chaque passage (au cas où)
     const status = computeContractStatus(contract);
 
-    // =====================================================
-    // 🔵 CAS SPÉCIAL : ANNUEL NON-PARTICULIER (Syndic / Agence)
-    // → une seule facture de clôture quand le contrat est terminé
-    // =====================================================
+    // ----- CAS ANNUEL SYNDIC (inchangé) -----
     if (mode === "annuel" && clientType !== "particulier") {
-      // vérifie s'il existe DÉJÀ une facture de clôture
       const hasClosureInvoice = docs.some((d) =>
         d.type === "facture" &&
         d.contractId === contract.id &&
@@ -10074,55 +10152,41 @@ function checkScheduledInvoices() {
         d.prestations.some((p) => p.kind === "contrat_resiliation")
       );
 
-      console.log(
-        "[Billing] Annuel non-particulier",
-        contract.id,
-        "clientType=", clientType,
-        "status=", status,
-        "hasClosureInvoice=", hasClosureInvoice
-      );
-
-      // contrat terminé + aucune facture de clôture → on la crée
       if (status === CONTRACT_STATUS.TERMINE && !hasClosureInvoice) {
         const fac = createTerminationInvoiceForContract(contract);
         if (fac) {
-          console.log(
-            "[Billing] Facture de clôture créée pour",
-            contract.id,
-            "facture", fac.number
-          );
-
-          // la fonction push déjà dans docs + saveDocuments,
-          // on relit la liste à jour au cas où
           docs = getAllDocuments();
-
           if (typeof saveSingleDocumentToFirestore === "function") {
             saveSingleDocumentToFirestore(fac);
           }
-        } else {
-          console.log(
-            "[Billing] createTerminationInvoiceForContract() a renvoyé null pour",
-            contract.id
-          );
         }
       }
-
-      // pas d’échéancier classique pour l’annuel non-particulier
       return;
     }
 
-    // =====================================================
-    // 💶 CAS GÉNÉRAL (particulier + syndic mensuel/trimestriel/semestriel)
-    // =====================================================
     if (!pr.billingMode) return;
 
     const totalInstallments = getNumberOfInstallments(pr);
     let installmentsCount   = countContractInstallmentInvoices(contract.id);
 
-    // Rattrapage : tant qu’une échéance est en retard,
-    // et qu'on n'a pas dépassé le nombre prévu
+    // 🧮 Calcul de la fin de contrat (si possible)
+    let limitISO = todayISO;
+    if (pr.startDate && pr.durationMonths) {
+      const start = new Date(pr.startDate + "T00:00:00");
+      if (!isNaN(start.getTime())) {
+        const contractEnd = new Date(start);
+        contractEnd.setMonth(contractEnd.getMonth() + Number(pr.durationMonths || 0));
+        contractEnd.setDate(0); // fin du dernier mois
+        const endISO = contractEnd.toISOString().slice(0, 10);
+        if (endISO < limitISO) {
+          limitISO = endISO;
+        }
+      }
+    }
+
+    // 🔁 Rattrapage : seulement jusqu'à limitISO
     while (pr.nextInvoiceDate &&
-           pr.nextInvoiceDate <= todayISO &&
+           pr.nextInvoiceDate <= limitISO &&
            installmentsCount < totalInstallments) {
 
       const fac = createAutomaticInvoice(contract);
@@ -10137,10 +10201,7 @@ function checkScheduledInvoices() {
 
       installmentsCount++;
 
-      // Prochaine échéance
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
-
-      // Si plus d'échéance à venir → on sort de la boucle
       if (!contract.pricing.nextInvoiceDate) break;
     }
 
