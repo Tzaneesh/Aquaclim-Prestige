@@ -2298,7 +2298,7 @@ function setConditions(type) {
 // ================== CRÉATION / CHARGEMENT DOCUMENT ==================
 
 function newDocument(type) {
-  currentDocumentId = null;
+currentDocumentId = null;
   document.getElementById("listView").classList.add("hidden");
   document.getElementById("formView").classList.remove("hidden");
 
@@ -6341,7 +6341,7 @@ function maybeProposeDevisForContract(contract) {
     title: "Créer un devis ?",
     message,
     confirmLabel: "Créer un devis",
-    cancelLabel: "Continuer sans devis",
+    cancelLabel: "Fermer",
     variant: "warning",
     icon: "🧾",
     onConfirm: function () {
@@ -6866,110 +6866,103 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
 
 // ----- Recalcul global du contrat -----
 
+// ----- Recalcul global du contrat -----
 function recomputeContract() {
-  const modeEl = document.getElementById("ctMode");
-  const mode = modeEl?.value || "standard";
-  const passHiverInput = document.getElementById("ctPassHiver");
-  const passEteInput = document.getElementById("ctPassEte");
+  // 1) Récup des champs principaux
+  const modeEl        = document.getElementById("ctMode");
+  const passHiverEl   = document.getElementById("ctPassHiver");
+  const passEteEl     = document.getElementById("ctPassEte");
+  const startDateEl   = document.getElementById("ctStartDate");
+  const durationEl    = document.getElementById("ctDuration");
+  const endDateEl     = document.getElementById("ctEndDate");
+  const periodEl      = document.getElementById("ctPeriod");
+  const totalPassEl   = document.getElementById("ctTotalPassages");
+  const recapSummary  = document.getElementById("ctRecapSummary");
+  const warnBox       = document.getElementById("ctWarning");
 
-  // 1) Mode standard / intensif si pas "personnalisé"
+  if (!modeEl || !passHiverEl || !passEteEl || !startDateEl || !durationEl || !totalPassEl) {
+    return;
+  }
+
+  let mode      = modeEl.value || "standard";
+  let passHiver = parseInt(passHiverEl.value || "0", 10) || 0;
+  let passEte   = parseInt(passEteEl.value   || "0", 10) || 0;
+
+  // 2) Mode standard / intensif → on force les valeurs si pas "custom"
   if (mode === "standard") {
-    if (passHiverInput) passHiverInput.value = "1";
-    if (passEteInput) passEteInput.value = "2";
+    passHiver = 1;
+    passEte   = 2;
+    passHiverEl.value = "1";
+    passEteEl.value   = "2";
   } else if (mode === "intensif") {
-    if (passHiverInput) passHiverInput.value = "2";
-    if (passEteInput) passEteInput.value = "4";
+    passHiver = 2;
+    passEte   = 4;
+    passHiverEl.value = "2";
+    passEteEl.value   = "4";
   }
 
-  const startDateStr = document.getElementById("ctStartDate")?.value || "";
-  const duration =
-    parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
+  const startISO = startDateEl.value || "";
+  const duration = parseInt(durationEl.value || "0", 10) || 0;
 
-  const endDateInput = document.getElementById("ctEndDate");
-  const periodInput = document.getElementById("ctPeriod");
-  const totalPassInput = document.getElementById("ctTotalPassages");
-
-  let totalPassages = 0;
-  let monthsEte = 0;
+  let monthsEte   = 0;
   let monthsHiver = 0;
+  let endISO      = "";
 
-  let passHiver = parseInt(passHiverInput?.value || "0", 10) || 0;
-  let passEte = parseInt(passEteInput?.value || "0", 10) || 0;
+  if (startISO && duration > 0) {
+    const info = computeContractMonths(startISO, duration);
+    monthsEte   = info.monthsEte;
+    monthsHiver = info.monthsHiver;
+    endISO      = info.endDateISO;
 
-  // 1bis) Calcul période + répartition hiver/été
-  if (startDateStr && duration > 0) {
-    const start = new Date(startDateStr + "T00:00:00");
-const end = new Date(start);
-end.setMonth(end.getMonth() + duration);
-end.setDate(end.getDate() - 1);
+    // maj champs fin + période
+    if (endDateEl) {
+      const d = new Date(endISO + "T00:00:00");
+      endDateEl.value = isNaN(d.getTime()) ? "" : d.toLocaleDateString("fr-FR");
+    }
 
-if (!isNaN(end.getTime())) {
-  if (endDateInput) {
-    endDateInput.value = end.toLocaleDateString("fr-FR");
-  }
-
-  const formatMonthYearFR = (d) =>
-    d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
-
-  if (periodInput) {
-    // Ex : "mai 2026 → septembre 2026"
-    periodInput.value =
-      `${formatMonthYearFR(start)} → ${formatMonthYearFR(end)}`;
-  }
-}
-
-
-    const res = computeContractMonths(startDateStr, duration);
-    monthsEte = res.monthsEte;
-    monthsHiver = res.monthsHiver;
-
-    totalPassages = monthsEte * passEte + monthsHiver * passHiver;
+    if (periodEl) {
+      const debutFr = new Date(startISO + "T00:00:00").toLocaleDateString("fr-FR");
+      const finFr   = new Date(endISO   + "T00:00:00").toLocaleDateString("fr-FR");
+      periodEl.value = debutFr + " → " + finFr;
+    }
   } else {
-    if (endDateInput) endDateInput.value = "";
-    if (periodInput) periodInput.value = "";
+    if (endDateEl) endDateEl.value = "";
+    if (periodEl)  periodEl.value  = "";
   }
 
-  if (totalPassInput) {
-    totalPassInput.value = totalPassages.toString();
-  }
+  // 3) Total passages
+  const totalPassages = monthsHiver * passHiver + monthsEte * passEte;
+  totalPassEl.value = String(totalPassages);
 
-  // 2) Récap lisible pour humain
-  const recapSummaryEl = document.getElementById("ctRecapSummary");
-  if (recapSummaryEl) {
-    if (startDateStr && duration > 0) {
-      const labelPeriode =
-        duration >= 12 ? "par an" : "sur la période du contrat";
-      const totalHiver = monthsHiver * passHiver;
-      const totalEte = monthsEte * passEte;
-
-      recapSummaryEl.innerHTML =
-        `Ce contrat prévoit <strong>${totalPassages}</strong> passages ${labelPeriode} : ` +
-        `<strong>${totalHiver}</strong> en hiver et <strong>${totalEte}</strong> en été.`;
+  if (recapSummary) {
+    if (monthsEte + monthsHiver === 0 || (passEte === 0 && passHiver === 0)) {
+      recapSummary.textContent = "";
     } else {
-      recapSummaryEl.textContent = "";
+      const parts = [];
+      if (monthsHiver > 0 && passHiver > 0) {
+        parts.push(`${monthsHiver} mois hiver × ${passHiver}/mois`);
+      }
+      if (monthsEte > 0 && passEte > 0) {
+        parts.push(`${monthsEte} mois été × ${passEte}/mois`);
+      }
+      recapSummary.textContent = parts.join(" + ");
     }
   }
 
-  // 3) Avertissements pro si configuration étrange
-  const warnBox = document.getElementById("ctWarning");
+  // 3bis) Warnings
   if (warnBox) {
     const warnings = [];
-
-    if (startDateStr && duration > 0) {
+    if (!startISO || !duration) {
+      warnings.push("Merci de renseigner une date de début et une durée de contrat.");
+    } else {
       if (monthsEte === 0 && passEte > 0) {
-        warnings.push(
-          "La période sélectionnée ne contient aucun mois d’été (mai à octobre) alors que des passages d’été sont paramétrés."
-        );
+        warnings.push("La période ne contient aucun mois d’été alors que des passages d’été sont définis.");
       }
       if (monthsHiver === 0 && passHiver > 0) {
-        warnings.push(
-          "La période sélectionnée ne contient aucun mois d’hiver alors que des passages d’hiver sont paramétrés."
-        );
+        warnings.push("La période ne contient aucun mois d’hiver alors que des passages d’hiver sont définis.");
       }
       if (totalPassages === 0 && (passHiver > 0 || passEte > 0)) {
-        warnings.push(
-          "Avec ces paramètres, le total de passages calculé est de 0. Merci de vérifier la date de début, la durée et la fréquence."
-        );
+        warnings.push("Avec ces paramètres, le total de passages calculé est de 0. Vérifie la date de début, la durée et la fréquence.");
       }
     }
 
@@ -6984,98 +6977,78 @@ if (!isNaN(end.getTime())) {
     }
   }
 
-// 4) Prix unitaire + options
-const clientType =
-  document.getElementById("ctClientType")?.value || "particulier";
-const mainService =
-  document.getElementById("ctMainService")?.value || "piscine_chlore";
+  // 4) Prix unitaire + options
+  const clientType   = document.getElementById("ctClientType")?.value || "particulier";
+  const mainService  = document.getElementById("ctMainService")?.value || "piscine_chlore";
+  const includeOpen  = document.getElementById("ctIncludeOpening")?.checked || false;
+  const includeWinter= document.getElementById("ctIncludeWinter")?.checked || false;
+  const airbnbOption = document.getElementById("ctAirbnb")?.checked || false;
 
-const unitPrice = getTarifFromTemplates(mainService, clientType);
+  const unitPrice = getTarifFromTemplates(mainService, clientType) || 0;
 
-const includeOpening =
-  document.getElementById("ctIncludeOpening")?.checked || false;
-const includeWinter =
-  document.getElementById("ctIncludeWinter")?.checked || false;
+  let extra = 0;
+  if (includeOpen) {
+    const kindOpening =
+      mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
+        ? "vidange_jacuzzi"
+        : "remise_service_piscine";
+    extra += getTarifFromTemplates(kindOpening, clientType) || 0;
+  }
+  if (includeWinter) {
+    extra += getTarifFromTemplates("hivernage_piscine", clientType) || 0;
+  }
 
-// 🔥 nouvelle option Airbnb
-const airbnbEnabled =
-  document.getElementById("ctAirbnb")?.checked || false;
-
-let extra = 0;
-
-if (includeOpening) {
-  const kindOpening =
-    mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
-      ? "vidange_jacuzzi"
-      : "remise_service_piscine"; // adapte selon tes PRESTATION_TEMPLATES
-  extra += getTarifFromTemplates(kindOpening, clientType);
-}
-
-if (includeWinter) {
-  extra += getTarifFromTemplates("hivernage_piscine", clientType);
-}
-
-// Base : passages + options
-let totalHT = totalPassages * unitPrice + extra;
-let airbnbExtra = 0;
-
-// ⚡ Majoration Airbnb +20 %
-if (airbnbEnabled && totalHT > 0) {
-  airbnbExtra = totalHT * 0.20;
-  totalHT = totalHT + airbnbExtra;
-}
-
+  let totalHT = totalPassages * unitPrice + extra;
+  let airbnbExtra = 0;
+  if (airbnbOption && totalHT > 0) {
+    airbnbExtra = totalHT * 0.20;
+    totalHT += airbnbExtra;
+  }
 
   // 5) TVA
   const tvaRateInput = document.getElementById("tvaRate");
-  const tvaRate = tvaRateInput ? parseFloat(tvaRateInput.value) || 0 : 0;
+  const tvaRate = tvaRateInput
+    ? (parseFloat(String(tvaRateInput.value).replace(",", ".")) || 0)
+    : 0;
+
   const tvaAmount = totalHT * (tvaRate / 100);
-  const totalTTC = totalHT + tvaAmount;
+  const totalTTC  = totalHT + tvaAmount;
 
-  // 6) Mise à jour UI
-  const unitInput = document.getElementById("ctUnitPrice");
-  const totalHTInput = document.getElementById("ctTotalHT");
-
-  const recapPass = document.getElementById("ctRecapPassages");
-  const recapPrice = document.getElementById("ctRecapPrice");
-  const recapTotal = document.getElementById("ctRecapTotal");
+  // 6) Mise à jour UI prix
+  const unitInput   = document.getElementById("ctUnitPrice");
+  const totalHTInput= document.getElementById("ctTotalHT");
+  const recapPass   = document.getElementById("ctRecapPassages");
+  const recapPrice  = document.getElementById("ctRecapPrice");
+  const recapTotal  = document.getElementById("ctRecapTotal");
 
   const format =
     typeof formatEuro === "function"
       ? formatEuro
       : (v) => (v.toFixed ? v.toFixed(2) + " €" : v + " €");
 
-  if (unitInput) unitInput.value = unitPrice ? format(unitPrice) : "0,00 €";
+  if (unitInput)   unitInput.value   = unitPrice ? format(unitPrice) : "0,00 €";
   if (totalHTInput) totalHTInput.value = format(totalHT);
+  if (recapPass)   recapPass.textContent  = totalPassages.toString();
+  if (recapPrice)  recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
 
-  if (recapPass) recapPass.textContent = totalPassages.toString();
-  if (recapPrice)
-    recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
-
-// 7) Récap montant : Net à payer / HT / TTC 
-let labelAmount = "";
-let displayAmount = 0;
-
-if (tvaRate === 0) {
-  displayAmount = totalHT;
-  labelAmount =
-    clientType === "syndic"
-      ? "Montant HT"
-      : "Net à payer";
-} else {
-  displayAmount = totalTTC;
-  labelAmount = "Montant TTC";
-}
-
-
-if (recapTotal) {
-  let txt = labelAmount + " : " + format(displayAmount);
-  if (airbnbEnabled && airbnbExtra > 0) {
-    txt += " (dont majoration Airbnb : " + format(airbnbExtra) + ")";
+  // Label récap final
+  let labelAmount = "";
+  let displayAmount = 0;
+  if (tvaRate === 0) {
+    displayAmount = totalHT;
+    labelAmount = clientType === "syndic" ? "Montant HT" : "Net à payer";
+  } else {
+    displayAmount = totalTTC;
+    labelAmount = "Montant TTC";
   }
-  recapTotal.textContent = txt;
-}
 
+  if (recapTotal) {
+    let txt = labelAmount + " : " + format(displayAmount);
+    if (airbnbOption && airbnbExtra > 0) {
+      txt += " (dont majoration Airbnb : " + format(airbnbExtra) + ")";
+    }
+    recapTotal.textContent = txt;
+  }
 }
 
 // ----- Construction d'un objet contrat depuis le formulaire -----
@@ -7368,10 +7341,8 @@ function fillContractForm(contract) {
       banner.style.display = "none";
     }
   }
-}
 
-
-  // ---------- 8. PRIX ----------
+  // ---------- 9. PRIX ----------
   const unitInput  = document.getElementById("ctUnitPrice");
   const totalHTInp = document.getElementById("ctTotalHT");
 
@@ -7382,34 +7353,22 @@ function fillContractForm(contract) {
     totalHTInp.value = pr.totalHT != null ? pr.totalHT : "";
   }
 
-  // ---------- 9. Type de bassin -> prestation ----------
+  // ---------- 10. Type de bassin -> prestation ----------
   const ctMainService = document.getElementById("ctMainService");
   const ctPoolTypeEl  = document.getElementById("ctPoolType");
   if (ctPoolTypeEl && ctMainService) {
     ctPoolTypeEl.dispatchEvent(new Event("change"));
   }
 
-  // ---------- 10. Recalcul complet ----------
-  recomputeContract();
+  // ---------- 11. Recalcul complet ----------
+  if (typeof recomputeContract === "function") {
+    recomputeContract();
+  }
 
-  // ---------- 11. Mise à jour bouton "Facturer" ----------
+  // ---------- 12. Mise à jour bouton "Facturer" ----------
   if (typeof updateContractTransformButtonVisibility === "function") {
     updateContractTransformButtonVisibility();
   }
-}
-
-// Combien de factures d'échéance existent déjà pour ce contrat ?
-function countContractInstallmentInvoices(contractId) {
-  const docs = getAllDocuments();
-  return docs.filter(d =>
-    d.type === "facture" &&
-    d.contractId === contractId &&
-    d.prestations &&
-    d.prestations.some(p =>
-      p.kind === "contrat_echeance" ||
-      p.kind === "contrat_echeance_initiale"
-    )
-  ).length;
 }
 
 
@@ -8348,9 +8307,42 @@ function resiliateCurrentContract() {
 
 
 function transformContractToInvoice() {
+  // On recalcule d'abord le contrat depuis le formulaire
   recomputeContract();
   const contract = buildContractFromForm(true);
   if (!contract) return;
+
+  // 🔒 Blocage si devis obligatoire mais non accepté
+  const devisNeeded = isDevisObligatoireForContract(contract);
+  const devisOK     = isDevisAcceptedForContract(contract);
+
+  if (devisNeeded && !devisOK) {
+    const linkedDevis = getLinkedDevisForContract(contract);
+    const devisNum    = linkedDevis ? linkedDevis.number : null;
+
+    let msg;
+    if (linkedDevis && devisNum) {
+      msg =
+        `Ce contrat est lié au devis ${devisNum} qui n’est pas encore marqué "Accepté".\n\n` +
+        `Impossible de générer une facture tant que ce devis n’est pas accepté.`;
+    } else {
+      msg =
+        `Ce contrat nécessite un devis accepté avant facturation (particulier > 150 € TTC).\n\n` +
+        `Impossible de générer une facture tant qu’un devis n’a pas été créé puis accepté.`;
+    }
+
+    showConfirmDialog({
+      title: "Devis obligatoire non accepté",
+      message: msg,
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "🧾"
+    });
+    return;
+  }
+
+  // --- 🧾 Partie d'origine : on garde tout comme avant ---
 
   const c  = contract.client  || {};
   const s  = contract.site    || {};
@@ -8385,8 +8377,7 @@ function transformContractToInvoice() {
   const tvaAmount = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
   const totalTTC = subtotal + tvaAmount;
 
-const number = getNextNumber("facture");
-
+  const number = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // LIGNE NORMALE DE FACTURE — pas de prorata/preavis ici
@@ -8403,67 +8394,50 @@ const number = getNextNumber("facture");
     }
   ];
 
-  // Conditions de paiement
   const baseNotesLines =
     pr.clientType === "syndic"
       ? [
           "Règlement à 30 jours fin de mois.",
-          "Aucun escompte pour paiement anticipé.",
-          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+          "Aucun escompte pour paiement anticipé. En cas de retard de paiement, des pénalités pourront être appliquées conformément aux conditions générales."
         ]
       : [
-          "Règlement à réception.",
-          "Aucun escompte pour paiement anticipé.",
-          "Des pénalités peuvent être appliquées en cas de retard."
+          "Règlement comptant à réception de la facture.",
+          "Aucun escompte pour paiement anticipé. En cas de retard de paiement, des pénalités pourront être appliquées conformément aux conditions générales."
         ];
 
-  const notes = baseNotesLines
-    .concat(["Les Conditions Générales de Vente sont disponibles sur demande."])
-    .join("\n");
+  const notes = baseNotesLines.join("\n");
 
   const facture = {
-       id: generateId("FAC"),
+    id: generateId(),
     type: "facture",
     number,
     date: todayISO,
-    validityDate: "",
-    subject,
-
-    contractId: contract.id || null,
-    contractReference: c.reference || "",
-
     client: {
-      civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
+      name: c.name || "",
+      address: c.address || "",
+      email: c.email || "",
+      phone: c.phone || "",
+      reference: c.reference || ""
     },
-
-    siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
-
+    site: {
+      name: s.name || "",
+      address: s.address || ""
+    },
+    subject,
     prestations,
-    tvaRate,
     subtotal,
-    discountRate: 0,
-    discountAmount: 0,
+    tvaRate,
     tvaAmount,
-    totalTTC,
-
+    total: totalTTC,
     notes,
-
     paid: false,
     paymentMode: "",
     paymentDate: "",
-    status: "",
-    conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
-
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    contractId: contract.id || currentContractId || null
   };
 
-  // Sauvegarde
   const docs = getAllDocuments();
   docs.push(facture);
   saveDocuments(docs);
@@ -8472,34 +8446,21 @@ const number = getNextNumber("facture");
     saveSingleDocumentToFirestore(facture);
   }
 
-  // Popup
-  showConfirmDialog({
-    title: "Contrat transformé en facture",
-    message:
-      `Une facture ${facture.number} a été créée à partir de ce contrat.\n\n` +
-      `Souhaites-tu l’ouvrir maintenant ?`,
-    confirmLabel: "Ouvrir la facture",
-    cancelLabel: "Rester sur le contrat",
-    variant: "success",
-    icon: "✅",
-    onConfirm: function () {
-      if (typeof switchListType === "function") {
-        switchListType("facture");
-      }
+  if (typeof switchListType === "function") {
+    switchListType("facture");
+  }
 
-      const contractView = document.getElementById("contractView");
-      const formView     = document.getElementById("formView");
-      if (contractView) contractView.classList.add("hidden");
-      if (formView) formView.classList.remove("hidden");
+  const contractView = document.getElementById("contractView");
+  const formView     = document.getElementById("formView");
+  if (contractView) contractView.classList.add("hidden");
+  if (formView) formView.classList.remove("hidden");
 
-      if (typeof loadDocument === "function") {
-        loadDocument(facture.id);
-      }
-      if (typeof loadDocumentsList === "function") {
-        loadDocumentsList();
-      }
-    }
-  });
+  if (typeof loadDocument === "function") {
+    loadDocument(facture.id);
+  }
+  if (typeof loadDocumentsList === "function") {
+    loadDocumentsList();
+  }
 }
 
 function openContractPDF(previewOnly = false) {
@@ -9632,28 +9593,37 @@ function initContractsUI() {
   const root = document.getElementById("contractView");
   if (!root) return;
 
-  // Champs qui déclenchent un recalcul
-  const ids = [
-    "ctMode",
-    "ctPassHiver",
-    "ctPassEte",
-    "ctStartDate",
-    "ctDuration"
+  // ✅ Tous les champs qui influencent le calcul du contrat
+  const recalcSelectors = [
+    "#ctMode",
+    "#ctPassHiver",
+    "#ctPassEte",
+    "#ctStartDate",
+    "#ctDuration",
+    "#ctBillingMode",
+    "#ctIncludeOpening",
+    "#ctIncludeWinter",
+    "#ctAirbnb",
+    "#ctPoolType",
+    "#ctMainService",
+    "#ctClientParticulier",
+    "#ctClientSyndic"
   ];
 
-  ids.forEach((id) => {
-    const el = document.getElementById(id);
+  recalcSelectors.forEach((sel) => {
+    const el = document.querySelector(sel);
     if (!el) return;
 
+    const isInput = el.tagName === "INPUT";
     const evtName =
-      el.tagName === "INPUT" && (el.type === "number" || el.type === "date")
+      isInput && (el.type === "number" || el.type === "date" || el.type === "checkbox" || el.type === "radio")
         ? "input"
         : "change";
 
     el.addEventListener(evtName, recomputeContract);
   });
 
-  // Synchronisation type de bassin -> prestation principale
+  // synchronisation type de bassin -> prestation principale
   const poolTypeEl = document.getElementById("ctPoolType");
   const mainServiceEl = document.getElementById("ctMainService");
 
@@ -9665,34 +9635,23 @@ function initContractsUI() {
       } else if (v === "piscine_chlore") {
         mainServiceEl.value = "piscine_chlore";
       } else {
-        // Spa / jacuzzi -> entretien_jacuzzi
         mainServiceEl.value = "entretien_jacuzzi";
       }
       recomputeContract();
     });
-
-    // init à l'ouverture
-    poolTypeEl.dispatchEvent(new Event("change"));
   }
 
-  // Options forfaitaires (remise en route / hivernage)
-  const opening = document.getElementById("ctIncludeOpening");
-  const winter = document.getElementById("ctIncludeWinter");
-  if (opening) opening.addEventListener("change", recomputeContract);
-  if (winter) winter.addEventListener("change", recomputeContract);
-const airbnb = document.getElementById("ctAirbnb");
-if (airbnb) airbnb.addEventListener("change", recomputeContract);
-
-
-  // Radios Particulier / Syndic (si tu les ajoutes ensuite au HTML)
+  // radios type client
   const ctPartRadio = document.getElementById("ctClientParticulier");
-  const ctSynRadio = document.getElementById("ctClientSyndic");
-  const hiddenType = document.getElementById("ctClientType");
+  const ctSynRadio  = document.getElementById("ctClientSyndic");
+  const hiddenType  = document.getElementById("ctClientType");
 
   if (ctPartRadio) {
     ctPartRadio.addEventListener("change", () => {
       if (ctPartRadio.checked) {
         updateContractClientType("particulier");
+        if (hiddenType) hiddenType.value = "particulier";
+        recomputeContract();
       }
     });
   }
@@ -9701,6 +9660,8 @@ if (airbnb) airbnb.addEventListener("change", recomputeContract);
     ctSynRadio.addEventListener("change", () => {
       if (ctSynRadio.checked) {
         updateContractClientType("syndic");
+        if (hiddenType) hiddenType.value = "syndic";
+        recomputeContract();
       }
     });
   }
@@ -9709,7 +9670,7 @@ if (airbnb) airbnb.addEventListener("change", recomputeContract);
   const initialType = (hiddenType && hiddenType.value) || "particulier";
   updateContractClientType(initialType);
 
-  // 1er calcul
+  // 1er calcul pour tout mettre d’aplomb
   recomputeContract();
 }
 

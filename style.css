@@ -1171,14 +1171,18 @@ textarea {
 
 /* Overlay général */
 .popup-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: flex;
+    position: fixed;      /* 🔥 ne bouge plus la page */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.35); /* fond semi-transparent */
+    display: flex;       /* centre la popup */
     justify-content: center;
     align-items: center;
-    z-index: 10000 !important;
+    z-index: 9999;       /* au-dessus de tout */
 }
+
 
 .popup-overlay.hidden {
     display: none;
