@@ -3999,14 +3999,64 @@ function setPaymentMode(id, mode) {
 
 function setDevisStatus(id, status) {
   const docs = getAllDocuments();
-  const doc = docs.find((d) => d.id === id);
-  if (!doc || doc.type !== "devis") return;
+  const idx = docs.findIndex(d => d.id === id);
+  if (idx === -1) return;
 
-  doc.status = status;
+  const doc = docs[idx];
+  if (doc.type !== "devis") return;
+
+  const oldStatus = doc.status || "";
+
+  // 1) Mise à jour du devis
+  doc.status    = status;   // ✅ la bonne variable est "status"
+  doc.updatedAt = new Date().toISOString();
+
   saveDocuments(docs);
-  saveSingleDocumentToFirestore(doc);
-  loadDocumentsList();
+
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(doc);
+  }
+
+  if (typeof loadDocumentsList === "function") {
+    loadDocumentsList();
+  }
+
+  // 2) Si on vient de passer à "accepte" → lancer la facturation du contrat lié
+  if (status === "accepte" && oldStatus !== "accepte") {
+
+    const contracts = getAllContracts() || [];
+
+    const linkedContracts = contracts.filter(c =>
+      c.meta && c.meta.sourceDevisId === doc.id
+    );
+
+    linkedContracts.forEach(contract => {
+      contract.meta = contract.meta || {};
+      contract.meta.sourceDevisStatus = "accepte";
+
+      if (!contract.pricing || !contract.pricing.billingMode) return;
+
+      if (contract.pricing.nextInvoiceDate) return;
+
+      if (typeof rebuildContractInvoices === "function") {
+        rebuildContractInvoices(contract);
+      } else {
+        contract.pricing.nextInvoiceDate =
+          computeNextInvoiceDate(contract) || "";
+
+        const all = getAllContracts().map(c =>
+          c.id === contract.id ? contract : c
+        );
+
+        saveContracts(all);
+        if (typeof saveSingleContractToFirestore === "function") {
+          saveSingleContractToFirestore(contract);
+        }
+      }
+    });
+  }
 }
+
 
 // ================== TRANSFORMATION DEVIS -> FACTURE ==================
 
@@ -7291,6 +7341,36 @@ function fillContractForm(contract) {
     }
   }
 
+  // ---------- 8. BANDEAU DEVIS LIÉ ----------
+  const banner = document.getElementById("ctDevisBanner");
+  if (banner) {
+    const meta        = contract.meta || {};
+    const devisNumber = meta.sourceDevisNumber || "";
+    const devisStatus = meta.sourceDevisStatus || meta.devisStatus || "";
+
+    if (devisNumber) {
+      let statusLabel = "";
+      if (devisStatus === "accepte") {
+        statusLabel = " (Accepté)";
+      } else if (devisStatus === "refuse") {
+        statusLabel = " (Refusé)";
+      } else if (devisStatus) {
+        statusLabel = " (" + devisStatus + ")";
+      } else {
+        statusLabel = " (En attente)";
+      }
+
+      banner.textContent =
+        "Contrat lié au devis " + devisNumber + statusLabel;
+      banner.style.display = "block";
+    } else {
+      banner.textContent = "";
+      banner.style.display = "none";
+    }
+  }
+}
+
+
   // ---------- 8. PRIX ----------
   const unitInput  = document.getElementById("ctUnitPrice");
   const totalHTInp = document.getElementById("ctTotalHT");
@@ -10142,6 +10222,13 @@ function checkScheduledInvoices() {
     const mode       = pr.billingMode || "annuel";
 
     const status = computeContractStatus(contract);
+    // ⛔ Si un devis est obligatoire mais pas encore accepté → aucune facture auto
+    const devisNeeded = isDevisObligatoireForContract(contract);
+    const devisOK     = isDevisAcceptedForContract(contract);
+    if (devisNeeded && !devisOK) {
+      return;
+    }
+
 
     // ----- CAS ANNUEL SYNDIC (inchangé) -----
     if (mode === "annuel" && clientType !== "particulier") {
