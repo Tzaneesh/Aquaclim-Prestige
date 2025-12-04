@@ -36,6 +36,7 @@ body {
     gap: 20px;
 }
 
+/* Utilisé partout pour masquer proprement */
 .hidden {
     display: none !important;
 }
@@ -220,18 +221,10 @@ body {
     background: #1b5e20;
 }
 
-.btn-danger {
-    background: #dc3545;
-    color: #fff;
-}
-
-.btn-danger:hover:not(:disabled) {
-    background: #c82333;
-}
-/* Déclinaison danger (utilisée pour les suppressions) */
+/* Danger : version unique (ancienne version supprimée) */
 .btn-danger {
     background-color: #d9534f;
-    color: white;
+    color: #fff;
     border: none;
     padding: 8px 14px;
     border-radius: 6px;
@@ -266,11 +259,10 @@ body {
     background-color: #d97706;
 }
 
+/* Taille réduite & look pill */
 .btn-small {
-    padding: 6px 12px;
-    font-size: 13px;
-    /* On rend les btn-small un peu plus élégants */
     padding: 6px 14px;
+    font-size: 13px;
     border-radius: 999px;
 }
 
@@ -303,6 +295,7 @@ body {
     color: #0d6efd;
     border: 1px solid #0d6efd;
 }
+
 .btn-outline-primary:hover {
     background: #0d6efd;
     color: #fff;
@@ -313,6 +306,7 @@ body {
     color: #333;
     border: 1px solid #ddd;
 }
+
 .btn-light:hover {
     background: #e4e4e4;
 }
@@ -346,7 +340,7 @@ body {
     cursor: not-allowed;
 }
 
-/* Boutons de modification/suppression */
+/* Boutons de modification/suppression “anciens” (si encore utilisés quelque part) */
 .modify-btn {
     background: #0275d8;
     color: white;
@@ -355,6 +349,7 @@ body {
     border-radius: 5px;
     cursor: pointer;
 }
+
 .modify-btn:hover {
     background: #025aa5;
 }
@@ -367,6 +362,7 @@ body {
     border-radius: 5px;
     cursor: pointer;
 }
+
 .delete-btn:hover {
     background: #b52b27;
 }
@@ -386,14 +382,15 @@ body {
 .tarif-delete-btn:hover {
     color: #ff0000;
 }
-
 /* =========================================================
     7. FORMULAIRES & INPUTS (Général)
 ========================================================= */
 
 .form-group {
     margin-bottom: 16px;
+    position: relative;   /* ➜ sert de repère pour la popup */
 }
+
 
 label {
     display: block;
@@ -435,7 +432,7 @@ textarea {
     resize: vertical;
 }
 
-/* Inputs spécifiques */
+/* Champs spécifiques pop-up client */
 #editClientForm input {
     width: 100%;
     margin-bottom: 8px;
@@ -464,16 +461,14 @@ textarea {
 #siteCivility {
     width: 260px;
     max-width: 100%;
-    box-sizing: border-box;
     margin-right: 12px;
 }
 
-/* Radio type client (ronds) */
+/* Radios type client */
 .client-type-option input[type="radio"] {
     appearance: auto !important;
     width: 16px;
     height: 16px;
-    border-radius: 50%;
     cursor: pointer;
 }
 
@@ -490,43 +485,40 @@ textarea {
     display: flex;
     align-items: center;
     gap: 5px;
-    white-space: nowrap;
 }
 
 /* =========================================================
-    8. ACTIONS FORMULAIRE
+    8. ACTIONS FORMULAIRE (Modifer / Imprimer / Supprimer)
 ========================================================= */
 
 .actions-btns {
     display: flex;
     flex-direction: column;
     gap: 8px;
-    align-items: stretch; /* chaque ligne prend toute la largeur de la cellule */
+    align-items: stretch;
     margin-bottom: 4px;
 }
 
 .actions-btns-row {
     display: flex;
-    flex-wrap: nowrap; /* on force 2 boutons par ligne */
     gap: 8px;
     justify-content: space-between;
 }
 
 .actions-btns-row .btn {
-    flex: 1 1 0; /* 🧨 chaque bouton prend 50% de la ligne, ils restent côte à côte */
+    flex: 1 1 0;
     padding: 5px 0;
     font-size: 12px;
     border-radius: 999px;
     text-align: center;
 }
 
-/* Ligne spéciale pour le bouton Supprimer dans les CONTRATS */
 .actions-btns-row--full {
     justify-content: center;
 }
 
 /* =========================================================
-    9. CLIENT / BLOC CLIENT
+    9. CLIENT / LISTE & PRINT
 ========================================================= */
 
 .client-list-box {
@@ -556,7 +548,6 @@ textarea {
     font-size: 13px;
 }
 
-/* Bloc client pour l'impression */
 .print-client-block h3 {
     margin-bottom: 6px;
     font-size: 14px;
@@ -568,7 +559,6 @@ textarea {
     display: flex;
     flex-wrap: wrap;
     gap: 18px;
-    width: 100%;
 }
 
 .client-col.left {
@@ -590,39 +580,22 @@ textarea {
     margin-top: 25px;
 }
 
+/* Ligne d'une prestation */
 .prestation-line {
     display: grid;
     grid-template-columns: 2.6fr 1.6fr 0.9fr 0.4fr;
     gap: 10px;
     margin-bottom: 12px;
-    align-items: flex-start;
     padding: 12px;
     background: #f8f9fa;
     border-radius: 8px;
+    align-items: start;
 }
 
 .prestation-line input,
 .prestation-line select,
 .prestation-line textarea {
     margin-bottom: 0;
-}
-
-.prestation-dates {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    margin-top: 4px;
-}
-
-.prestation-dates input {
-    font-size: 12px;
-    padding: 7px;
-}
-
-.dates-add-btn {
-    margin-top: 4px;
-    padding: 4px 10px;
-    font-size: 11px;
 }
 
 .prestation-total {
@@ -636,7 +609,25 @@ textarea {
     margin-right: 10px;
 }
 
-/* Groupes dans Prestations */
+/* Saisie dates */
+.prestation-dates {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.prestation-dates input {
+    font-size: 12px;
+    padding: 7px;
+}
+
+.dates-add-btn {
+    margin-top: 4px;
+    padding: 4px 10px;
+    font-size: 11px;
+}
+
+/* Groupes qty/prix */
 .qty-price-group {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -647,13 +638,9 @@ textarea {
     font-size: 12px;
 }
 
+/* Achats */
 .purchase-wrapper {
     margin-top: 4px;
-}
-
-.prestation-line .purchase-wrapper {
-    margin-top: 0 !important;
-    align-self: flex-start;
 }
 
 .prestation-date-row {
@@ -665,7 +652,6 @@ textarea {
 .prestation-date-row .prestation-date {
     width: 140px;
     min-width: 140px;
-    max-width: 140px;
     padding: 7px;
 }
 
@@ -690,7 +676,6 @@ textarea {
 .total-line {
     display: flex;
     justify-content: space-between;
-    align-items: center;
     margin-bottom: 8px;
     font-size: 14px;
 }
@@ -731,24 +716,22 @@ textarea {
 }
 
 /* =========================================================
-    12. PAIEMENT / STATUTS
+    12. PAIEMENT / STATUTS FACTURES
 ========================================================= */
 
 .pay-line {
     font-size: 12px;
     margin-bottom: 4px;
     display: flex;
-    flex-direction: column; /* ➜ options l’une sous l’autre */
+    flex-direction: column;
     gap: 4px;
-    align-items: flex-start;
 }
 
 .pay-line label {
     display: flex;
     align-items: center;
-    gap: 4px; /* petit espace entre le rond et le texte */
+    gap: 4px;
 }
-
 
 .payment-date-wrapper {
     margin-top: 4px;
@@ -785,7 +768,7 @@ textarea {
     color: #1976d2;
 }
 
-/* Facture payée / non payée */
+/* Facture payée / impayée */
 .badge-facture-paid {
     background: #e8f5e9;
     color: #388e3c;
@@ -867,7 +850,7 @@ textarea {
     color: #999;
 }
 
-/* Panel tarifs */
+/* Section tarifs */
 #tarifsPanel table.documents-table th,
 #tarifsPanel table.documents-table td {
     font-size: 12px;
@@ -881,28 +864,15 @@ textarea {
 .tarifs-actions {
     display: flex;
     gap: 10px;
-    justify-content: flex-start;
     flex-wrap: wrap;
     margin-top: 10px;
 }
 
-.tarifs-actions-top {
-    margin-bottom: 10px;
-}
-
-.tarif-label-cell {
+.tarifs-label-cell {
     cursor: pointer;
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-.tarif-label-text {
-    text-decoration: none;
-}
-
-.tarif-label-cell:hover .tarif-label-text {
-    text-decoration: underline;
 }
 
 .tarif-desc-icon {
@@ -917,19 +887,31 @@ textarea {
 }
 
 /* =========================================================
-    15. FILTRES LISTE
+    15. FILTRES LISTE (Recherche, année, tri, CSV)
 ========================================================= */
 
 .filters-row {
     display: flex;
+    justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    gap: 16px;
     margin-bottom: 10px;
     flex-wrap: wrap;
 }
 
-.filters-row select {
-    max-width: 160px;
+/* Groupe à droite (recherche + année + tri + export) */
+.filters-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+/* Éléments compacts */
+.sort-wrapper,
+#yearFilterContainer,
+#exportContainer,
+.doc-search-wrapper {
+    flex: 0 0 auto;
 }
 
 .filter-label {
@@ -938,17 +920,11 @@ textarea {
     font-size: 12px;
 }
 
-.doc-search-wrapper {
-    margin-left: auto;
-    margin-right: 16px;
-}
-
 .doc-search-wrapper input {
     min-width: 230px;
 }
 
-/* Bandeau alerte contrats à renouveler */
-
+/* Bandeau alerte contrats */
 .contracts-alert {
     margin: 8px 0 4px;
     padding: 8px 10px;
@@ -962,10 +938,10 @@ textarea {
 .contracts-alert strong {
     font-weight: 600;
 }
-
 /* =========================================================
     16. CONTRATS PISCINE / SPA (VUE APPLICATION)
 ========================================================= */
+
 #contractView {
     width: 100%;
     max-width: 1400px !important;
@@ -974,14 +950,12 @@ textarea {
     background: #eef3ff;
     border-radius: 15px;
     display: block;
-}
-
-#contractView .card {
-    margin: 0 auto !important;   /* Force le bloc interne à se centrer */
+    position: relative;         
 }
 
 
 #contractView .card {
+    margin: 0 auto !important;
     background: #fff;
     padding: 25px;
     border-radius: 12px;
@@ -994,10 +968,14 @@ textarea {
     margin-top: 25px;
     margin-bottom: 4px;
     font-size: 12px;
-   font-weight: bold;
+    font-weight: bold;
     color: #0d47a1;
 }
-.block p { margin: 3px 0; }
+
+.block p {
+    margin: 3px 0;
+}
+
 /* Labels des champs */
 #contractView .form-group label {
     font-weight: 500;
@@ -1015,14 +993,14 @@ textarea {
     font-size: 14px;
 }
 
-/* Layout des lignes dans le contrat (on reste en flex dédié contrat) */
+/* Layout des lignes dans le contrat */
 #contractView .row {
     display: flex;
     flex-wrap: wrap;
     gap: 15px;
 }
 
-/* Chaque form-group prend une largeur mini pour rester propre */
+/* Largeur des champs */
 #contractView .form-group {
     flex: 1 1 220px;
 }
@@ -1064,22 +1042,36 @@ textarea {
     font-weight: 600;
 }
 
+/* Popup d’avertissement flottante */
+/* Alerte sous "Total passages (auto)" – flottante dans le form-group */
 .ct-warning {
+    position: absolute;   /* flotte à l’intérieur du .form-group */
+    left: 0;
+    top: 100%;            /* juste sous l’input */
     margin-top: 6px;
+
+    max-width: 100%;
+
     padding: 8px 12px;
     border-radius: 6px;
     background: #fff3cd;
     border: 1px solid #ffe8a1;
     color: #856404;
-    font-size: 13px;
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    z-index: 5;
 }
 
+/* Masquée tant que le JS laisse .hidden */
 .ct-warning.hidden {
-    display: none;
+    display: none !important;
 }
+
+
+
+
 
 .contract-client-actions {
     display: flex;
@@ -1096,6 +1088,7 @@ textarea {
     gap: 12px;
     font-size: 13px;
 }
+
 .contract-options label {
     display: flex;
     align-items: center;
@@ -1106,10 +1099,7 @@ textarea {
     border: 1px solid #dce4ff;
 }
 
-/* ---- OPTIONS FORFAITAIRES – STYLE PROPRE ---- */
-/* --- STYLE PROPRE ET FORCÉ POUR LES OPTIONS FORFAITAIRES --- */
-
-/* --- OPTIONS COMPACTES --- */
+/* --- OPTIONS FORFAITAIRES – STYLE PROPRE --- */
 
 .options-box {
     display: flex !important;
@@ -1121,15 +1111,12 @@ textarea {
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
-
     background: #f8faff !important;
     border: 1px solid #d8e2ff !important;
     padding: 8px 12px !important;
     border-radius: 10px !important;
-
     box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
     cursor: pointer !important;
-
     transition: 0.15s ease !important;
 }
 
@@ -1150,7 +1137,6 @@ textarea {
     font-weight: 500 !important;
 }
 
-
 /* =========================================================
     17. SIGNATURE (VUE APPLICATION)
 ========================================================= */
@@ -1169,56 +1155,46 @@ textarea {
     18. POPUP / CONFIRMATION
 ========================================================= */
 
-/* Overlay général */
+/* Overlay général (popup clients, etc.) */
 .popup-overlay {
-    position: fixed;      /* 🔥 ne bouge plus la page */
-    top: 0;
-    left: 0;
+    position: fixed;
+    inset: 0;
     width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.35); /* fond semi-transparent */
-    display: flex;       /* centre la popup */
+    background: rgba(0, 0, 0, 0.35);
+    display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 9999;       /* au-dessus de tout */
+    z-index: 9999;
 }
-
 
 .popup-overlay.hidden {
     display: none;
 }
 
-.hidden {
-  display: none !important;
-}
-
-/* popup centrée + fade */
+/* Popup centrée */
 .popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0.98);
-  opacity: 0;
-  pointer-events: none;
-
-  background: #fff;
-  padding: 25px;
-  border-radius: 14px;
-  width: 340px;
-  max-width: 90%;
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
-  z-index: 9999;
-
-  transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.98);
+    opacity: 0;
+    pointer-events: none;
+    background: #fff;
+    padding: 25px;
+    border-radius: 14px;
+    width: 340px;
+    max-width: 90%;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+    z-index: 9999;
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
 }
 
 .popup.show {
-  opacity: 1;
-  transform: translate(-50%, -50%) scale(1);
-  pointer-events: all;
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: all;
 }
-
-
 
 .popup h3 {
     margin-bottom: 15px;
@@ -1347,7 +1323,7 @@ textarea {
     background: #bdbdbd;
 }
 
-/* Footer du popup clients */
+/* Popup clients : footer */
 #clientsPopup .clients-footer {
     margin-top: 12px;
     padding-top: 10px;
@@ -1359,16 +1335,8 @@ textarea {
     gap: 8px;
 }
 
-
 .clients-footer-left,
 .clients-footer-right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-#clientsPopup .clients-footer-left,
-#clientsPopup .clients-footer-right {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -1380,9 +1348,251 @@ textarea {
     border-radius: 999px;
 }
 
+/* Custom dialog (résiliation, etc.) */
+.custom-dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5000;
+}
+
+.custom-dialog {
+    background: white;
+    width: 380px;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+    animation: fadeIn 0.2s ease-out;
+}
+
+.custom-dialog h3 {
+    margin: 0 0 12px 0;
+}
+
+.dialog-label {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.dialog-input,
+.dialog-textarea {
+    width: 100%;
+    margin-top: 3px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+}
+
+.dialog-textarea {
+    height: 70px;
+    resize: none;
+}
+
+.dialog-actions {
+    margin-top: 14px;
+    text-align: right;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.resiliation-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.resiliation-field {
+    margin-bottom: 6px;
+}
+
+.resiliation-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border-radius: 4px;
+    border: 1px solid #d0d5dd;
+    font-size: 13px;
+}
+
+.resiliation-field small {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    color: #667085;
+}
+
+.resiliation-note {
+    margin-top: 4px;
+    font-size: 11px;
+    color: #555;
+}
+
+/* Lien voir nouveau contrat */
+.renew-link a {
+    font-size: 11px;
+    color: #1a74d9;
+    text-decoration: underline;
+    display: inline-block;
+    margin-top: 4px;
+}
+
+/* Etoile obligatoire */
+.required-star {
+    color: #d00000 !important;
+    font-weight: 700;
+}
+
+/* Inputs plus petits */
+.small-input,
+.small-select {
+    width: 220px !important;
+    max-width: 220px !important;
+    display: inline-block !important;
+}
+
+/* Réduction champs tarifs contrat */
+#ctUnitPrice,
+#ctTotalHT,
+#ctBillingMode {
+    max-width: 250px !important;
+}
 
 /* =========================================================
-    19. ANIMATIONS
+    19. STATUTS CONTRATS / ÉCHÉANCIER
+========================================================= */
+
+.status-cell {
+    text-align: center;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+/* Statuts contrats */
+.status-ok {
+    background-color: #e6f4ea;
+    color: #137333;
+}
+
+.status-warning {
+    background-color: #fff4e5;
+    color: #b06000;
+}
+
+.status-terminated {
+    background-color: #eeeeee;
+    color: #222222;
+    border: 1px solid #bbbbbb;
+}
+
+.status-cancelled {
+    background-color: #ffe6e6;
+    color: #cc0000;
+    border: 1px solid #cc0000;
+}
+
+.resiliation-note {
+    font-size: 11px;
+    margin-top: 8px;
+    color: #555;
+}
+
+/* Table échéancier */
+.schedule-table th,
+.schedule-table td {
+    text-align: center;
+    vertical-align: middle;
+}
+
+/* Lignes colorées */
+.schedule-row-paid {
+    background: #e6f6ec;
+}
+.schedule-row-due {
+    background: #fdeaea;
+}
+.schedule-row-closure {
+    background: #e7f0ff;
+}
+.schedule-row-forecast {
+    background: #fafafa;
+}
+
+/* Cellule statut échéancier */
+.schedule-status-cell {
+    white-space: nowrap;
+}
+
+/* Contenu statut échéancier */
+.schedule-status {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.schedule-status-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.schedule-status-main {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.schedule-status-meta {
+    font-size: 12px;
+    color: #666;
+}
+
+/* Bouton "Voir" compact */
+.schedule-status-btn {
+    border: none;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    background: #555;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.schedule-status-btn:hover {
+    opacity: 0.9;
+}
+
+/* Popup échéancier plus large */
+#contractSchedulePopup .popup {
+    width: 95%;
+    max-width: 600px;
+}
+
+/* =========================================================
+    20. LAYOUT LISTES DOCUMENTS (CARTE, LARGEUR)
+========================================================= */
+
+/* La carte des documents (devis / contrats / factures) plus étroite */
+#documentsCard {
+    max-width: 1100px;
+    margin: 0 auto 30px;
+}
+
+/* =========================================================
+    21. ANIMATIONS
 ========================================================= */
 
 @keyframes slideDown {
@@ -1407,8 +1617,24 @@ textarea {
     }
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes popupSlideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* =========================================================
-    20. RESPONSIVE
+    22. RESPONSIVE
 ========================================================= */
 
 @media (max-width: 768px) {
@@ -1424,9 +1650,35 @@ textarea {
     .btn {
         width: 100%;
     }
+
+    /* Liste documents : s'adapte */
+    #documentsCard {
+        max-width: 100%;
+    }
+
+    .filters-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filters-group {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .doc-search-wrapper {
+        flex: 1 1 100%;
+    }
+
+    .sort-wrapper {
+        width: 100%;
+    }
+
+    .sort-wrapper select {
+        width: 100%;
+    }
 }
 
-/* Petits écrans : on empile au lieu d'afficher côte à côte */
 @media (max-width: 900px) {
     body {
         font-size: 14px;
@@ -1453,7 +1705,7 @@ textarea {
 }
 
 /* =========================================================
-    21. IMPRESSION (VUE APPLICATION)
+    23. IMPRESSION (VUE APPLICATION)
 ========================================================= */
 
 @media print {
@@ -1475,7 +1727,6 @@ textarea {
         border-radius: 0;
     }
 
-    /* En-tête plus compact à l’impression */
     .header {
         padding: 18px 22px;
         margin-bottom: 12px;
@@ -1532,7 +1783,6 @@ textarea {
         margin-bottom: 2px;
     }
 
-    /* Zébrage léger sur tableaux */
     .documents-table tbody tr:nth-child(odd),
     .print-prestations-table tbody tr:nth-child(odd) {
         background: #f8f9fc;
@@ -1553,7 +1803,6 @@ textarea {
         border-bottom: 1px solid #e1e8ed;
     }
 
-    /* Totaux plus premium à l’impression */
     .totals {
         background: #f3f6fc;
         border: 1px solid #cbd3e1;
@@ -1591,238 +1840,62 @@ textarea {
     }
 }
 
-.status-cell {
-  text-align: center;
+
+#contractView {
+    overflow: visible !important;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
+#ctWarning {
+    position: fixed !important;
+    right: 30px;
+    bottom: 30px;
+    z-index: 9999 !important;
+
+    display: flex !important;
 }
 
-/* En cours : vert */
-.status-ok {
-  background-color: #e6f4ea;
-  color: #137333;
+.ct-passages-details {
+    font-size: 13px;
+    color: #666;
+
+    display: block;
+    margin-top: 4px;
+
+    max-width: 280px; /* empêche de prendre toute la ligne */
+    white-space: normal; /* permet les retours à la ligne */
+    line-height: 1.3;
 }
 
-/* À renouveler : orange */
-.status-warning {
-  background-color: #fff4e5;
-  color: #b06000;
+/* ========= Warning + détails sous "Total passages" ========= */
+
+.ct-warning-wrapper {
+  position: relative;
 }
 
-/* Terminé : gris / noir */
-.status-terminated {
-  background-color: #eeeeee;
-  color: #222222;
-  border: 1px solid #bbbbbb;
-}
-
-/* Résilié : rouge */
-.status-cancelled {
-  background-color: #ffe6e6;
-  color: #cc0000;
-  border: 1px solid #cc0000;
-}
-
-.resiliation-note {
-  font-size: 11px;
-  margin-top: 8px;
-  color: #555;
-}.custom-dialog-overlay {
-  position: fixed;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 5000;
-}
-
-.custom-dialog {
-  background: white;
-  width: 380px;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.25);
-  animation: fadeIn 0.2s ease-out;
-}
-
-.custom-dialog h3 {
-  margin: 0 0 12px 0;
-}
-
-.dialog-label {
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.dialog-input,
-.dialog-textarea {
-  width: 100%;
-  margin-top: 3px;
-  padding: 8px;
-  border: 1px solid #ccc;
+/* Bloc warning sous l'input */
+.ct-warning-message {
+  margin-top: 6px;
+  padding: 8px 12px;
+  background: #fff3cd;
+  border: 1px solid #ffe8a1;
   border-radius: 6px;
-}
-
-.dialog-textarea {
-  height: 70px;
-  resize: none;
-}
-
-.dialog-actions {
-  margin-top: 14px;
-  text-align: right;
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to   { opacity: 1; transform: scale(1); }
-}
-
-.resiliation-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.resiliation-field {
-  margin-bottom: 6px;
-}
-
-.resiliation-input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 6px 8px;
-  border-radius: 4px;
-  border: 1px solid #d0d5dd;
-  font-size: 13px;
-}
-
-.resiliation-field small {
-  display: block;
-  margin-top: 3px;
-  font-size: 11px;
-  color: #667085;
-}
-
-.resiliation-note {
-  margin-top: 4px;
-  font-size: 11px;
-  color: #555;
-}
-
-.btn-warning {
-  background: #f59e0b;
-  color: #fff;
-}
-.btn-warning:hover {
-  background: #d97706;
-}
-.renew-link a {
-  font-size: 11px;
-  color: #1a74d9;
-  text-decoration: underline;
-  display: inline-block;
-  margin-top: 4px;
-}
-.required-star {
-  color: #d32f2f !important;
-  font-weight: bold;
-  margin-left: 3px;
-}
-
-.small-input {
-  max-width: 250px !important;
-}
-
-.small-select {
-  max-width: 250px !important;
-}
-
-.form-label.required::after {
-  content: " *";
-  color: #e53935;
-  margin-left: 4px;
-}
-
-.small-input,
-.small-select {
-  width: 220px !important;    /* largeur fixe */
-  max-width: 220px !important;
-  display: inline-block !important;
-}
-/* Réduction des champs tarifs */
-#ctUnitPrice,
-#ctTotalHT,
-#ctBillingMode {
-  max-width: 250px !important;
-}
-
-/* Rendre les labels obligatoires rouges */
-.required-star {
-  color: #d00000 !important;
-  font-weight: 700;
-}
-
-/* ====== Échéancier contrat : cellule Statut ====== */
-
-.schedule-table td {
-  vertical-align: middle;
-}
-
-/* Container complet de la cellule statut */
-.schedule-status {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-/* Bloc texte (statut + numéro) */
-.schedule-status-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-/* Ligne principale : "prévisionnel" / "facturée (payée)"... */
-.schedule-status-main {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-/* Ligne secondaire : numéro FAC-2025-005 */
-.schedule-status-meta {
+  color: #856404;
   font-size: 12px;
-  color: #666;
+  line-height: 1.35;
 }
 
-/* Bouton "Voir" compact */
-.schedule-status-btn {
-  border: none;
-  border-radius: 999px;
-  padding: 2px 10px;
-  font-size: 11px;
-  cursor: pointer;
-  background: #555;
-  color: #fff;
-  white-space: nowrap;
+/* Masqué par défaut (ton JS enlève/rajoute .hidden) */
+.ct-warning-message.hidden {
+  display: none !important;
 }
 
-.schedule-status-btn:hover {
-  opacity: 0.9;
+/* Texte explicatif (ne casse pas la mise en page) */
+.ct-passages-details {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #555;
+  line-height: 1.3;
+  max-width: 100%;
+  overflow-wrap: break-word;
 }
-
 

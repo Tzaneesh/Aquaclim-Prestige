@@ -131,69 +131,95 @@
     </div>
 
   <!-- TABLEAU DES DOCUMENTS -->
-<div class="card">
-  <div class="filters-row no-print">
-    <span id="listTitle" class="list-title">Liste des devis</span>
+  <div class="card" id="documentsCard">
+    <div class="filters-row no-print">
+      <span id="listTitle" class="list-title">Liste des devis</span>
 
-    <!-- 🔍 Recherche devis / factures -->
+      <!-- Groupe filtres à droite -->
+      <div class="filters-group">
 
-    <div class="doc-search-wrapper">
-      <input
-        type="text"
-        id="docSearchInput"
-        placeholder="Rechercher (n°, client, objet...)"
-        oninput="onDocumentsSearchChange()"
-      />
+        <!-- 🔍 Recherche devis / factures -->
+        <div class="doc-search-wrapper">
+          <input
+            type="text"
+            id="docSearchInput"
+            placeholder="Rechercher (n°, client, objet...)"
+            oninput="onDocumentsSearchChange()"
+          />
+        </div>
+
+        <!-- Filtre année (factures uniquement) -->
+        <div id="yearFilterContainer" class="hidden">
+          <label>Année</label>
+          <select id="yearFilter" onchange="loadDocumentsList()">
+            <option value="all">Toutes</option>
+          </select>
+        </div>
+
+        <!-- Tri (si tu l’as gardé) -->
+        <div class="sort-wrapper">
+          <label class="filter-label" for="sortDocumentsBy">Trier par</label>
+          <select id="sortDocumentsBy" onchange="loadDocumentsList()">
+            <option value="date_desc">Date</option>
+            <option value="number_desc">Numéro</option>
+          </select>
+        </div>
+
+        <!-- Bouton Export CSV -->
+        <div id="exportContainer" class="hidden">
+          <button
+            class="btn btn-secondary btn-small"
+            onclick="exportFacturesCSV()"
+          >
+            📥 Exporter (CSV)
+          </button>
+        </div>
+      </div>
     </div>
 
-    <div id="yearFilterContainer" class="hidden">
-      <label>Année</label>
-      <select id="yearFilter" onchange="loadDocumentsList()">
-        <option value="all">Toutes</option>
-      </select>
-    </div>
-
-    <div id="exportContainer" class="hidden">
-      <button class="btn btn-secondary btn-small" onclick="exportFacturesCSV()">📥 Exporter (CSV)</button>
-    </div>
-  </div>
-
-    <div id="unpaidFilterContainer" class="hidden">
+    <!-- Filtre "factures impayées" à l'intérieur de la carte -->
+    <div id="unpaidFilterContainer" class="hidden" style="margin-top:10px;">
       <label style="font-size:14px;">
-        <input type="checkbox" id="filterUnpaid" onchange="loadDocumentsList()">
+        <input
+          type="checkbox"
+          id="filterUnpaid"
+          onchange="loadDocumentsList()"
+        >
         Afficher seulement les factures impayées
       </label>
     </div>
 
-
-  <!-- Alerte contrats à renouveler (visible uniquement sur l’onglet Contrats) -->
-
-  <div id="contractsAlert" class="contracts-alert no-print hidden"></div>
-<div id="contractsFilterBar" class="no-print hidden" style="margin-bottom:10px;">
-  <label style="font-size:14px;">
-    <input type="checkbox" id="filterRenewal" onchange="loadContractsList()">
-    Voir uniquement les contrats à renouveler / terminés
-  </label>
-</div>
-
-      <table class="documents-table">
-        <thead>
-          <tr>
-            <th>Type</th>
-            <th>Numéro</th>
-            <th>Client</th>
-            <th>Date</th>
-            <th>Montant</th>
-            <th>Statut</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-
-        <tbody id="documentsTableBody">
-          <tr><td colspan="7" class="no-docs-cell">Aucun document pour le moment</td></tr>
-        </tbody>
-      </table>
+    <!-- Alerte contrats à renouveler (en dessous du bloc filtres) -->
+    <div id="contractsAlert" class="contracts-alert no-print hidden"></div>
+    <div id="contractsFilterBar" class="no-print hidden" style="margin-bottom:10px;">
+      <label style="font-size:14px;">
+        <input type="checkbox" id="filterRenewal" onchange="loadContractsList()">
+        Voir uniquement les contrats à renouveler / terminés
+      </label>
     </div>
+
+    <table class="documents-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Numéro</th>
+          <th>Client</th>
+          <th>Date</th>
+          <th>Montant</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="documentsTableBody">
+        <tr>
+          <td colspan="7" class="no-docs-cell">
+            Aucun document pour le moment
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
 
   </section>
 
@@ -806,14 +832,24 @@
         <input type="text" id="ctPeriod" readonly>
       </div>
 
-<div class="form-group">
-  <label>Total passages (auto)</label>
+<div class="form-group ct-warning-wrapper">
+  <label for="ctTotalPassages">Total passages (auto)</label>
 
-  <input type="text" id="ctTotalPassages" readonly>
+  <!-- Champ total passages -->
+  <input id="ctTotalPassages" type="number" readonly />
 
-  <div id="ctRecapSummary" class="ct-recap-summary"></div>
-  <div id="ctWarning" class="ct-warning hidden"></div>
+  <!-- WARNING sous le champ -->
+  <div id="ctWarning" class="ct-warning-message hidden">
+    ⚠️ Attention à la configuration du contrat :
+    La période ne contient aucun mois d’été alors que des passages d’été sont définis.
+  </div>
+
+  <!-- Texte explicatif sous le champ -->
+  <div class="ct-passages-details">
+    6 mois hiver × 1/mois + 6 mois été × 2/mois
+  </div>
 </div>
+
 
     </div>
 
@@ -887,7 +923,11 @@
   <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
 </div>
 
+<!-- Alerte configuration contrat -->
+<div id="ctWarning" class="ct-warning hidden no-print"></div>
+
 <div class="contract-tva">
+  <label>TVA </label>
   <label>TVA </label>
   <div class="tva-options">
     <label>

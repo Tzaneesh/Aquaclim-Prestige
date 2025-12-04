@@ -1686,6 +1686,25 @@ function removePassageDate(btn) {
   }
 }
 
+function autoFillSubjectFromFirstPrestation() {
+  const subjectInput = document.getElementById("docSubject");
+  if (!subjectInput) return;
+
+  // ❌ Si l'utilisateur a modifié l'objet à la main, on ne le touche plus
+  if (subjectInput.dataset.manualEdited === "1") {
+    return;
+  }
+
+  // On prend la première ligne de prestation
+  const firstDescInput = document.querySelector(".prestation-desc");
+  if (!firstDescInput) return;
+
+  const val = firstDescInput.value.trim();
+  // Même si l'objet contient déjà quelque chose, tant qu'il n'est pas "manuel",
+  // on le met à jour pour rester synchro avec la prestation
+  subjectInput.value = val;
+}
+
 
 function addPrestation() {
   prestationCount++;
@@ -1808,6 +1827,13 @@ function addPrestation() {
 
 
   container.appendChild(line);
+
+  // 🧠 Quand on tape l’intitulé, on propose de remplir l’objet automatiquement
+  const descInput = line.querySelector(".prestation-desc");
+  if (descInput) {
+    descInput.addEventListener("input", autoFillSubjectFromFirstPrestation);
+  }
+
   calculateTotals();
 }
 
@@ -1938,6 +1964,9 @@ function applyTemplate(selectEl) {
       }
       descInput.value = title;
     }
+    // 🎯 Après avoir mis l’intitulé depuis le modèle,
+    // on remplit l'objet si besoin
+    autoFillSubjectFromFirstPrestation();
   }
 
   
@@ -2478,29 +2507,58 @@ doc.prestations.forEach((p) => {
   updatePurchaseVisibility(line);
   updatePriceLayout(line);
 
-  const descInput = line.querySelector(".prestation-desc");
-  const qtyInput = line.querySelector(".prestation-qty");
-  const priceInput = line.querySelector(".prestation-price");
-  const unitInput = line.querySelector(".prestation-unit");
+  const descInput      = line.querySelector(".prestation-desc");
+  const qtyInput       = line.querySelector(".prestation-qty");
+  const priceInput     = line.querySelector(".prestation-price");
+  const unitInput      = line.querySelector(".prestation-unit");
   const templateSelect = line.querySelector(".prestation-template");
 
-  if (descInput) descInput.value = p.desc;
-  if (qtyInput) qtyInput.value = p.qty;
+  if (descInput)  descInput.value  = p.desc;
+  if (qtyInput)   qtyInput.value   = p.qty;
   if (priceInput) priceInput.value = p.price;
-  if (unitInput) unitInput.value = p.unit || "";
+  if (unitInput)  unitInput.value  = p.unit || "";
+
+  // ==============================
+  // 🎯 Choix du "modèle" (template)
+  // ==============================
+
+  // kind réel stocké dans la ligne (contrat_echeance, contrat_normal, etc.)
+  let effectiveKind = p.kind || "";
+
+  // Est-ce qu'on a déjà un modèle qui correspond à ce kind ?
+  let hasTemplateForKind = PRESTATION_TEMPLATES.some(
+    (t) => t.kind === effectiveKind
+  );
+
+  // Si ce n'est PAS un modèle connu, mais que la facture est liée à un contrat,
+  // on essaie de deviner le bon modèle (piscine chlore / sel / spa) à partir du contrat.
+  if (!hasTemplateForKind && doc.type === "facture" && doc.contractId) {
+    const linkedContract = getContract(doc.contractId);
+    const inferredKind   = getTemplateKindForContract(linkedContract);
+    if (inferredKind) {
+      effectiveKind      = inferredKind;
+      hasTemplateForKind = PRESTATION_TEMPLATES.some(
+        (t) => t.kind === effectiveKind
+      );
+    }
+  }
 
   // 🔁 on remet le bon modèle dans le select
   if (templateSelect) {
-    const idx = PRESTATION_TEMPLATES.findIndex((t) => t.kind === p.kind);
+    const idx = PRESTATION_TEMPLATES.findIndex(
+      (t) => t.kind === effectiveKind
+    );
     templateSelect.value = idx >= 0 ? String(idx) : "0";
   }
 
-  // 🧠 ICI on re-calcule le "prix de base" à partir du modèle + type client
-  const template = PRESTATION_TEMPLATES.find((t) => t.kind === p.kind);
+  // 🧠 On recalcule le "prix de base" à partir du modèle + type client
+  const template = PRESTATION_TEMPLATES.find(
+    (t) => t.kind === effectiveKind
+  );
   if (template) {
     const custom = getCustomPrices();
     const clientType =
-      (document.getElementById("clientSyndic")?.checked ? "syndic" : "particulier");
+      document.getElementById("clientSyndic")?.checked ? "syndic" : "particulier";
 
     const key = template.kind + "_" + clientType;
     let base =
@@ -2510,10 +2568,10 @@ doc.prestations.forEach((p) => {
         ? (template.priceSyndic || 0)
         : (template.priceParticulier || 0);
 
-    line.dataset.basePrice = base.toFixed(2); // ✅ base = tarif pour 1 clim
+    line.dataset.basePrice = base.toFixed(2);
   }
 
-  // dates…
+  // ⚙️ Dates…
   const datesContainer = line.querySelector(".prestation-dates");
   datesContainer.innerHTML = "";
   const dates = (p.dates && p.dates.length) ? p.dates : [""];
@@ -2524,18 +2582,17 @@ doc.prestations.forEach((p) => {
     const inp = document.createElement("input");
     inp.type = "date";
     inp.className = "prestation-date";
-    if (dv) inp.value = dv;
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
-    removeBtn.textContent = "✖";
-    removeBtn.onclick = function () {
-      removePassageDate(removeBtn);
-    };
+    inp.value = dv || "";
 
     row.appendChild(inp);
-    row.appendChild(removeBtn);
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "prestation-date-remove";
+    btn.textContent = "✕";
+    btn.addEventListener("click", () => row.remove());
+
+    row.appendChild(btn);
     datesContainer.appendChild(row);
   });
 });
@@ -3069,8 +3126,24 @@ function loadDocumentsList() {
     });
   }
 
-  // Tri : plus récents d’abord
-  filtered.sort((a, b) => new Date(b.date) - new Date(a.date));
+  // 🔽 Tri : date ou numéro selon le select
+  const sortSel  = document.getElementById("sortDocumentsBy");
+  const sortMode = sortSel ? sortSel.value : "date_desc";
+
+  filtered.sort((a, b) => {
+    if (sortMode === "number_desc") {
+      const na = (a.number || "").toString();
+      const nb = (b.number || "").toString();
+      // On compare en chaîne, mais comme tes numéros sont normalisés ça passe très bien
+      return nb.localeCompare(na, "fr", { numeric: true });
+    }
+
+    // défaut : date décroissante
+    const da = a.date ? new Date(a.date) : new Date(a.createdAt || 0);
+    const db = b.date ? new Date(b.date) : new Date(b.createdAt || 0);
+    return db - da;
+  });
+
 
   const tbody = document.getElementById("documentsTableBody");
   if (!tbody) return;
@@ -3858,11 +3931,23 @@ function loadContractsList() {
     });
   }
 
+  const sortSel  = document.getElementById("sortDocumentsBy");
+  const sortMode = sortSel ? sortSel.value : "date_desc";
+
   filtered.sort((a, b) => {
-    const da = (a.pricing?.startDate || a.createdAt || "");
-    const db = (b.pricing?.startDate || b.createdAt || "");
+    if (sortMode === "number_desc") {
+      // Pour les contrats, on n’a pas vraiment de numéro, on va utiliser la référence client ou l'id
+      const ra = (a.client?.reference || a.id || "").toString();
+      const rb = (b.client?.reference || b.id || "").toString();
+      return rb.localeCompare(ra, "fr", { numeric: true });
+    }
+
+    // défaut : startDate (ou createdAt) décroissant
+    const da = a.pricing?.startDate || a.createdAt || "";
+    const db = b.pricing?.startDate || b.createdAt || "";
     return db.localeCompare(da);
   });
+
 
   const tbody = document.getElementById("documentsTableBody");
   if (!tbody) return;
@@ -5872,7 +5957,7 @@ function computeNextInvoiceDate(contract) {
   const start = new Date(startISO + "T00:00:00");
   if (isNaN(start.getTime())) return "";
 
-  // 🔧 Fin de mois propre
+  // 🔧 Fin de mois propre (pour le 50/50 particulier)
   function endOfMonth(d) {
     const x = new Date(d);
     x.setMonth(x.getMonth() + 1);
@@ -5882,6 +5967,7 @@ function computeNextInvoiceDate(contract) {
   }
 
   // 🔧 Fin de période n (n = 1, 2, 3...) pour un syndic
+  // (⚠️ plus utilisé dans la nouvelle logique, mais je le laisse si tu l’emploies ailleurs)
   function getInstallmentEnd(startDate, stepMonths, index) {
     const d = new Date(startDate);
     d.setMonth(d.getMonth() + stepMonths * index);
@@ -5900,39 +5986,44 @@ function computeNextInvoiceDate(contract) {
   // 🔵 SYNDIC = POST-PAYÉ (factures après prestation)
   // =======================================================
   if (clientType === "syndic") {
+    // 👉 Nouveau comportement : date anniversaire, plus de "fin de mois"
 
-    // Annuel syndic → facture uniquement à la FIN du contrat
-    if (mode === "annuel") {
-      if (!pr.nextInvoiceDate) {
-        // on donne la date de fin de contrat
-        return contractEnd.toISOString().slice(0, 10);
-      }
-      // s'il y a déjà eu une facture (ou une tentative), plus d'autre
-      return "";
-    }
-
-    const stepMonths = getBillingStepMonths(mode);
-    if (!stepMonths) return "";
+    // Step en mois selon le mode
+    let stepMonths;
+    if (mode === "mensuel")      stepMonths = 1;
+    else if (mode === "trimestriel") stepMonths = 3;
+    else if (mode === "semestriel")  stepMonths = 6;
+    else if (mode === "annuel")      stepMonths = 12;
+    else return "";
 
     const totalInstallments = getNumberOfInstallments(pr);
 
-    // 1ʳᵉ échéance → fin de la 1ʳᵉ période
-    if (!pr.nextInvoiceDate) {
-      let end1 = getInstallmentEnd(start, stepMonths, 1);
-      if (end1 > contractEnd) end1 = new Date(contractEnd);
-      return end1.toISOString().slice(0, 10);
+    // Helper : iᵉ échéance = startISO + i * stepMonths (en ISO)
+    function getInstallmentISO(index) {
+      // On utilise ton addMonths global si présent, sinon fallback
+      if (typeof addMonths === "function") {
+        return addMonths(startISO, stepMonths * index);
+      }
+      const d = new Date(start);
+      d.setMonth(d.getMonth() + stepMonths * index);
+      d.setHours(0, 0, 0, 0);
+      return d.toISOString().slice(0, 10);
     }
 
-    // On cherche à quel index correspond la dernière nextInvoiceDate
+    // 1ʳᵉ échéance → directement date anniversaire de la 1ʳᵉ période
+    if (!pr.nextInvoiceDate) {
+      const firstISO = getInstallmentISO(1);
+      const firstDate = new Date(firstISO + "T00:00:00");
+      if (firstDate > contractEnd) return "";
+      return firstISO;
+    }
+
+    // On cherche à quel "index" correspond la nextInvoiceDate actuelle
     const currentISO = pr.nextInvoiceDate;
     let currentIndex = null;
 
     for (let i = 1; i <= totalInstallments; i++) {
-      let endI = getInstallmentEnd(start, stepMonths, i);
-      if (endI > contractEnd) {
-        endI = new Date(contractEnd);
-      }
-      const isoI = endI.toISOString().slice(0, 10);
+      const isoI = getInstallmentISO(i);
       if (isoI === currentISO) {
         currentIndex = i;
         break;
@@ -5940,16 +6031,18 @@ function computeNextInvoiceDate(contract) {
     }
 
     if (!currentIndex) {
-      // si la date ne correspond à aucune période -> on arrête
+      // la date ne correspond à aucune échéance théorique → on arrête
       return "";
     }
 
     const nextIndex = currentIndex + 1;
     if (nextIndex > totalInstallments) return "";
 
-    let nextEnd = getInstallmentEnd(start, stepMonths, nextIndex);
-    if (nextEnd > contractEnd) nextEnd = new Date(contractEnd);
-    return nextEnd.toISOString().slice(0, 10);
+    const nextISO = getInstallmentISO(nextIndex);
+    const nextDate = new Date(nextISO + "T00:00:00");
+    if (nextDate > contractEnd) return "";
+
+    return nextISO;
   }
 
   // =======================================================
@@ -5989,7 +6082,7 @@ function computeNextInvoiceDate(contract) {
   // =============================
   if (clientType === "particulier" && mode === "mensuel") {
     const totalInstallments = getNumberOfInstallments(pr);
-    const already = countContractInstallmentInvoices(contract.id); 
+    const already = countContractInstallmentInvoices(contract.id);
     // (inclut l’échéance initiale)
 
     // Toutes les échéances prévues sont déjà facturées
@@ -6043,6 +6136,30 @@ function getContractLabel(type) {
 }
 
 let currentContractId = null;
+
+function getTemplateKindForContract(contract) {
+  if (!contract) return "";
+  const p  = contract.pool    || {};
+  const pr = contract.pricing || {};
+
+  const poolType = pr.mainService || p.type || "";
+
+  if (poolType === "piscine_sel") {
+    return "piscine_sel";
+  }
+
+  if (
+    poolType === "spa" ||
+    poolType === "spa_jacuzzi" ||
+    poolType === "entretien_jacuzzi"
+  ) {
+    return "entretien_jacuzzi";
+  }
+
+  // défaut : entretien piscine chlore
+  return "piscine_chlore";
+}
+
 
 // ----- LocalStorage contrats -----
 
@@ -9525,126 +9642,144 @@ function closeContractSchedulePopup() {
   overlay.classList.add("hidden");
 }
 
+// Format YYYY-MM-DD sans problème de fuseau horaire
+function formatDateYMD(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+
 function buildContractSchedule(contract) {
   const pr = contract.pricing || {};
   const mode = pr.billingMode || "annuel";
+  const clientType = pr.clientType || "particulier";
 
   const startISO = pr.startDate;
-  if (!startISO) return [];
+  const duration = Number(pr.durationMonths || 0);
+  if (!startISO || !duration) return [];
 
   const totalHT = Number(pr.totalHT || 0);
   const tvaRate = Number(pr.tvaRate || 0);
-  const duration = Number(pr.durationMonths || 0);
+  if (!totalHT) return [];
 
-  let n = 1;
-  let stepMonths = 0;
+  // =============== NOMBRE D’ÉCHÉANCES SELON MODE ===============
 
-  if (mode === "annuel") {
-    n = 1;
-    stepMonths = 0;
-  } else if (mode === "annuel_50_50") {
-    n = 2;
-    stepMonths = duration > 0 ? Math.round(duration / 2) : 0;
-  } else {
-    n = getNumberOfInstallments(pr);      // basé sur durationMonths
-    stepMonths = getBillingStepMonths(mode);
+  function getInstallments() {
+    if (mode === "mensuel")     return duration;
+    if (mode === "trimestriel") return Math.ceil(duration / 3);
+    if (mode === "semestriel")  return Math.ceil(duration / 6);
+    return 1; // annuel / par défaut
   }
 
-  if (n < 1) n = 1;
-
-  let amountHT;
-  if (mode === "annuel") {
-    amountHT = totalHT;
-  } else if (mode === "annuel_50_50") {
-    amountHT = totalHT / 2;
-  } else {
-    amountHT = totalHT / n;
-  }
-
+  const n = getInstallments();
+  const amountHT  = totalHT / n;
   const amountTVA = amountHT * (tvaRate / 100);
   const amountTTC = amountHT + amountTVA;
 
   const rows = [];
-  let current = new Date(startISO + "T00:00:00");
 
+  // =============== CALCUL DES DATES (ANNIVERSAIRE) ===============
   for (let i = 0; i < n; i++) {
-    const iso = current.toISOString().slice(0, 10);
+    let dateISO;
+
+    // Si ton helper addMonths() existe (défini en haut de fichier) ➜ on l’utilise
+    if (typeof addMonths === "function") {
+      let step = 0;
+      if (mode === "mensuel")      step = 1;
+      else if (mode === "trimestriel") step = 3;
+      else if (mode === "semestriel")  step = 6;
+      else if (mode === "annuel")      step = 12;
+
+      // fallback sécurité
+      if (!step) {
+        dateISO = startISO;
+      } else {
+        dateISO = addMonths(startISO, step * i);
+      }
+    } else {
+      // Fallback sans addMonths (au cas où)
+      let d = new Date(startISO + "T00:00:00");
+      if (mode === "mensuel")       d.setMonth(d.getMonth() + i);
+      else if (mode === "trimestriel") d.setMonth(d.getMonth() + i * 3);
+      else if (mode === "semestriel")  d.setMonth(d.getMonth() + i * 6);
+      else if (mode === "annuel")      d.setFullYear(d.getFullYear() + i);
+
+      dateISO = d.toISOString().slice(0, 10);
+    }
 
     rows.push({
       index: i + 1,
-      date: iso,
+      date: dateISO,
       amountHT,
       amountTVA,
       amountTTC,
-      status: "prévisionnel"
+      status: "Prévisionnel",
+      statusType: "forecast",
+      invoiceId: null,
+      invoiceNumber: ""
+    });
+  }
+
+  // =============== SYNCHRO AVEC FACTURES EXISTANTES ===============
+  const docs = getAllDocuments();
+
+  let invoices = docs.filter(d =>
+    d.type === "facture" &&
+    d.contractId === contract.id
+  );
+
+  // Particulier → on isole les factures d’échéance
+  if (clientType === "particulier") {
+    invoices = invoices.filter(inv =>
+      inv.prestations &&
+      inv.prestations.some(p =>
+        p.kind === "contrat_echeance" ||
+        p.kind === "contrat_echeance_initiale"
+      )
+    );
+  }
+
+  // Match strict jour/mois/année
+  rows.forEach(r => {
+    const match = invoices.find(inv => {
+      if (!inv.date) return false;
+      return inv.date.slice(0, 10) === r.date;
     });
 
-    if (stepMonths > 0) {
-      current.setMonth(current.getMonth() + stepMonths);
+    if (match) {
+      r.invoiceId = match.id;
+      r.invoiceNumber = match.number;
+
+      r.status = match.paid ? "Payée" : "À payer";
+      r.statusType = match.paid ? "paid" : "due";
+
+      r.amountHT  = Number(match.subtotal || match.total || r.amountHT);
+      r.amountTVA = Number(match.tvaAmount || r.amountTVA);
+      r.amountTTC = Number(match.totalTTC || r.amountTTC);
     }
-  }
+  });
 
-  // ----- 🔍 On croise avec les factures réelles du contrat -----
-
-  const docs = getAllDocuments();
-  const invoices = docs.filter(d =>
-    d.type === "facture" &&
-    d.contractId === contract.id &&
-    d.prestations &&
-    d.prestations.some(p =>
-      p.kind === "contrat_echeance" ||
-      p.kind === "contrat_echeance_initiale"
-    )
-  );
-
-  // Marquer les échéances déjà facturées
-rows.forEach((r) => {
-  const inv = invoices.find(d =>
-    d.date &&
-    d.date.slice(0, 10) === r.date
-  );
-
-  if (inv) {
-    const invHT  = Number(inv.subtotal || inv.total || 0);
-    const invTVA = Number(inv.tvaAmount || 0);
-    const invTTC = Number(inv.totalTTC || inv.total || invHT + invTVA);
-
-    r.amountHT  = invHT || r.amountHT;
-    r.amountTVA = invTVA;
-    r.amountTTC = invTTC;
-
-    const baseStatus   = inv.paid ? "facturée (payée)" : "facturée (à payer)";
-    const invoiceNum   = inv.number ? ` – ${inv.number}` : "";
-
-    r.status        = baseStatus + invoiceNum;
-    r.invoiceId     = inv.id || null;        // 🔹 pour le bouton "Voir"
-    r.invoiceNumber = inv.number || "";      // 🔹 au cas où tu veux le réutiliser
-  }
-});
-
-
-  // Facture de résiliation éventuelle
-  const closureInvoice = docs.find(d =>
-    d.type === "facture" &&
-    d.contractId === contract.id &&
-    d.prestations &&
-    d.prestations.some(p => p.kind === "contrat_resiliation")
+  // =============== FACTURE DE RÉSILIATION ===============
+  const closureInvoice = docs.find(inv =>
+    inv.type === "facture" &&
+    inv.contractId === contract.id &&
+    inv.prestations &&
+    inv.prestations.some(p => p.kind === "contrat_resiliation")
   );
 
   if (closureInvoice) {
-    const invHT  = Number(closureInvoice.subtotal || closureInvoice.total || 0);
-    const invTVA = Number(closureInvoice.tvaAmount || 0);
-    const invTTC = Number(closureInvoice.totalTTC || closureInvoice.total || invHT + invTVA);
-
     rows.push({
       index: rows.length + 1,
-      date:  closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
-      amountHT:  invHT,
-      amountTVA: invTVA,
-      amountTTC: invTTC,
-       status: "facture de résiliation" + (closureInvoice.number ? ` – ${closureInvoice.number}` : ""),
-  invoiceId: closureInvoice.id || null,
-  invoiceNumber: closureInvoice.number || ""
+      date: closureInvoice.date.slice(0, 10),
+      amountHT:  Number(closureInvoice.subtotal || closureInvoice.total || 0),
+      amountTVA: Number(closureInvoice.tvaAmount || 0),
+      amountTTC: Number(closureInvoice.totalTTC || 0),
+      status: "Résiliation",
+      statusType: "closure",
+      invoiceId: closureInvoice.id,
+      invoiceNumber: closureInvoice.number
     });
   }
 
@@ -9653,116 +9788,96 @@ rows.forEach((r) => {
 
 
 
-
 function renderContractScheduleHTML(rows) {
-  if (!rows || rows.length === 0) {
-    return "<p>Aucune échéance calculable (vérifie la date de début et le montant).</p>";
+  if (!rows || !rows.length) {
+    return "<p>Aucune échéance calculée pour ce contrat.</p>";
   }
 
-  const nbEcheances = rows.length;
-  const montantTTCEcheance = rows[0].amountTTC || 0;
-  const montantTTCTotal = montantTTCEcheance * nbEcheances;
-
-  // 👉 est-ce qu’il y a de la TVA ?
-  const hasTVA = rows.some(r => (r.amountTVA || 0) > 0.0001);
+  const hasTVA = rows.some(r => typeof r.amountTVA === "number" && !isNaN(r.amountTVA));
 
   let html = `
-    <div class="schedule-summary">
-      <p><strong>Nombre d’échéances :</strong> ${nbEcheances}</p>
-      <p><strong>Montant TTC / échéance :</strong> ${montantTTCEcheance.toFixed(2)} €</p>
-      <p><strong>Montant TTC total :</strong> ${montantTTCTotal.toFixed(2)} €</p>
-    </div>
-    <div class="schedule-table-wrapper">
-      <table class="schedule-table">
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Date</th>
-            <th>Montant HT</th>`;
-
-  if (hasTVA) {
-    html += `
-            <th>Montant TVA</th>
-            <th>Montant TTC</th>`;
-  }
-
-  html += `
-            <th>Statut</th>
-          </tr>
-        </thead>
-        <tbody>
+    <table class="schedule-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Date</th>
+          <th>Montant HT</th>
+          ${hasTVA ? "<th>TVA</th><th>TTC</th>" : ""}
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
   `;
 
- rows.forEach((r) => {
-  const d = new Date(r.date + "T00:00:00");
-  const dateFr = isNaN(d.getTime()) ? r.date : d.toLocaleDateString("fr-FR");
+  rows.forEach((r) => {
+    const d = new Date(r.date + "T00:00:00");
+    const dateFr = isNaN(d.getTime()) ? r.date : d.toLocaleDateString("fr-FR");
 
-  // ---- Construction de la cellule "Statut" bien maquettée ----
-  let statusHtml = "";
+    // Classe de couleur selon le type
+    let rowClass = "";
+    if (r.statusType === "paid") {
+      rowClass = "schedule-row-paid";      // vert
+    } else if (r.statusType === "due") {
+      rowClass = "schedule-row-due";       // rouge
+    } else if (r.statusType === "closure") {
+      rowClass = "schedule-row-closure";   // autre couleur
+    } else {
+      rowClass = "schedule-row-forecast";  // gris léger
+    }
 
-  // Cas où il y a une facture liée (échéance facturée)
-  if (r.invoiceId) {
-    const mainLabel = (r.status || "").split("–")[0].trim() || "facturée";
-    const invNumber = r.invoiceNumber || (
-      (r.status || "").includes("FAC-")
-        ? r.status.split("FAC-").slice(1).join("FAC-").trim()
-        : ""
-    );
+    // Texte statut (une seule ligne)
+    const parts = [];
+    if (r.statusType === "paid") {
+      parts.push("Payée");
+    } else if (r.statusType === "due") {
+      parts.push("À payer");
+    } else if (r.statusType === "closure") {
+      parts.push("Résiliation");
+    } else {
+      parts.push("Prévisionnel");
+    }
 
-    statusHtml = `
+    if (r.invoiceNumber) {
+      parts.push(r.invoiceNumber);
+    }
+
+    let statusHtml = `
       <div class="schedule-status">
-        <div class="schedule-status-text">
-          <div class="schedule-status-main">${mainLabel}</div>
-          ${invNumber ? `<div class="schedule-status-meta">${invNumber}</div>` : ""}
-        </div>
+        <span class="schedule-status-text">${parts.join(" · ")}</span>
+    `;
+
+    if (r.invoiceId) {
+      statusHtml += `
         <button type="button"
                 class="schedule-status-btn"
                 onclick="openInvoiceFromSchedule('${r.invoiceId}')">
           Voir
         </button>
-      </div>
-    `;
-  } else {
-    // Cas prévisionnel (aucune facture)
-    statusHtml = `
-      <div class="schedule-status">
-        <div class="schedule-status-text">
-          <div class="schedule-status-main">${r.status || "prévisionnel"}</div>
-        </div>
-      </div>
-    `;
-  }
+      `;
+    }
 
-  // ---- Ligne du tableau ----
-  html += `
-    <tr>
-      <td>${r.index}</td>
-      <td>${dateFr}</td>
-      <td class="amount-cell">${r.amountHT.toFixed(2)} €</td>`;
+    statusHtml += `</div>`;
 
-  if (hasTVA) {
     html += `
-      <td class="amount-cell">${r.amountTVA.toFixed(2)} €</td>
-      <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>`;
-  }
+      <tr class="${rowClass}">
+        <td>${r.index}</td>
+        <td>${dateFr}</td>
+        <td class="amount-cell">${r.amountHT.toFixed(2)} €</td>
+        ${hasTVA ? `
+        <td class="amount-cell">${r.amountTVA.toFixed(2)} €</td>
+        <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>` : ""}
+        <td class="schedule-status-cell">${statusHtml}</td>
+      </tr>
+    `;
+  });
 
   html += `
-      <td>${statusHtml}</td>
-    </tr>
-  `;
-});
-
-
-
-  html += `
-        </tbody>
-      </table>
-    </div>
+      </tbody>
+    </table>
   `;
 
   return html;
 }
-
 
 
 function initContractsUI() {
@@ -10099,7 +10214,6 @@ function createAutomaticInvoice(contract) {
 
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
-
   const nextDate = new Date(nextISO + "T00:00:00");
   if (isNaN(nextDate.getTime())) return null;
 
@@ -10128,7 +10242,7 @@ function createAutomaticInvoice(contract) {
   let lineDesc = "";
 
   // ============================
-  // 🔴 PARTICULIER
+  // 🔴 PARTICULIER (inchangé)
   // ============================
   if (clientType === "particulier") {
     if (mode === "annuel_50_50") {
@@ -10140,8 +10254,7 @@ function createAutomaticInvoice(contract) {
     } else {
       // Mensuel anticipé (échéance i/n)
 
-      // 💡 IMPORTANT :
-      // numéro d’échéance = nb de factures d’échéance déjà existantes + 1
+      // 💡 numéro d’échéance = nb de factures d’échéance déjà existantes + 1
       const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
 
       amountHT = totalHT / n;
@@ -10151,57 +10264,71 @@ function createAutomaticInvoice(contract) {
     }
   }
 
-
   // ============================
-  // 🔵 SYNDIC (post-payé)
+  // 🔵 SYNDIC (post-payé, date anniversaire)
   // ============================
   else {
-    if (mode === "annuel") {
-      // Annuel syndic → facture de fin gérée ailleurs
-      return null;
-    }
-
-    // Montant fractionné
+    // Montant fractionné (mensuel / trimestriel / semestriel / annuel)
     amountHT = totalHT / n;
 
     let stepMonths = getBillingStepMonths(mode);
-    if (!stepMonths) stepMonths = duration;
+    if (!stepMonths) stepMonths = duration; // fallback
 
-    const totalInstallments = getNumberOfInstallments(pr);
-
-    // Reconstruire la période [startPeriod, endPeriod]
-    let periodStart = new Date(start);
+    // On reconstruit la période [periodStart, periodEnd]
+    let periodStart = null;
     let periodEnd   = null;
-    let found       = false;
 
-    for (let i = 1; i <= totalInstallments; i++) {
-      const endCandidate = new Date(start);
-      endCandidate.setMonth(endCandidate.getMonth() + stepMonths * i);
-      endCandidate.setDate(0); // dernier jour du mois précédent
+    // On s’appuie sur la nouvelle règle :
+    // échéance i : date = addMonths(startISO, stepMonths * i)
+    for (let i = 1; i <= n; i++) {
+      let endISO;
+      if (typeof addMonths === "function") {
+        endISO = addMonths(startISO, stepMonths * i);
+      } else {
+        const tmp = new Date(start);
+        tmp.setMonth(tmp.getMonth() + stepMonths * i);
+        endISO = tmp.toISOString().slice(0, 10);
+      }
 
-      const isoCandidate = endCandidate.toISOString().slice(0, 10);
+      if (!endISO) continue;
 
-      if (isoCandidate === nextISO) {
-        periodEnd = endCandidate;
-        found = true;
+      if (endISO === nextISO) {
+        // Début de période
+        let startPeriodISO;
+        if (i === 1) {
+          startPeriodISO = startISO;
+        } else {
+          if (typeof addMonths === "function") {
+            startPeriodISO = addMonths(startISO, stepMonths * (i - 1));
+          } else {
+            const tmp = new Date(start);
+            tmp.setMonth(tmp.getMonth() + stepMonths * (i - 1));
+            startPeriodISO = tmp.toISOString().slice(0, 10);
+          }
+        }
+
+        periodStart = new Date(startPeriodISO + "T00:00:00");
+
+        // Fin de période = veille de l’échéance (post-payé)
+        periodEnd = new Date(endISO + "T00:00:00");
+        periodEnd.setDate(periodEnd.getDate() - 1);
+
         break;
-      } else if (isoCandidate < nextISO) {
-        periodStart = new Date(endCandidate);
-        periodStart.setDate(periodStart.getDate() + 1);
       }
     }
 
-    if (!found || !periodEnd) {
-      const prevStart = new Date(nextDate);
-      prevStart.setDate(1);
-      const prevEnd = new Date(prevStart);
-      prevEnd.setMonth(prevStart.getMonth() + 1);
-      prevEnd.setDate(0);
+    // Fallback si pour une raison quelconque on n'a pas trouvé l'index
+    if (!periodStart || !periodEnd) {
+      const endFallback = new Date(nextISO + "T00:00:00");
+      let startFallback = new Date(nextISO + "T00:00:00");
+      startFallback.setMonth(startFallback.getMonth() - stepMonths);
 
-      periodStart = prevStart;
-      periodEnd   = prevEnd;
+      periodStart = startFallback;
+      periodEnd   = endFallback;
+      periodEnd.setDate(periodEnd.getDate() - 1);
     }
 
+    // On ne dépasse jamais la fin du contrat
     if (periodEnd > contractEnd) {
       periodEnd = new Date(contractEnd);
     }
@@ -10237,7 +10364,7 @@ function createAutomaticInvoice(contract) {
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
   return {
-      id: generateId("FAC"),
+    id: generateId("FAC"),
     type: "facture",
     number,
     date: nextISO,
@@ -10291,7 +10418,6 @@ function createAutomaticInvoice(contract) {
     updatedAt: todayISO
   };
 }
-
 
 
 
@@ -10362,71 +10488,74 @@ function countContractInstallmentInvoices(contractId) {
 function checkScheduledInvoices() {
   let docs        = getAllDocuments();
   const contracts = getAllContracts();
-  const todayISO  = new Date().toISOString().slice(0, 10);
+  const today     = (typeof todayISO === "function")
+    ? todayISO()
+    : new Date().toISOString().slice(0, 10);
 
   contracts.forEach(contract => {
+    // 🔒 On ne gère pas les contrats résiliés
     if (contract.status === CONTRACT_STATUS.RESILIE) {
       return;
     }
+
     const pr = contract.pricing || {};
+    if (!pr.billingMode) return;
+
     const clientType = pr.clientType || "particulier";
     const mode       = pr.billingMode || "annuel";
 
-    const status = computeContractStatus(contract);
-    // ⛔ Si un devis est obligatoire mais pas encore accepté → aucune facture auto
+    // ⛔ Devis obligatoire mais pas accepté → aucune facture auto
     const devisNeeded = isDevisObligatoireForContract(contract);
     const devisOK     = isDevisAcceptedForContract(contract);
     if (devisNeeded && !devisOK) {
       return;
     }
 
-
-    // ----- CAS ANNUEL SYNDIC (inchangé) -----
-    if (mode === "annuel" && clientType !== "particulier") {
-      const hasClosureInvoice = docs.some((d) =>
-        d.type === "facture" &&
-        d.contractId === contract.id &&
-        d.prestations &&
-        d.prestations.some((p) => p.kind === "contrat_resiliation")
-      );
-
-      if (status === CONTRACT_STATUS.TERMINE && !hasClosureInvoice) {
-        const fac = createTerminationInvoiceForContract(contract);
-        if (fac) {
-          docs = getAllDocuments();
-          if (typeof saveSingleDocumentToFirestore === "function") {
-            saveSingleDocumentToFirestore(fac);
-          }
-        }
-      }
-      return;
-    }
-
-    if (!pr.billingMode) return;
-
     const totalInstallments = getNumberOfInstallments(pr);
     let installmentsCount   = countContractInstallmentInvoices(contract.id);
 
-    // 🧮 Calcul de la fin de contrat (si possible)
-    let limitISO = todayISO;
+    // 🧮 Définition d'une limite temporelle de rattrapage :
+    //     min(aujourd'hui, fin de contrat)
+    let limitISO = today;
+
     if (pr.startDate && pr.durationMonths) {
-      const start = new Date(pr.startDate + "T00:00:00");
-      if (!isNaN(start.getTime())) {
-        const contractEnd = new Date(start);
-        contractEnd.setMonth(contractEnd.getMonth() + Number(pr.durationMonths || 0));
-        contractEnd.setDate(0); // fin du dernier mois
-        const endISO = contractEnd.toISOString().slice(0, 10);
-        if (endISO < limitISO) {
-          limitISO = endISO;
+      let contractEndISO = "";
+
+      if (typeof addMonths === "function") {
+        contractEndISO = addMonths(pr.startDate, Number(pr.durationMonths || 0));
+      } else {
+        // fallback sans helpers
+        const start = new Date(pr.startDate + "T00:00:00");
+        if (!isNaN(start.getTime())) {
+          start.setMonth(start.getMonth() + Number(pr.durationMonths || 0));
+          contractEndISO = start.toISOString().slice(0, 10);
+        }
+      }
+
+      if (contractEndISO) {
+        if (typeof compareISO === "function") {
+          if (compareISO(contractEndISO, limitISO) < 0) {
+            limitISO = contractEndISO;
+          }
+        } else {
+          // au cas où compareISO ne serait pas dispo, on se rabat sur la comparaison de string ISO
+          if (contractEndISO < limitISO) {
+            limitISO = contractEndISO;
+          }
         }
       }
     }
 
-    // 🔁 Rattrapage : seulement jusqu'à limitISO
-    while (pr.nextInvoiceDate &&
-           pr.nextInvoiceDate <= limitISO &&
-           installmentsCount < totalInstallments) {
-
+    // 🔁 Rattrapage des échéances manquantes
+    while (
+      pr.nextInvoiceDate &&
+      (
+        typeof compareISO === "function"
+          ? compareISO(pr.nextInvoiceDate, limitISO) <= 0
+          : pr.nextInvoiceDate <= limitISO
+      ) &&
+      installmentsCount < totalInstallments
+    ) {
       const fac = createAutomaticInvoice(contract);
       if (!fac) break;
 
@@ -10439,10 +10568,13 @@ function checkScheduledInvoices() {
 
       installmentsCount++;
 
-      contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
-      if (!contract.pricing.nextInvoiceDate) break;
+      // Recalcul de la prochaine échéance
+      pr.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
+      if (!pr.nextInvoiceDate) break;
     }
 
+    // On remet bien le pricing à jour sur le contrat courant
+    contract.pricing = pr;
   });
 
   saveContracts(contracts);
@@ -10470,7 +10602,14 @@ window.onload = function () {
   if (typeof updateButtonColors === "function") {
     updateButtonColors();
   }
-
+  // 🔒 Si l'utilisateur tape lui-même dans l'objet, on arrête la synchro auto
+  const subjectInput = document.getElementById("docSubject");
+  if (subjectInput && !subjectInput.dataset.boundManualFlag) {
+    subjectInput.addEventListener("input", () => {
+      subjectInput.dataset.manualEdited = "1";
+    });
+    subjectInput.dataset.boundManualFlag = "1";
+  }
   // 🔁 Factures d’échéance auto : seulement si TOUT est défini
   if (typeof checkScheduledInvoices === "function"
       && typeof countContractInstallmentInvoices === "function") {
