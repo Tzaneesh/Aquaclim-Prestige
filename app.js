@@ -5871,38 +5871,33 @@ function computeNextInvoiceDate(contract) {
   contractEnd.setDate(contractEnd.getDate() - 1);
   contractEnd.setHours(0, 0, 0, 0);
 
- // =======================================================
+// =======================================================
 // 🔵 SYNDIC = POST-PAYÉ, À LA DATE D’ANNIVERSAIRE
 // =======================================================
 if (clientType === "syndic") {
-
-  // Annuel syndic → une seule facture à la fin du contrat
-  if (mode === "annuel") {
-    if (!pr.nextInvoiceDate) {
-      return contractEnd.toISOString().slice(0, 10);
-    }
-    return "";
+  // Pour mensuel / trimestriel / semestriel → 1, 3, 6
+  // Pour ANNUEL → on retombe sur la durée totale du contrat
+  let stepMonths = getBillingStepMonths(mode);
+  if (!stepMonths) {
+    stepMonths = duration; // ex : 12 mois pour un annuel
   }
-
-  const stepMonths = getBillingStepMonths(mode);
   if (!stepMonths) return "";
 
   const totalInstallments = getNumberOfInstallments(pr);
   const already = countContractInstallmentInvoices(contract.id);
 
-  // Toutes les échéances prévues sont déjà facturées
+  // Si on a déjà toutes les factures prévues → rien à faire
   if (already >= totalInstallments) {
     return "";
   }
 
-  // index = 0 → première facture, 1 → deuxième facture, etc.
-  const index = already;
+  // index = numéro d’échéance à générer (1ère, 2ème, ...)
+  const index = already + 1;
 
-  // 📅 Date = date de début + (index * stepMonths)
   const d = new Date(start);
   d.setMonth(d.getMonth() + stepMonths * index);
 
-  // 🩹 Patch anti-déplacement
+  // Patch anti-déplacement de jour (28/29/30/31)
   const startDay = start.getDate();
   const daysInMonth = new Date(
     d.getFullYear(),
@@ -5911,13 +5906,12 @@ if (clientType === "syndic") {
   ).getDate();
   d.setDate(Math.min(startDay, daysInMonth));
 
-  if (d > contractEnd) {
-    return "";
-  }
+  // On laisse la limite “fin de contrat” gérée par:
+  // - totalInstallments
+  // - checkScheduledInvoices (qui ne crée que ≤ today)
 
   return d.toISOString().slice(0, 10);
 }
-
 
   // =======================================================
   // 🔴 PARTICULIER = FACTURATION ANTICIPÉE
@@ -5929,25 +5923,23 @@ if (clientType === "syndic") {
   }
 
   // 🟣 PARTICULIER ANNÉE 50/50
-  if (mode === "annuel_50_50") {
-    // 1ʳᵉ facture → immédiate (déjà faite ailleurs)
-    // Ici on ne calcule que la 2e facture (solde 50%)
-    if (!pr.nextInvoiceDate) {
-      const mid = new Date(start);
+ if (mode === "annuel_50_50") {
+  // 1ʳᵉ facture = immédiate (acompte)
+  // Ici on ne calcule que la 2e facture (solde 50 %)
+  if (!pr.nextInvoiceDate) {
+    const half = duration > 0 ? Math.round(duration / 2) : 6; // 6 mois si 12 mois
+    const second = new Date(start);
+    second.setMonth(second.getMonth() + half); // ex : 12/06/2024 → 12/12/2024
 
-      // Milieu du contrat → durée / 2
-      const half = Math.floor(duration / 2);
-      mid.setMonth(mid.getMonth() + half);
-
-      const midEnd = endOfMonth(mid);
-
-      if (midEnd > contractEnd) return contractEnd.toISOString().slice(0, 10);
-      return midEnd.toISOString().slice(0, 10);
+    if (second > contractEnd) {
+      return contractEnd.toISOString().slice(0, 10);
     }
-
-    // Si nextInvoiceDate déjà défini → 2e facture déjà émise
-    return "";
+    return second.toISOString().slice(0, 10);
   }
+
+  // 2e facture déjà émise
+  return "";
+}
 
   // =============================
   // 🟢 PARTICULIER MENSUEL
@@ -9550,8 +9542,7 @@ function buildContractSchedule(contract) {
   const rows = [];
 
   // ===============================
-  // 🟢 CAS PARTICULIER / MENSUEL
-  // → échéances au même jour que le début
+  // 🟢 PARTICULIER / MENSUEL
   // ===============================
   if (clientType === "particulier" && mode === "mensuel") {
     const n = getNumberOfInstallments(pr) || duration; // nb d'échéances
@@ -9569,46 +9560,46 @@ function buildContractSchedule(contract) {
 
       if (d > contractEnd) break;
 
-rows.push({
-  index:        i + 1,
-  date:         formatDateYMD(d),
-  amountHT,
-  amountTVA,
-  amountTTC,
-  status:       "Prévisionnel",
-  statusType:   "forecast",
-  invoiceId:    null,
-  invoiceNumber:""
-});
-
+      rows.push({
+        index:        i + 1,
+        date:         formatDateYMD(d),
+        amountHT,
+        amountTVA,
+        amountTTC,
+        status:       "Prévisionnel",
+        statusType:   "forecast",
+        invoiceId:    null,
+        invoiceNumber:""
+      });
     }
+
   } else {
     // ===============================
-    // 🧰 CAS GÉNÉRIQUES (annuel, 50/50, trimestriel, etc.)
+    // 🧰 CAS GÉNÉRIQUES
+    // (annuel, 50/50, trimestriel, semestriel, etc.)
     // ===============================
     let n = 1;
     let stepMonths = 0;
 
-    if (mode === "annuel") {
-      n = 1;
-      stepMonths = 0;
-    } else if (mode === "annuel_50_50") {
-      n = 2;
+    if (mode === "annuel_50_50") {
+      n          = 2;
       stepMonths = duration > 0 ? Math.round(duration / 2) : 0;
     } else {
-      n = getNumberOfInstallments(pr);      // basé sur durationMonths
-      stepMonths = getBillingStepMonths(mode);
+      // nombre d’échéances (1 pour annuel, 4 pour trimestriel sur 12 mois, etc.)
+      n = getNumberOfInstallments(pr);
+      // pas de période : 1, 3, 6, 12…
+      stepMonths = getBillingStepMonths(mode) || duration;
     }
 
     if (n < 1) n = 1;
 
     let amountHT;
     if (mode === "annuel") {
-      amountHT = totalHT;
+      amountHT = totalHT;          // 1 seule facture
     } else if (mode === "annuel_50_50") {
-      amountHT = totalHT / 2;
+      amountHT = totalHT / 2;      // deux fois 50 %
     } else {
-      amountHT = totalHT / n;
+      amountHT = totalHT / n;      // fractionnement classique
     }
 
     const amountTVA = amountHT * (tvaRate / 100);
@@ -9616,21 +9607,26 @@ rows.push({
 
     let current = new Date(startISO + "T00:00:00");
 
+    // ✅ SYNDIC : la 1ʳᵉ échéance est à la FIN de la première période
+    // (1 mois, 3 mois, 6 mois ou duration pour l’annuel)
+    if (clientType === "syndic" && stepMonths > 0) {
+      current.setMonth(current.getMonth() + stepMonths);
+    }
+
     for (let i = 0; i < n; i++) {
-const iso = formatDateYMD(current);
+      const iso = formatDateYMD(current);
 
-rows.push({
-  index:        i + 1,
-  date:         iso,
-  amountHT,
-  amountTVA,
-  amountTTC,
-  status:       "Prévisionnel",
-  statusType:   "forecast",
-  invoiceId:    null,
-  invoiceNumber:""
-});
-
+      rows.push({
+        index:        i + 1,
+        date:         iso,
+        amountHT,
+        amountTVA,
+        amountTTC,
+        status:       "Prévisionnel",
+        statusType:   "forecast",
+        invoiceId:    null,
+        invoiceNumber:""
+      });
 
       if (stepMonths > 0) {
         current.setMonth(current.getMonth() + stepMonths);
@@ -9638,65 +9634,62 @@ rows.push({
     }
   }
 
-// 🔍 On croise avec les factures réelles du contrat
-const docs = getAllDocuments();
+  // 🔍 On croise avec les factures réelles du contrat
+  const docs = getAllDocuments();
 
-// 1) On prend TOUTES les factures du contrat
-let invoices = docs.filter(d =>
-  d.type === "facture" &&
-  d.contractId === contract.id
-);
-
-// 2) Pour les PARTICULIERS, on garde seulement les factures d'échéance
-//    (kind = contrat_echeance / contrat_echeance_initiale)
-//    → ça évite de compter l'ouverture, l'hivernage, etc.
-if (clientType === "particulier") {
-  invoices = invoices.filter(d =>
-    d.prestations &&
-    d.prestations.some(p =>
-      p.kind === "contrat_echeance" ||
-      p.kind === "contrat_echeance_initiale"
-    )
+  // 1) On prend TOUTES les factures du contrat
+  let invoices = docs.filter(d =>
+    d.type === "facture" &&
+    d.contractId === contract.id
   );
-}
-// Pour les SYNDICS, on ne filtre PAS : toute facture liée au contrat compte.
 
-rows.forEach((r) => {
-  const inv = invoices.find(d => {
-    if (!d.date) return false;
-
-    const invDate = new Date(d.date);
-    const rowDate = new Date(r.date + "T00:00:00");
-
-    return (
-      invDate.getFullYear() === rowDate.getFullYear() &&
-      invDate.getMonth()    === rowDate.getMonth()
-      // 👆 On ignore le jour → on matche au MOIS
+  // 2) Pour les PARTICULIERS, on ne garde que les factures d’échéance
+  if (clientType === "particulier") {
+    invoices = invoices.filter(d =>
+      d.prestations &&
+      d.prestations.some(p =>
+        p.kind === "contrat_echeance" ||
+        p.kind === "contrat_echeance_initiale"
+      )
     );
-  });
-
-  if (inv) {
-    const invHT  = Number(inv.subtotal || inv.total || 0);
-    const invTVA = Number(inv.tvaAmount || 0);
-    const invTTC = Number(inv.totalTTC || inv.total || invHT + invTVA);
-
-    r.amountHT  = invHT || r.amountHT;
-    r.amountTVA = invTVA;
-    r.amountTTC = invTTC;
-
-    r.invoiceId     = inv.id || null;
-    r.invoiceNumber = inv.number || "";
-
-    if (inv.paid) {
-      r.status     = "Payée";
-      r.statusType = "paid";
-    } else {
-      r.status     = "À payer";
-      r.statusType = "due";
-    }
   }
-});
+  // Pour les SYNDICS, on garde toutes les factures liées au contrat
 
+  rows.forEach((r) => {
+    const inv = invoices.find(d => {
+      if (!d.date) return false;
+
+      const invDate = new Date(d.date);
+      const rowDate = new Date(r.date + "T00:00:00");
+
+      return (
+        invDate.getFullYear() === rowDate.getFullYear() &&
+        invDate.getMonth()    === rowDate.getMonth()
+        // 👆 on matche au MOIS, pas au jour
+      );
+    });
+
+    if (inv) {
+      const invHT  = Number(inv.subtotal || inv.total || 0);
+      const invTVA = Number(inv.tvaAmount || 0);
+      const invTTC = Number(inv.totalTTC || inv.total || invHT + invTVA);
+
+      r.amountHT  = invHT || r.amountHT;
+      r.amountTVA = invTVA;
+      r.amountTTC = invTTC;
+
+      r.invoiceId     = inv.id || null;
+      r.invoiceNumber = inv.number || "";
+
+      if (inv.paid) {
+        r.status     = "Payée";
+        r.statusType = "paid";
+      } else {
+        r.status     = "À payer";
+        r.statusType = "due";
+      }
+    }
+  });
 
   // 🔵 Facture de résiliation éventuelle
   const closureInvoice = docs.find(d =>
@@ -9712,60 +9705,58 @@ rows.forEach((r) => {
     const invTTC = Number(closureInvoice.totalTTC || closureInvoice.total || invHT + invTVA);
 
     rows.push({
-      index:        rows.length + 1,
-      date:         closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
-      amountHT:     invHT,
-      amountTVA:    invTVA,
-      amountTTC:    invTTC,
-      status:       "Résiliation",
-      statusType:   "closure",
-      invoiceId:    closureInvoice.id || null,
-      invoiceNumber:closureInvoice.number || ""
+      index:         rows.length + 1,
+      date:          closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
+      amountHT:      invHT,
+      amountTVA:     invTVA,
+      amountTTC:     invTTC,
+      status:        "Résiliation",
+      statusType:    "closure",
+      invoiceId:     closureInvoice.id || null,
+      invoiceNumber: closureInvoice.number || ""
     });
   }
+
   // 🎨 Ajustement des couleurs uniquement pour les contrats SYNDIC
-const todayISO = new Date().toISOString().slice(0, 10);
-const today = new Date(todayISO + "T00:00:00");
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const today    = new Date(todayISO + "T00:00:00");
 
-if (clientType === "syndic") {
-  rows.forEach((r) => {
-    const d = new Date(r.date + "T00:00:00");
-    if (isNaN(d.getTime())) return;
+  if (clientType === "syndic") {
+    rows.forEach((r) => {
+      const d = new Date(r.date + "T00:00:00");
+      if (isNaN(d.getTime())) return;
 
-    // 🔵 On ne touche pas à la ligne de résiliation (bleu)
-    if (r.statusType === "closure") {
-      return;
-    }
+      // On ne touche pas à la ligne de résiliation
+      if (r.statusType === "closure") {
+        return;
+      }
 
-    // 1) Aucune facture liée → purement prévisionnel (gris)
-    if (!r.invoiceId) {
-      r.statusType = "forecast";
-      r.status = "Prévisionnel";
-      return;
-    }
+      // Pas de facture liée → prévisionnel
+      if (!r.invoiceId) {
+        r.statusType = "forecast";
+        r.status     = "Prévisionnel";
+        return;
+      }
 
-    // 2) Il y a une facture liée à cette échéance
-    if (r.statusType === "paid") {
-      // Facture payée → on laisse "paid" (vert)
-      return;
-    }
+      // Facture payée → déjà vert
+      if (r.statusType === "paid") {
+        return;
+      }
 
-    // Ici : facture non payée
-    if (d <= today) {
-      // Date d’échéance passée → À payer (rouge)
-      r.statusType = "due";
-      r.status = "À payer";
-    } else {
-      // Échéance future → on considère que ça reste prévisionnel (gris)
-      r.statusType = "forecast";
-      r.status = "Prévisionnel";
-    }
-  });
-}
-
+      // Facture non payée
+      if (d <= today) {
+        r.statusType = "due";          // rouge
+        r.status     = "À payer";
+      } else {
+        r.statusType = "forecast";     // gris
+        r.status     = "Prévisionnel";
+      }
+    });
+  }
 
   return rows;
 }
+
 
 function renderContractScheduleHTML(rows) {
   if (!rows || !rows.length) {
@@ -10252,12 +10243,7 @@ function createAutomaticInvoice(contract) {
   // 🔵 SYNDIC (post-payé)
   // ============================
   else {
-    if (mode === "annuel") {
-      // Annuel syndic → facture de fin gérée ailleurs
-      return null;
-    }
-
-    // Montant fractionné
+ // Montant fractionné
     amountHT = totalHT / n;
 
     let stepMonths = getBillingStepMonths(mode);
@@ -10305,8 +10291,12 @@ function createAutomaticInvoice(contract) {
     const startLabel = periodStart.toLocaleDateString("fr-FR");
     const endLabel   = periodEnd.toLocaleDateString("fr-FR");
 
-    subject  = `${serviceLabel} – prestations du ${startLabel} au ${endLabel}${clientName}`;
-    lineDesc = `${serviceLabel} – prestations réalisées du ${startLabel} au ${endLabel}`;
+ 
+    // 🔢 Numéro d’échéance pour le SYNDIC (comme pour le particulier)
+    const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
+
+    subject  = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}${clientName}`;
+    lineDesc = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations réalisées du ${startLabel} au ${endLabel}`;
   }
 
   const tvaAmount = amountHT * (tvaRate / 100);
@@ -10476,34 +10466,12 @@ function checkScheduledInvoices() {
       return;
     }
 
-
-    // ----- CAS ANNUEL SYNDIC (inchangé) -----
-    if (mode === "annuel" && clientType !== "particulier") {
-      const hasClosureInvoice = docs.some((d) =>
-        d.type === "facture" &&
-        d.contractId === contract.id &&
-        d.prestations &&
-        d.prestations.some((p) => p.kind === "contrat_resiliation")
-      );
-
-      if (status === CONTRACT_STATUS.TERMINE && !hasClosureInvoice) {
-        const fac = createTerminationInvoiceForContract(contract);
-        if (fac) {
-          docs = getAllDocuments();
-          if (typeof saveSingleDocumentToFirestore === "function") {
-            saveSingleDocumentToFirestore(fac);
-          }
-        }
-      }
-      return;
-    }
-
     if (!pr.billingMode) return;
 
     const totalInstallments = getNumberOfInstallments(pr);
     let installmentsCount   = countContractInstallmentInvoices(contract.id);
 
-    // 🧮 Calcul de la fin de contrat (si possible)
+    // 🧮 Calcul de la fin de contrat (optionnel, tu peux le garder si tu l'utilises ailleurs)
     let limitISO = todayISO;
     if (pr.startDate && pr.durationMonths) {
       const start = new Date(pr.startDate + "T00:00:00");
@@ -10518,9 +10486,9 @@ function checkScheduledInvoices() {
       }
     }
 
-    // 🔁 Rattrapage : seulement jusqu'à limitISO
+    // 🔁 Rattrapage : uniquement pour les factures dont la date ≤ aujourd'hui
     while (pr.nextInvoiceDate &&
-           pr.nextInvoiceDate <= limitISO &&
+           pr.nextInvoiceDate <= todayISO &&
            installmentsCount < totalInstallments) {
 
       const fac = createAutomaticInvoice(contract);
