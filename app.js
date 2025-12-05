@@ -5114,6 +5114,12 @@ function openPrintable(id, previewOnly) {
       notesText = notesText.trim();
     }
 
+// ❌ Si facture payée → on supprime totalement le bloc conditions
+if (!isDevis && doc.paid) {
+    notesHtml = "";
+    notesText = "";
+}
+
     notesHtml = notesText
       ? `
       <div class="conditions-block">
@@ -5151,10 +5157,55 @@ function openPrintable(id, previewOnly) {
     </div>
   `;
 
-  const signatureClientTitle = isDevis ? "Bon pour accord" : "Pour acquit";
-  const signatureClientText = isDevis
-    ? "Précédé de la mention manuscrite : « Bon pour accord, lu et approuvé »."
-    : "Le client reconnaît avoir reçu la facture et en avoir pris connaissance.";
+ // Date à afficher sous la signature client
+const signatureDisplayDate = doc.signatureDate
+  ? doc.signatureDate
+  : new Date().toLocaleDateString("fr-FR");
+
+// Bloc signatures (différent si devis signé ou non)
+let signatureClientHTML = "";
+
+if (isDevis && doc.signature) {
+  // ✅ Devis signé : on affiche tout ce que tu veux en bas à gauche
+  signatureClientHTML = `
+    ${notesHtml}
+    ${importantHtml}
+    <div class="signatures">
+      <div class="signature-block">
+        <div class="signature-title">Bon pour accord</div>
+        <p>Bon pour accord, lu et approuvé.</p>
+        <p>Date : ${signatureDisplayDate}</p>
+        <p>Signature du client :</p>
+        <img src="${doc.signature}" class="sig" alt="Signature du client">
+      </div>
+      <div class="signature-block">
+        <div class="signature-title">AquaClim Prestige</div>
+        <p>Signature et cachet de l’entreprise</p>
+        <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+      </div>
+    </div>
+  `;
+} else if (isDevis) {
+  // 📝 Devis non signé : texte classique, sans image
+  signatureClientHTML = `
+    ${notesHtml}
+    ${importantHtml}
+    <div class="signatures">
+      <div class="signature-block">
+        <div class="signature-title">${signatureClientTitle}</div>
+        <p>${signatureClientText}</p>
+        <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
+        <p>Signature du client :</p>
+      </div>
+      <div class="signature-block">
+        <div class="signature-title">AquaClim Prestige</div>
+        <p>Signature et cachet de l’entreprise</p>
+        <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+      </div>
+    </div>
+  `;
+}
+
 
   const printWindow = window.open("", "_blank");
 
@@ -5708,23 +5759,7 @@ img.sig {
   <div class="page-footer bottom-block">
     ${
       isDevis
-        ? `
-          ${notesHtml}
-          ${importantHtml}
-          <div class="signatures">
-            <div class="signature-block">
-              <div class="signature-title">${signatureClientTitle}</div>
-              <p>${signatureClientText}</p>
-            <p style="margin-top:6px; margin-bottom:16px;">Date :</p>
-              <p>Signature du client :</p>
-            </div>
-            <div class="signature-block">
-              <div class="signature-title">AquaClim Prestige</div>
-              <p>Signature et cachet de l’entreprise</p>
-              <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
-            </div>
-          </div>
-        `
+        ? signatureClientHTML
         : (
           isUnpaidInvoice
             ? `
@@ -6206,7 +6241,7 @@ function generateDevisFromContract(contract) {
     ? `${label} pour la période ${globalPeriod}`
     : label;
 
-  // ----- 💶 Données prix venant du contrat -----
+  // ----- Données prix venant du contrat -----
   const totalHTContract = Number(pr.totalHT)  || 0;
   const tvaRate         = Number(pr.tvaRate)  || 0;
 
@@ -6218,7 +6253,7 @@ function generateDevisFromContract(contract) {
       ? [
           "Règlement à 30 jours fin de mois.",
           "Aucun escompte pour paiement anticipé.",
-          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce)."
+          "En cas de retard de paiement : pénalités + indemnité forfaitaire de 40 € (art. L441-10 du Code de commerce)."
         ]
       : [
           "Paiement à réception de facture.",
@@ -6226,24 +6261,17 @@ function generateDevisFromContract(contract) {
           "Aucun escompte pour paiement anticipé."
         ];
 
-  const notes = baseNotesLines
-    .concat([
-      "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire.",
-      "Les tarifs des pièces détachées et produits sont susceptibles d’évoluer selon les fournisseurs.",
-      "Toute prestation non mentionnée fera l’objet d’un devis complémentaire.",
-      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
-    ])
-    .join("\n");
+  const notesBase = baseNotesLines.concat([
+    "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire.",
+    "Les tarifs des pièces détachées et produits sont susceptibles d’évoluer selon les fournisseurs.",
+    "Toute prestation non mentionnée fera l’objet d’un devis complémentaire.",
+    "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
+  ]).join("\n");
 
-  // ====== 🧮 Construction AUTOMATIQUE de la prestation ======
-
-  // 1️⃣ Nombre total de passages
+  // ===== 1. Prestation principale (entretiens réguliers) =====
   const totalPassages = Number(pr.totalPassages || 0) || 1;
-
-  // 2️⃣ Prix unitaire (prix d’un entretien)
   let unitPrice = Number(pr.unitPrice || 0);
 
-  // Si pas de unitPrice stocké, on répartit le total du contrat sur les passages
   if (!unitPrice && totalPassages > 0 && totalHTContract > 0) {
     unitPrice = totalHTContract / totalPassages;
   }
@@ -6251,31 +6279,27 @@ function generateDevisFromContract(contract) {
     unitPrice = totalHTContract;
   }
 
-  // 3️⃣ Total de la ligne = quantité × prix
   let lineQty   = totalPassages;
   let lineTotal = unitPrice * lineQty;
 
-  // Sécurité : si tout est à 0 mais qu’on a un total contrat, on retombe sur l’ancien comportement
   if (!lineTotal && totalHTContract > 0) {
     lineQty   = 1;
     lineTotal = totalHTContract;
     unitPrice = totalHTContract;
   }
 
-  // 4️⃣ Choix du "kind" pour que le Modèle se mette tout seul
   const mainService = pr.mainService || poolType;
   let prestationKind;
-
   if (mainService === "piscine_sel") {
-    prestationKind = "piscine_sel";              // modèle Entretien piscine sel
+    prestationKind = "piscine_sel";
   } else if (
     mainService === "spa" ||
     mainService === "spa_jacuzzi" ||
     mainService === "entretien_jacuzzi"
   ) {
-    prestationKind = "entretien_jacuzzi";        // modèle Entretien jacuzzi / spa
+    prestationKind = "entretien_jacuzzi";
   } else {
-    prestationKind = "piscine_chlore";           // défaut : Entretien piscine chlore
+    prestationKind = "piscine_chlore";
   }
 
   const prestations = [
@@ -6291,12 +6315,95 @@ function generateDevisFromContract(contract) {
     }
   ];
 
-  // 5️⃣ Totaux du devis calculés à partir de la prestation
-  const subtotal   = lineTotal;
-  const tvaAmount  = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
-  const totalTTC   = tvaRate > 0 ? subtotal + tvaAmount : subtotal;
+  // ===== 2. Options forfaitaires (remise en service / hivernage) =====
+  let optionsExtraTotal = 0;
 
-  // ====== ✅ Objet devis final ======
+  const includeOpening = !!pr.includeOpening;
+  const includeWinter  = !!pr.includeWinter;
+  const airbnbOption   = !!pr.airbnbOption;
+
+// Remise en service
+if (includeOpening) {
+  const kindOpening =
+    mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
+      ? "vidange_jacuzzi"
+      : "remise_service_piscine";
+
+  const openingPrice = getTarifFromTemplates(kindOpening, clientType) || 0;
+
+  if (openingPrice > 0) {
+    prestations.push({
+      desc: "Remise en service de la piscine en début de saison",
+      detail:
+        "Remise en eau, redémarrage de la filtration, équilibrage, traitement choc et contrôle complet du bassin.",
+      qty: 1,
+      price: openingPrice,
+      total: openingPrice,
+      unit: "forfait",
+      dates: [],
+      // 🔴 ICI : on met le *vrai* kind du modèle
+      kind: kindOpening
+    });
+    optionsExtraTotal += openingPrice;
+  }
+}
+
+
+// Hivernage
+if (includeWinter) {
+  const winterKind  = "hivernage_piscine";
+  const winterPrice = getTarifFromTemplates(winterKind, clientType) || 0;
+
+  if (winterPrice > 0) {
+    prestations.push({
+      desc: "Hivernage complet de la piscine",
+      detail:
+        "Nettoyage, traitement choc, abaissement du niveau d’eau, purge des équipements et sécurisation du bassin.",
+      qty: 1,
+      price: winterPrice,
+      total: winterPrice,
+      unit: "forfait",
+      dates: [],
+      // 🔴 idem, on utilise le kind du modèle
+      kind: winterKind
+    });
+    optionsExtraTotal += winterPrice;
+  }
+}
+
+
+  // ===== 3. Majoration Airbnb +20 % =====
+  let airbnbExtra = 0;
+  if (airbnbOption) {
+    const baseForAirbnb = lineTotal + optionsExtraTotal;
+    airbnbExtra = baseForAirbnb * 0.20;
+
+    if (airbnbExtra > 0.01) {
+      prestations.push({
+        desc: "Majoration usage location saisonnière / Airbnb (+20%)",
+        detail: "Fréquence accrue, niveau d’exigence renforcé et nettoyage approfondi après chaque rotation de locataires.",
+        qty: 1,
+        price: airbnbExtra,
+        total: airbnbExtra,
+        unit: "forfait",
+        dates: [],
+        kind: "airbnb_extra"
+      });
+    }
+  }
+
+  // ===== 4. Totaux =====
+  const subtotal  = prestations.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+  const tvaAmount = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
+  const totalTTC  = subtotal + tvaAmount;
+
+  const notes =
+    notesBase +
+    (airbnbOption
+      ? "\n\nMajoration 20% appliquée en raison de l’usage en location saisonnière / Airbnb."
+      : "");
+
+  // ===== 5. Objet devis final =====
   return {
     id: Date.now().toString(),
     type: "devis",
@@ -6338,6 +6445,7 @@ function generateDevisFromContract(contract) {
     updatedAt: todayISO
   };
 }
+
 
 function maybeProposeDevisForContract(contract) {
   if (!contract || !contract.pricing) {
@@ -7186,7 +7294,12 @@ const pricing = {
   billingMode: document.getElementById("ctBillingMode")?.value || "annuel",
   nextInvoiceDate: "",
 
-  // ✅ info existante
+  // ---------- Options forfaitaires ----------
+
+  includeOpening: document.getElementById("ctIncludeOpening")?.checked || false,
+  includeWinter:  document.getElementById("ctIncludeWinter")?.checked  || false,
+
+  // ---------- Usage Airbnb ----------
 
   airbnbOption: document.getElementById("ctAirbnb")?.checked || false
 };
@@ -7283,9 +7396,17 @@ function fillContractForm(contract) {
     ctPartRadio.checked = true;
   }
 
+  // 🔁 Restituer le mode de facturation enregistré
+  const ctBillingMode = document.getElementById("ctBillingMode");
+  if (ctBillingMode && pr.billingMode) {
+    ctBillingMode.value = pr.billingMode;
+  }
+
+  // Met à jour l’UI selon le type (désactivation des modes interdits, etc.)
   updateContractClientType(type);
 
-  // ---------- 5. FRÉQUENCE & DATES ----------
+   // ---------- 5. FRÉQUENCE & DATES ----------
+
   const ctMode = document.getElementById("ctMode");
   if (ctMode) ctMode.value = pr.mode || "standard";
 
@@ -7321,6 +7442,7 @@ function fillContractForm(contract) {
     ctTotalPass.value =
       pr.totalPassages != null ? String(pr.totalPassages) : "0";
   }
+
 
   // ---------- 6. OPTIONS ----------
   const openingEl = document.getElementById("ctIncludeOpening");
@@ -10511,6 +10633,165 @@ function checkScheduledInvoices() {
 
   saveContracts(contracts);
 }
+
+/* ======================
+   SIGNATURE ELECTRONIQUE
+====================== */
+
+let signaturePad = null;
+
+// Ajuster la taille réelle du canvas (pour les écrans HDPI)
+function resizeSignatureCanvas() {
+  const canvas = document.getElementById("signatureCanvas");
+  if (!canvas) return;
+
+  const ratio = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+
+  // on multiplie la taille réelle par le ratio
+  canvas.width = rect.width * ratio;
+  canvas.height = rect.height * ratio;
+
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+}
+
+// Ouvrir la popup de signature
+function openSignaturePopup() {
+  const popup = document.getElementById("signaturePopup");
+  const canvas = document.getElementById("signatureCanvas");
+  if (!popup || !canvas) {
+    console.error("❌ SignaturePopup ou canvas introuvable");
+    return;
+  }
+
+  popup.classList.remove("hidden");
+
+  // ajuste le canvas avant d'initialiser SignaturePad
+  resizeSignatureCanvas();
+
+  signaturePad = new SignaturePad(canvas, {
+    penColor: "black",
+    backgroundColor: "rgba(0,0,0,0)"
+  });
+}
+
+// Enregistrer la signature dans le devis courant
+
+function saveSignatureToCurrentDocument(dataUrl) {
+  if (!currentDocumentId) {
+    showConfirmDialog({
+      title: "Aucun devis ouvert",
+      message: "Impossible d'enregistrer la signature : aucun devis n'est en cours d'édition.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const docs = getAllDocuments();
+  const idx = docs.findIndex(d => d.id === currentDocumentId);
+  if (idx === -1) {
+    showConfirmDialog({
+      title: "Devis introuvable",
+      message: "Impossible d'enregistrer la signature : le devis n'a pas été retrouvé.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "danger",
+      icon: "❌"
+    });
+    return;
+  }
+
+  const doc = docs[idx];
+
+  if (doc.type !== "devis") {
+    showConfirmDialog({
+      title: "Type de document invalide",
+      message: "La signature électronique ne peut être appliquée que sur un devis.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "ℹ️"
+    });
+    return;
+  }
+
+  // ✅ On enregistre la signature + date du jour
+  doc.signature = dataUrl;
+  doc.signatureDate = new Date().toLocaleDateString("fr-FR");
+  doc.status = "accepte"; // sans accent pour rester cohérent avec le reste
+
+  docs[idx] = doc;
+  saveDocuments(docs);
+
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(doc);
+  }
+
+  // Popup jolie au lieu du alert()
+  showConfirmDialog({
+    title: "Devis signé",
+    message: "Signature enregistrée.\nLe devis est maintenant marqué comme accepté.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+
+  // Rechargement de l'UI
+  if (typeof loadDocument === "function") {
+    loadDocument(doc.id);
+  }
+  if (typeof loadDocumentsList === "function") {
+    loadDocumentsList();
+  }
+}
+
+
+// === Boutons de la popup ===
+document.addEventListener("DOMContentLoaded", () => {
+  const clearBtn = document.getElementById("signatureClear");
+  const validateBtn = document.getElementById("signatureValidate");
+  const approveRadio = document.getElementById("approveDevis");
+
+  if (approveRadio) {
+    approveRadio.addEventListener("click", () => {
+      openSignaturePopup();
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      signaturePad?.clear();
+    });
+  }
+
+  if (validateBtn) {
+  validateBtn.addEventListener("click", () => {
+    if (!signaturePad || signaturePad.isEmpty()) {
+      showConfirmDialog({
+        title: "Signature manquante",
+        message: "Merci de signer dans la zone prévue avant de valider le devis.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "✍️"
+      });
+      return;
+    }
+
+    const dataUrl = signaturePad.toDataURL("image/png");
+    saveSignatureToCurrentDocument(dataUrl);
+
+    const popup = document.getElementById("signaturePopup");
+    popup?.classList.add("hidden");
+  });
+}
+
+});
 
 // ================== INIT ==================
 

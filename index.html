@@ -290,7 +290,7 @@
 
           <label class="client-type-option">
             <input type="radio" name="clientType" value="syndic" id="clientSyndic" onchange="selectClientType('syndic')">
-            Syndic / Agence
+          Agence immobilière
           </label>
 
         </div>
@@ -306,7 +306,7 @@
       <option value="">—</option>
       <option value="Monsieur">Monsieur</option>
       <option value="Madame">Madame</option>
-      <option value="Monsieur et Madame">Monsieur et Madame</option>
+      <option value="Monsieur et Madame">Monsieur ou Madame</option>
     </select>
   </div>
 
@@ -520,6 +520,14 @@
         </div>
       </div>
 
+<div class="form-group no-print">
+    <label>
+     <input type="radio" id="approveDevis" name="approveDoc" onclick="openSignaturePopup()">
+
+        Bon pour accord – signer électroniquement
+    </label>
+</div>
+
       <!-- Notes -->
       <div class="form-group">
         <label>Notes / Conditions</label>
@@ -587,7 +595,7 @@
       <option value="">—</option>
       <option value="Monsieur">Monsieur</option>
       <option value="Madame">Madame</option>
-      <option value="Société">Société</option>
+      <option value="Société">Monsieur ou Madame</option>
     </select>
   </div>
 
@@ -752,7 +760,7 @@
     </label>
     <label class="client-type-option">
       <input type="radio" name="ctClientTypeChoice" value="syndic" id="ctClientSyndic">
-      Syndic / Agence
+      Agence immobilière
     </label>
   </div>
   <!-- Valeur utilisée par le JS (comme avant) -->
@@ -1131,8 +1139,26 @@
 
 </div> <!-- FIN container -->
 
+<!-- Librairie SignaturePad -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+
 <!-- App JS -->
 <script src="app.js"></script>
+
+
+<!-- POPUP SIGNATURE (UNIQUE) -->
+<div id="signaturePopup" class="signature-overlay hidden">
+  <div class="signature-box">
+    <h2 class="signature-title">Signature du client</h2>
+
+    <canvas id="signatureCanvas"></canvas>
+
+    <div class="signature-actions">
+      <button id="signatureClear" class="btn btn-secondary">Effacer</button>
+      <button id="signatureValidate" class="btn btn-primary">Valider</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
 
