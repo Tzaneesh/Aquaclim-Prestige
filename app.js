@@ -1625,6 +1625,27 @@ function onDiscountPercentChange() {
   calculateTotals();
 }
 
+function autoFillSubjectFromFirstPrestation() {
+  const subjectInput = document.getElementById("docSubject");
+  if (!subjectInput) return;
+
+  // ❌ Si l'utilisateur a modifié l'objet à la main, on ne le touche plus
+  if (subjectInput.dataset.manualEdited === "1") {
+    return;
+  }
+
+  // On prend la première ligne de prestation
+  const firstDescInput = document.querySelector(".prestation-desc");
+  if (!firstDescInput) return;
+
+  const val = firstDescInput.value.trim();
+  // Même si l'objet contient déjà quelque chose, tant qu'il n'est pas "manuel",
+  // on le met à jour pour rester synchro avec la prestation
+  subjectInput.value = val;
+}
+
+
+
 // ================== PRESTATIONS ==================
 function addPassageDate(btn) {
   // On part du bouton "➕ Ajouter une date"
@@ -1684,25 +1705,6 @@ function removePassageDate(btn) {
     newRow.appendChild(removeBtn);
     container.appendChild(newRow);
   }
-}
-
-function autoFillSubjectFromFirstPrestation() {
-  const subjectInput = document.getElementById("docSubject");
-  if (!subjectInput) return;
-
-  // ❌ Si l'utilisateur a modifié l'objet à la main, on ne le touche plus
-  if (subjectInput.dataset.manualEdited === "1") {
-    return;
-  }
-
-  // On prend la première ligne de prestation
-  const firstDescInput = document.querySelector(".prestation-desc");
-  if (!firstDescInput) return;
-
-  const val = firstDescInput.value.trim();
-  // Même si l'objet contient déjà quelque chose, tant qu'il n'est pas "manuel",
-  // on le met à jour pour rester synchro avec la prestation
-  subjectInput.value = val;
 }
 
 
@@ -1905,13 +1907,15 @@ function updatePurchaseVisibility(line) {
 function applyTemplate(selectEl) {
   const index = parseInt(selectEl.value, 10);
   const line = selectEl.closest(".prestation-line");
+
   if (
     !line ||
     isNaN(index) ||
     index < 0 ||
     index >= PRESTATION_TEMPLATES.length
-  )
+  ) {
     return;
+  }
 
   const template = PRESTATION_TEMPLATES[index];
   const clientType = getCurrentClientType();
@@ -1960,50 +1964,60 @@ function applyTemplate(selectEl) {
       if (template.kind === "entretien_clim") {
         const qty = qtyInput ? parseFloat(qtyInput.value) || 1 : 1;
         const plural = qty >= 2 ? "s" : "";
-        title = "Entretien climatisation" + plural;
+        title = `Entretien${plural} climatisation`;
       }
       descInput.value = title;
     }
+
     // 🎯 Après avoir mis l’intitulé depuis le modèle,
     // on remplit l'objet si besoin
     autoFillSubjectFromFirstPrestation();
   }
 
-  
-// Prix (avec prise en compte des tarifs personnalisés)
-if (priceInput) {
-  const custom = getCustomPrices(); 
-  let price = 0;
+  // Prix (avec prise en compte des tarifs personnalisés)
+  if (priceInput) {
+    const custom = getCustomPrices();
+    let price = 0;
 
-  if (template.kind) {
-    const key =
-      template.kind + "_" +
-      (clientType === "syndic" ? "syndic" : "particulier");
+    if (template.kind) {
+      const key =
+        template.kind +
+        "_" +
+        (clientType === "syndic" ? "syndic" : "particulier");
 
-    // Si un prix modifié existe → on l'utilise
-    if (custom[key] != null) {
-      price = custom[key];
-    } else {
-      // Sinon → prix d'origine du template
-      price =
-        clientType === "syndic"
-          ? template.priceSyndic || 0
-          : template.priceParticulier || 0;
+      // Si un prix modifié existe → on l'utilise
+      if (custom[key] != null) {
+        price = custom[key];
+      } else {
+        // Sinon → prix d'origine du template
+        price =
+          clientType === "syndic"
+            ? template.priceSyndic || 0
+            : template.priceParticulier || 0;
+      }
     }
+
+    priceInput.value = price.toFixed(2);
+    line.dataset.basePrice = price.toFixed(2);
+    line.dataset.autoPrice = "1";
   }
-
-  priceInput.value = price.toFixed(2);
-  line.dataset.basePrice = price.toFixed(2);
-  line.dataset.autoPrice = "1";
-}
-
-
 
   if (qtyInput) qtyInput.value = 1;
 
   updatePurchaseVisibility(line);
   calculateTotals();
+} // <- fin de applyTemplate
+
+function onPriceChange(input) {
+  const line = input.closest(".prestation-line");
+  if (!line) return;
+
+  // Dès que l'utilisateur modifie le prix manuellement,
+  // on indique que ce n'est plus un prix auto
+  line.dataset.autoPrice = "0";
+  calculateTotals();
 }
+
 
 function onPriceChange(input) {
   const line = input.closest(".prestation-line");
@@ -3126,7 +3140,7 @@ function loadDocumentsList() {
     });
   }
 
-  // 🔽 Tri : date ou numéro selon le select
+    // 🔽 Tri : date ou numéro selon le select
   const sortSel  = document.getElementById("sortDocumentsBy");
   const sortMode = sortSel ? sortSel.value : "date_desc";
 
@@ -3143,7 +3157,6 @@ function loadDocumentsList() {
     const db = b.date ? new Date(b.date) : new Date(b.createdAt || 0);
     return db - da;
   });
-
 
   const tbody = document.getElementById("documentsTableBody");
   if (!tbody) return;
@@ -3488,118 +3501,6 @@ function closeResiliationPopup() {
   resiliationContractId = null;
 }
 
-
-
-function createTerminationInvoiceForContract(contract) {
-  const c   = contract.client  || {};
-  const s   = contract.site    || {};
-  const pr  = contract.pricing || {};
-
-  const totalContractHT = Number(pr.totalHT) || 0;
-  const tvaRate         = Number(pr.tvaRate) || 0;
-
-  // 1) Montant déjà facturé pour ce contrat
-  const docs = getAllDocuments();
-  const alreadyBilledHT = docs
-    .filter(d => d.type === "facture" && d.contractId === contract.id)
-    .reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
-
-  // 2) Solde restant
-  const remainingHT = Math.max(0, totalContractHT - alreadyBilledHT);
-
-  if (remainingHT <= 0) {
-    // Rien à facturer
-    return null;
-  }
-
-  const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
-  const totalTTC  = remainingHT + tvaAmount;
-
-  const number   = getNextNumber("facture");
-  const todayISO = new Date().toISOString().slice(0, 10);
-
-  const baseLabel = "Facture de clôture – Contrat d’entretien";
-  const formattedPeriod = formatNicePeriod(pr.startDate, pr.endDateLabel);
-  const subject = formattedPeriod
-    ? `${baseLabel} ${formattedPeriod}`
-    : baseLabel;
-
-  const lineDesc = subject;
-
-  const prestations = [
-    {
-      desc: lineDesc,
-      detail: "Montant restant dû au titre du contrat d’entretien.",
-      qty: 1,
-      price: remainingHT,
-      total: remainingHT,
-      unit: "forfait",
-      dates: [],
-      kind: "contrat_resiliation"
-    }
-  ];
-
-  const notes = [
-    "Facture de clôture émise suite à la résiliation du contrat d’entretien.",
-    "Le montant facturé correspond au solde restant dû conformément aux conditions contractuelles.",
-    "Les conditions générales restent applicables."
-  ].join("\n");
-
-  const facture = {
-    id: Date.now().toString(),
-    type: "facture",
-    number,
-    date: todayISO,
-    validityDate: "",
-
-    subject,
-
-    contractId: contract.id || null,
-    contractReference: c.reference || "",
-
-    client: {
-      civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
-    },
-
-    siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
-
-    prestations,
-    tvaRate,
-    subtotal: remainingHT,
-    discountRate: 0,
-    discountAmount: 0,
-    tvaAmount,
-    totalTTC,
-
-    notes,
-
-    paid: false,
-    paymentMode: "",
-    paymentDate: "",
-
-    status: "",
-    conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
-
-    createdAt: new Date().toISOString()
-  };
-
-  docs.push(facture);
-  saveDocuments(docs);
-
-  if (typeof saveSingleDocumentToFirestore === "function") {
-    saveSingleDocumentToFirestore(facture);
-  }
-
-  return facture;
-}
-
-
 function confirmResiliationPopup() {
   if (!resiliationContractId) {
     closeResiliationPopup();
@@ -3905,8 +3806,7 @@ function loadContractsList() {
 
   let filtered = contracts;
 
-
-
+  // Filtre "À renouveler"
   const renewalToggle = document.getElementById("filterRenewal");
   if (renewalToggle && renewalToggle.checked) {
     filtered = filtered.filter(c =>
@@ -3915,7 +3815,7 @@ function loadContractsList() {
     );
   }
 
-
+  // Filtre recherche
   if (q) {
     filtered = filtered.filter((c) => {
       const ref = (c.client?.reference || "").toLowerCase();
@@ -3931,24 +3831,23 @@ function loadContractsList() {
     });
   }
 
+  // Tri
   const sortSel  = document.getElementById("sortDocumentsBy");
   const sortMode = sortSel ? sortSel.value : "date_desc";
 
   filtered.sort((a, b) => {
     if (sortMode === "number_desc") {
-      // Pour les contrats, on n’a pas vraiment de numéro, on va utiliser la référence client ou l'id
       const ra = (a.client?.reference || a.id || "").toString();
       const rb = (b.client?.reference || b.id || "").toString();
       return rb.localeCompare(ra, "fr", { numeric: true });
     }
 
-    // défaut : startDate (ou createdAt) décroissant
     const da = a.pricing?.startDate || a.createdAt || "";
     const db = b.pricing?.startDate || b.createdAt || "";
     return db.localeCompare(da);
   });
 
-
+  // Affichage dans le tableau
   const tbody = document.getElementById("documentsTableBody");
   if (!tbody) return;
   tbody.innerHTML = "";
@@ -3962,35 +3861,38 @@ function loadContractsList() {
   filtered.forEach((c) => {
     const tr = document.createElement("tr");
 
-    const ref = c.client?.reference || "";
-    const clientName = c.client?.name || "";
-    const startDate = c.pricing?.startDate || "";
-    const totalHT = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
+    const ref        = c.client?.reference || "";
+    const clientName = c.client?.name      || "";
+
+    // 🔵 conversion ISO → DD/MM/YYYY
+    const startDateISO = c.pricing?.startDate || "";
+    const startDateFR  = startDateISO ? formatDateFr(startDateISO) : "";
+
+    const totalHT    = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
 
     const statutHTML = renderContractStatusBadge(c);
-let renewedLink = "";
-if (c.meta && c.meta.renewedTo) {
-  renewedLink = `
-    <div class="renew-link">
-      <a href="#" onclick="openContractFromList('${c.meta.renewedTo}')">
-        Voir nouveau contrat →
-      </a>
-    </div>
-  `;
-}
+
+    let renewedLink = "";
+    if (c.meta && c.meta.renewedTo) {
+      renewedLink = `
+        <div class="renew-link">
+          <a href="#" onclick="openContractFromList('${c.meta.renewedTo}')">
+            Voir nouveau contrat →
+          </a>
+        </div>
+      `;
+    }
 
     const status = computeContractStatus(c);
 
-const renewBtn =
-  (status === CONTRACT_STATUS.A_RENOUVELER || status === CONTRACT_STATUS.TERMINE)
-    ? `
- <button class="btn btn-primary btn-small" onclick="openRenewPopup('${c.id}')">
-  Renouveler
-</button>
-
-    `
-    : "";
-
+    const renewBtn =
+      (status === CONTRACT_STATUS.A_RENOUVELER || status === CONTRACT_STATUS.TERMINE)
+        ? `
+        <button class="btn btn-primary btn-small" onclick="openRenewPopup('${c.id}')">
+          Renouveler
+        </button>
+        `
+        : "";
 
     const resiliationRow =
       (status === CONTRACT_STATUS.EN_COURS || status === CONTRACT_STATUS.A_RENOUVELER)
@@ -4018,9 +3920,8 @@ const renewBtn =
         <div class="actions-btns-row">
           <button class="btn btn-primary btn-small" type="button"
                   onclick="previewContractFromList('${c.id}')">Aperçu</button>
-   <button class="btn btn-success btn-small" type="button"
-        onclick="transformContractFromList('${c.id}')">Facturer</button>
-
+          <button class="btn btn-success btn-small" type="button"
+                  onclick="transformContractFromList('${c.id}')">Facturer</button>
         </div>
 
         ${renewBtn
@@ -4042,19 +3943,17 @@ const renewBtn =
       `<td>Contrat</td>` +
       `<td>${escapeHtml(ref || c.id)}</td>` +
       `<td>${escapeHtml(clientName)}</td>` +
-      `<td>${escapeHtml(startDate || "")}</td>` +
+      `<td>${escapeHtml(startDateFR || "")}</td>` +   // 🔥 DATE EN FRANÇAIS
       `<td><strong>${formatEuro(totalHT)}</strong></td>` +
       `<td class="status-cell">
-  ${statutHTML}
-  ${renewedLink}
-</td>
-` +
+        ${statutHTML}
+        ${renewedLink}
+      </td>` +
       `<td>${actionsHtml}</td>`;
 
     tbody.appendChild(tr);
   });
 }
-
 
 
 function setPaymentMode(id, mode) {
@@ -5957,7 +5856,7 @@ function computeNextInvoiceDate(contract) {
   const start = new Date(startISO + "T00:00:00");
   if (isNaN(start.getTime())) return "";
 
-  // 🔧 Fin de mois propre (pour le 50/50 particulier)
+  // 🔧 Fin de mois propre (utilisé pour certains cas particuliers)
   function endOfMonth(d) {
     const x = new Date(d);
     x.setMonth(x.getMonth() + 1);
@@ -5966,84 +5865,59 @@ function computeNextInvoiceDate(contract) {
     return x;
   }
 
-  // 🔧 Fin de période n (n = 1, 2, 3...) pour un syndic
-  // (⚠️ plus utilisé dans la nouvelle logique, mais je le laisse si tu l’emploies ailleurs)
-  function getInstallmentEnd(startDate, stepMonths, index) {
-    const d = new Date(startDate);
-    d.setMonth(d.getMonth() + stepMonths * index);
-    d.setDate(0); // dernier jour du mois précédent
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }
-
   // Date de fin de contrat (fin du dernier mois)
   const contractEnd = new Date(start);
   contractEnd.setMonth(contractEnd.getMonth() + duration);
-  contractEnd.setDate(0);
+  contractEnd.setDate(contractEnd.getDate() - 1);
   contractEnd.setHours(0, 0, 0, 0);
 
-  // =======================================================
-  // 🔵 SYNDIC = POST-PAYÉ (factures après prestation)
-  // =======================================================
-  if (clientType === "syndic") {
-    // 👉 Nouveau comportement : date anniversaire, plus de "fin de mois"
+ // =======================================================
+// 🔵 SYNDIC = POST-PAYÉ, À LA DATE D’ANNIVERSAIRE
+// =======================================================
+if (clientType === "syndic") {
 
-    // Step en mois selon le mode
-    let stepMonths;
-    if (mode === "mensuel")      stepMonths = 1;
-    else if (mode === "trimestriel") stepMonths = 3;
-    else if (mode === "semestriel")  stepMonths = 6;
-    else if (mode === "annuel")      stepMonths = 12;
-    else return "";
-
-    const totalInstallments = getNumberOfInstallments(pr);
-
-    // Helper : iᵉ échéance = startISO + i * stepMonths (en ISO)
-    function getInstallmentISO(index) {
-      // On utilise ton addMonths global si présent, sinon fallback
-      if (typeof addMonths === "function") {
-        return addMonths(startISO, stepMonths * index);
-      }
-      const d = new Date(start);
-      d.setMonth(d.getMonth() + stepMonths * index);
-      d.setHours(0, 0, 0, 0);
-      return d.toISOString().slice(0, 10);
-    }
-
-    // 1ʳᵉ échéance → directement date anniversaire de la 1ʳᵉ période
+  // Annuel syndic → une seule facture à la fin du contrat
+  if (mode === "annuel") {
     if (!pr.nextInvoiceDate) {
-      const firstISO = getInstallmentISO(1);
-      const firstDate = new Date(firstISO + "T00:00:00");
-      if (firstDate > contractEnd) return "";
-      return firstISO;
+      return contractEnd.toISOString().slice(0, 10);
     }
-
-    // On cherche à quel "index" correspond la nextInvoiceDate actuelle
-    const currentISO = pr.nextInvoiceDate;
-    let currentIndex = null;
-
-    for (let i = 1; i <= totalInstallments; i++) {
-      const isoI = getInstallmentISO(i);
-      if (isoI === currentISO) {
-        currentIndex = i;
-        break;
-      }
-    }
-
-    if (!currentIndex) {
-      // la date ne correspond à aucune échéance théorique → on arrête
-      return "";
-    }
-
-    const nextIndex = currentIndex + 1;
-    if (nextIndex > totalInstallments) return "";
-
-    const nextISO = getInstallmentISO(nextIndex);
-    const nextDate = new Date(nextISO + "T00:00:00");
-    if (nextDate > contractEnd) return "";
-
-    return nextISO;
+    return "";
   }
+
+  const stepMonths = getBillingStepMonths(mode);
+  if (!stepMonths) return "";
+
+  const totalInstallments = getNumberOfInstallments(pr);
+  const already = countContractInstallmentInvoices(contract.id);
+
+  // Toutes les échéances prévues sont déjà facturées
+  if (already >= totalInstallments) {
+    return "";
+  }
+
+  // index = 0 → première facture, 1 → deuxième facture, etc.
+  const index = already;
+
+  // 📅 Date = date de début + (index * stepMonths)
+  const d = new Date(start);
+  d.setMonth(d.getMonth() + stepMonths * index);
+
+  // 🩹 Patch anti-déplacement
+  const startDay = start.getDate();
+  const daysInMonth = new Date(
+    d.getFullYear(),
+    d.getMonth() + 1,
+    0
+  ).getDate();
+  d.setDate(Math.min(startDay, daysInMonth));
+
+  if (d > contractEnd) {
+    return "";
+  }
+
+  return d.toISOString().slice(0, 10);
+}
+
 
   // =======================================================
   // 🔴 PARTICULIER = FACTURATION ANTICIPÉE
@@ -6082,7 +5956,7 @@ function computeNextInvoiceDate(contract) {
   // =============================
   if (clientType === "particulier" && mode === "mensuel") {
     const totalInstallments = getNumberOfInstallments(pr);
-    const already = countContractInstallmentInvoices(contract.id);
+    const already = countContractInstallmentInvoices(contract.id); 
     // (inclut l’échéance initiale)
 
     // Toutes les échéances prévues sont déjà facturées
@@ -6104,7 +5978,11 @@ function computeNextInvoiceDate(contract) {
     return d.toISOString().slice(0, 10);
   }
 
-  // Autres modes (trimestriel / semestriel si un jour pour particulier)
+  // =============================
+  // Autres cas particuliers
+  // (trimestriel / semestriel particulier, si tu t’en sers un jour)
+  // =============================
+
   const stepMonths = getBillingStepMonths(mode);
   if (!stepMonths) return "";
 
@@ -6118,10 +5996,12 @@ function computeNextInvoiceDate(contract) {
   const next = new Date(base);
   next.setMonth(next.getMonth() + stepMonths);
 
-  if (next > contractEnd) return "";
+  if (next > contractEnd) {
+    return "";
+  }
+
   return next.toISOString().slice(0, 10);
 }
-
 function getContractLabel(type) {
   if (type === "piscine_chlore" || type === "piscine_sel") {
     return "Contrat d’entretien Piscine";
@@ -6413,7 +6293,7 @@ function generateDevisFromContract(contract) {
       qty:    lineQty,
       price:  unitPrice,
       total:  lineTotal,
-      unit: "passage",
+      unit:   "forfait",
       dates:  [],
       kind:   prestationKind
     }
@@ -6937,9 +6817,10 @@ function getContractUnitPrice() {
 
 // ----- Distribution des mois été / hiver -----
 
+
 function computeContractMonths(startDateStr, durationMonths) {
   if (!startDateStr || !durationMonths) {
-    return { monthsEte: 0, monthsHiver: 0 };
+    return { monthsEte: 0, monthsHiver: 0, endDateISO: null };
   }
 
   const start = new Date(startDateStr + "T00:00:00");
@@ -6954,13 +6835,12 @@ function computeContractMonths(startDateStr, durationMonths) {
   let monthsHiver = 0;
 
   const ONE_DAY = 24 * 60 * 60 * 1000;
-  const MIN_DAYS = 15; // 🔥 seuil : au moins 15 jours dans le mois
+  const MIN_DAYS = 15; // au moins 15 jours pour compter le mois
 
   while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
     const monthStart = new Date(y, m, 1);
-    const monthEnd   = new Date(y, m + 1, 0); // dernier jour du mois
+    const monthEnd   = new Date(y, m + 1, 0);
 
-    // chevauchement réel entre le contrat et ce mois
     const effStart = monthStart < start ? start : monthStart;
     const effEnd   = monthEnd > end ? end : monthEnd;
 
@@ -6979,8 +6859,13 @@ function computeContractMonths(startDateStr, durationMonths) {
     }
   }
 
-  return { monthsEte, monthsHiver };
+  return {
+    monthsEte,
+    monthsHiver,
+    endDateISO: end.toISOString().slice(0, 10)
+  };
 }
+
 
 function computeMonthsEteHiverBetween(startISO, endISO) {
   if (!startISO || !endISO) {
@@ -7030,12 +6915,10 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
 }
 
 
-
 // ----- Recalcul global du contrat -----
 
-// ----- Recalcul global du contrat -----
 function recomputeContract() {
-  // 1) Récup des champs principaux
+  // 1) Récup des champs
   const modeEl        = document.getElementById("ctMode");
   const passHiverEl   = document.getElementById("ctPassHiver");
   const passEteEl     = document.getElementById("ctPassEte");
@@ -7051,11 +6934,11 @@ function recomputeContract() {
     return;
   }
 
+  // 2) Mode entretien
   let mode      = modeEl.value || "standard";
   let passHiver = parseInt(passHiverEl.value || "0", 10) || 0;
   let passEte   = parseInt(passEteEl.value   || "0", 10) || 0;
 
-  // 2) Mode standard / intensif → on force les valeurs si pas "custom"
   if (mode === "standard") {
     passHiver = 1;
     passEte   = 2;
@@ -7071,33 +6954,30 @@ function recomputeContract() {
   const startISO = startDateEl.value || "";
   const duration = parseInt(durationEl.value || "0", 10) || 0;
 
-  let monthsEte   = 0;
+  let monthsEte = 0;
   let monthsHiver = 0;
-  let endISO      = "";
 
+  // 3) Calcul des mois + date de fin via computeContractMonths()
+  let endISO = "";
   if (startISO && duration > 0) {
     const info = computeContractMonths(startISO, duration);
     monthsEte   = info.monthsEte;
     monthsHiver = info.monthsHiver;
     endISO      = info.endDateISO;
 
-    // maj champs fin + période
-    if (endDateEl) {
-      const d = new Date(endISO + "T00:00:00");
-      endDateEl.value = isNaN(d.getTime()) ? "" : d.toLocaleDateString("fr-FR");
-    }
+    if (endDateEl) endDateEl.value = endISO;
 
     if (periodEl) {
       const debutFr = new Date(startISO + "T00:00:00").toLocaleDateString("fr-FR");
       const finFr   = new Date(endISO   + "T00:00:00").toLocaleDateString("fr-FR");
-      periodEl.value = debutFr + " → " + finFr;
+      periodEl.value = `${debutFr} → ${finFr}`;
     }
   } else {
     if (endDateEl) endDateEl.value = "";
     if (periodEl)  periodEl.value  = "";
   }
 
-  // 3) Total passages
+  // 4) Total passages
   const totalPassages = monthsHiver * passHiver + monthsEte * passEte;
   totalPassEl.value = String(totalPassages);
 
@@ -7116,7 +6996,7 @@ function recomputeContract() {
     }
   }
 
-  // 3bis) Warnings
+  // 5) Warnings
   if (warnBox) {
     const warnings = [];
     if (!startISO || !duration) {
@@ -7134,7 +7014,7 @@ function recomputeContract() {
     }
 
     if (warnings.length > 0) {
-      warnBox.innerHTML =
+      warnBox.innerHTML = 
         `<span style="font-size:18px;line-height:1;">⚠️</span>` +
         `<div><strong>Attention à la configuration du contrat :</strong><br>${warnings.join("<br>")}</div>`;
       warnBox.classList.remove("hidden");
@@ -7144,7 +7024,7 @@ function recomputeContract() {
     }
   }
 
-  // 4) Prix unitaire + options
+  // 6) Calcul prix (inchangé)
   const clientType   = document.getElementById("ctClientType")?.value || "particulier";
   const mainService  = document.getElementById("ctMainService")?.value || "piscine_chlore";
   const includeOpen  = document.getElementById("ctIncludeOpening")?.checked || false;
@@ -7172,7 +7052,6 @@ function recomputeContract() {
     totalHT += airbnbExtra;
   }
 
-  // 5) TVA
   const tvaRateInput = document.getElementById("tvaRate");
   const tvaRate = tvaRateInput
     ? (parseFloat(String(tvaRateInput.value).replace(",", ".")) || 0)
@@ -7181,7 +7060,6 @@ function recomputeContract() {
   const tvaAmount = totalHT * (tvaRate / 100);
   const totalTTC  = totalHT + tvaAmount;
 
-  // 6) Mise à jour UI prix
   const unitInput   = document.getElementById("ctUnitPrice");
   const totalHTInput= document.getElementById("ctTotalHT");
   const recapPass   = document.getElementById("ctRecapPassages");
@@ -7198,7 +7076,6 @@ function recomputeContract() {
   if (recapPass)   recapPass.textContent  = totalPassages.toString();
   if (recapPrice)  recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
 
-  // Label récap final
   let labelAmount = "";
   let displayAmount = 0;
   if (tvaRate === 0) {
@@ -8030,27 +7907,23 @@ function formatNicePeriod(startISO, endRaw) {
 const RESILIATION_PREAVIS_DAYS = 30; // adapte si besoin (45, 60...)
 
 function createTerminationInvoiceForContract(contract) {
-  const c   = contract.client  || {};
-  const s   = contract.site    || {};
-  const pr  = contract.pricing || {};
-  const meta = contract.meta   || {};
+  const c    = contract.client  || {};
+  const s    = contract.site    || {};
+  const pr   = contract.pricing || {};
+  const meta = contract.meta    || {};
 
   const totalContractHT = Number(pr.totalHT) || 0;
   const tvaRate         = Number(pr.tvaRate) || 0;
 
   // Si on n'a pas de date de début ou de fréquence, on retombe sur l'ancienne logique "reste du contrat"
+  const hasPassHiver = pr.passHiver !== undefined && pr.passHiver !== null;
+  const hasPassEte   = pr.passEte   !== undefined && pr.passEte   !== null;
 
-const hasPassHiver = pr.passHiver !== undefined && pr.passHiver !== null;
-const hasPassEte   = pr.passEte   !== undefined && pr.passEte   !== null;
+  if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
+    return createTerminationInvoiceSimple(contract);
+  }
 
-// Si pas de date ou pas de durée ou aucune fréquence définie -> fallback
-if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
-  return createTerminationInvoiceSimple(contract);
-}
-
-
-  // 1) Determiner la date de fin "théorique" du contrat
-
+  // 1) Déterminer la date de fin "théorique" du contrat
   let contractEnd = null;
 
   if (pr.startDate && pr.durationMonths) {
@@ -8064,7 +7937,6 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
   }
 
   if (!contractEnd && pr.endDateLabel) {
-    // si endDateLabel est au format jj/mm/aaaa
     if (/^\d{2}\/\d{2}\/\d{4}$/.test(pr.endDateLabel)) {
       const iso = parseFrenchDate(pr.endDateLabel);
       if (iso) {
@@ -8078,18 +7950,18 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
   }
 
   // 2) Date de résiliation + préavis
-  let resISO = meta.resiliationDate || new Date().toISOString().slice(0,10);
+  let resISO  = meta.resiliationDate || new Date().toISOString().slice(0, 10);
   let resDate = new Date(resISO + "T00:00:00");
   if (isNaN(resDate.getTime())) {
     resDate = new Date();
-    resDate.setHours(0,0,0,0);
-    resISO = resDate.toISOString().slice(0,10);
+    resDate.setHours(0, 0, 0, 0);
+    resISO  = resDate.toISOString().slice(0, 10);
   }
 
   const who = meta.resiliationWho || "client";
 
   // Si résiliation par le client -> on applique un préavis
-  // Si résiliation par le prestataire -> pas de préavis (tu peux changer la logique si tu veux)
+  // Si résiliation par le prestataire -> pas de préavis
   let effectiveEnd = new Date(resDate);
   if (who === "client") {
     effectiveEnd.setDate(effectiveEnd.getDate() + RESILIATION_PREAVIS_DAYS);
@@ -8100,14 +7972,13 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
     effectiveEnd = contractEnd;
   }
 
-  const startISO = pr.startDate;
-  const effectiveEndISO = effectiveEnd.toISOString().slice(0,10);
+  const startISO        = pr.startDate;
+  const effectiveEndISO = effectiveEnd.toISOString().slice(0, 10);
 
   // 3) Calcul du nombre de mois été / hiver sur la période début -> résiliation+préavis
   const { monthsEte, monthsHiver } = computeMonthsEteHiverBetween(startISO, effectiveEndISO);
 
   // 4) Passages théoriques sur cette période
-
   const passHiver = Number(pr.passHiver) || 0;
   const passEte   = Number(pr.passEte)   || 0;
   const unitPrice =
@@ -8116,14 +7987,12 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
 
   let theoreticalPassages = monthsEte * passEte + monthsHiver * passHiver;
 
-  // On ne peut pas dépasser le total de passages du contrat
   if (pr.totalPassages && theoreticalPassages > pr.totalPassages) {
     theoreticalPassages = pr.totalPassages;
   }
 
   let htDue = theoreticalPassages * unitPrice;
 
-  // On ne dépasse pas le total du contrat
   if (htDue > totalContractHT) {
     htDue = totalContractHT;
   }
@@ -8136,7 +8005,6 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
 
   // 6) Solde à facturer
   const remainingHT = Math.max(0, htDue - alreadyBilledHT);
-
   if (remainingHT <= 0) {
     return null; // rien à facturer
   }
@@ -8147,9 +8015,13 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
   const number   = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
-  const baseLabel = "Facture de clôture – Contrat d’entretien";
+  // 💡 Date de facture = fin effective du contrat (sans aller dans le futur)
+  const invoiceDateISO =
+    effectiveEndISO <= todayISO ? effectiveEndISO : todayISO;
+
+  const baseLabel       = "Facture de clôture – Contrat d’entretien";
   const formattedPeriod = formatNicePeriod(startISO, effectiveEndISO);
-  const subject = formattedPeriod
+  const subject         = formattedPeriod
     ? `${baseLabel} ${formattedPeriod}`
     : baseLabel;
 
@@ -8167,27 +8039,26 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
 
   const prestations = [
     {
-      desc: lineDesc,
+      desc:   lineDesc,
       detail: "Solde restant dû au titre du contrat d’entretien (prorata + préavis).",
-      qty: 1,
-      price: remainingHT,
-      total: remainingHT,
-      unit: "forfait",
-      dates: [],
-      kind: "contrat_resiliation"
+      qty:    1,
+      price:  remainingHT,
+      total:  remainingHT,
+      unit:   "forfait",
+      dates:  [],
+      kind:   "contrat_resiliation"
     }
   ];
 
   const facture = {
-      id: generateId("FAC"),
+    id: generateId("FAC"),
     type: "facture",
     number,
-    date: todayISO,
+    date: invoiceDateISO,       // 🔥 ICI : fin de contrat, plus todayISO
     validityDate: "",
-
     subject,
 
-    contractId: contract.id || null,
+    contractId:        contract.id || null,
     contractReference: c.reference || "",
 
     client: {
@@ -8204,15 +8075,15 @@ if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
 
     prestations,
     tvaRate,
-    subtotal: remainingHT,
-    discountRate: 0,
+    subtotal:       remainingHT,
+    discountRate:   0,
     discountAmount: 0,
     tvaAmount,
     totalTTC,
 
     notes,
 
-    paid: false,
+    paid:        false,
     paymentMode: "",
     paymentDate: "",
 
@@ -9530,7 +9401,7 @@ function formatDateFr(iso) {
   if (!year || !month || !day) return iso;
 
   // Affichage demandé : DD-MM-YYYY
-  return `${day}-${month}-${year}`;
+return `${day}/${month}/${year}`;
 }
 
 
@@ -9652,141 +9523,249 @@ function formatDateYMD(d) {
 
 
 function buildContractSchedule(contract) {
-  const pr = contract.pricing || {};
-  const mode = pr.billingMode || "annuel";
+  const pr         = contract.pricing || {};
+  const mode       = pr.billingMode || "annuel";
   const clientType = pr.clientType || "particulier";
 
   const startISO = pr.startDate;
+  if (!startISO) return [];
+
+  const totalHT  = Number(pr.totalHT || 0);
+  const tvaRate  = Number(pr.tvaRate || 0);
   const duration = Number(pr.durationMonths || 0);
-  if (!startISO || !duration) return [];
 
-  const totalHT = Number(pr.totalHT || 0);
-  const tvaRate = Number(pr.tvaRate || 0);
-  if (!totalHT) return [];
+  // Sécurité : si rien de cohérent, on sort
+  if (!totalHT || !duration) return [];
 
-  // =============== NOMBRE D’ÉCHÉANCES SELON MODE ===============
+  // Date de début brute
+  const start = new Date(startISO + "T00:00:00");
+  if (isNaN(start.getTime())) return [];
 
-  function getInstallments() {
-    if (mode === "mensuel")     return duration;
-    if (mode === "trimestriel") return Math.ceil(duration / 3);
-    if (mode === "semestriel")  return Math.ceil(duration / 6);
-    return 1; // annuel / par défaut
-  }
-
-  const n = getInstallments();
-  const amountHT  = totalHT / n;
-  const amountTVA = amountHT * (tvaRate / 100);
-  const amountTTC = amountHT + amountTVA;
+  // Date de fin de contrat = fin du dernier mois
+  const contractEnd = new Date(start);
+  contractEnd.setMonth(contractEnd.getMonth() + duration);
+  contractEnd.setDate(0);
+  contractEnd.setHours(0, 0, 0, 0);
 
   const rows = [];
 
-  // =============== CALCUL DES DATES (ANNIVERSAIRE) ===============
-  for (let i = 0; i < n; i++) {
-    let dateISO;
+  // ===============================
+  // 🟢 CAS PARTICULIER / MENSUEL
+  // → échéances au même jour que le début
+  // ===============================
+  if (clientType === "particulier" && mode === "mensuel") {
+    const n = getNumberOfInstallments(pr) || duration; // nb d'échéances
 
-    // Si ton helper addMonths() existe (défini en haut de fichier) ➜ on l’utilise
-    if (typeof addMonths === "function") {
-      let step = 0;
-      if (mode === "mensuel")      step = 1;
-      else if (mode === "trimestriel") step = 3;
-      else if (mode === "semestriel")  step = 6;
-      else if (mode === "annuel")      step = 12;
+    const amountHT  = totalHT / n;
+    const amountTVA = amountHT * (tvaRate / 100);
+    const amountTTC = amountHT + amountTVA;
 
-      // fallback sécurité
-      if (!step) {
-        dateISO = startISO;
-      } else {
-        dateISO = addMonths(startISO, step * i);
-      }
+    let first = new Date(start);
+    first.setHours(0, 0, 0, 0);
+
+    for (let i = 0; i < n; i++) {
+      const d = new Date(first);
+      d.setMonth(first.getMonth() + i);
+
+      if (d > contractEnd) break;
+
+rows.push({
+  index:        i + 1,
+  date:         formatDateYMD(d),
+  amountHT,
+  amountTVA,
+  amountTTC,
+  status:       "Prévisionnel",
+  statusType:   "forecast",
+  invoiceId:    null,
+  invoiceNumber:""
+});
+
+    }
+  } else {
+    // ===============================
+    // 🧰 CAS GÉNÉRIQUES (annuel, 50/50, trimestriel, etc.)
+    // ===============================
+    let n = 1;
+    let stepMonths = 0;
+
+    if (mode === "annuel") {
+      n = 1;
+      stepMonths = 0;
+    } else if (mode === "annuel_50_50") {
+      n = 2;
+      stepMonths = duration > 0 ? Math.round(duration / 2) : 0;
     } else {
-      // Fallback sans addMonths (au cas où)
-      let d = new Date(startISO + "T00:00:00");
-      if (mode === "mensuel")       d.setMonth(d.getMonth() + i);
-      else if (mode === "trimestriel") d.setMonth(d.getMonth() + i * 3);
-      else if (mode === "semestriel")  d.setMonth(d.getMonth() + i * 6);
-      else if (mode === "annuel")      d.setFullYear(d.getFullYear() + i);
-
-      dateISO = d.toISOString().slice(0, 10);
+      n = getNumberOfInstallments(pr);      // basé sur durationMonths
+      stepMonths = getBillingStepMonths(mode);
     }
 
-    rows.push({
-      index: i + 1,
-      date: dateISO,
-      amountHT,
-      amountTVA,
-      amountTTC,
-      status: "Prévisionnel",
-      statusType: "forecast",
-      invoiceId: null,
-      invoiceNumber: ""
-    });
+    if (n < 1) n = 1;
+
+    let amountHT;
+    if (mode === "annuel") {
+      amountHT = totalHT;
+    } else if (mode === "annuel_50_50") {
+      amountHT = totalHT / 2;
+    } else {
+      amountHT = totalHT / n;
+    }
+
+    const amountTVA = amountHT * (tvaRate / 100);
+    const amountTTC = amountHT + amountTVA;
+
+    let current = new Date(startISO + "T00:00:00");
+
+    for (let i = 0; i < n; i++) {
+const iso = formatDateYMD(current);
+
+rows.push({
+  index:        i + 1,
+  date:         iso,
+  amountHT,
+  amountTVA,
+  amountTTC,
+  status:       "Prévisionnel",
+  statusType:   "forecast",
+  invoiceId:    null,
+  invoiceNumber:""
+});
+
+
+      if (stepMonths > 0) {
+        current.setMonth(current.getMonth() + stepMonths);
+      }
+    }
   }
 
-  // =============== SYNCHRO AVEC FACTURES EXISTANTES ===============
-  const docs = getAllDocuments();
+// 🔍 On croise avec les factures réelles du contrat
+const docs = getAllDocuments();
 
-  let invoices = docs.filter(d =>
-    d.type === "facture" &&
-    d.contractId === contract.id
+// 1) On prend TOUTES les factures du contrat
+let invoices = docs.filter(d =>
+  d.type === "facture" &&
+  d.contractId === contract.id
+);
+
+// 2) Pour les PARTICULIERS, on garde seulement les factures d'échéance
+//    (kind = contrat_echeance / contrat_echeance_initiale)
+//    → ça évite de compter l'ouverture, l'hivernage, etc.
+if (clientType === "particulier") {
+  invoices = invoices.filter(d =>
+    d.prestations &&
+    d.prestations.some(p =>
+      p.kind === "contrat_echeance" ||
+      p.kind === "contrat_echeance_initiale"
+    )
   );
+}
+// Pour les SYNDICS, on ne filtre PAS : toute facture liée au contrat compte.
 
-  // Particulier → on isole les factures d’échéance
-  if (clientType === "particulier") {
-    invoices = invoices.filter(inv =>
-      inv.prestations &&
-      inv.prestations.some(p =>
-        p.kind === "contrat_echeance" ||
-        p.kind === "contrat_echeance_initiale"
-      )
+rows.forEach((r) => {
+  const inv = invoices.find(d => {
+    if (!d.date) return false;
+
+    const invDate = new Date(d.date);
+    const rowDate = new Date(r.date + "T00:00:00");
+
+    return (
+      invDate.getFullYear() === rowDate.getFullYear() &&
+      invDate.getMonth()    === rowDate.getMonth()
+      // 👆 On ignore le jour → on matche au MOIS
     );
-  }
-
-  // Match strict jour/mois/année
-  rows.forEach(r => {
-    const match = invoices.find(inv => {
-      if (!inv.date) return false;
-      return inv.date.slice(0, 10) === r.date;
-    });
-
-    if (match) {
-      r.invoiceId = match.id;
-      r.invoiceNumber = match.number;
-
-      r.status = match.paid ? "Payée" : "À payer";
-      r.statusType = match.paid ? "paid" : "due";
-
-      r.amountHT  = Number(match.subtotal || match.total || r.amountHT);
-      r.amountTVA = Number(match.tvaAmount || r.amountTVA);
-      r.amountTTC = Number(match.totalTTC || r.amountTTC);
-    }
   });
 
-  // =============== FACTURE DE RÉSILIATION ===============
-  const closureInvoice = docs.find(inv =>
-    inv.type === "facture" &&
-    inv.contractId === contract.id &&
-    inv.prestations &&
-    inv.prestations.some(p => p.kind === "contrat_resiliation")
+  if (inv) {
+    const invHT  = Number(inv.subtotal || inv.total || 0);
+    const invTVA = Number(inv.tvaAmount || 0);
+    const invTTC = Number(inv.totalTTC || inv.total || invHT + invTVA);
+
+    r.amountHT  = invHT || r.amountHT;
+    r.amountTVA = invTVA;
+    r.amountTTC = invTTC;
+
+    r.invoiceId     = inv.id || null;
+    r.invoiceNumber = inv.number || "";
+
+    if (inv.paid) {
+      r.status     = "Payée";
+      r.statusType = "paid";
+    } else {
+      r.status     = "À payer";
+      r.statusType = "due";
+    }
+  }
+});
+
+
+  // 🔵 Facture de résiliation éventuelle
+  const closureInvoice = docs.find(d =>
+    d.type === "facture" &&
+    d.contractId === contract.id &&
+    d.prestations &&
+    d.prestations.some(p => p.kind === "contrat_resiliation")
   );
 
   if (closureInvoice) {
+    const invHT  = Number(closureInvoice.subtotal || closureInvoice.total || 0);
+    const invTVA = Number(closureInvoice.tvaAmount || 0);
+    const invTTC = Number(closureInvoice.totalTTC || closureInvoice.total || invHT + invTVA);
+
     rows.push({
-      index: rows.length + 1,
-      date: closureInvoice.date.slice(0, 10),
-      amountHT:  Number(closureInvoice.subtotal || closureInvoice.total || 0),
-      amountTVA: Number(closureInvoice.tvaAmount || 0),
-      amountTTC: Number(closureInvoice.totalTTC || 0),
-      status: "Résiliation",
-      statusType: "closure",
-      invoiceId: closureInvoice.id,
-      invoiceNumber: closureInvoice.number
+      index:        rows.length + 1,
+      date:         closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
+      amountHT:     invHT,
+      amountTVA:    invTVA,
+      amountTTC:    invTTC,
+      status:       "Résiliation",
+      statusType:   "closure",
+      invoiceId:    closureInvoice.id || null,
+      invoiceNumber:closureInvoice.number || ""
     });
   }
+  // 🎨 Ajustement des couleurs uniquement pour les contrats SYNDIC
+const todayISO = new Date().toISOString().slice(0, 10);
+const today = new Date(todayISO + "T00:00:00");
 
-  return rows;
+if (clientType === "syndic") {
+  rows.forEach((r) => {
+    const d = new Date(r.date + "T00:00:00");
+    if (isNaN(d.getTime())) return;
+
+    // 🔵 On ne touche pas à la ligne de résiliation (bleu)
+    if (r.statusType === "closure") {
+      return;
+    }
+
+    // 1) Aucune facture liée → purement prévisionnel (gris)
+    if (!r.invoiceId) {
+      r.statusType = "forecast";
+      r.status = "Prévisionnel";
+      return;
+    }
+
+    // 2) Il y a une facture liée à cette échéance
+    if (r.statusType === "paid") {
+      // Facture payée → on laisse "paid" (vert)
+      return;
+    }
+
+    // Ici : facture non payée
+    if (d <= today) {
+      // Date d’échéance passée → À payer (rouge)
+      r.statusType = "due";
+      r.status = "À payer";
+    } else {
+      // Échéance future → on considère que ça reste prévisionnel (gris)
+      r.statusType = "forecast";
+      r.status = "Prévisionnel";
+    }
+  });
 }
 
 
+  return rows;
+}
 
 function renderContractScheduleHTML(rows) {
   if (!rows || !rows.length) {
@@ -9878,6 +9857,8 @@ function renderContractScheduleHTML(rows) {
 
   return html;
 }
+
+
 
 
 function initContractsUI() {
@@ -10214,6 +10195,7 @@ function createAutomaticInvoice(contract) {
 
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
+
   const nextDate = new Date(nextISO + "T00:00:00");
   if (isNaN(nextDate.getTime())) return null;
 
@@ -10242,7 +10224,7 @@ function createAutomaticInvoice(contract) {
   let lineDesc = "";
 
   // ============================
-  // 🔴 PARTICULIER (inchangé)
+  // 🔴 PARTICULIER
   // ============================
   if (clientType === "particulier") {
     if (mode === "annuel_50_50") {
@@ -10254,7 +10236,8 @@ function createAutomaticInvoice(contract) {
     } else {
       // Mensuel anticipé (échéance i/n)
 
-      // 💡 numéro d’échéance = nb de factures d’échéance déjà existantes + 1
+      // 💡 IMPORTANT :
+      // numéro d’échéance = nb de factures d’échéance déjà existantes + 1
       const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
 
       amountHT = totalHT / n;
@@ -10264,71 +10247,57 @@ function createAutomaticInvoice(contract) {
     }
   }
 
+
   // ============================
-  // 🔵 SYNDIC (post-payé, date anniversaire)
+  // 🔵 SYNDIC (post-payé)
   // ============================
   else {
-    // Montant fractionné (mensuel / trimestriel / semestriel / annuel)
+    if (mode === "annuel") {
+      // Annuel syndic → facture de fin gérée ailleurs
+      return null;
+    }
+
+    // Montant fractionné
     amountHT = totalHT / n;
 
     let stepMonths = getBillingStepMonths(mode);
-    if (!stepMonths) stepMonths = duration; // fallback
+    if (!stepMonths) stepMonths = duration;
 
-    // On reconstruit la période [periodStart, periodEnd]
-    let periodStart = null;
+    const totalInstallments = getNumberOfInstallments(pr);
+
+    // Reconstruire la période [startPeriod, endPeriod]
+    let periodStart = new Date(start);
     let periodEnd   = null;
+    let found       = false;
 
-    // On s’appuie sur la nouvelle règle :
-    // échéance i : date = addMonths(startISO, stepMonths * i)
-    for (let i = 1; i <= n; i++) {
-      let endISO;
-      if (typeof addMonths === "function") {
-        endISO = addMonths(startISO, stepMonths * i);
-      } else {
-        const tmp = new Date(start);
-        tmp.setMonth(tmp.getMonth() + stepMonths * i);
-        endISO = tmp.toISOString().slice(0, 10);
-      }
+    for (let i = 1; i <= totalInstallments; i++) {
+      const endCandidate = new Date(start);
+      endCandidate.setMonth(endCandidate.getMonth() + stepMonths * i);
+      endCandidate.setDate(0); // dernier jour du mois précédent
 
-      if (!endISO) continue;
+      const isoCandidate = endCandidate.toISOString().slice(0, 10);
 
-      if (endISO === nextISO) {
-        // Début de période
-        let startPeriodISO;
-        if (i === 1) {
-          startPeriodISO = startISO;
-        } else {
-          if (typeof addMonths === "function") {
-            startPeriodISO = addMonths(startISO, stepMonths * (i - 1));
-          } else {
-            const tmp = new Date(start);
-            tmp.setMonth(tmp.getMonth() + stepMonths * (i - 1));
-            startPeriodISO = tmp.toISOString().slice(0, 10);
-          }
-        }
-
-        periodStart = new Date(startPeriodISO + "T00:00:00");
-
-        // Fin de période = veille de l’échéance (post-payé)
-        periodEnd = new Date(endISO + "T00:00:00");
-        periodEnd.setDate(periodEnd.getDate() - 1);
-
+      if (isoCandidate === nextISO) {
+        periodEnd = endCandidate;
+        found = true;
         break;
+      } else if (isoCandidate < nextISO) {
+        periodStart = new Date(endCandidate);
+        periodStart.setDate(periodStart.getDate() + 1);
       }
     }
 
-    // Fallback si pour une raison quelconque on n'a pas trouvé l'index
-    if (!periodStart || !periodEnd) {
-      const endFallback = new Date(nextISO + "T00:00:00");
-      let startFallback = new Date(nextISO + "T00:00:00");
-      startFallback.setMonth(startFallback.getMonth() - stepMonths);
+    if (!found || !periodEnd) {
+      const prevStart = new Date(nextDate);
+      prevStart.setDate(1);
+      const prevEnd = new Date(prevStart);
+      prevEnd.setMonth(prevStart.getMonth() + 1);
+      prevEnd.setDate(0);
 
-      periodStart = startFallback;
-      periodEnd   = endFallback;
-      periodEnd.setDate(periodEnd.getDate() - 1);
+      periodStart = prevStart;
+      periodEnd   = prevEnd;
     }
 
-    // On ne dépasse jamais la fin du contrat
     if (periodEnd > contractEnd) {
       periodEnd = new Date(contractEnd);
     }
@@ -10364,7 +10333,7 @@ function createAutomaticInvoice(contract) {
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
   return {
-    id: generateId("FAC"),
+      id: generateId("FAC"),
     type: "facture",
     number,
     date: nextISO,
@@ -10418,6 +10387,7 @@ function createAutomaticInvoice(contract) {
     updatedAt: todayISO
   };
 }
+
 
 
 
@@ -10488,74 +10458,71 @@ function countContractInstallmentInvoices(contractId) {
 function checkScheduledInvoices() {
   let docs        = getAllDocuments();
   const contracts = getAllContracts();
-  const today     = (typeof todayISO === "function")
-    ? todayISO()
-    : new Date().toISOString().slice(0, 10);
+  const todayISO  = new Date().toISOString().slice(0, 10);
 
   contracts.forEach(contract => {
-    // 🔒 On ne gère pas les contrats résiliés
     if (contract.status === CONTRACT_STATUS.RESILIE) {
       return;
     }
-
     const pr = contract.pricing || {};
-    if (!pr.billingMode) return;
-
     const clientType = pr.clientType || "particulier";
     const mode       = pr.billingMode || "annuel";
 
-    // ⛔ Devis obligatoire mais pas accepté → aucune facture auto
+    const status = computeContractStatus(contract);
+    // ⛔ Si un devis est obligatoire mais pas encore accepté → aucune facture auto
     const devisNeeded = isDevisObligatoireForContract(contract);
     const devisOK     = isDevisAcceptedForContract(contract);
     if (devisNeeded && !devisOK) {
       return;
     }
 
+
+    // ----- CAS ANNUEL SYNDIC (inchangé) -----
+    if (mode === "annuel" && clientType !== "particulier") {
+      const hasClosureInvoice = docs.some((d) =>
+        d.type === "facture" &&
+        d.contractId === contract.id &&
+        d.prestations &&
+        d.prestations.some((p) => p.kind === "contrat_resiliation")
+      );
+
+      if (status === CONTRACT_STATUS.TERMINE && !hasClosureInvoice) {
+        const fac = createTerminationInvoiceForContract(contract);
+        if (fac) {
+          docs = getAllDocuments();
+          if (typeof saveSingleDocumentToFirestore === "function") {
+            saveSingleDocumentToFirestore(fac);
+          }
+        }
+      }
+      return;
+    }
+
+    if (!pr.billingMode) return;
+
     const totalInstallments = getNumberOfInstallments(pr);
     let installmentsCount   = countContractInstallmentInvoices(contract.id);
 
-    // 🧮 Définition d'une limite temporelle de rattrapage :
-    //     min(aujourd'hui, fin de contrat)
-    let limitISO = today;
-
+    // 🧮 Calcul de la fin de contrat (si possible)
+    let limitISO = todayISO;
     if (pr.startDate && pr.durationMonths) {
-      let contractEndISO = "";
-
-      if (typeof addMonths === "function") {
-        contractEndISO = addMonths(pr.startDate, Number(pr.durationMonths || 0));
-      } else {
-        // fallback sans helpers
-        const start = new Date(pr.startDate + "T00:00:00");
-        if (!isNaN(start.getTime())) {
-          start.setMonth(start.getMonth() + Number(pr.durationMonths || 0));
-          contractEndISO = start.toISOString().slice(0, 10);
-        }
-      }
-
-      if (contractEndISO) {
-        if (typeof compareISO === "function") {
-          if (compareISO(contractEndISO, limitISO) < 0) {
-            limitISO = contractEndISO;
-          }
-        } else {
-          // au cas où compareISO ne serait pas dispo, on se rabat sur la comparaison de string ISO
-          if (contractEndISO < limitISO) {
-            limitISO = contractEndISO;
-          }
+      const start = new Date(pr.startDate + "T00:00:00");
+      if (!isNaN(start.getTime())) {
+        const contractEnd = new Date(start);
+        contractEnd.setMonth(contractEnd.getMonth() + Number(pr.durationMonths || 0));
+        contractEnd.setDate(0); // fin du dernier mois
+        const endISO = contractEnd.toISOString().slice(0, 10);
+        if (endISO < limitISO) {
+          limitISO = endISO;
         }
       }
     }
 
-    // 🔁 Rattrapage des échéances manquantes
-    while (
-      pr.nextInvoiceDate &&
-      (
-        typeof compareISO === "function"
-          ? compareISO(pr.nextInvoiceDate, limitISO) <= 0
-          : pr.nextInvoiceDate <= limitISO
-      ) &&
-      installmentsCount < totalInstallments
-    ) {
+    // 🔁 Rattrapage : seulement jusqu'à limitISO
+    while (pr.nextInvoiceDate &&
+           pr.nextInvoiceDate <= limitISO &&
+           installmentsCount < totalInstallments) {
+
       const fac = createAutomaticInvoice(contract);
       if (!fac) break;
 
@@ -10568,13 +10535,10 @@ function checkScheduledInvoices() {
 
       installmentsCount++;
 
-      // Recalcul de la prochaine échéance
-      pr.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
-      if (!pr.nextInvoiceDate) break;
+      contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
+      if (!contract.pricing.nextInvoiceDate) break;
     }
 
-    // On remet bien le pricing à jour sur le contrat courant
-    contract.pricing = pr;
   });
 
   saveContracts(contracts);
@@ -10602,6 +10566,12 @@ window.onload = function () {
   if (typeof updateButtonColors === "function") {
     updateButtonColors();
   }
+
+  // 🔁 Factures d’échéance auto : seulement si TOUT est défini
+  if (typeof checkScheduledInvoices === "function"
+      && typeof countContractInstallmentInvoices === "function") {
+    checkScheduledInvoices();
+  }
   // 🔒 Si l'utilisateur tape lui-même dans l'objet, on arrête la synchro auto
   const subjectInput = document.getElementById("docSubject");
   if (subjectInput && !subjectInput.dataset.boundManualFlag) {
@@ -10609,11 +10579,6 @@ window.onload = function () {
       subjectInput.dataset.manualEdited = "1";
     });
     subjectInput.dataset.boundManualFlag = "1";
-  }
-  // 🔁 Factures d’échéance auto : seulement si TOUT est défini
-  if (typeof checkScheduledInvoices === "function"
-      && typeof countContractInstallmentInvoices === "function") {
-    checkScheduledInvoices();
   }
 
   // 🛰 Synchro Firebase en arrière-plan

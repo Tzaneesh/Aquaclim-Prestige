@@ -130,7 +130,7 @@
       </div>
     </div>
 
-  <!-- TABLEAU DES DOCUMENTS -->
+   <!-- TABLEAU DES DOCUMENTS -->
   <div class="card" id="documentsCard">
     <div class="filters-row no-print">
       <span id="listTitle" class="list-title">Liste des devis</span>
@@ -832,24 +832,14 @@
         <input type="text" id="ctPeriod" readonly>
       </div>
 
-<div class="form-group ct-warning-wrapper">
-  <label for="ctTotalPassages">Total passages (auto)</label>
+<div class="form-group">
+  <label>Total passages (auto)</label>
 
-  <!-- Champ total passages -->
-  <input id="ctTotalPassages" type="number" readonly />
+  <input type="text" id="ctTotalPassages" readonly>
 
-  <!-- WARNING sous le champ -->
-  <div id="ctWarning" class="ct-warning-message hidden">
-    ⚠️ Attention à la configuration du contrat :
-    La période ne contient aucun mois d’été alors que des passages d’été sont définis.
-  </div>
-
-  <!-- Texte explicatif sous le champ -->
-  <div class="ct-passages-details">
-    6 mois hiver × 1/mois + 6 mois été × 2/mois
-  </div>
+  <div id="ctRecapSummary" class="ct-recap-summary"></div>
+  <div id="ctWarning" class="ct-warning hidden"></div>
 </div>
-
 
     </div>
 
@@ -923,11 +913,7 @@
   <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
 </div>
 
-<!-- Alerte configuration contrat -->
-<div id="ctWarning" class="ct-warning hidden no-print"></div>
-
 <div class="contract-tva">
-  <label>TVA </label>
   <label>TVA </label>
   <div class="tva-options">
     <label>
