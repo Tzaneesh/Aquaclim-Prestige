@@ -34,14 +34,64 @@
   </header>
 
   <!-- ONGLET DEVIS / FACTURES -->
-  <div class="top-nav no-print">
-    <button id="tabDevis" class="btn tab-btn active" onclick="switchListType('devis')">📄 Devis</button>
-<button id="tabContrats" class="btn tab-btn" onclick="switchListType('contrat')">📘 Contrats</button>
 
-    <button id="tabFactures" class="btn tab-btn" onclick="switchListType('facture')">💰 Factures</button>
+<!-- ONGLET ACCUEIL / DEVIS / CONTRATS / FACTURES -->
+<div class="top-nav no-print">
+  <button id="tabHome" class="btn tab-btn active" onclick="showHome()">🏠 Accueil</button>
+  <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
+  <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
+  <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
+</div>
+
+<section id="homeView">
+
+  <div class="dashboard">
+    <h2 class="dashboard-title">Vue d’ensemble</h2>
+
+    <div class="dashboard-grid">
+
+      <!-- 📄 Devis -->
+      <div class="dash-card" id="dashDevis">
+        <div class="dash-header">📄 Devis</div>
+        <div class="dash-stats">
+          <p id="dashDevisCount">0 devis enregistrés</p>
+          <p id="dashDevisStatus">–</p>
+          <p id="dashDevisLast">Dernier devis : –</p>
+        </div>
+        <button class="dash-btn" onclick="openSection('devis')">Voir les devis</button>
+      </div>
+
+      <!-- 📘 Contrats -->
+      <div class="dash-card" id="dashContrats">
+        <div class="dash-header">📘 Contrats</div>
+        <div class="dash-stats">
+          <p id="dashContractCount">0 contrats actifs</p>
+          <p id="dashContractRenew">À renouveler : –</p>
+        </div>
+        <!-- ⚠️ ICI : 'contrat' (singulier) -->
+        <button class="dash-btn" onclick="openSection('contrat')">Voir les contrats</button>
+      </div>
+
+      <!-- 💰 Factures -->
+      <div class="dash-card" id="dashFactures">
+        <div class="dash-header">💰 Factures</div>
+        <div class="dash-stats">
+          <p id="dashInvoiceCount">0 factures créées</p>
+          <p id="dashInvoiceUnpaid">Impayées : –</p>
+          <p id="dashInvoiceAmount">Montant impayé : –</p>
+        </div>
+        <!-- ⚠️ ICI : 'facture' (singulier) -->
+        <button class="dash-btn dash-btn-facture" onclick="openSection('facture')">Voir les factures</button>
+      </div>
+
+    </div>
   </div>
+</section>
+
+
 
   <!-- LISTE DES DOCUMENTS -->
+
   <section id="listView">
 
 <div class="actions no-print">
@@ -520,13 +570,14 @@
         </div>
       </div>
 
-<div class="form-group no-print">
-    <label>
-     <input type="radio" id="approveDevis" name="approveDoc" onclick="openSignaturePopup()">
-
-        Bon pour accord – signer électroniquement
-    </label>
+<div class="form-group no-print devis-signature-trigger">
+  <label style="display:flex; align-items:center; gap:10px; margin:0;">
+    <input type="radio" id="approveDevis" name="approveDoc" onclick="openSignaturePopup()">
+    Bon pour accord – signer électroniquement
+  </label>
 </div>
+
+
 
       <!-- Notes -->
       <div class="form-group">
@@ -921,7 +972,30 @@
   <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
 </div>
 
+<!-- SIGNATURE CONTRAT SYNDIC -->
+
+<div
+  id="ctSignatureWrapper"
+  class="form-group no-print devis-signature-trigger"
+  style="display:none;"
+>
+  <label>
+    <input
+      type="radio"
+      id="approveContract"
+      name="approveContract"
+      onclick="openContractSignature()"
+    >
+    Bon pour accord – signer électroniquement
+  </label>
+</div>
+
 <div class="contract-tva">
+
+
+
+<div class="contract-tva">
+
   <label>TVA </label>
   <div class="tva-options">
     <label>
@@ -949,8 +1023,7 @@
   </div>
 </div>
 
-
-    <!-- ACTIONS BAS CONTRAT -->
+ <!-- ACTIONS BAS CONTRAT -->
    <div class="actions no-print" style="margin-bottom:20px;">
     <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
@@ -1153,10 +1226,13 @@
 
     <canvas id="signatureCanvas"></canvas>
 
-    <div class="signature-actions">
-      <button id="signatureClear" class="btn btn-secondary">Effacer</button>
-      <button id="signatureValidate" class="btn btn-primary">Valider</button>
-    </div>
+<div class="signature-actions">
+  <button id="signatureClear" class="btn btn-warning">Effacer</button>
+<button id="signatureClose" class="btn btn-secondary">Fermer</button>
+
+  <button id="signatureValidate" class="btn btn-primary">Valider</button>
+</div>
+
   </div>
 </div>
 </body>

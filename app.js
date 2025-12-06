@@ -1142,6 +1142,9 @@ function saveSingleDocumentToFirestore(doc) {
     .catch((err) =>
       console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err)
     );
+syncContractsWithDevis(doc);
+
+
 }
 // ================== LISTE CLIENTS (popup) ==================
 let clientsPopupList = [];      // liste courante affichée dans le popup
@@ -1292,6 +1295,10 @@ function getNextContractReference() {
 // ================== TABS DEVIS / FACTURES / CONTRATS ==================
 
 function switchListType(type) {
+  // On cache la vue Accueil quand on passe à une liste
+  const homeView = document.getElementById("homeView");
+  if (homeView) homeView.classList.add("hidden");
+
   currentListType = type;
 
   const tabDevis    = document.getElementById("tabDevis");
@@ -1431,6 +1438,11 @@ function adjustPriceHTMargin(line) {
   } else {
     price.classList.remove("priceht-lower");
   }
+}
+
+function getAllInvoices() {
+  // On renvoie toutes les factures stockées dans "documents"
+  return getAllDocuments().filter(d => d.type === "facture");
 }
 
 // ================== FILTRE ANNÉE FACTURES ==================
@@ -2855,6 +2867,10 @@ function saveDocument() {
   currentDocumentId = doc.id;
   loadDocumentsList();
   updateTransformButtonVisibility();
+if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+}
+
 }
 
 
@@ -2955,6 +2971,11 @@ function deleteDocument(id) {
       loadDocumentsList();
     }
   });
+
+if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+}
+
 }
 
 // Supprimer depuis le FORMULAIRE (bouton rouge en haut du devis/facture)
@@ -3431,23 +3452,49 @@ function updateContractsAlert() {
 
 
 function renderContractStatusBadge(contract) {
+  const meta = contract.meta || {};
+  const devisStatus = (meta.sourceDevisStatus || "").toLowerCase();
 
-  if (contract.meta && contract.meta.forceStatus === "termine_renouvele") {
-    return '<span class="status-badge status-terminated">Terminé (renouvelé)</span>';
-  }
-  const st = contract.status || computeContractStatus(contract);
+  // 🎯 CAS CONTRAT LIÉ À UN DEVIS
+  if (meta.sourceDevisNumber) {
 
-  switch (st) {
-    case CONTRACT_STATUS.A_RENOUVELER:
-      return '<span class="status-badge status-warning">À renouveler</span>';
-    case CONTRACT_STATUS.TERMINE:
-      return '<span class="status-badge status-terminated">Terminé</span>';
-    case CONTRACT_STATUS.RESILIE:
-      return '<span class="status-badge status-cancelled">Résilié</span>';
-    default:
-      return '<span class="status-badge status-ok">En cours</span>';
+    if (devisStatus === "accepte" || devisStatus === "accepted") {
+      return `<span class="status-badge status-accepted">En cours</span>`;
+    }
+
+    if (devisStatus === "en_attente" || devisStatus === "pending") {
+      return `<span class="status-badge status-pending">En attente</span>`;
+    }
+
+    if (
+      devisStatus === "refuse"  || devisStatus === "refused" ||
+      devisStatus === "expire" || devisStatus === "expired"
+    ) {
+      return `<span class="status-badge status-refused">Non validé</span>`;
+    }
+
+    // fallback si bizarre
+    return `<span class="status-badge status-pending">En attente</span>`;
   }
+
+  // 🎯 CONTRACT SANS DEVIS → statut normal
+  const cst = computeContractStatus(contract);
+
+  if (cst === CONTRACT_STATUS.EN_COURS)
+    return `<span class="status-badge status-accepted">En cours</span>`;
+
+  if (cst === CONTRACT_STATUS.A_RENOUVELER)
+    return `<span class="status-badge status-pending">À renouveler</span>`;
+
+  if (cst === CONTRACT_STATUS.TERMINE)
+    return `<span class="status-badge status-expired">Terminé</span>`;
+
+  if (cst === CONTRACT_STATUS.RESILIE)
+    return `<span class="status-badge status-refused">Résilié</span>`;
+
+  return `<span class="status-badge status-pending">En attente</span>`;
 }
+
 
 // ---- Popup résiliation ----
 
@@ -3992,7 +4039,7 @@ function setDevisStatus(id, status) {
   const oldStatus = doc.status || "";
 
   // 1) Mise à jour du devis
-  doc.status    = status;   // ✅ la bonne variable est "status"
+  doc.status    = status;
   doc.updatedAt = new Date().toISOString();
 
   saveDocuments(docs);
@@ -4006,7 +4053,7 @@ function setDevisStatus(id, status) {
   }
 
   // 2) Si on vient de passer à "accepte" → lancer la facturation du contrat lié
-  if (status === "accepte" && oldStatus !== "accepte") {
+if (status === "accepte" && oldStatus !== "accepte") {
 
     const contracts = getAllContracts() || [];
 
@@ -4018,8 +4065,17 @@ function setDevisStatus(id, status) {
       contract.meta = contract.meta || {};
       contract.meta.sourceDevisStatus = "accepte";
 
-      if (!contract.pricing || !contract.pricing.billingMode) return;
+      // ⭐ IMPORTANT : transmettre la signature du devis au contrat particulier
+      if (doc.signature) {
+        contract._inheritedSignature = doc.signature;
+        contract._inheritedSignatureDate =
+          doc.signatureDate || new Date().toLocaleDateString("fr-FR");
+      }
 
+      // ====================
+      // Gestion facturation
+      // ====================
+      if (!contract.pricing || !contract.pricing.billingMode) return;
       if (contract.pricing.nextInvoiceDate) return;
 
       if (typeof rebuildContractInvoices === "function") {
@@ -4037,8 +4093,19 @@ function setDevisStatus(id, status) {
           saveSingleContractToFirestore(contract);
         }
       }
+
+      // Sauvegarde du contrat mis à jour
+      const updated = getAllContracts().map(c =>
+        c.id === contract.id ? contract : c
+      );
+
+      saveContracts(updated);
+      if (typeof saveSingleContractToFirestore === "function") {
+        saveSingleContractToFirestore(contract);
+      }
     });
-  }
+}
+
 }
 
 
@@ -6067,6 +6134,176 @@ function getTemplateKindForContract(contract) {
   return "piscine_chlore";
 }
 
+/* ============================
+   ACCUEIL / MENU PRINCIPAL
+============================ */
+
+function showHome() {
+  const tabHome     = document.getElementById("tabHome");
+  const tabDevis    = document.getElementById("tabDevis");
+  const tabContrats = document.getElementById("tabContrats");
+  const tabFactures = document.getElementById("tabFactures");
+
+  const homeView     = document.getElementById("homeView");
+  const listView     = document.getElementById("listView");
+  const formView     = document.getElementById("formView");
+  const contractView = document.getElementById("contractView");
+
+  // Onglets
+  tabHome    && tabHome.classList.add("active");
+  tabDevis   && tabDevis.classList.remove("active");
+  tabContrats&& tabContrats.classList.remove("active");
+  tabFactures&& tabFactures.classList.remove("active");
+
+  // Vues
+  homeView     && homeView.classList.remove("hidden");
+  listView     && listView.classList.add("hidden");
+  formView     && formView.classList.add("hidden");
+  contractView && contractView.classList.add("hidden");
+
+
+  refreshHomeStats();
+}
+
+
+function openFromHome(type) {
+  // Onglets
+  const tabHome      = document.getElementById("tabHome");
+  const tabDevis     = document.getElementById("tabDevis");
+  const tabContrats  = document.getElementById("tabContrats");
+  const tabFactures  = document.getElementById("tabFactures");
+
+  tabHome && tabHome.classList.remove("active");
+
+  if (type === "devis") {
+    tabDevis && tabDevis.classList.add("active");
+    tabContrats && tabContrats.classList.remove("active");
+    tabFactures && tabFactures.classList.remove("active");
+  } else if (type === "contrat") {
+    tabContrats && tabContrats.classList.add("active");
+    tabDevis && tabDevis.classList.remove("active");
+    tabFactures && tabFactures.classList.remove("active");
+  } else if (type === "facture") {
+    tabFactures && tabFactures.classList.add("active");
+    tabDevis && tabDevis.classList.remove("active");
+    tabContrats && tabContrats.classList.remove("active");
+  }
+
+  const homeView     = document.getElementById("homeView");
+  const listView     = document.getElementById("listView");
+  const formView     = document.getElementById("formView");
+  const contractView = document.getElementById("contractView");
+
+  homeView     && homeView.classList.add("hidden");
+  listView     && listView.classList.remove("hidden");
+  formView     && formView.classList.add("hidden");
+  contractView && contractView.classList.add("hidden");
+
+  // On réutilise ta logique existante
+  if (typeof switchListType === "function") {
+    switchListType(type);
+  }
+}
+
+function refreshHomeStats() {
+  // Sécu : si pas de dashboard sur la page, on ne fait rien
+  if (!document.getElementById("homeView")) return;
+
+  const docs      = (typeof getAllDocuments === "function") ? getAllDocuments() : [];
+  const contracts = (typeof getAllContracts === "function") ? getAllContracts() : [];
+
+  // ========= DEVIS =========
+  const devis = docs.filter(d => d.type === "devis");
+
+  const devisCount     = devis.length;
+  const devisPending   = devis.filter(d => !d.status || d.status === "en_attente").length;
+  const devisAccepted  = devis.filter(d => d.status === "accepte").length;
+  const devisRefused   = devis.filter(d => d.status === "refuse").length;
+  const devisExpired   = devis.filter(d => d.status === "expire").length;
+
+  const lastDevis = devis
+    .slice()
+    .sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
+
+  const elDevisCount  = document.getElementById("dashDevisCount");
+  const elDevisStatus = document.getElementById("dashDevisStatus");
+  const elDevisLast   = document.getElementById("dashDevisLast");
+
+  if (elDevisCount) {
+    elDevisCount.textContent =
+      devisCount + (devisCount > 1 ? " devis enregistrés" : " devis enregistré");
+  }
+
+  if (elDevisStatus) {
+    elDevisStatus.textContent =
+      `${devisPending} en attente · ` +
+      `${devisAccepted} acceptés · ` +
+      `${devisRefused} refusés · ` +
+      `${devisExpired} expirés`;
+  }
+
+  if (elDevisLast) {
+    if (lastDevis) {
+      const num  = lastDevis.number || lastDevis.id || "";
+      const date = lastDevis.date || "";
+      elDevisLast.textContent = `Dernier devis : ${num} (${date})`;
+    } else {
+      elDevisLast.textContent = "Dernier devis : –";
+    }
+  }
+
+  // ========= CONTRATS =========
+  const activeContracts = contracts.filter(c =>
+    c.status === CONTRACT_STATUS.EN_COURS ||
+    c.status === CONTRACT_STATUS.A_RENOUVELER
+  );
+  const toRenew = contracts.filter(c =>
+    c.status === CONTRACT_STATUS.A_RENOUVELER
+  );
+
+  const elCtCount  = document.getElementById("dashContractCount");
+  const elCtRenew  = document.getElementById("dashContractRenew");
+
+  if (elCtCount) {
+    elCtCount.textContent =
+      activeContracts.length +
+      (activeContracts.length > 1 ? " contrats actifs" : " contrat actif");
+  }
+
+  if (elCtRenew) {
+    elCtRenew.textContent = `À renouveler : ${toRenew.length}`;
+  }
+
+  // ========= FACTURES =========
+  const factures = docs.filter(d => d.type === "facture");
+  const unpaid   = factures.filter(f => !f.paid);
+
+  const unpaidAmount = unpaid.reduce((sum, f) => {
+    const val = Number(f.totalTTC || 0);
+    return sum + (isNaN(val) ? 0 : val);
+  }, 0);
+
+  const elInvCount  = document.getElementById("dashInvoiceCount");
+  const elInvUnpaid = document.getElementById("dashInvoiceUnpaid");
+  const elInvAmt    = document.getElementById("dashInvoiceAmount");
+
+  if (elInvCount) {
+    elInvCount.textContent =
+      factures.length +
+      (factures.length > 1 ? " factures créées" : " facture créée");
+  }
+
+  if (elInvUnpaid) {
+    elInvUnpaid.textContent = `Impayées : ${unpaid.length}`;
+  }
+
+  if (elInvAmt) {
+    const fmt = (typeof formatEuro === "function")
+      ? formatEuro(unpaidAmount)
+      : (unpaidAmount.toFixed(2) + " €");
+    elInvAmt.textContent = `Montant impayé : ${fmt}`;
+  }
+}
 
 // ----- LocalStorage contrats -----
 
@@ -6574,6 +6811,12 @@ function isDevisAcceptedForContract(contract) {
 
 function newContract() {
   currentContractId = null;
+  // 🧽 on nettoie le bandeau "Contrat lié au devis"
+  const banner = document.getElementById("ctDevisBanner");
+  if (banner) {
+    banner.style.display = "none";
+    banner.textContent = "";
+  }
 
   const listView = document.getElementById("listView");
   const contractView = document.getElementById("contractView");
@@ -6706,6 +6949,11 @@ function deleteContractFromList(id) {
       loadContractsList();
     }
   });
+if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+}
+
+
 }
 function openContractPdfFromList(id, previewOnly) {
   const contract = getContract(id);
@@ -7335,10 +7583,11 @@ function fillContractForm(contract) {
 
   currentContractId = contract.id;
 
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
-  const p  = contract.pool    || {};
-  const pr = contract.pricing || {};
+  const c    = contract.client  || {};
+  const s    = contract.site    || {};
+  const p    = contract.pool    || {};
+  const pr   = contract.pricing || {};
+  const meta = contract.meta    || {};
 
   // ---------- 1. CLIENT ----------
   const ctClientCiv = document.getElementById("ctClientCivility");
@@ -7405,8 +7654,7 @@ function fillContractForm(contract) {
   // Met à jour l’UI selon le type (désactivation des modes interdits, etc.)
   updateContractClientType(type);
 
-   // ---------- 5. FRÉQUENCE & DATES ----------
-
+  // ---------- 5. FRÉQUENCE & DATES ----------
   const ctMode = document.getElementById("ctMode");
   if (ctMode) ctMode.value = pr.mode || "standard";
 
@@ -7443,7 +7691,6 @@ function fillContractForm(contract) {
       pr.totalPassages != null ? String(pr.totalPassages) : "0";
   }
 
-
   // ---------- 6. OPTIONS ----------
   const openingEl = document.getElementById("ctIncludeOpening");
   if (openingEl) openingEl.checked = !!pr.includeOpening;
@@ -7472,33 +7719,13 @@ function fillContractForm(contract) {
     }
   }
 
-  // ---------- 8. BANDEAU DEVIS LIÉ ----------
-  const banner = document.getElementById("ctDevisBanner");
-  if (banner) {
-    const meta        = contract.meta || {};
-    const devisNumber = meta.sourceDevisNumber || "";
-    const devisStatus = meta.sourceDevisStatus || meta.devisStatus || "";
-
-    if (devisNumber) {
-      let statusLabel = "";
-      if (devisStatus === "accepte") {
-        statusLabel = " (Accepté)";
-      } else if (devisStatus === "refuse") {
-        statusLabel = " (Refusé)";
-      } else if (devisStatus) {
-        statusLabel = " (" + devisStatus + ")";
-      } else {
-        statusLabel = " (En attente)";
-      }
-
-      banner.textContent =
-        "Contrat lié au devis " + devisNumber + statusLabel;
-      banner.style.display = "block";
-    } else {
-      banner.textContent = "";
-      banner.style.display = "none";
-    }
+  // ---------- 8. BANDEAU DEVIS LIÉ (COULEUR) ----------
+  let linkedDevis = null;
+  if (typeof getAllDocuments === "function" && meta.sourceDevisId) {
+    const docs = getAllDocuments();
+    linkedDevis = docs.find(d => d.id === meta.sourceDevisId) || null;
   }
+  updateCtDevisBanner(linkedDevis, meta);
 
   // ---------- 9. PRIX ----------
   const unitInput  = document.getElementById("ctUnitPrice");
@@ -7527,8 +7754,109 @@ function fillContractForm(contract) {
   if (typeof updateContractTransformButtonVisibility === "function") {
     updateContractTransformButtonVisibility();
   }
+
+  // ---------- 13. STATUT CONTRAT (lié au devis) ----------
+  const ctStatus = document.getElementById("ctStatus");
+  if (ctStatus) {
+    // On récupère le statut du devis lié si présent
+    const meta = contract.meta || {};
+    let statusCode =
+      (meta.sourceDevisStatus ||
+       meta.devisStatus ||
+       contract.status ||
+       "").toLowerCase();
+
+    let displayStatus = "En attente"; // valeur par défaut
+
+    // Mapping :
+    // devis accepté   -> En cours
+    // devis en attente -> En attente
+    // devis refusé / expiré -> Non validé
+    if (statusCode === "accepte" || statusCode === "accepted") {
+      displayStatus = "En cours";
+    } else if (
+      statusCode === "refuse"  || statusCode === "refused" ||
+      statusCode === "expire" || statusCode === "expired"
+    ) {
+      displayStatus = "Non validé";
+    } else {
+      // tout le reste (en_attente, pending, vide...) -> En attente
+      displayStatus = "En attente";
+    }
+
+    ctStatus.textContent = displayStatus;
+  }
 }
 
+
+/* ============================================================
+   BANDEAU COULEUR POUR CONTRAT LIÉ AU DEVIS
+   (mêmes couleurs que les badges devis)
+============================================================ */
+function updateCtDevisBanner(devis, metaFallback) {
+  const banner = document.getElementById("ctDevisBanner");
+  if (!banner) return;
+
+  metaFallback = metaFallback || {};
+
+  // ----- Numéro & statut -----
+  let number = "";
+  let statusCode = "";
+
+  if (devis) {
+    number     = devis.number || "";
+    statusCode = devis.status || "";
+  } else {
+    number     = metaFallback.sourceDevisNumber || "";
+    statusCode = metaFallback.sourceDevisStatus || metaFallback.devisStatus || "";
+  }
+
+  // Pas de devis → rien à afficher
+  if (!number) {
+    banner.style.display = "none";
+    banner.textContent = "";
+    return;
+  }
+
+  const norm = (statusCode || "").toLowerCase();
+
+  let bg, color, border, label;
+
+  if (norm === "accepted" || norm === "accepte") {
+    bg     = "#E8F7E8";
+    color  = "#1E7C1E";
+    border = "#3CB43C";
+    label  = "Accepté";
+  } else if (norm === "refused" || norm === "refuse") {
+    bg     = "#FFE5E5";
+    color  = "#C62828";
+    border = "#E57373";
+    label  = "Refusé";
+  } else if (norm === "expired" || norm === "expire") {
+    bg     = "#FFECD9";
+    color  = "#E67E22";
+    border = "#FFB56A";
+    label  = "Expiré";
+  } else {
+    // En attente / inconnu
+    bg     = "#FFF6D8";
+    color  = "#8E6C00";
+    border = "#EBCB66";
+    label  = "En attente";
+  }
+
+  banner.style.display    = "block";
+  banner.style.background = bg;
+  banner.style.borderLeft = `4px solid ${border}`;
+  banner.style.color      = color;
+
+  banner.textContent = `Contrat lié au devis ${number} (${label})`;
+}
+
+function capitalizeStatus(s) {
+  if (!s) return "";
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 function rebuildContractInvoices(contract) {
   const pr = contract.pricing || {};
@@ -7844,6 +8172,11 @@ if (pr.clientType === "syndic") {
     icon: "✅"
   });
 
+if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+}
+
+
 }
 
 function resetContractFormToDefaults() {
@@ -7988,6 +8321,11 @@ function deleteCurrentContract() {
       resetContractFormToDefaults();
     }
   });
+if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+}
+
+
 }
 
 function formatNicePeriod(startISO, endRaw) {
@@ -8620,6 +8958,25 @@ function openContractPDF(previewOnly = false) {
   recomputeContract();
   const contract = buildContractFromForm(true);
   if (!contract) return;
+  // 🔗 On récupère la version enregistrée du contrat pour garder la signature
+  if (currentContractId && typeof getContract === "function") {
+    const stored = getContract(currentContractId);
+    if (stored) {
+      if (stored.signature) {
+        contract.signature = stored.signature;
+      }
+      if (stored.signatureDate) {
+        contract.signatureDate = stored.signatureDate;
+      }
+      if (stored._inheritedSignature) {
+        contract._inheritedSignature = stored._inheritedSignature;
+      }
+      if (stored._inheritedSignatureDate) {
+        contract._inheritedSignatureDate = stored._inheritedSignatureDate;
+      }
+    }
+  }
+
 
   const c   = contract.client  || {};
   const s   = contract.site    || {};
@@ -8790,6 +9147,53 @@ if (docsForThis.length > 0) {
   const isSyndic        = pr.clientType === "syndic";
   const clientBlockTitle = isSyndic ? "Syndic / Agence" : "Client";
   const nameLabel        = isSyndic ? "Société" : "Nom";
+
+  // ================= SIGNATURE CLIENT =================
+
+  // 1) d'abord : signature stockée dans le CONTRAT (cas syndic)
+  let clientSignatureDataUrl = contract.signature || "";
+  let clientSignatureDate    = contract.signatureDate || "";
+
+  // 2) si PAS de signature dans le contrat ET que ce n'est PAS un syndic,
+  //    on essaie de récupérer la signature du DEVIS lié (cas particulier)
+  if (!clientSignatureDataUrl && !isSyndic && typeof getAllDocuments === "function") {
+    const meta = contract.meta || {};
+    const docs = getAllDocuments();
+
+    let linkedDevis = null;
+
+    if (meta.sourceDevisId) {
+      linkedDevis = docs.find(d => d.id === meta.sourceDevisId);
+    } else if (meta.sourceDevisNumber) {
+      linkedDevis = docs.find(
+        d => d.type === "devis" && d.number === meta.sourceDevisNumber
+      );
+    }
+
+    if (linkedDevis && linkedDevis.status === "accepte" && linkedDevis.signature) {
+      clientSignatureDataUrl = linkedDevis.signature;
+      clientSignatureDate    = linkedDevis.signatureDate || linkedDevis.date || "";
+    }
+  }
+
+  // Date qui apparaîtra dans "Fait à Nice, le ..."
+  const clientSignatureDateLabel =
+    formatDateFR(clientSignatureDate) || pdfDateStr;
+
+  // HTML du bloc signature client
+  let clientSignatureHTML = "";
+  if (clientSignatureDataUrl) {
+    clientSignatureHTML = `
+      <p>Signature précédée de la mention : « Lu et approuvé ».</p>
+      <p>Date de signature : ${clientSignatureDateLabel}</p>
+      <img src="${clientSignatureDataUrl}" class="sig" alt="Signature du client" />
+    `;
+  } else {
+    clientSignatureHTML = `
+      <p>(Aucune signature disponible)</p>
+    `;
+  }
+
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -9337,18 +9741,56 @@ ${terminationBillingBlockTop}
       <p>Fait à Nice, le ${pdfDateStr}</p>
 
       <div class="signatures">
+
+        <!-- 🟦 SIGNATURE CLIENT -->
         <div class="signature-block">
           <div class="signature-title">Client / Mandataire</div>
-          <p>Signature précédée de la mention : « Lu et approuvé ».</p>
+
+          ${
+            // 🔵 CONTRAT PARTICULIER : signature héritée du devis
+            pr.clientType === "particulier" && contract._inheritedSignature
+              ? `
+                <p>Bon pour accord</p>
+                <p>Lu et approuvé.</p>
+                <p>Date : ${contract._inheritedSignatureDate || pdfDateStr}</p>
+                <p>Signature du client :</p>
+                <img src="${contract._inheritedSignature}" class="sig" />
+              `
+              : ""
+          }
+
+          ${
+            // 🟣 CONTRAT SYNDIC : signature faite dans le contrat
+            pr.clientType === "syndic" && contract.signature
+              ? `
+                <p>Bon pour accord</p>
+                <p>Lu et approuvé.</p>
+                <p>Date : ${contract.signatureDate || pdfDateStr}</p>
+                <p>Signature du client :</p>
+                <img src="${contract.signature}" class="sig" />
+              `
+              : ""
+          }
+
+          ${
+            (!contract._inheritedSignature && !contract.signature)
+              ? `<p>(Aucune signature disponible)</p>`
+              : ""
+          }
         </div>
+
+        <!-- 🟩 SIGNATURE PRESTATAIRE -->
         <div class="signature-block">
           <div class="signature-title">AquaClim Prestige</div>
           <p>Signature et cachet de l’entreprise</p>
           <img src="signature.png" class="sig" alt="Signature AquaClim Prestige" />
         </div>
+
       </div>
     </div>
   </div>
+
+
 
 </div>
 </body>
@@ -9423,6 +9865,11 @@ function updateContractClientType(type) {
   if (typeof recomputeContract === "function") {
     recomputeContract();
   }
+// 🎯 Affichage du bouton signature syndic
+const sigWrapper = document.getElementById("ctSignatureWrapper");
+if (sigWrapper) {
+  sigWrapper.style.display = (type === "syndic") ? "block" : "none";
+}
 }
 
 
@@ -10722,13 +11169,18 @@ function saveSignatureToCurrentDocument(dataUrl) {
   // ✅ On enregistre la signature + date du jour
   doc.signature = dataUrl;
   doc.signatureDate = new Date().toLocaleDateString("fr-FR");
-  doc.status = "accepte"; // sans accent pour rester cohérent avec le reste
 
   docs[idx] = doc;
   saveDocuments(docs);
 
   if (typeof saveSingleDocumentToFirestore === "function") {
     saveSingleDocumentToFirestore(doc);
+  }
+
+  // ✅ On passe le devis en "Accepté" via la fonction centrale
+  //    → ça déclenche aussi la facturation du contrat lié
+  if (typeof setDevisStatus === "function") {
+    setDevisStatus(doc.id, "accepte");
   }
 
   // Popup jolie au lieu du alert()
@@ -10748,50 +11200,190 @@ function saveSignatureToCurrentDocument(dataUrl) {
   if (typeof loadDocumentsList === "function") {
     loadDocumentsList();
   }
+
 }
 
 
 // === Boutons de la popup ===
+
 document.addEventListener("DOMContentLoaded", () => {
   const clearBtn = document.getElementById("signatureClear");
   const validateBtn = document.getElementById("signatureValidate");
   const approveRadio = document.getElementById("approveDevis");
 
+  // Bouton devis (inchangé)
   if (approveRadio) {
     approveRadio.addEventListener("click", () => {
       openSignaturePopup();
     });
   }
 
+  // bouton Effacer
   if (clearBtn) {
     clearBtn.addEventListener("click", () => {
       signaturePad?.clear();
     });
   }
 
-  if (validateBtn) {
-  validateBtn.addEventListener("click", () => {
-    if (!signaturePad || signaturePad.isEmpty()) {
-      showConfirmDialog({
-        title: "Signature manquante",
-        message: "Merci de signer dans la zone prévue avant de valider le devis.",
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "warning",
-        icon: "✍️"
-      });
-      return;
-    }
-
-    const dataUrl = signaturePad.toDataURL("image/png");
-    saveSignatureToCurrentDocument(dataUrl);
-
-    const popup = document.getElementById("signaturePopup");
-    popup?.classList.add("hidden");
+// bouton Fermer
+const closeBtn = document.getElementById("signatureClose");
+if (closeBtn) {
+  closeBtn.addEventListener("click", () => {
+    document.getElementById("signaturePopup").classList.add("hidden");
   });
 }
 
+
+  // BOUTON VALIDER UNIQUE
+  if (validateBtn) {
+    validateBtn.addEventListener("click", () => {
+      if (!signaturePad || signaturePad.isEmpty()) {
+        showConfirmDialog({
+          title: "Signature manquante",
+          message: "Merci de signer dans la zone prévue avant de valider.",
+          confirmLabel: "OK",
+          variant: "warning",
+          icon: "✍️"
+        });
+        return;
+      }
+
+      const dataUrl = signaturePad.toDataURL("image/png");
+
+      // 🔥🔥🔥 CONTRAT SYNDIC
+      if (window.currentContractSignatureMode) {
+        saveContractSignature(dataUrl);
+        window.currentContractSignatureMode = false;
+      }
+      else {
+        // 🔵 DEVIS (comportement original)
+        saveSignatureToCurrentDocument(dataUrl);
+      }
+
+      document.getElementById("signaturePopup").classList.add("hidden");
+    });
+  }
 });
+
+/* ======================
+   SIGNATURE CONTRAT SYNDIC
+====================== */
+
+// Ouvre la popup de signature mais pour un CONTRAT
+function openContractSignature() {
+  const popup  = document.getElementById("signaturePopup");
+  const canvas = document.getElementById("signatureCanvas");
+  if (!popup || !canvas) return;
+
+  // on indique qu'on signe un CONTRAT (et pas un devis)
+  window.currentContractSignatureMode = true;
+
+  // on affiche la popup
+  popup.classList.remove("hidden");
+
+  // ajuste la taille réelle du canvas
+  resizeSignatureCanvas();
+
+  // initialise SignaturePad
+  signaturePad = new SignaturePad(canvas, {
+    penColor: "black",
+    backgroundColor: "rgba(0,0,0,0)"
+  });
+}
+
+// 👉👉👉 FONCTION UNIQUE À GARDER POUR SAUVER LA SIGNATURE CONTRAT
+function saveContractSignature(dataUrl) {
+  if (!currentContractId) {
+    showConfirmDialog({
+      title: "Aucun contrat ouvert",
+      message: "Impossible d'enregistrer la signature : aucun contrat n'est en cours d'édition.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const list = getAllContracts();
+  const idx = list.findIndex(c => c.id === currentContractId);
+  if (idx === -1) {
+    showConfirmDialog({
+      title: "Contrat introuvable",
+      message: "Impossible d'enregistrer la signature : le contrat n'a pas été retrouvé.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "danger",
+      icon: "❌"
+    });
+    return;
+  }
+
+  const c = list[idx];
+
+  // 🔥 on stocke la signature DANS LE CONTRAT (syndic)
+  c.signature = dataUrl;
+  c.signatureDate = new Date().toLocaleDateString("fr-FR");
+
+  list[idx] = c;
+  saveContracts(list);
+
+  if (typeof saveSingleContractToFirestore === "function") {
+    saveSingleContractToFirestore(c);
+  }
+
+  // Recharge le formulaire contrat (affiche la signature si tu veux)
+  fillContractForm(c);
+
+  showConfirmDialog({
+    title: "Contrat signé",
+    message: "Signature enregistrée pour ce contrat syndic.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✍️"
+  });
+}
+
+function syncContractsWithDevis(updatedDevis) {
+  if (!updatedDevis || !updatedDevis.id) return;
+
+  const allContracts = getAllContracts();
+  let changed = false;
+
+  allContracts.forEach(c => {
+    if (c.meta && c.meta.sourceDevisId === updatedDevis.id) {
+      c.meta.sourceDevisStatus = updatedDevis.status;
+      c.meta.sourceDevisNumber = updatedDevis.number;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    saveContracts(allContracts);
+
+    if (typeof saveSingleContractToFirestore === "function") {
+      allContracts.forEach(c => {
+        if (c.meta && c.meta.sourceDevisId === updatedDevis.id) {
+          saveSingleContractToFirestore(c);
+        }
+      });
+    }
+
+    if (typeof loadContractsList === "function") {
+      loadContractsList();
+    }
+  }
+}
+
+/* ---- On met à jour le dashboard dès que la page est chargée ---- */
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+  }
+});
+
+
 
 // ================== INIT ==================
 
@@ -10814,6 +11406,9 @@ window.onload = function () {
   }
   if (typeof updateButtonColors === "function") {
     updateButtonColors();
+  }
+  if (typeof showHome === "function") {
+    showHome();
   }
 
   // 🔁 Factures d’échéance auto : seulement si TOUT est défini
