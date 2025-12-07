@@ -41,6 +41,7 @@
   <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
   <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
   <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
+<button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
 </div>
 
 <section id="homeView">
@@ -58,7 +59,7 @@
           <p id="dashDevisStatus">–</p>
           <p id="dashDevisLast">Dernier devis : –</p>
         </div>
-        <button class="dash-btn" onclick="openSection('devis')">Voir les devis</button>
+        <button class="dash-btn" onclick="openFromHome('devis')">Voir les devis</button>
       </div>
 
       <!-- 📘 Contrats -->
@@ -69,7 +70,7 @@
           <p id="dashContractRenew">À renouveler : –</p>
         </div>
         <!-- ⚠️ ICI : 'contrat' (singulier) -->
-        <button class="dash-btn" onclick="openSection('contrat')">Voir les contrats</button>
+        <button class="dash-btn" onclick="openFromHome('contrat')">Voir les contrats</button>
       </div>
 
       <!-- 💰 Factures -->
@@ -81,11 +82,35 @@
           <p id="dashInvoiceAmount">Montant impayé : –</p>
         </div>
         <!-- ⚠️ ICI : 'facture' (singulier) -->
-        <button class="dash-btn dash-btn-facture" onclick="openSection('facture')">Voir les factures</button>
+        <button class="dash-btn dash-btn-facture" onclick="openFromHome('facture')">Voir les factures</button>
       </div>
 
+<!-- 📊 CHIFFRE D'AFFAIRES (URSSAF) -->
+  <div class="dash-card dash-card-ca">
+    <div class="dash-card-header">
+      <span class="dash-card-icon">📊</span>
+      <div>
+        <h3>Chiffre d'affaires</h3>
+      </div>
     </div>
+
+    <p id="dashCATotal">CA total : –</p>
+    <p id="dashCAPaid" class="dash-sub">Payé : –</p>
+    <p id="dashCAUnpaid" class="dash-sub">Impayé : –</p>
+    <p id="dashCAMonth" class="dash-sub">Mois en cours : –</p>
+<p id="dashTVAMicroBadge"
+   class="dash-sub"
+   style="display:none; font-weight:600; color:#b00020;">
+  TVA activée (20 %)
+</p>
+
+
+    <button class="dash-btn dash-btn-primary" onclick="openCAReport()">
+      Voir le CA détaillé
+    </button>
   </div>
+</div>
+
 </section>
 
 
@@ -517,10 +542,10 @@
 
           <div class="tva-options">
             <label>
-              <input type="radio" name="tvaRadio" id="tva0" checked onchange="setTVA(0)"> 0 %
+              <input type="radio" name="tvaRadio" id="tva0" checked onchange="onMainTvaRadioChange(0)"> 0 %
             </label>
             <label>
-              <input type="radio" name="tvaRadio" id="tva20" onchange="setTVA(20)"> 20 %
+              <input type="radio" name="tvaRadio" id="tva20" onchange="onMainTvaRadioChange(20)"> 20 %
             </label>
           </div>
 
@@ -998,28 +1023,29 @@
 
   <label>TVA </label>
   <div class="tva-options">
-    <label>
-      <input
-        type="radio"
-        name="contractTva"
-        id="ctTva0"
-        value="0"
-        checked
-        onchange="setTVA(0)"
-      >
-      0 %
-    </label>
+<label>
+  <input
+    type="radio"
+    name="tva"
+    id="tva0"
+    value="0"
+    checked
+    onchange="onMainTvaRadioChange(0)"
+  >
+  0 %
+</label>
 
-    <label>
-      <input
-        type="radio"
-        name="contractTva"
-        id="ctTva20"
-        value="20"
-        onchange="setTVA(20)"
-      >
-      20 %
-    </label>
+<label>
+  <input
+    type="radio"
+    name="tva"
+    id="tva20"
+    value="20"
+    onchange="onMainTvaRadioChange(20)"
+  >
+  20 %
+</label>
+
   </div>
 </div>
 
@@ -1094,6 +1120,138 @@
   </div>
 </div>
 
+
+<!-- ================== POPUP CHIFFRE D'AFFAIRES ================== -->
+<div id="caReportOverlay" class="ca-overlay hidden">
+  <div class="ca-box">
+    <div class="ca-header">
+      <h3>Chiffre d’affaires</h3>
+      <button type="button" class="btn btn-light ca-close" onclick="closeCAReport()">✕</button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="ca-filters-row">
+      <div class="ca-filter">
+        <label for="caYearSelect">Année :</label>
+        <select id="caYearSelect" onchange="renderCAReport()"></select>
+      </div>
+
+      <div class="ca-filter">
+        <label class="ca-compare-label">
+          <input type="checkbox" id="caComparePrevYear" onchange="renderCAReport()">
+          Comparer avec N-1
+        </label>
+      </div>
+
+      <div class="ca-filter ca-export-group">
+        <button type="button" class="btn btn-secondary btn-small" onclick="exportCAURSSAFCSV()">
+          📤 Export URSSAF
+        </button>
+        <button type="button" class="btn btn-secondary btn-small" onclick="exportCAFullCSV()">
+          📊 Export Expert-comptable
+        </button>
+      </div>
+    </div>
+
+    <!-- Résumé haut niveau -->
+    <div class="ca-summary-grid">
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">CA total TTC</div>
+        <div class="ca-summary-value" id="caSummaryTotalTTC">–</div>
+        <div class="ca-summary-sub" id="caSummaryTotalHT">HT : –</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">CA payé TTC</div>
+        <div class="ca-summary-value" id="caSummaryPaidTTC">–</div>
+        <div class="ca-summary-sub" id="caSummaryPaidPct">– % des factures</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">CA impayé TTC</div>
+        <div class="ca-summary-value ca-badge-danger" id="caSummaryUnpaidTTC">–</div>
+        <div class="ca-summary-sub" id="caSummaryUnpaidCount">– factures impayées</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">TVA collectée</div>
+        <div class="ca-summary-value" id="caSummaryTVA">–</div>
+        <div class="ca-summary-sub" id="caSummaryTVARate">TVA moyenne : –</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">Mois en cours (TTC)</div>
+        <div class="ca-summary-value" id="caSummaryCurrentMonth">–</div>
+        <div class="ca-summary-sub" id="caSummaryCurrentMonthLabel">–</div>
+      </div>
+
+      <div class="ca-summary-card" id="caSummaryPrevYearCard">
+        <div class="ca-summary-label">Écart vs N-1</div>
+        <div class="ca-summary-value" id="caSummaryDelta">–</div>
+        <div class="ca-summary-sub" id="caSummaryDeltaPct">–</div>
+      </div>
+    </div>
+
+    <!-- Graphique -->
+    <div class="ca-chart-wrapper">
+      <h4>Évolution mensuelle du CA (TTC)</h4>
+      <div id="caChartBars" class="ca-chart-bars"></div>
+      <div class="ca-chart-legend">
+        <span class="ca-legend-current">■ Année sélectionnée</span>
+        <span class="ca-legend-prev" id="caLegendPrevYear">■ N-1</span>
+      </div>
+    </div>
+
+    <!-- Tableau mensuel détaillé -->
+    <div class="ca-table-wrapper">
+      <h4>Tableau mensuel détaillé</h4>
+      <table class="ca-table">
+        <thead>
+          <tr>
+            <th>Mois</th>
+            <th class="text-right">CA HT</th>
+            <th class="text-right">TVA</th>
+            <th class="text-right">CA TTC</th>
+            <th class="text-right">Payé</th>
+            <th class="text-right">Impayé</th>
+            <th class="text-right">% réglé</th>
+            <th class="text-right"># factures (payées / impayées)</th>
+          </tr>
+        </thead>
+        <tbody id="caTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Synthèse TVA (utile comptable) -->
+    <div class="ca-tva-wrapper">
+      <h4>TVA – récapitulatif annuel</h4>
+      <table class="ca-table ca-table-small">
+        <thead>
+          <tr>
+            <th>Base HT</th>
+            <th>TVA collectée</th>
+            <th>CA TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-right" id="caTVABaseHT">–</td>
+            <td class="text-right" id="caTVACollectee">–</td>
+            <td class="text-right" id="caTVACATTC">–</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="ca-tva-note">
+        🔎 À transmettre à ton expert-comptable pour la déclaration de TVA et à l’URSSAF
+        pour justifier du chiffre d’affaires encaissé.
+      </p>
+    </div>
+
+    <div class="ca-footer">
+      <button type="button" class="btn btn-light" onclick="closeCAReport()">Fermer</button>
+    </div>
+  </div>
+</div>
 
 
 

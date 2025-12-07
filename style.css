@@ -829,6 +829,12 @@ textarea {
     color: #ef6c00;
 }
 
+.badge-devis-cloture {
+    background: #e0e0e0;
+    color: #424242;
+}
+
+
 /* =========================================================
     14. TABLE DOCUMENTS / TARIFS
 ========================================================= */
@@ -1871,6 +1877,25 @@ textarea {
   gap: 12px;
 }
 
+.year-menu-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 6px;      /* espace entre "Année :" et le select */
+  margin-right: 10px;
+}
+
+.year-menu-wrapper label {
+  margin: 0;
+  white-space: nowrap; /* empêche le retour à la ligne */
+}
+
+.year-menu-wrapper select {
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid #e1e8ed;
+}
+
+
 /* Le tri + année restent compacts */
 .sort-wrapper,
 #yearFilterContainer,
@@ -2106,6 +2131,343 @@ textarea {
 .btn-close:hover {
     background: #777;
 }
+
+/* ================== DASHBOARD CA ================== */
+
+.dash-card-ca h3 {
+  white-space: nowrap;
+}
+
+.dash-card-ca p {
+  margin: 3px 0;
+}
+
+.dash-btn-secondary {
+  background: #eef2ff;
+  color: #1a3a8a;
+  border: 1px solid #cdd6ff;
+}
+
+.dash-btn-secondary:hover {
+  background: #dbe2ff;
+}
+
+/* ===== POPUP CHIFFRE D'AFFAIRES ===== */
+
+.ca-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 40px 16px;
+  z-index: 9999;
+  overflow-y: auto;
+}
+
+.ca-overlay.hidden {
+  display: none !important;
+}
+
+.ca-box {
+  background: #ffffff;
+  border-radius: 16px;
+  max-width: 1100px;
+  width: 100%;
+  padding: 20px 24px 18px;
+  box-shadow: 0 18px 45px rgba(15,23,42,0.25);
+}
+
+.ca-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ca-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a73e8;
+}
+
+.ca-close {
+  padding: 4px 10px;
+}
+
+/* Filtres */
+
+.ca-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.ca-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ca-filter label {
+  font-weight: 500;
+}
+
+.ca-compare-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ca-export-group {
+  margin-left: auto;
+  gap: 8px;
+}
+
+/* Résumé */
+
+.ca-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.ca-summary-card {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f4f7ff;
+  border: 1px solid #dde4ff;
+}
+
+.ca-summary-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5f6368;
+  margin-bottom: 4px;
+}
+
+.ca-summary-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0d3b66;
+}
+
+.ca-summary-sub {
+  font-size: 11px;
+  color: #5f6368;
+  margin-top: 2px;
+}
+
+.ca-badge-danger {
+  color: #b00020;
+}
+
+/* Graphique */
+
+.ca-chart-wrapper {
+  margin-bottom: 18px;
+}
+
+.ca-chart-wrapper h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.ca-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  height: 160px;
+  padding: 8px 0 4px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ca-bar-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.ca-bar {
+  width: 12px;
+  border-radius: 999px 999px 0 0;
+  background: #1a73e8;
+}
+
+.ca-bar-prev {
+  width: 8px;
+  border-radius: 999px 999px 0 0;
+  background: #a0aec0;
+  margin-top: 2px;
+}
+
+.ca-chart-legend {
+  display: flex;
+  gap: 12px;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.ca-chart-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.ca-legend-current::before {
+  background: #1a73e8;
+}
+
+.ca-legend-prev::before {
+  background: #a0aec0;
+}
+
+/* Tableau */
+
+.ca-table-wrapper {
+  margin-bottom: 16px;
+}
+
+.ca-table-wrapper h4,
+.ca-tva-wrapper h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+}
+
+.ca-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  background: #fff;
+}
+
+.ca-table th,
+.ca-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.ca-table th {
+  background: #f3f4f6;
+  text-align: left;
+  font-weight: 600;
+}
+
+.ca-table tr:nth-child(even) td {
+  background: #fafbff;
+}
+
+.ca-table-small {
+  width: auto;
+  min-width: 0;
+}
+
+.ca-tva-wrapper {
+  margin-bottom: 10px;
+}
+
+.ca-tva-note {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+}
+
+.ca-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 6px;
+}
+
+/* Helpers */
+
+.text-right {
+  text-align: right;
+}
+
+/* responsive */
+
+@media (max-width: 768px) {
+  .ca-box {
+    padding: 16px;
+  }
+
+  .ca-export-group {
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .ca-chart-bars {
+    height: 140px;
+  }
+}
+
+/* ===== Dashboard CA – filtres ===== */
+.ca-filters-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+/* Le select "Année" ne doit pas prendre 100% */
+.ca-filters-row select#caYearSelect {
+  width: auto !important;
+  min-width: 90px;
+  display: inline-block;
+}
+
+.dash-card-header {
+    display: flex;
+    align-items: center;   
+    gap: 10px;             
+}
+
+.dash-card-icon {
+    font-size: 1.4rem;     
+    line-height: 1;        
+    display: flex;
+    align-items: center;
+}
+
+
+.tab-btn-ca {
+  background-color: #eef0f3;
+  border: 1px solid #cfd5dd;
+  color: #333;
+  font-weight: 600;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.tab-btn-ca.active {
+  background-color: #1e80ef !important;
+  border-color: #1b6fcb !important;
+  color: white !important;
+}
+
+.tab-btn-ca:hover {
+  background-color: #e2e8ef;
+}
+
 
 
 

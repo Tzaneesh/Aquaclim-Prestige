@@ -383,6 +383,17 @@ async function initFirebase() {
   if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
   }
+  // 🔁 Met à jour le filtre des années après la synchro
+  if (typeof loadYearFilter === "function") {
+    loadYearFilter();
+  }
+  // 🏠 Met à jour le dashboard CA / impayés etc.
+  if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+  }
+
+computeCA();
+
 }
 
 // ================== GESTION CLIENTS ==================
@@ -501,6 +512,17 @@ function onContractClientNameChange() {
     fillContractClientFromObject(found);
   }
 }
+function openCA() {
+  // Ouvre la popup CA existante
+  openCAReport();
+
+  // Met le bouton CA en bleu (actif)
+  const tabCA = document.getElementById("tabCA");
+  if (tabCA) tabCA.classList.add("active");
+}
+
+
+
 
 // Ajoute le client du contrat dans la base clients
 function addCurrentClientFromContract() {
@@ -1171,6 +1193,456 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
+/* ================== CHIFFRE D'AFFAIRES – DASHBOARD PRO ================== */
+
+function formatEuroCA(v) {
+  const n = Number(v) || 0;
+  return n.toLocaleString("fr-FR", {
+    style: "currency",
+    currency: "EUR",
+    minimumFractionDigits: 2
+  });
+}
+
+function getCAAvailableYears() {
+  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+  if (docs.length === 0) {
+    return [new Date().getFullYear()];
+  }
+  let minYear = 9999;
+  let maxYear = 0;
+
+  docs.forEach(d => {
+    const dt = new Date(d.date);
+    const y = dt.getFullYear();
+    if (!isNaN(y)) {
+      if (y < minYear) minYear = y;
+      if (y > maxYear) maxYear = y;
+    }
+  });
+
+  const years = [];
+  for (let y = minYear; y <= maxYear; y++) {
+    years.push(y);
+  }
+  return years;
+}
+
+/**
+ * Retourne les stats par mois pour une année donnée.
+ * year = null => toutes années confondues (utile pour "Toutes").
+ */
+function computeCAMonthsForYear(year) {
+  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    month: i + 1,
+    totalHT: 0,
+    totalTVA: 0,
+    totalTTC: 0,
+    paidTTC: 0,
+    unpaidTTC: 0,
+    paidCount: 0,
+    unpaidCount: 0
+  }));
+
+  docs.forEach(d => {
+    if (!d.date) return;
+
+    const dt = new Date(d.date);
+    const y = dt.getFullYear();
+    if (!isNaN(y) && year && y !== year) return; // si année précise
+
+    const mIndex = dt.getMonth(); // 0..11
+    const month = months[mIndex];
+
+    const ht = Number(d.subtotal || 0) || 0;
+    const tva = Number(d.tvaAmount || 0) || 0;
+    const ttc = Number(d.totalTTC || 0) || 0;
+
+    month.totalHT += ht;
+    month.totalTVA += tva;
+    month.totalTTC += ttc;
+
+    if (d.paid) {
+      month.paidTTC += ttc;
+      month.paidCount += 1;
+    } else {
+      month.unpaidTTC += ttc;
+      month.unpaidCount += 1;
+    }
+  });
+
+  return months;
+}
+
+/**
+ * Bilan global sur une année (ou toutes).
+ */
+function buildCAReport(year) {
+  const months = computeCAMonthsForYear(year);
+
+  const totals = months.reduce(
+    (acc, m) => {
+      acc.totalHT += m.totalHT;
+      acc.totalTVA += m.totalTVA;
+      acc.totalTTC += m.totalTTC;
+      acc.paidTTC += m.paidTTC;
+      acc.unpaidTTC += m.unpaidTTC;
+      acc.paidCount += m.paidCount;
+      acc.unpaidCount += m.unpaidCount;
+      return acc;
+    },
+    {
+      totalHT: 0,
+      totalTVA: 0,
+      totalTTC: 0,
+      paidTTC: 0,
+      unpaidTTC: 0,
+      paidCount: 0,
+      unpaidCount: 0
+    }
+  );
+
+  const now = new Date();
+  const currentMonthIndex = now.getMonth();
+  const currentMonth = months[currentMonthIndex];
+
+  return {
+    year,
+    months,
+    totals,
+    currentMonth,
+    availableYears: getCAAvailableYears()
+  };
+}
+
+/* ----- UI ----- */
+
+function initCAYearSelect() {
+  const select = document.getElementById("caYearSelect");
+  if (!select) return;
+
+  const years = getCAAvailableYears();
+  const currentYear = new Date().getFullYear();
+
+  select.innerHTML = "";
+
+  // Option "Toutes"
+  const optAll = document.createElement("option");
+  optAll.value = "all";
+  optAll.textContent = "Toutes";
+  select.appendChild(optAll);
+
+  years.forEach(y => {
+    const opt = document.createElement("option");
+    opt.value = String(y);
+    opt.textContent = String(y);
+    select.appendChild(opt);
+  });
+
+  // Sélection par défaut : année courante si elle existe, sinon "Toutes"
+  if (years.includes(currentYear)) {
+    select.value = String(currentYear);
+  } else {
+    select.value = "all";
+  }
+}
+
+function renderCAReport() {
+  const yearSelect = document.getElementById("caYearSelect");
+  const compareCheckbox = document.getElementById("caComparePrevYear");
+  if (!yearSelect) return;
+
+  const value = yearSelect.value || "all";
+  const selectedYear = value === "all" ? null : parseInt(value, 10) || null;
+
+  const report = buildCAReport(selectedYear);
+  const comparePrev = !!(compareCheckbox && compareCheckbox.checked);
+
+  let prevReport = null;
+  if (comparePrev && selectedYear) {
+    prevReport = buildCAReport(selectedYear - 1);
+  }
+
+  // ===== Résumé =====
+  const t = report.totals;
+  const totalTTC = t.totalTTC;
+  const totalHT = t.totalHT;
+  const totalTVA = t.totalTVA;
+  const paidTTC = t.paidTTC;
+  const unpaidTTC = t.unpaidTTC;
+
+  const totalCount = t.paidCount + t.unpaidCount;
+  const paidPct = totalTTC > 0 ? (paidTTC / totalTTC) * 100 : 0;
+
+  const summaryTotal = document.getElementById("caSummaryTotalTTC");
+  const summaryTotalHT = document.getElementById("caSummaryTotalHT");
+  const summaryPaid = document.getElementById("caSummaryPaidTTC");
+  const summaryPaidPct = document.getElementById("caSummaryPaidPct");
+  const summaryUnpaid = document.getElementById("caSummaryUnpaidTTC");
+  const summaryUnpaidCount = document.getElementById("caSummaryUnpaidCount");
+  const summaryTVA = document.getElementById("caSummaryTVA");
+  const summaryTVARate = document.getElementById("caSummaryTVARate");
+  const summaryCurMonth = document.getElementById("caSummaryCurrentMonth");
+  const summaryCurMonthLabel = document.getElementById("caSummaryCurrentMonthLabel");
+  const prevCard = document.getElementById("caSummaryPrevYearCard");
+  const summaryDelta = document.getElementById("caSummaryDelta");
+  const summaryDeltaPct = document.getElementById("caSummaryDeltaPct");
+
+  if (summaryTotal) summaryTotal.textContent = formatEuroCA(totalTTC);
+  if (summaryTotalHT) summaryTotalHT.textContent = "HT : " + formatEuroCA(totalHT);
+
+  if (summaryPaid) summaryPaid.textContent = formatEuroCA(paidTTC);
+  if (summaryPaidPct) {
+    summaryPaidPct.textContent =
+      totalTTC > 0
+        ? `${paidPct.toFixed(1)} % du CA payé`
+        : "Aucune facture";
+  }
+
+  if (summaryUnpaid) summaryUnpaid.textContent = formatEuroCA(unpaidTTC);
+  if (summaryUnpaidCount) {
+    summaryUnpaidCount.textContent =
+      t.unpaidCount > 0
+        ? `${t.unpaidCount} facture(s) impayée(s)`
+        : "0 facture impayée";
+  }
+
+  if (summaryTVA) summaryTVA.textContent = formatEuroCA(totalTVA);
+  if (summaryTVARate) {
+    const rate = totalHT > 0 ? (totalTVA / totalHT) * 100 : 0;
+    summaryTVARate.textContent =
+      totalHT > 0 ? `TVA moyenne : ${rate.toFixed(1)} %` : "TVA moyenne : –";
+  }
+
+  const now = new Date();
+  const monthNames = [
+    "Janvier","Février","Mars","Avril","Mai","Juin",
+    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+  ];
+  const curMonth = report.currentMonth || null;
+
+  if (summaryCurMonth) {
+    summaryCurMonth.textContent = curMonth
+      ? formatEuroCA(curMonth.totalTTC)
+      : "–";
+  }
+  if (summaryCurMonthLabel) {
+    const labelYear = selectedYear || now.getFullYear();
+    summaryCurMonthLabel.textContent = `${monthNames[now.getMonth()]} ${labelYear}`;
+  }
+
+  // Écart vs N-1
+  if (prevCard && summaryDelta && summaryDeltaPct) {
+    if (prevReport && prevReport.totals.totalTTC > 0) {
+      const prev = prevReport.totals.totalTTC;
+      const delta = totalTTC - prev;
+      const deltaPct = (delta / prev) * 100;
+
+      summaryDelta.textContent = (delta >= 0 ? "+" : "") + formatEuroCA(delta);
+      summaryDeltaPct.textContent =
+        (delta >= 0 ? "▲ " : "▼ ") + deltaPct.toFixed(1) + " % vs " + (selectedYear - 1);
+
+      prevCard.style.display = "";
+    } else {
+      summaryDelta.textContent = "–";
+      summaryDeltaPct.textContent = "Pas de données N-1";
+      prevCard.style.display = comparePrev ? "" : "none";
+    }
+  }
+
+  // ===== Tableau mensuel =====
+  const tbody = document.getElementById("caTableBody");
+  if (tbody) {
+    tbody.innerHTML = "";
+
+    report.months.forEach((m, idx) => {
+      const tr = document.createElement("tr");
+
+      const monthLabel = monthNames[idx].slice(0, 3); // abréviation
+
+      const total = m.totalTTC;
+      const paid = m.paidTTC;
+      const unpaid = m.unpaidTTC;
+      const count = m.paidCount + m.unpaidCount;
+      const pct = total > 0 ? (paid / total) * 100 : 0;
+
+      tr.innerHTML =
+        `<td>${monthLabel}</td>` +
+        `<td class="text-right">${formatEuroCA(m.totalHT)}</td>` +
+        `<td class="text-right">${formatEuroCA(m.totalTVA)}</td>` +
+        `<td class="text-right">${formatEuroCA(total)}</td>` +
+        `<td class="text-right">${formatEuroCA(paid)}</td>` +
+        `<td class="text-right">${formatEuroCA(unpaid)}</td>` +
+        `<td class="text-right">${total > 0 ? pct.toFixed(1) + " %" : "–"}</td>` +
+        `<td class="text-right">${count} (${m.paidCount} / ${m.unpaidCount})</td>`;
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ===== Graphique barres =====
+  const chart = document.getElementById("caChartBars");
+  if (chart) {
+    chart.innerHTML = "";
+
+    const currentValues = report.months.map(m => m.totalTTC);
+    const prevValues = prevReport ? prevReport.months.map(m => m.totalTTC) : [];
+    const maxVal = Math.max(
+      1,
+      ...currentValues,
+      ...(prevReport ? prevValues : [0])
+    );
+
+    report.months.forEach((m, idx) => {
+      const group = document.createElement("div");
+      group.className = "ca-bar-group";
+
+      const bar = document.createElement("div");
+      bar.className = "ca-bar";
+      const h = (m.totalTTC / maxVal) * 140; // 140px max
+      bar.style.height = `${Math.round(h)}px`;
+
+      group.appendChild(bar);
+
+      if (prevReport) {
+        const prevMonth = prevReport.months[idx];
+        const barPrev = document.createElement("div");
+        barPrev.className = "ca-bar-prev";
+        const hp = (prevMonth.totalTTC / maxVal) * 140;
+        barPrev.style.height = `${Math.round(hp)}px`;
+        group.appendChild(barPrev);
+      }
+
+      const label = document.createElement("div");
+      label.textContent = monthNames[idx].charAt(0); // J, F, M...
+      group.appendChild(label);
+
+      chart.appendChild(group);
+    });
+
+    const legendPrev = document.getElementById("caLegendPrevYear");
+    if (legendPrev) {
+      legendPrev.style.visibility = prevReport ? "visible" : "hidden";
+    }
+  }
+
+  // ===== TVA annuelle =====
+  const baseHTCell = document.getElementById("caTVABaseHT");
+  const tvaCell = document.getElementById("caTVACollectee");
+  const caTTCCell = document.getElementById("caTVACATTC");
+
+  if (baseHTCell) baseHTCell.textContent = formatEuroCA(totalHT);
+  if (tvaCell) tvaCell.textContent = formatEuroCA(totalTVA);
+  if (caTTCCell) caTTCCell.textContent = formatEuroCA(totalTTC);
+}
+
+/* ===== Ouverture / fermeture ===== */
+
+function openCAReport() {
+  const overlay = document.getElementById("caReportOverlay");
+  if (!overlay) return;
+
+  initCAYearSelect();
+  renderCAReport();
+
+  overlay.classList.remove("hidden");
+}
+
+function closeCAReport() {
+  const overlay = document.getElementById("caReportOverlay");
+  if (!overlay) return;
+  overlay.classList.add("hidden");
+
+  // Désactive le bouton CA
+  const tabCA = document.getElementById("tabCA");
+  if (tabCA) tabCA.classList.remove("active");
+}
+
+/* ===== Exports CSV ===== */
+
+function exportCAURSSAFCSV() {
+  const yearSelect = document.getElementById("caYearSelect");
+  if (!yearSelect) return;
+  const value = yearSelect.value || "all";
+  const year = value === "all" ? null : parseInt(value, 10) || null;
+
+  // URSSAF = CA encaissé (factures payées) par mois
+  const months = computeCAMonthsForYear(year);
+
+  const monthNames = [
+    "Janvier","Février","Mars","Avril","Mai","Juin",
+    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+  ];
+
+  let csv = "Mois;CA encaissé TTC\n";
+
+  months.forEach((m, idx) => {
+    csv += `${monthNames[idx]};${m.paidTTC.toFixed(2).replace(".", ",")}\n`;
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = year ? `CA_URSSAF_${year}.csv` : "CA_URSSAF_toutes_annees.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function exportCAFullCSV() {
+  const yearSelect = document.getElementById("caYearSelect");
+  if (!yearSelect) return;
+  const value = yearSelect.value || "all";
+  const year = value === "all" ? null : parseInt(value, 10) || null;
+
+  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+
+  let csv = "Numero;Date;Client;HT;TVA;TTC;Payee;Date_reglement;Mode\n";
+
+  docs.forEach(d => {
+    const dt = new Date(d.date);
+    const y = dt.getFullYear();
+    if (year && y !== year) return;
+
+    const dateStr = dt.toLocaleDateString("fr-FR");
+    const statut = d.paid ? "OUI" : "NON";
+    const dateReg = d.paymentDate
+      ? new Date(d.paymentDate).toLocaleDateString("fr-FR")
+      : "";
+    const mode = d.paymentMode || "";
+
+    const clientName = (d.client?.name || "").replace(/;/g, ",");
+
+    csv +=
+      [
+        d.number || "",
+        dateStr,
+        clientName,
+        Number(d.subtotal || 0).toFixed(2).replace(".", ","),
+        Number(d.tvaAmount || 0).toFixed(2).replace(".", ","),
+        Number(d.totalTTC || 0).toFixed(2).replace(".", ","),
+        statut,
+        dateReg,
+        mode
+      ].join(";") + "\n";
+  });
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = year ? `CA_detail_${year}.csv` : "CA_detail_toutes_annees.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+
 function isDevisExpired(docType, validityDate) {
   if (docType !== "devis" || !validityDate) return false;
   const today = new Date();
@@ -1304,10 +1776,12 @@ function switchListType(type) {
   const tabDevis    = document.getElementById("tabDevis");
   const tabFactures = document.getElementById("tabFactures");
   const tabContrats = document.getElementById("tabContrats");
+const tabCA       = document.getElementById("tabCA");
 
   if (tabDevis)    tabDevis.classList.toggle("active", type === "devis");
   if (tabFactures) tabFactures.classList.toggle("active", type === "facture");
   if (tabContrats) tabContrats.classList.toggle("active", type === "contrat");
+  if (tabCA)       tabCA.classList.remove("active");
 
   const listView     = document.getElementById("listView");
   const formView     = document.getElementById("formView");
@@ -1450,13 +1924,26 @@ function getAllInvoices() {
 function loadYearFilter() {
   const select = document.getElementById("yearFilter");
   if (!select) return;
+
+  // On remet la valeur par défaut
   select.innerHTML = '<option value="all">Toutes</option>';
-  if (currentListType !== "facture") return;
-  const docs = getAllDocuments().filter((d) => d.type === "facture");
+
+  // On prend toutes les FACTURES stockées
+  const docs = getAllDocuments().filter(d => d.type === "facture");
+
   const years = new Set();
+
   docs.forEach((d) => {
-    if (d.date) years.add(new Date(d.date).getFullYear());
+    if (!d.date) return;
+
+    // On force un vrai ISO avec heure neutre pour éviter les bugs de parsing
+    const dt = new Date(d.date + "T00:00:00");
+    if (isNaN(dt.getTime())) return;
+
+    years.add(dt.getFullYear());
   });
+
+  // On remplit le select avec les années trouvées
   Array.from(years)
     .sort()
     .forEach((y) => {
@@ -1465,8 +1952,13 @@ function loadYearFilter() {
       opt.textContent = y;
       select.appendChild(opt);
     });
-}
 
+  // Sécurité : le conteneur du filtre ne s'affiche que sur "Factures"
+  const container = document.getElementById("yearFilterContainer");
+  if (container) {
+    container.classList.toggle("hidden", currentListType !== "facture");
+  }
+}
 // ================== TVA & TYPE DOCUMENT ==================
 
 function getCurrentClientType() {
@@ -1534,6 +2026,14 @@ function updateDocType() {
   const docDate = document.getElementById("docDate").value;
   const validityInput = document.getElementById("validityDate");
 
+  // 👉 bloc "Bon pour accord – signer électroniquement" (devis seulement)
+  const approveRadio = document.getElementById("approveDevis");
+  let devisSignatureWrapper = null;
+  if (approveRadio) {
+    // on remonte au parent qui a la classe .devis-signature-trigger
+    devisSignatureWrapper = approveRadio.closest(".devis-signature-trigger");
+  }
+
   if (type === "devis") {
     validityGroup.style.display = "block";
     const base = docDate ? new Date(docDate) : new Date();
@@ -1541,15 +2041,26 @@ function updateDocType() {
     validity.setDate(validity.getDate() + 30);
     validityInput.value = validity.toISOString().split("T")[0];
     paymentSection.classList.add("hidden");
+
+    // ✅ on AFFICHE le bouton de signature pour les devis
+    if (devisSignatureWrapper) {
+      devisSignatureWrapper.style.display = "block";
+    }
   } else {
     validityGroup.style.display = "none";
     validityInput.value = "";
     paymentSection.classList.remove("hidden");
+
+    // ❌ on CACHE le bouton de signature pour les factures
+    if (devisSignatureWrapper) {
+      devisSignatureWrapper.style.display = "none";
+    }
   }
 
   refreshDevisStatusUI(type, validityInput.value);
   updateButtonColors();
 }
+
 
 function updateTransformButtonVisibility() {
   const transformBtn = document.getElementById("transformButton");
@@ -1614,6 +2125,7 @@ function onPayModeChange() {
     dateInput.value = docDate || new Date().toISOString().split("T")[0];
   }
 }
+
 
 // ================== RÉDUCTION ==================
 
@@ -2632,6 +3144,50 @@ calculateTotals(); // et on laisse faire la logique dégressive normale
 
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
 function saveDocument() {
+
+// ==== BLOCAGE TVA MICRO ====
+try {
+  const status = getMicroTvaStatus(); // ton statut actuel
+  const selectedRate = Number(document.getElementById("tvaRate").value || 0);
+
+  // Si encore en franchise (CA < 37 500 €) → TVA doit OBLIGATOIREMENT être 0%
+  if (status.mode === "franchise" && selectedRate > 0) {
+
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "TVA impossible",
+        message: 
+          "Tu es encore sous le seuil micro (moins de 37 500 €). " +
+          "Les devis et factures DOIVENT rester en TVA 0 %. Impossible de sauvegarder en 20 %. ",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "⚠️"
+      });
+    }
+    return; // ❌ STOP, on empêche la sauvegarde
+  }
+
+  // Si TVA devenue obligatoire → interdire TVA 0% sur tout nouveau document
+  if (status.mode === "obligatoire" && selectedRate === 0) {
+
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "TVA obligatoire",
+        message:
+          "Le seuil micro de 37 500 € a été dépassé.\n" +
+          "La TVA de 20 % est désormais obligatoire sur les nouveaux documents.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "⚠️"
+      });
+    }
+    return; // ❌ STOP, on empêche la sauvegarde
+  }
+} catch (e) {
+  console.error("Erreur contrôle TVA :", e);
+}
   const clientName = document.getElementById("clientName").value.trim();
   const clientAddress = document.getElementById("clientAddress").value.trim();
   const clientCivility = (document.getElementById("clientCivility")?.value || "").trim();
@@ -2867,11 +3423,18 @@ function saveDocument() {
   currentDocumentId = doc.id;
   loadDocumentsList();
   updateTransformButtonVisibility();
-if (typeof refreshHomeStats === "function") {
+  if (typeof refreshHomeStats === "function") {
     refreshHomeStats();
-}
+  }
+
+  // 🔄 MAJ dashboard + automate TVA micro
+  if (typeof computeCA === "function") {
+    computeCA();
+  }
 
 }
+
+
 
 
 function deleteCurrent() {
@@ -2932,6 +3495,9 @@ function deleteCurrent() {
       backToList();
     }
   });
+
+computeCA();
+
 }
 // Supprimer depuis la LISTE (bouton "Supprimer" dans le tableau)
 function deleteDocument(id) {
@@ -3106,40 +3672,327 @@ function backToContracts() {
   // Pour l’instant : retour à la liste Devis/Factures
   switchListType("devis");
 }
-// ================== LISTE DOCUMENTS & STATUTS ==================
 
-function loadDocumentsList() { 
-  // Cas spécial : onglet Contrats
-  if (currentListType === "contrat") {
-    loadContractsList();
+// =====================================
+// 📊 CALCUL CA ANNUEL / MENSUEL
+// =====================================
+function computeCA() {
+  const docs = getAllDocuments().filter(d => d.type === "facture");
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+
+  let total = 0;
+  let paid = 0;
+  let unpaid = 0;
+  let currentMonthTotal = 0;
+
+  docs.forEach(f => {
+    const amount = Number(f.totalTTC || 0);
+
+    // total annuel
+    if (f.date?.startsWith(String(year))) {
+      total += amount;
+    }
+
+    // payé / impayé (ton ancien code utilisait status === "paid")
+    if (f.paid) {
+      paid += amount;
+    } else {
+      unpaid += amount;
+    }
+
+    // mois courant
+    if (f.date?.startsWith(`${year}-${month}`)) {
+      currentMonthTotal += amount;
+    }
+  });
+
+  document.getElementById("dashCATotal").textContent  = "CA total : "   + formatEuro(total);
+  document.getElementById("dashCAPaid").textContent   = "Payé : "       + formatEuro(paid);
+  document.getElementById("dashCAUnpaid").textContent = "Impayé : "     + formatEuro(unpaid);
+  document.getElementById("dashCAMonth").textContent  = "Mois en cours : " + formatEuro(currentMonthTotal);
+
+  // 🔎 à chaque recalcul du CA, on surveille le seuil micro TVA
+  if (typeof checkMicroTVAThreshold === "function") {
+    checkMicroTVAThreshold(false);
+  }
+}
+
+// =====================================
+// TVA MICRO-ENTREPRISE – SURVEILLANCE SEUIL
+// =====================================
+
+// Seuils légaux prestations de services (micro, franchise en base TVA)
+// Source officielle : 37 500 € (seuil de base) / 41 250 € (seuil majoré)
+const MICRO_TVA_THRESHOLD_BASE = 37500;     // déclenche l'obligation de TVA
+const MICRO_TVA_THRESHOLD_TOLERANCE = 41250; // pour info, non utilisé ici
+const MICRO_TVA_THRESHOLD_TTC = MICRO_TVA_THRESHOLD_BASE;
+
+
+const MICRO_TVA_STATUS_KEY = "micro_tva_status";
+
+function getMicroTVAStatus() {
+  try {
+    const raw = localStorage.getItem(MICRO_TVA_STATUS_KEY);
+    if (!raw) {
+      return { mode: "franchise", activatedYear: null, activatedCA: 0 };
+    }
+    const parsed = JSON.parse(raw);
+    return {
+      mode: parsed.mode || "franchise",           // "franchise" ou "obligatoire"
+      activatedYear: parsed.activatedYear || null,
+      activatedCA: parsed.activatedCA || 0
+    };
+  } catch (e) {
+    console.error("Erreur lecture statut TVA micro :", e);
+    return { mode: "franchise", activatedYear: null, activatedCA: 0 };
+  }
+}
+
+function getMicroTvaStatus() {
+  // Petit wrapper pour compatibilité avec le reste du code
+  const st = getMicroTVAStatus();
+  return st && st.mode ? st.mode : "franchise";
+}
+
+
+function saveMicroTVAStatus(status) {
+  try {
+    localStorage.setItem(MICRO_TVA_STATUS_KEY, JSON.stringify(status));
+  } catch (e) {
+    console.error("Erreur sauvegarde statut TVA micro :", e);
+  }
+}
+
+// CA TTC de l'année civile en cours (simple, à partir des factures)
+
+function computeCurrentYearCAForMicro() {
+  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+  const now = new Date();
+  const currentYear = now.getFullYear();
+
+  let totalTTC = 0;
+
+  docs.forEach(f => {
+    // 🔎 Micro-entreprise = on compte le CA ENCAISSÉ seulement !
+    if (!f.paid) return;
+
+    // Date de paiement si présente, sinon date facture
+    const refDate = f.paymentDate || f.date;
+    const d = new Date(refDate + "T00:00:00");
+    if (isNaN(d.getTime()) || d.getFullYear() !== currentYear) return;
+
+    const val = Number(f.totalTTC || 0);
+    if (!isNaN(val)) totalTTC += val;
+  });
+
+  return { year: currentYear, caTTC: totalTTC };
+}
+
+
+
+function formatEuroFallback(v) {
+  if (typeof formatEuro === "function") return formatEuro(v);
+  return (Number(v || 0).toFixed(2) + " €");
+}
+
+/**
+ * Surveille le seuil micro :
+ * - si CA >= 37 500 € sur l'année en cours → bascule en "TVA obligatoire"
+ * - pas de retour automatique en arrière
+ * @param {boolean} showAlert - true = popup d'alerte
+ */
+function checkMicroTVAThreshold(showAlert = false) {
+  const status = getMicroTVAStatus();
+  const { year, caTTC } = computeCurrentYearCAForMicro();
+
+  // Petit badge sur le dashboard (optionnel, si tu ajoutes l'élément dans le HTML)
+  const badge = document.getElementById("dashTVAMicroBadge");
+  if (badge) {
+    if (status.mode === "obligatoire") {
+      badge.textContent = "TVA activée (20 %)";
+      badge.style.display = "inline-block";
+    } else {
+      badge.style.display = "none";
+    }
+  }
+
+  // Si TVA déjà activée une fois → on ne revient jamais en "franchise" tout seul
+  if (status.mode === "obligatoire") {
     return;
   }
 
+  // Dépassement du seuil légal micro – prestations de services
+  if (caTTC >= MICRO_TVA_THRESHOLD_BASE) {
+    const newStatus = {
+      mode: "obligatoire",
+      activatedYear: year,
+      activatedCA: caTTC
+    };
+    saveMicroTVAStatus(newStatus);
+
+    // Notification uniquement quand on demande (ex : à l’enregistrement d’une facture)
+    if (showAlert) {
+      if (typeof showConfirmDialog === "function") {
+        showConfirmDialog({
+          title: "Seuil TVA micro-entreprise dépassé",
+          message:
+            `Ton chiffre d'affaires ${year} atteint ${formatEuroFallback(caTTC)}.\n\n` +
+            `Le seuil légal de franchise en base de TVA (prestations de services) est de ` +
+            `${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}.\n\n` +
+            `À partir de maintenant, la TVA 20 % doit être appliquée sur les nouveaux devis et factures.`,
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "warning",
+          icon: "⚠️"
+        });
+      } else {
+        alert(
+          "⚠️ Seuil TVA micro dépassé : " +
+          formatEuroFallback(caTTC) +
+          " (seuil " +
+          formatEuroFallback(MICRO_TVA_THRESHOLD_BASE) +
+          "). TVA 20 % obligatoire sur les prochaines factures."
+        );
+      }
+    }
+
+    // Force la TVA à 20 % sur le formulaire courant
+    if (typeof setTVA === "function") {
+      setTVA(20);
+    }
+    const tva0  = document.getElementById("tva0");
+    const tva20 = document.getElementById("tva20");
+    if (tva0 && tva20) {
+      tva0.checked = false;
+      tva20.checked = true;
+    }
+
+    // Mise à jour éventuelle du badge (si présent)
+    const badge2 = document.getElementById("dashTVAMicroBadge");
+    if (badge2) {
+      badge2.textContent = "TVA activée (20 %)";
+      badge2.style.display = "inline-block";
+    }
+  }
+}
+
+// =====================================
+// MICRO TVA – GARDE-FOU 0 % / 20 %
+// =====================================
+
+function onMainTvaRadioChange(rate) {
+  const status = getMicroTvaStatus();
+  const tva0  = document.getElementById("tva0");
+  const tva20 = document.getElementById("tva20");
+
+  // 🟦 Cas 1 : tu es encore en franchise (CA ≤ 37 500) -> TVA 0% obligatoire
+  if (status === "franchise" && rate > 0) {
+    if (tva0 && tva20) {
+      tva0.checked = true;
+      tva20.checked = false;
+    }
+
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "TVA non applicable",
+        message:
+          "Tu es encore sous le seuil micro (" +
+          MICRO_TVA_THRESHOLD_BASE.toLocaleString('fr-FR') +
+          " € encaissés TTC).\n\n" +
+          "On reste automatiquement en TVA 0 %.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "info",
+        icon: "ℹ️"
+      });
+    }
+    setTVA(0);
+    return;
+  }
+
+  // 🔴 Cas 2 : seuil dépassé -> TVA 20 % obligatoire, pas de retour à 0 %
+  if (status === "obligatoire" && rate === 0) {
+    if (tva0 && tva20) {
+      tva0.checked = false;
+      tva20.checked = true;
+    }
+
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "TVA obligatoire",
+        message:
+          "Le seuil micro de " +
+          MICRO_TVA_THRESHOLD_TTC.toLocaleString('fr-FR') +
+          " € encaissés TTC a été dépassé.\n\n" +
+          "Les nouvelles factures doivent être émises avec une TVA de 20 %. " +
+          "Les contrats déjà en place, eux, ne sont pas modifiés automatiquement.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "⚠️"
+      });
+    }
+    setTVA(20);
+    return;
+  }
+
+  // ✅ Cas normal : on applique ce que tu as choisi
+  setTVA(rate);
+}
+
+
+
+
+// ================== LISTE DOCUMENTS & STATUTS ==================
+
+function loadDocumentsList() {
+
+  // Cas spécial : onglet Contrats
+  if (currentListType === "contrat") {
+      loadContractsList();
+      return;
+  }
+
+  // 🔎 Récupération des documents AVANT les filtres
   const docs = getAllDocuments();
-  let filtered = docs.filter((d) => d.type === currentListType);
+
+  // On garde seulement le type courant (devis / facture)
+  let filtered = docs.filter(d => d.type === currentListType);
+
+  // 🔎 FILTRE ANNÉE (AUTO)
+  const selectedYear = document.getElementById("yearMenu")?.value || "all";
+
+  if (selectedYear !== "all") {
+      filtered = filtered.filter(d => {
+          if (!d.date) return false;
+          return String(d.date).startsWith(selectedYear);
+      });
+  }
 
   // 🔵 Filtres spécifiques aux FACTURES
   if (currentListType === "facture") {
-    // Filtre année
-    const yearSel = document.getElementById("yearFilter");
-    if (yearSel && yearSel.value !== "all") {
-      const y = parseInt(yearSel.value, 10);
-      filtered = filtered.filter(
-        (d) => d.date && new Date(d.date).getFullYear() === y
-      );
-    }
 
-    // Filtre "seulement les factures impayées"
-    const unpaidToggle = document.getElementById("filterUnpaid");
-    if (unpaidToggle && unpaidToggle.checked) {
-      filtered = filtered.filter((d) => !d.paid);
-    }
+      // Filtre année
+      const yearSel = document.getElementById("yearFilter");
+      if (yearSel && yearSel.value !== "all") {
+        const y = parseInt(yearSel.value, 10);
+        filtered = filtered.filter(
+          (d) => d.date && new Date(d.date).getFullYear() === y
+        );
+      }
+
+      // Filtre "seulement les factures impayées"
+      const unpaidToggle = document.getElementById("filterUnpaid");
+      if (unpaidToggle && unpaidToggle.checked) {
+        filtered = filtered.filter((d) => !d.paid);
+      }
   }
 
   // 🔍 Filtre recherche (numéro, client, objet, statut, montant)
   const searchInput = document.getElementById("docSearchInput");
   const q = (searchInput ? searchInput.value : "").trim().toLowerCase();
-
   if (q) {
     filtered = filtered.filter((d) => {
       const number = (d.number || "").toLowerCase();
@@ -3202,6 +4055,7 @@ function loadDocumentsList() {
     }
 
     // ====== STATUT (colonne) ======
+
     let statutHTML = "";
 
     // --- FACTURE ---
@@ -3293,52 +4147,59 @@ function loadDocumentsList() {
     }
 
     // --- DEVIS ---
-    if (doc.type === "devis") {
-      let storedStatus = doc.status || "en_attente";
-      let displayStatus = storedStatus;
+if (doc.type === "devis") {
+  let storedStatus = doc.status || "en_attente";
+  let displayStatus = storedStatus;
 
-      if (
-        isDevisExpired("devis", doc.validityDate) &&
-        storedStatus === "en_attente"
-      ) {
-        displayStatus = "expire";
-      }
+  if (
+    isDevisExpired("devis", doc.validityDate) &&
+    storedStatus === "en_attente"
+  ) {
+    displayStatus = "expire";
+  }
 
-      let badgeDevisClass = "badge-devis-en-attente";
-      let text = "En attente";
+  let badgeDevisClass = "badge-devis-en-attente";
+  let text = "En attente";
 
-      if (displayStatus === "accepte") {
-        badgeDevisClass = "badge-devis-accepte";
-        text = "Accepté";
-      } else if (displayStatus === "refuse") {
-        badgeDevisClass = "badge-devis-refuse";
-        text = "Refusé";
-      } else if (displayStatus === "expire") {
-        badgeDevisClass = "badge-devis-expire";
-        text = "Expiré";
-      }
+  if (displayStatus === "accepte") {
+    badgeDevisClass = "badge-devis-accepte";
+    text = "Accepté";
+  } else if (displayStatus === "cloture") {
+    badgeDevisClass = "badge-devis-cloture";
+    text = "Clôturé";
+  } else if (displayStatus === "refuse") {
+    badgeDevisClass = "badge-devis-refuse";
+    text = "Refusé";
+  } else if (displayStatus === "expire") {
+    badgeDevisClass = "badge-devis-expire";
+    text = "Expiré";
+  }
 
-      const selectHtml =
-        `<select style="font-size:11px;margin-top:4px;" ` +
-        `onchange="setDevisStatus('${doc.id}', this.value)">` +
-        `<option value="en_attente" ${
-          storedStatus === "en_attente" ? "selected" : ""
-        }>En attente</option>` +
-        `<option value="accepte" ${
-          storedStatus === "accepte" ? "selected" : ""
-        }>Accepté</option>` +
-        `<option value="refuse" ${
-          storedStatus === "refuse" ? "selected" : ""
-        }>Refusé</option>` +
-        `<option value="expire" ${
-          storedStatus === "expire" ? "selected" : ""
-        }>Expiré</option>` +
-        `</select>`;
+  const selectHtml =
+    `<select style="font-size:11px;margin-top:4px;" ` +
+    `onchange="setDevisStatus('${doc.id}', this.value)">` +
+    `<option value="en_attente" ${
+      storedStatus === "en_attente" ? "selected" : ""
+    }>En attente</option>` +
+    `<option value="accepte" ${
+      storedStatus === "accepte" ? "selected" : ""
+    }>Accepté</option>` +
+    `<option value="cloture" ${
+      storedStatus === "cloture" ? "selected" : ""
+    }>Clôturé</option>` +
+    `<option value="refuse" ${
+      storedStatus === "refuse" ? "selected" : ""
+    }>Refusé</option>` +
+    `<option value="expire" ${
+      storedStatus === "expire" ? "selected" : ""
+    }>Expiré</option>` +
+    `</select>`;
 
-      statutHTML =
-        `<span class="badge ${badgeDevisClass}">${text}</span><br>` +
-        selectHtml;
-    }
+  statutHTML =
+    `<span class="badge ${badgeDevisClass}">${text}</span><br>` +
+    selectHtml;
+}
+
 
     // ====== BOUTONS (Modifier / Imprimer / Aperçu / Supprimer) ======
     let openBtnClass = "btn btn-primary btn-small";
@@ -3462,6 +4323,10 @@ function renderContractStatusBadge(contract) {
       return `<span class="status-badge status-accepted">En cours</span>`;
     }
 
+    if (devisStatus === "cloture" || devisStatus === "closed") {
+      return `<span class="status-badge status-terminated">Clôturé</span>`;
+    }
+
     if (devisStatus === "en_attente" || devisStatus === "pending") {
       return `<span class="status-badge status-pending">En attente</span>`;
     }
@@ -3472,6 +4337,7 @@ function renderContractStatusBadge(contract) {
     ) {
       return `<span class="status-badge status-refused">Non validé</span>`;
     }
+
 
     // fallback si bizarre
     return `<span class="status-badge status-pending">En attente</span>`;
@@ -4002,20 +4868,24 @@ function loadContractsList() {
   });
 }
 
-
 function setPaymentMode(id, mode) {
   const docs = getAllDocuments();
   const doc = docs.find((d) => d.id === id);
   if (!doc) return;
 
+  const wasPaid = !!doc.paid; // état avant modification
+
   if (!mode) {
+    // 🔴 Non réglée
     doc.paymentMode = "";
     doc.paid = false;
     doc.paymentDate = "";
   } else {
+    // 🟢 Réglée
     doc.paymentMode = mode;
     doc.paid = true;
 
+    // Date de paiement
     if (mode === "virement" || mode === "cheque") {
       doc.paymentDate = doc.paymentDate || doc.date;
     } else {
@@ -4023,8 +4893,21 @@ function setPaymentMode(id, mode) {
     }
   }
 
+  // 💾 On sauvegarde d'abord la facture modifiée
   saveDocuments(docs);
   saveSingleDocumentToFirestore(doc);
+
+  // 🔗 SI FACTURE LIÉE À UN DEVIS → on met à jour le statut du devis
+  if (doc.type === "facture" && doc.sourceDevisId && typeof setDevisStatus === "function") {
+    if (!wasPaid && doc.paid) {
+      // Passage NON PAYÉ → PAYÉ => le devis passe en "cloturé"
+      setDevisStatus(doc.sourceDevisId, "cloture");
+    } else if (wasPaid && !doc.paid) {
+      // Passage PAYÉ → NON PAYÉ => on remet le devis en "accepté"
+      setDevisStatus(doc.sourceDevisId, "accepte");
+    }
+  }
+
   loadDocumentsList();
 }
 
@@ -4047,20 +4930,28 @@ function setDevisStatus(id, status) {
   if (typeof saveSingleDocumentToFirestore === "function") {
     saveSingleDocumentToFirestore(doc);
   }
+  if (doc.type === "facture") {
+    // On re-check le seuil micro à chaque facture
+    checkMicroTVAThreshold(true);
+  }
+
 
   if (typeof loadDocumentsList === "function") {
     loadDocumentsList();
   }
 
-  // 2) Si on vient de passer à "accepte" → lancer la facturation du contrat lié
-if (status === "accepte" && oldStatus !== "accepte") {
+  // 2) Si on vient de passer à "accepte"
+  if (status === "accepte" && oldStatus !== "accepte") {
 
-    const contracts = getAllContracts() || [];
+    const contracts = (typeof getAllContracts === "function"
+      ? getAllContracts()
+      : []) || [];
 
     const linkedContracts = contracts.filter(c =>
       c.meta && c.meta.sourceDevisId === doc.id
     );
 
+    // 🟦 CAS 1 : il y a un contrat lié → on laisse la logique actuelle (échéances, etc.)
     linkedContracts.forEach(contract => {
       contract.meta = contract.meta || {};
       contract.meta.sourceDevisStatus = "accepte";
@@ -4073,7 +4964,7 @@ if (status === "accepte" && oldStatus !== "accepte") {
       }
 
       // ====================
-      // Gestion facturation
+      // Gestion facturation contrat
       // ====================
       if (!contract.pricing || !contract.pricing.billingMode) return;
       if (contract.pricing.nextInvoiceDate) return;
@@ -4094,20 +4985,69 @@ if (status === "accepte" && oldStatus !== "accepte") {
         }
       }
 
-      // Sauvegarde du contrat mis à jour
       const updated = getAllContracts().map(c =>
         c.id === contract.id ? contract : c
       );
-
       saveContracts(updated);
       if (typeof saveSingleContractToFirestore === "function") {
         saveSingleContractToFirestore(contract);
       }
     });
-}
+
+    // 🟥 CAS 2 : aucun contrat lié → on génère une facture "classique" automatiquement
+    if (linkedContracts.length === 0 && typeof createInvoiceFromDevis === "function") {
+      const factureAuto = createInvoiceFromDevis(doc);
+      if (factureAuto) {
+        console.log("[Devis] Facture auto créée à l'acceptation :", factureAuto.number);
+      }
+    }
+  }
+
 
 }
 
+// Crée (ou récupère) une facture à partir d'un devis
+function createInvoiceFromDevis(devis, options = {}) {
+  if (!devis || devis.type !== "devis") return null;
+
+  const docs = getAllDocuments();
+  const opts = options || {};
+
+  // 🔒 Si une facture existe déjà pour ce devis → on la réutilise (sauf force === true)
+  if (!opts.force) {
+    const existing = docs.find(
+      d => d.type === "facture" && d.sourceDevisId === devis.id
+    );
+    if (existing) {
+      return existing;
+    }
+  }
+
+  const facture = JSON.parse(JSON.stringify(devis));
+
+  facture.id = generateId("FAC");
+  facture.type = "facture";
+  facture.number = getNextNumber("facture");
+  facture.date = new Date().toISOString().split("T")[0];
+  facture.validityDate = "";
+  facture.paid = false;
+  facture.paymentMode = "";
+  facture.paymentDate = "";
+  facture.status = "";
+  facture.createdAt = new Date().toISOString();
+
+  // 🔗 Lien vers le devis d'origine
+  facture.sourceDevisId = devis.id;
+  facture.sourceDevisNumber = devis.number || "";
+
+  docs.push(facture);
+  saveDocuments(docs);
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(facture);
+  }
+
+  return facture;
+}
 
 // ================== TRANSFORMATION DEVIS -> FACTURE ==================
 
@@ -4123,6 +5063,7 @@ function transformToInvoice() {
     });
     return;
   }
+
   const devis = getDocument(currentDocumentId);
   if (!devis || devis.type !== "devis") {
     showConfirmDialog({
@@ -4136,23 +5077,20 @@ function transformToInvoice() {
     return;
   }
 
-  const docs = getAllDocuments();
-  const facture = JSON.parse(JSON.stringify(devis));
+  // ✅ crée une facture si besoin, sinon réutilise celle déjà liée au devis
+  const facture = createInvoiceFromDevis(devis);
 
- facture.id = generateId("FAC");
-  facture.type = "facture";
-  facture.number = getNextNumber("facture");
-  facture.date = new Date().toISOString().split("T")[0];
-  facture.validityDate = "";
-  facture.paid = false;
-  facture.paymentMode = "";
-  facture.paymentDate = "";
-  facture.status = "";
-  facture.createdAt = new Date().toISOString();
-
-  docs.push(facture);
-  saveDocuments(docs);
-  saveSingleDocumentToFirestore(facture);
+  if (!facture) {
+    showConfirmDialog({
+      title: "Erreur",
+      message: "Impossible de créer une facture à partir de ce devis.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "error",
+      icon: "❌"
+    });
+    return;
+  }
 
   showConfirmDialog({
     title: "Devis transformé",
@@ -4165,6 +5103,7 @@ function transformToInvoice() {
 
   loadDocument(facture.id);
 }
+
 
 
 // ================== EXPORT CSV FACTURES ==================
@@ -4895,6 +5834,8 @@ function showConfirmDialog({
   overlay.classList.remove("hidden");
 }
 
+const signatureClientTitle = "Bon pour accord";
+const signatureClientText  = "Bon pour accord, lu et approuvé.";
 
 
 
@@ -5119,6 +6060,9 @@ function openPrintable(id, previewOnly) {
     "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/logo.png";
   const signSrc =
     "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
+  const stampSrc =
+    "https://ton-url-ou-ton-fichier/tampon.png"; // ⬅ remplace par ton vrai lien
+
 
   let reglementHtml = "";
   if (!isDevis && doc.paid && doc.paymentMode) {
@@ -5245,11 +6189,13 @@ if (isDevis && doc.signature) {
         <p>Signature du client :</p>
         <img src="${doc.signature}" class="sig" alt="Signature du client">
       </div>
-      <div class="signature-block">
+           <div class="signature-block">
         <div class="signature-title">AquaClim Prestige</div>
-        <p>Signature et cachet de l’entreprise</p>
+        <p>Signature et tampon de l’entreprise</p>
         <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+        <img src="${stampSrc}" class="sig" alt="Tampon AquaClim Prestige">
       </div>
+
     </div>
   `;
 } else if (isDevis) {
@@ -5266,9 +6212,11 @@ if (isDevis && doc.signature) {
       </div>
       <div class="signature-block">
         <div class="signature-title">AquaClim Prestige</div>
-        <p>Signature et cachet de l’entreprise</p>
+        <p>Signature et tampon de l’entreprise</p>
         <img src="${signSrc}" class="sig" alt="Signature AquaClim Prestige">
+        <img src="${stampSrc}" class="sig" alt="Tampon AquaClim Prestige">
       </div>
+
     </div>
   `;
 }
@@ -6143,6 +7091,7 @@ function showHome() {
   const tabDevis    = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
   const tabFactures = document.getElementById("tabFactures");
+ const tabCA       = document.getElementById("tabCA");
 
   const homeView     = document.getElementById("homeView");
   const listView     = document.getElementById("listView");
@@ -6154,6 +7103,7 @@ function showHome() {
   tabDevis   && tabDevis.classList.remove("active");
   tabContrats&& tabContrats.classList.remove("active");
   tabFactures&& tabFactures.classList.remove("active");
+  tabCA      && tabCA.classList.remove("active");
 
   // Vues
   homeView     && homeView.classList.remove("hidden");
@@ -6218,8 +7168,10 @@ function refreshHomeStats() {
   const devisCount     = devis.length;
   const devisPending   = devis.filter(d => !d.status || d.status === "en_attente").length;
   const devisAccepted  = devis.filter(d => d.status === "accepte").length;
+  const devisClosed    = devis.filter(d => d.status === "cloture").length;
   const devisRefused   = devis.filter(d => d.status === "refuse").length;
   const devisExpired   = devis.filter(d => d.status === "expire").length;
+
 
   const lastDevis = devis
     .slice()
@@ -6238,9 +7190,11 @@ function refreshHomeStats() {
     elDevisStatus.textContent =
       `${devisPending} en attente · ` +
       `${devisAccepted} acceptés · ` +
+      `${devisClosed} clôturés · ` +
       `${devisRefused} refusés · ` +
       `${devisExpired} expirés`;
   }
+
 
   if (elDevisLast) {
     if (lastDevis) {
@@ -6297,13 +7251,61 @@ function refreshHomeStats() {
     elInvUnpaid.textContent = `Impayées : ${unpaid.length}`;
   }
 
-  if (elInvAmt) {
+    if (elInvAmt) {
     const fmt = (typeof formatEuro === "function")
       ? formatEuro(unpaidAmount)
       : (unpaidAmount.toFixed(2) + " €");
     elInvAmt.textContent = `Montant impayé : ${fmt}`;
   }
+
+  // ========= CHIFFRE D'AFFAIRES (CARTE DASHBOARD) =========
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); // 0-11
+
+  let caTotal = 0;
+  let caPaid = 0;
+  let caUnpaid = 0;
+  let caThisMonth = 0;
+
+  factures.forEach((f) => {
+    const val = Number(f.totalTTC || 0);
+    if (isNaN(val)) return;
+
+    caTotal += val;
+    if (f.paid) {
+      caPaid += val;
+    } else {
+      caUnpaid += val;
+    }
+
+    if (f.date) {
+      const d = new Date(f.date + "T00:00:00");
+      if (!isNaN(d.getTime()) &&
+          d.getFullYear() === currentYear &&
+          d.getMonth() === currentMonth) {
+        caThisMonth += val;
+      }
+    }
+  });
+
+  const elCaTotal  = document.getElementById("dashCATotal");
+  const elCaPaid   = document.getElementById("dashCAPaid");
+  const elCaUnpaid = document.getElementById("dashCAUnpaid");
+  const elCaMonth  = document.getElementById("dashCAMonth");
+
+  const fmt = (v) =>
+    (typeof formatEuro === "function")
+      ? formatEuro(v)
+      : (Number(v || 0).toFixed(2) + " €");
+
+  if (elCaTotal)  elCaTotal.textContent  = "CA total : " + fmt(caTotal);
+  if (elCaPaid)   elCaPaid.textContent   = "Payé : " + fmt(caPaid);
+  if (elCaUnpaid) elCaUnpaid.textContent = "Impayé : " + fmt(caUnpaid);
+   if (elCaMonth)  elCaMonth.textContent  = "Mois en cours : " + fmt(caThisMonth);
+
 }
+
 
 // ----- LocalStorage contrats -----
 
@@ -6805,7 +7807,7 @@ function isDevisAcceptedForContract(contract) {
   if (!devis) return false;
 
   const status = devis.status || "en_attente";
-  return status === "accepte";
+  return status === "accepte" || status === "cloture";
 }
 
 
@@ -7827,6 +8829,11 @@ function updateCtDevisBanner(devis, metaFallback) {
     color  = "#1E7C1E";
     border = "#3CB43C";
     label  = "Accepté";
+  } else if (norm === "closed" || norm === "cloture") {
+    bg     = "#E0E0E0";
+    color  = "#424242";
+    border = "#BDBDBD";
+    label  = "Clôturé";
   } else if (norm === "refused" || norm === "refuse") {
     bg     = "#FFE5E5";
     color  = "#C62828";
@@ -9782,9 +10789,11 @@ ${terminationBillingBlockTop}
         <!-- 🟩 SIGNATURE PRESTATAIRE -->
         <div class="signature-block">
           <div class="signature-title">AquaClim Prestige</div>
-          <p>Signature et cachet de l’entreprise</p>
+          <p>Signature et tampon de l’entreprise</p>
           <img src="signature.png" class="sig" alt="Signature AquaClim Prestige" />
+          <img src="tampon.png" class="sig" alt="Tampon AquaClim Prestige" />
         </div>
+
 
       </div>
     </div>
@@ -11383,6 +12392,30 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// ==========================================
+// AUTO-GÉNÉRATION DES ANNÉES DOCUMENTS
+// ==========================================
+function fillYearMenu() {
+    const docs = getAllDocuments();
+    const select = document.getElementById("yearMenu");
+    if (!select) return;
+
+    const years = new Set(["2025", "2026", "2027"]);
+
+    docs.forEach(d => {
+        if (d.date) {
+            const y = d.date.split("-")[0];
+            years.add(y);
+        }
+    });
+
+    const sorted = Array.from(years).sort();
+    select.innerHTML = '<option value="all">Toutes</option>';
+
+    sorted.forEach(y => {
+        select.innerHTML += `<option value="${y}">${y}</option>`;
+    });
+}
 
 
 // ================== INIT ==================
@@ -11427,6 +12460,10 @@ window.onload = function () {
 
   // 🛰 Synchro Firebase en arrière-plan
   initFirebase();
+
+  if (typeof refreshHomeStats === "function") {
+    refreshHomeStats();
+  }
 
 
   // Contrats UI
