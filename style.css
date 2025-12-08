@@ -110,6 +110,7 @@ body {
     text-overflow: ellipsis;
 }
 
+
 .list-title {
     font-weight: 600;
     color: #1a74d9;
@@ -2469,5 +2470,523 @@ textarea {
 }
 
 
+.offline-badge {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  display: none;
+  align-items: center;
+  gap: 6px;
+  z-index: 9999;
+}
+
+.offline-badge.offline {
+  background: #dc3545;
+  color: #fff;
+}
+
+.offline-badge.syncing {
+  background: #f59e0b;
+  color: #111827;
+}
+
+.offline-badge.online {
+  background: #2e7d32;
+  color: #fff;
+}
+
+.health-card {
+    margin-top: 10px;
+}
+
+.health-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.health-table th,
+.health-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+}
+
+.health-table th {
+    font-weight: 600;
+    color: #4b5563;
+    background: #f9fafb;
+}
+
+.health-status {
+    font-weight: 700;
+}
+
+/* Couleurs statut */
+.health-ok {
+    color: #15803d; /* vert */
+}
+
+.health-warn {
+    color: #f97316; /* orange */
+}
+
+.health-bad {
+    color: #dc2626; /* rouge */
+}
+
+
+
+.history-card {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.history-entry {
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: #f5f5f5;
+  border: 1px solid #e0e0e0;
+}
+
+.history-meta {
+  font-size: 11px;
+  color: #777;
+  margin-bottom: 3px;
+}
+
+.history-type {
+  font-weight: 600;
+}
+
+.history-detail {
+  white-space: pre-line;
+}
+
+.history-empty {
+  font-size: 12px;
+  color: #999;
+}
+.number-cell {
+  white-space: normal !important;
+  line-height: 1.2;
+}
+
+.number-cell .client-subject {
+  display: block;
+  font-size: 0.85rem;
+  opacity: 0.85;
+  margin-top: 3px;
+
+
+  max-width: 220px;          
+  white-space: normal;      
+  overflow: visible;        
+  text-overflow: unset;      
+  word-wrap: break-word;    
+}
+
+/* ================= AUDIT DOCUMENT ================= */
+
+
+.document-health-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.document-health-table th {
+  text-align: left;
+  background: #f0f0f0;
+  padding: 6px;
+}
+
+.document-health-table td {
+  padding: 6px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.audit-ok {
+  color: #0c7a00;
+  font-weight: 600;
+}
+
+.audit-warn {
+  color: #c98400;
+  font-weight: 600;
+}
+
+.audit-crit {
+  color: #b00020;
+  font-weight: 700;
+}
+
+/* ===== Planning hebdomadaire ===== */
+
+.planning-card {
+  margin-top: 24px;
+}
+
+.planning-header {
+  display: flex;
+  justify-content: center;      /* centré */
+  align-items: center;
+  gap: 16px;
+  margin: 10px 0 24px;          /* plus d’espace sous les boutons */
+}
+
+.planning-week-label {
+  font-weight: 600;
+  color: #374151;
+}
+
+/* grille des jours */
+.planning-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.day-column {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  min-height: 90px;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.05s ease, border-color 0.15s;
+}
+
+.day-column:hover {
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+/* jour d'aujourd'hui : fond léger */
+.day-column.is-today {
+  background: #f1f5f9;
+}
+
+/* jour sélectionné : contour bleu qui suit ton clic */
+.day-column.is-selected {
+  border-color: #1a74d9;
+  box-shadow: 0 0 0 2px rgba(26, 116, 217, 0.25);
+}
+
+.day-column.is-weekend {
+  background: #f9fafb;
+}
+
+.day-column-header {
+  font-size: 13px;
+  font-weight: 600;
+  color: #4b5563;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.planning-add-btn {
+  border: none;
+  background: #e5e7eb;
+  border-radius: 999px;
+  font-size: 11px;
+  padding: 1px 7px;
+  cursor: pointer;
+}
+
+.planning-add-btn:hover {
+  background: #d1d5db;
+}
+
+.day-visits {
+  font-size: 12px;
+}
+
+.visit-entry {
+  background: #eef2ff;           /* visites contrat */
+  border-radius: 8px;
+  padding: 4px 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+}
+
+.visit-entry.visit-manual {
+  background: #ecfdf5;           /* ajout manuel */
+}
+
+.visit-pool {
+  font-size: 11px;
+  color: #4b5563;
+}
+
+.visit-empty {
+  font-size: 12px;
+  color: #9ca3af;
+}
+
+/* panneau de détails sous le planning */
+.planning-details {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 13px;
+}
+
+.planning-details.hidden {
+  display: none;
+}
+
+.planning-details h3 {
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+
+.planning-details-entry {
+  margin-bottom: 8px;
+}
+
+/* petite ligne de date dans le popup planning */
+.popup-date {
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.delete-manual-btn {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: #c62828;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.delete-manual-btn:hover {
+  background: #b71c1c;
+}
+
+
+/* ======= TABLEAU ATTESTATIONS CLEAN ======= */
+
+#attestationView table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+#attestationView table th,
+#attestationView table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
+}
+
+#attestationView table th {
+  background: #f7f9fc;
+  font-weight: 600;
+  color: #333;
+}
+
+#attestationView .col-date {
+  width: 110px;
+  white-space: nowrap;
+}
+
+#attestationView .col-client {
+  width: 160px;
+  font-weight: 600;
+}
+
+#attestationView .col-address {
+  width: 280px;
+}
+
+#attestationView .col-units {
+  width: 80px;
+  text-align: center;
+}
+
+#attestationView .col-source {
+  width: 140px;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #555;
+}
+
+#attestationView .col-actions {
+  width: 150px;
+  text-align: right;
+}
+
+#attestationView .btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 6px;
+  margin-left: 4px;
+}
+
+.no-docs-cell {
+  text-align: center;
+  padding: 25px 0 !important;
+  color: #888;
+  font-style: italic;
+}
+
+
+/* ====== POPUP RAPPORT D'INTERVENTION ====== */
+
+#rapportPopup .popup {
+    width: 780px;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header (client + date) */
+.rapport-header-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+@media (min-width: 800px) {
+    .rapport-header-grid {
+        grid-template-columns: 1.2fr 0.8fr;
+    }
+}
+
+/* ========================= */
+/*   LISTE DES SECTIONS      */
+/* ========================= */
+
+.rapport-checklist {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    max-height: 300px;
+    overflow-y: auto;
+    padding-right: 10px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Pour les grands écrans → 2 colonnes */
+@media (min-width: 900px) {
+    .rapport-checklist {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+}
+
+/* ========================= */
+/*   SECTION (carte)         */
+/* ========================= */
+
+.rapport-section {
+    background: #f9fafc;
+    border-radius: 10px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
+    width: 100%;
+    min-width: 300px; /* Empêche l’écrasement */
+    box-sizing: border-box;
+}
+
+@media (min-width: 900px) {
+    .rapport-section {
+        width: calc(50% - 12px);
+    }
+}
+
+.rapport-section h4 {
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a74d9;
+}
+
+/* ========================= */
+/*   LIGNES CHECKLIST        */
+/* ========================= */
+
+.rapport-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    white-space: nowrap;     /* Texte sur UNE ligne */
+    overflow: hidden;
+}
+
+.rapport-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    accent-color: #1a74d9;
+}
+
+/* Texte de l’item */
+.rapport-item-text {
+    flex: 1;
+    display: inline-block;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Coupe proprement si vraiment trop long */
+}
+
+/* ====== Analyse de l'eau dans le rapport ====== */
+
+.rapport-analyse {
+  margin-top: 12px;
+  margin-bottom: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f9fafc;
+  border: 1px solid #e5e7eb;
+}
+
+.rapport-analyse h4 {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a74d9;
+}
+
+.rapport-analyse-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.rapport-analyse-grid .form-group {
+  flex: 1 1 160px;
+  margin-bottom: 0;
+}
+
+.rapport-analyse-grid input {
+  max-width: 180px;
+}
 
 

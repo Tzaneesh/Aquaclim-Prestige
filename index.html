@@ -41,8 +41,15 @@
   <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
   <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
   <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
+<button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
+
 <button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
 </div>
+
+<div id="offlineBadge" class="offline-badge" style="display:none;">
+  Hors ligne – données en local
+</div>
+
 
 <section id="homeView">
 
@@ -85,35 +92,273 @@
         <button class="dash-btn dash-btn-facture" onclick="openFromHome('facture')">Voir les factures</button>
       </div>
 
-<!-- 📊 CHIFFRE D'AFFAIRES (URSSAF) -->
-  <div class="dash-card dash-card-ca">
-    <div class="dash-card-header">
-      <span class="dash-card-icon">📊</span>
-      <div>
-        <h3>Chiffre d'affaires</h3>
-      </div>
-    </div>
+<!-- 📊 CHIFFRE D'AFFAIRES-->
+ <div class="dash-card dash-card-ca">
+        <div class="dash-card-header">
+          <span class="dash-card-icon">📊</span>
+          <div>
+            <h3>Chiffre d'affaires</h3>
+          </div>
+        </div>
 
-    <p id="dashCATotal">CA total : –</p>
-    <p id="dashCAPaid" class="dash-sub">Payé : –</p>
-    <p id="dashCAUnpaid" class="dash-sub">Impayé : –</p>
-    <p id="dashCAMonth" class="dash-sub">Mois en cours : –</p>
-<p id="dashTVAMicroBadge"
-   class="dash-sub"
-   style="display:none; font-weight:600; color:#b00020;">
-  TVA activée (20 %)
-</p>
+        <p id="dashCATotal">CA total : –</p>
+        <p id="dashCAPaid" class="dash-sub">Payé : –</p>
+        <p id="dashCAUnpaid" class="dash-sub">Impayé : –</p>
+        <p id="dashCAMonth" class="dash-sub">Mois en cours : –</p>
+        <p id="dashTVAMicroBadge"
+           class="dash-sub"
+           style="display:none; font-weight:600; color:#b00020;">
+          TVA activée (20 %)
+        </p>
 
+        <button class="dash-btn dash-btn-primary" onclick="openCAReport()">
+          Voir le CA détaillé
+        </button>
+      </div> <!-- fin .dash-card-ca -->
 
-    <button class="dash-btn dash-btn-primary" onclick="openCAReport()">
-      Voir le CA détaillé
+    </div> <!-- fin .dashboard-grid -->
+
+    <!-- 🩺 Tableau État de santé global -->
+    <div class="card health-card">
+      <h2 class="section-title">État de santé global</h2>
+      <table class="health-table">
+        <thead>
+          <tr>
+            <th>Catégorie</th>
+            <th>Statut</th>
+            <th>Détail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="healthRowFacturesLate">
+            <td>Factures critiques</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+
+          <tr id="healthRowFacturesPending">
+            <td>Factures en attente</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+
+          <tr id="healthRowDevis">
+            <td>Devis</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+
+          <tr id="healthRowContrats">
+            <td>Contrats</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+          <!-- Plus tard : ligne Agenda -->
+        </tbody>
+      </table>
+    </div> <!-- fin .health-card -->
+
+    <!-- 🗓️ Planning de la semaine -->
+   <div class="card planning-card">
+  <h2 class="section-title">Planning de la semaine</h2>
+
+  <div class="planning-header">
+    <button type="button" class="btn btn-secondary btn-small"
+            onclick="changePlanningWeek(-1)">
+      ← Semaine précédente
+    </button>
+
+    <span id="planningWeekLabel" class="planning-week-label"></span>
+
+    <button type="button" class="btn btn-secondary btn-small"
+            onclick="changePlanningWeek(1)">
+      Semaine suivante →
     </button>
   </div>
+
+  <div id="planningGrid" class="planning-grid"></div>
+
+  <!-- détails du jour sélectionné -->
+  <div id="planningDetails" class="planning-details hidden"></div>
 </div>
+
+</div> <!-- fin .dashboard -->
+</section> <!-- fin #homeView -->
+
+<section id="attestationView" class="hidden">
+  <div class="card">
+    <h2>📑 Attestations & Rapports</h2>
+
+    <button class="btn btn-primary" onclick="openClimAttestationGenerator()">
+      Générer une attestation clim
+    </button>
+
+    <button class="btn btn-primary" onclick="openPiscineRapportGenerator()">
+      Générer un rapport d’intervention
+    </button>
+  </div>
+
+  <!-- 🧾 Historique des attestations -->
+  <div class="card">
+    <h3>Historique des attestations clim</h3>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Client</th>
+          <th>Adresse</th>
+          <th>Unités</th>
+          <th>Source</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="attestationsTableBody">
+        <tr>
+          <td colspan="6" class="no-docs-cell">
+            Aucune attestation enregistrée pour le moment
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+<div class="card">
+  <h3>Historique des rapports d’intervention</h3>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Client</th>
+        <th>Type</th>
+        <th>Source</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rapportsTableBody">
+      <tr>
+        <td colspan="5" class="no-docs-cell">
+          Aucun rapport enregistré pour le moment
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+
 
 </section>
 
+<div id="rapportPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h2>📝 Rapport d’intervention</h2>
 
+    <div class="rapport-header-grid">
+      <div>
+        <label>Nom du client</label>
+        <input type="text" id="rapClientName">
+      </div>
+
+      <div>
+        <label>Date d’intervention</label>
+        <input type="date" id="rapDate">
+      </div>
+    </div>
+
+    <label>Adresse</label>
+    <input type="text" id="rapClientAddress">
+
+    <label>Type de rapport</label>
+    <select id="rapportType" onchange="rebuildRapportChecklist()">
+      <option value="">— Choisir —</option>
+    </select>
+
+    <div id="rapportChecklist" class="rapport-checklist"></div>
+
+<div class="rapport-analyse">
+  <h4>Analyse de l’eau (optionnel)</h4>
+
+  <div class="rapport-analyse-grid">
+    <div class="form-group">
+      <label>pH mesuré</label>
+      <input type="number" id="rapPH" step="0.1" placeholder="ex : 7.4">
+    </div>
+
+    <div class="form-group">
+      <label>Chlore libre (mg/L)</label>
+      <input type="number" id="rapChlore" step="0.1" placeholder="ex : 2.5">
+    </div>
+  </div>
+</div>
+
+    <label>Remarques / anomalies</label>
+    <textarea id="rapNotes" rows="3"></textarea>
+
+    <div class="popup-buttons">
+      <button class="btn btn-success" onclick="saveRapportOnly()">Enregistrer</button>
+      <button class="btn btn-secondary" onclick="closeRapportPopup()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
+
+<div id="attestationPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h2>Attestation d’entretien clim</h2>
+
+    <label>Nom du client</label>
+    <input type="text" id="attClientName">
+
+    <label>Adresse</label>
+    <input type="text" id="attClientAddress">
+
+    <label>Date d’intervention</label>
+    <input type="date" id="attDate">
+
+    <label>Nombre d’unités clim entretenues</label>
+    <input type="number" id="attUnits" min="1" value="1">
+
+    <label>Remarques (optionnel)</label>
+    <textarea id="attNotes" rows="3"></textarea>
+
+<div class="popup-buttons">
+  <button class="btn btn-success" onclick="saveAttestationOnly()">Enregistrer</button>
+  <button class="btn btn-secondary" onclick="closeAttestationPopup()">Fermer</button>
+</div>
+
+  </div>
+</div>
+
+
+<!-- POPUP ajout manuel planning -->
+<div id="planningPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Ajouter une intervention</h3>
+    <p id="planningPopupDate" class="popup-date"></p>
+
+    <label>Prestation</label>
+    <select id="planningPopupPrestation"></select>
+
+    <label>Nom du client</label>
+    <input type="text" id="planningPopupClient">
+
+    <label>Adresse</label>
+    <input type="text" id="planningPopupAddress">
+
+    <label>Téléphone</label>
+    <input type="text" id="planningPopupPhone">
+
+    <label>Notes</label>
+    <textarea id="planningPopupNotes" placeholder="Notes supplémentaires..."></textarea>
+
+    <div class="popup-buttons">
+      <button class="btn btn-primary" onclick="confirmManualPlanningPopup()">Ajouter</button>
+      <button class="btn btn-secondary" onclick="closeManualPlanningPopup()">Annuler</button>
+    </div>
+  </div>
+</div>
 
   <!-- LISTE DES DOCUMENTS -->
 
@@ -602,6 +847,33 @@
   </label>
 </div>
 
+<!-- ================= HISTORIQUE DOCUMENT ================= -->
+
+<div id="historyCard" class="history-card no-print">
+  <h3 class="section-title">Historique du document</h3>
+  <div id="historyList" class="history-list">
+    <div class="history-empty">Aucune modification pour le moment.</div>
+  </div>
+</div>
+
+<!-- ================= SANTÉ DU DOCUMENT ================= -->
+
+<div id="documentHealthCard" class="health-card no-print" style="margin-top:20px;">
+  <h3 class="section-title">Santé du document</h3>
+
+  <table class="document-health-table">
+    <thead>
+      <tr>
+        <th>Catégorie</th>
+        <th>Statut</th>
+        <th>Détails</th>
+      </tr>
+    </thead>
+    <tbody id="documentHealthBody">
+      <tr><td colspan="3">Analyse en cours...</td></tr>
+    </tbody>
+  </table>
+</div>
 
 
       <!-- Notes -->
@@ -621,7 +893,6 @@
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
 
-    </div>
   </section>
 
 <!-- ========================================================= -->
@@ -1075,6 +1346,25 @@
 
   </div> <!-- fin .card -->
 
+<!-- ================= SANTÉ DU CONTRAT ================= -->
+
+<div id="contractHealthCard" class="health-card no-print" style="margin-top:20px;">
+  <h3 class="section-title">Santé du contrat</h3>
+
+  <table class="document-health-table">
+    <thead>
+      <tr>
+        <th>Catégorie</th>
+        <th>Statut</th>
+        <th>Détails</th>
+      </tr>
+    </thead>
+    <tbody id="contractHealthBody">
+      <tr><td colspan="3">Analyse en cours...</td></tr>
+    </tbody>
+  </table>
+</div>
+
 </section> <!-- fin #contractView -->
 
 
@@ -1373,9 +1663,11 @@
 <!-- Librairie SignaturePad -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
 
+<!-- jsPDF pour génération des PDF -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
 <!-- App JS -->
 <script src="app.js"></script>
-
 
 <!-- POPUP SIGNATURE (UNIQUE) -->
 <div id="signaturePopup" class="signature-overlay hidden">
