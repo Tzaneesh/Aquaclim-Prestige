@@ -3106,4 +3106,96 @@ textarea {
   }
 }
 
+/* =========================================================
+   💊 2) TABLETTES (iPad)
+========================================================= */
+@media (min-width: 601px) and (max-width: 1024px) {
+
+  .container {
+    max-width: 960px;
+    padding: 16px;
+  }
+
+  .header-inner {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header h1 {
+    font-size: 30px;
+  }
+
+  .top-nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .top-nav .btn {
+    font-size: 14px;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .prestation-line {
+    grid-template-columns: 2.2fr 1.4fr 0.9fr 0.5fr;
+  }
+
+  .planning-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .card table,
+  table.table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+
+/* ===== Fix tableaux documents (devis/factures/contrats) ===== */
+@media (max-width: 768px) {
+
+  .documents-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    table-layout: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .documents-table th,
+  .documents-table td {
+    white-space: nowrap;
+    font-size: 12px;
+    padding: 8px;
+  }
+
+  /* Suppression largeur figée du statut */
+  .documents-table th:nth-child(6),
+  .documents-table td.status-cell {
+    width: auto !important;
+  }
+}
+
+/* Popup Rapport */
+#rapportPopup .popup {
+  width: 780px;
+  max-width: 95vw;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Popup Planning */
+#planningPopup .popup {
+  max-height: 90vh;
+  overflow-y: auto;
+}
 
