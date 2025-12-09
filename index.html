@@ -22,13 +22,16 @@
     <div class="header-inner">
       <img src="logo.png" alt="AquaClim Prestige" class="header-logo" />
       <div>
-        <h1>AquaClim Prestige</h1>
-        <p class="subtitle">Entretien & Dépannage - Climatisation & Piscine</p>
-        <p class="contact">
-          Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
-          Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
-          SIRET : <strong>XXXXXXXXXXXXX</strong>
-        </p>
+       <h1 class="js-company-name">AquaClim Prestige</h1>
+<p class="subtitle js-company-subtitle">Entretien & Dépannage - Climatisation & Piscine</p>
+<p class="contact">
+  <span class="js-company-legal">Le Blevennec Loïc</span> –
+  <span class="js-company-address">2 avenue Cauvin, 06100 Nice</span><br>
+  Tél : <span class="js-company-phone">06 03 53 77 73</span> –
+  Email : <span class="js-company-email">aquaclimprestige@gmail.com</span><br>
+  SIRET : <strong class="js-company-siret">XXXXXXXXXXXXX</strong>
+</p>
+
       </div>
     </div>
   </header>
@@ -41,9 +44,9 @@
   <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
   <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
   <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
-<button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
-
-<button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
+  <button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
+  <button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
+  <button id="tabSettings" class="btn tab-btn" onclick="showSettings()">⚙️ Paramètres</button>
 </div>
 
 <div id="offlineBadge" class="offline-badge" style="display:none;">
@@ -246,9 +249,94 @@
   </table>
 </div>
 
-
-
 </section>
+
+<!-- ================== PARAMÈTRES ENTREPRISE ================== -->
+<section id="settingsView" class="hidden">
+  <div class="card">
+    <h2 class="section-title">Paramètres de l’entreprise</h2>
+    <p style="margin-bottom:10px;">
+      Ces informations seront utilisées pour l’en-tête, les devis, factures, contrats,
+      attestations et coordonnées bancaires.
+    </p>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confCompanyName">Nom commercial</label>
+        <input type="text" id="confCompanyName" />
+      </div>
+      <div class="form-group">
+        <label for="confSubtitle">Sous-titre</label>
+        <input type="text" id="confSubtitle" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confLegalName">Nom légal / gérant</label>
+        <input type="text" id="confLegalName" />
+      </div>
+      <div class="form-group">
+        <label for="confSiret">SIRET</label>
+        <input type="text" id="confSiret" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confAddress">Adresse</label>
+        <input type="text" id="confAddress" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confPhone">Téléphone</label>
+        <input type="text" id="confPhone" />
+      </div>
+      <div class="form-group">
+        <label for="confEmail">Email</label>
+        <input type="email" id="confEmail" />
+      </div>
+    </div>
+
+    <hr style="margin:18px 0;">
+
+    <h3 class="section-title">Coordonnées bancaires (RIB / IBAN)</h3>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confRibHolder">Titulaire du compte</label>
+        <input type="text" id="confRibHolder" />
+      </div>
+      <div class="form-group">
+        <label for="confBankName">Banque</label>
+        <input type="text" id="confBankName" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confIban">IBAN</label>
+        <input type="text" id="confIban" />
+      </div>
+      <div class="form-group">
+        <label for="confBic">BIC</label>
+        <input type="text" id="confBic" />
+      </div>
+    </div>
+
+    <div class="actions no-print" style="margin-top:20px;">
+      <button class="btn btn-primary" type="button" onclick="saveCompanySettingsFromForm()">
+        💾 Enregistrer les paramètres
+      </button>
+    </div>
+  </div>
+</section>
+
+
+
+
 
 <div id="rapportPopup" class="popup-overlay hidden">
   <div class="popup">
@@ -1400,9 +1488,8 @@
 
 
   <!-- ================= POPUP CONFIRM CUSTOM ================= -->
-  <div id="confirmOverlay" ...
-
-  <div id="confirmOverlay" class="confirm-overlay hidden">
+ 
+ <div id="confirmOverlay" class="confirm-overlay hidden">
     <div class="confirm-box">
 
       <div class="confirm-icon" id="confirmIcon">⚠️</div>
@@ -1585,15 +1672,13 @@
     <textarea id="sendMessagePreview" rows="7"></textarea>
 
     <div class="popup-buttons">
-<div class="popup-buttons">
-  <button class="btn btn-primary btn-small" type="button" onclick="sendByEmail()">✉️ Envoyer par email</button>
-  <button class="btn btn-success btn-small" type="button" onclick="sendByWhatsApp()">💬 Envoyer par WhatsApp</button>
-  <button class="btn btn-secondary btn-small" type="button" onclick="closeSendPopup()">Fermer</button>
-</div>
-
+      <button class="btn btn-primary btn-small" type="button" onclick="sendByEmail()">✉️ Envoyer par email</button>
+      <button class="btn btn-success btn-small" type="button" onclick="sendByWhatsApp()">💬 Envoyer par WhatsApp</button>
+      <button class="btn btn-secondary btn-small" type="button" onclick="closeSendPopup()">Fermer</button>
     </div>
   </div>
 </div>
+
 
 
 

@@ -56,6 +56,71 @@ function todayISO() {
 return formatDateYMD(new Date());
 }
 
+// ================== PARAMÈTRES ENTREPRISE ==================
+
+const COMPANY_SETTINGS_KEY = "acp_company_settings_v1";
+
+function getDefaultCompanySettings() {
+  return {
+    companyName: "AquaClim Prestige",
+    subtitle: "Entretien & Dépannage - Climatisations & Piscines",
+    legalName: "Le Blevennec Loïc",
+    address: "2 avenue Cauvin, 06100 Nice",
+    phone: "06 03 53 77 73",
+    email: "aquaclimprestige@gmail.com",
+    siret: "XXXXXXXXXXXXX",
+    ribHolder: "AquaClim Prestige – Le Blevennec Loïc",
+    bankName: "Banque Fictive",
+    iban: "FR76 1234 5678 9012 3456 7890 123",
+    bic: "FICTFRPPXXX"
+  };
+}
+
+function getCompanySettings() {
+  try {
+    const raw = localStorage.getItem(COMPANY_SETTINGS_KEY);
+    if (!raw) return getDefaultCompanySettings();
+    const parsed = JSON.parse(raw);
+    return { ...getDefaultCompanySettings(), ...parsed };
+  } catch (e) {
+    return getDefaultCompanySettings();
+  }
+}
+
+function saveCompanySettings(settings) {
+  const clean = { ...getDefaultCompanySettings(), ...settings };
+  try {
+    localStorage.setItem(COMPANY_SETTINGS_KEY, JSON.stringify(clean));
+  } catch (e) {}
+  applyCompanySettingsToUI(clean);
+}
+
+function applyCompanySettingsToUI(settings) {
+  const s = settings || getCompanySettings();
+
+  document.querySelectorAll(".js-company-name").forEach(el => {
+    el.textContent = s.companyName;
+  });
+  document.querySelectorAll(".js-company-subtitle").forEach(el => {
+    el.textContent = s.subtitle;
+  });
+  document.querySelectorAll(".js-company-legal").forEach(el => {
+    el.textContent = s.legalName;
+  });
+  document.querySelectorAll(".js-company-address").forEach(el => {
+    el.textContent = s.address;
+  });
+  document.querySelectorAll(".js-company-phone").forEach(el => {
+    el.textContent = s.phone;
+  });
+  document.querySelectorAll(".js-company-email").forEach(el => {
+    el.textContent = s.email;
+  });
+  document.querySelectorAll(".js-company-siret").forEach(el => {
+    el.textContent = s.siret;
+  });
+}
+
 
 // ================== CONSTANTES / MODÈLES ==================
 
@@ -1280,6 +1345,9 @@ function showAttestations() {
 
   const attestationView = document.getElementById("attestationView");
   if (attestationView) attestationView.classList.remove("hidden");
+const settingsView = document.getElementById("settingsView");
+settingsView && settingsView.classList.add("hidden");
+
 
   // ===== Listes attestations + rapports =====
   if (typeof loadAttestationsList === "function") {
@@ -1289,6 +1357,89 @@ function showAttestations() {
     loadRapportsList();
   }
 }
+
+// ================== VUE PARAMÈTRES ==================
+
+function showSettings() {
+  // onglets
+  const tabHome     = document.getElementById("tabHome");
+  const tabDevis    = document.getElementById("tabDevis");
+  const tabContrats = document.getElementById("tabContrats");
+  const tabFactures = document.getElementById("tabFactures");
+  const tabAttest   = document.getElementById("tabAttest");
+  const tabCA       = document.getElementById("tabCA");
+  const tabSettings = document.getElementById("tabSettings");
+
+  tabHome     && tabHome.classList.remove("active");
+  tabDevis    && tabDevis.classList.remove("active");
+  tabContrats && tabContrats.classList.remove("active");
+  tabFactures && tabFactures.classList.remove("active");
+  tabAttest   && tabAttest.classList.remove("active");
+  tabCA       && tabCA.classList.remove("active");
+  tabSettings && tabSettings.classList.add("active");
+
+  // vues
+  const views = ["homeView", "listView", "formView", "contractView", "attestationView", "settingsView"];
+  views.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (id === "settingsView") el.classList.remove("hidden");
+    else el.classList.add("hidden");
+  });
+
+  // remplissage du formulaire
+  fillCompanySettingsForm();
+}
+
+function fillCompanySettingsForm() {
+  const s = getCompanySettings();
+  const setVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) el.value = val || "";
+  };
+
+  setVal("confCompanyName", s.companyName);
+  setVal("confSubtitle",    s.subtitle);
+  setVal("confLegalName",   s.legalName);
+  setVal("confSiret",       s.siret);
+  setVal("confAddress",     s.address);
+  setVal("confPhone",       s.phone);
+  setVal("confEmail",       s.email);
+  setVal("confRibHolder",   s.ribHolder);
+  setVal("confBankName",    s.bankName);
+  setVal("confIban",        s.iban);
+  setVal("confBic",         s.bic);
+}
+
+function saveCompanySettingsFromForm() {
+  const getVal = (id) => (document.getElementById(id)?.value || "").trim();
+
+  const settings = {
+    companyName: getVal("confCompanyName"),
+    subtitle:    getVal("confSubtitle"),
+    legalName:   getVal("confLegalName"),
+    siret:       getVal("confSiret"),
+    address:     getVal("confAddress"),
+    phone:       getVal("confPhone"),
+    email:       getVal("confEmail"),
+    ribHolder:   getVal("confRibHolder"),
+    bankName:    getVal("confBankName"),
+    iban:        getVal("confIban"),
+    bic:         getVal("confBic")
+  };
+
+  saveCompanySettings(settings);
+
+  showConfirmDialog({
+    title: "Paramètres enregistrés",
+    message: "Les informations de l’entreprise ont été mises à jour.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "✅"
+  });
+}
+
 
 
 /* ========== ATTESTATION CLIM ========== */
@@ -3480,9 +3631,9 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   let y = 34;
-  doc.text("Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice", 12, y); y += 5;
-  doc.text("Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com", 12, y);
-
+  const company = getCompanySettings();
+  doc.text(`${company.legalName} – ${company.address}`, 12, y); y += 5;
+  doc.text(`Tél : ${company.phone} – Email : ${company.email}`, 12, y);
   // ========= TITRE DOCUMENT =========
   y += 10;
   const title = record.typeLabel || "Rapport d’intervention";
@@ -3857,7 +4008,7 @@ const tabCA       = document.getElementById("tabCA");
   const btnFacture  = document.getElementById("createFacture");
   const btnContract = document.getElementById("createContract");
 
-  // 🔵 MODE CONTRATS
+    // 🔵 MODE CONTRATS
   if (type === "contrat") {
     if (listView)     listView.classList.remove("hidden");
     if (formView)     formView.classList.add("hidden");
@@ -3893,6 +4044,13 @@ const tabCA       = document.getElementById("tabCA");
 
     resetTarifsPanel();
     currentDocumentId = null;
+
+    if (typeof refreshContractsStatuses === "function") {
+      refreshContractsStatuses();
+    }
+    if (typeof updateContractsAlert === "function") {
+      updateContractsAlert();
+    }
 
     loadContractsList();
     return;
@@ -7474,9 +7632,9 @@ doc.text("CLIMATISATION",          pillX + pillW / 2, pillY + 12, { align: "cent
   doc.setFontSize(10);
   let y = 38;
 
-  doc.text("Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice", margin, y); y += 5;
-  doc.text("Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com", margin, y); y += 8;
-
+const company = getCompanySettings();
+  doc.text(`${company.legalName} – ${company.address}`, margin, y); y += 5;
+  doc.text(`Tél : ${company.phone} – Email : ${company.email}`, margin, y); y += 8;
   /* ================= TITRE DOCUMENT ================= */
 
   doc.setFont("helvetica", "bold");
@@ -7644,11 +7802,30 @@ function refreshContractsStatuses() {
   let changed = false;
 
   const updated = list.map((c) => {
+    c.meta = c.meta || {};
+
+    const oldStatus = c.status;
     const newStatus = computeContractStatus(c);
-    if (newStatus !== c.status) {
+
+    // 1) Mettre à jour le statut du contrat si besoin
+    if (newStatus !== oldStatus) {
       c.status = newStatus;
       changed = true;
     }
+
+    // 2) Si le contrat est en "Terminé" ET lié à un devis non encore clôturé
+    if (
+      newStatus === CONTRACT_STATUS.TERMINE &&
+      c.meta.sourceDevisId &&
+      typeof setDevisStatus === "function" &&
+      c.meta.sourceDevisStatus !== "cloture"
+    ) {
+      // On clôture le devis SANS rapport technique
+      setDevisStatus(c.meta.sourceDevisId, "cloture", true);
+      c.meta.sourceDevisStatus = "cloture";
+      changed = true;
+    }
+
     return c;
   });
 
@@ -7691,7 +7868,19 @@ function renderContractStatusBadge(contract) {
   const meta = contract.meta || {};
   const devisStatus = (meta.sourceDevisStatus || "").toLowerCase();
 
-  // 🎯 CAS CONTRAT LIÉ À UN DEVIS
+  // ✅ Statut "réel" basé sur les dates et la résiliation
+  const cst = computeContractStatus(contract);
+
+  // 🔴 Priorité absolue : Terminé / Résilié
+  if (cst === CONTRACT_STATUS.TERMINE) {
+    return `<span class="status-badge status-terminated">Terminé</span>`;
+  }
+
+  if (cst === CONTRACT_STATUS.RESILIE) {
+    return `<span class="status-badge status-refused">Résilié</span>`;
+  }
+
+  // 🎯 CAS CONTRAT LIÉ À UN DEVIS (tant qu'il n'est ni terminé ni résilié)
   if (meta.sourceDevisNumber) {
 
     if (devisStatus === "accepte" || devisStatus === "accepted") {
@@ -7699,7 +7888,8 @@ function renderContractStatusBadge(contract) {
     }
 
     if (devisStatus === "cloture" || devisStatus === "closed") {
-      return `<span class="status-badge status-terminated">Clôturé</span>`;
+      // Côté contrat, on appelle ça "Terminé"
+      return `<span class="status-badge status-terminated">Terminé</span>`;
     }
 
     if (devisStatus === "en_attente" || devisStatus === "pending") {
@@ -7713,25 +7903,16 @@ function renderContractStatusBadge(contract) {
       return `<span class="status-badge status-refused">Non validé</span>`;
     }
 
-
     // fallback si bizarre
     return `<span class="status-badge status-pending">En attente</span>`;
   }
 
-  // 🎯 CONTRACT SANS DEVIS → statut normal
-  const cst = computeContractStatus(contract);
-
+  // 🎯 CONTRAT SANS DEVIS → statut normal
   if (cst === CONTRACT_STATUS.EN_COURS)
     return `<span class="status-badge status-accepted">En cours</span>`;
 
   if (cst === CONTRACT_STATUS.A_RENOUVELER)
     return `<span class="status-badge status-pending">À renouveler</span>`;
-
-  if (cst === CONTRACT_STATUS.TERMINE)
-    return `<span class="status-badge status-expired">Terminé</span>`;
-
-  if (cst === CONTRACT_STATUS.RESILIE)
-    return `<span class="status-badge status-refused">Résilié</span>`;
 
   return `<span class="status-badge status-pending">En attente</span>`;
 }
@@ -8496,7 +8677,7 @@ function setPaymentMode(id, mode) {
   }
 }
 
-function setDevisStatus(id, status) {
+function setDevisStatus(id, status, skipRapport = false) {
   const docs = getAllDocuments();
   const idx = docs.findIndex(d => d.id === id);
   if (idx === -1) return;
@@ -8521,9 +8702,11 @@ function setDevisStatus(id, status) {
   }
 
   // 2) Si on vient de passer à "cloture" → créer un rapport technique auto
+  //    (sauf si skipRapport = true, ex : fin de contrat)
   if (
     status === "cloture" &&
     oldStatus !== "cloture" &&
+    !skipRapport &&
     typeof createRapportFromDevis === "function"
   ) {
     try {
@@ -9625,18 +9808,19 @@ function openPrintable(id, previewOnly) {
   }
 
 
-  let ribHtml = "";
+   let ribHtml = "";
   if (!isDevis && !doc.paid) {
     ribHtml = `
       <div class="rib-block">
         <div class="rib-title">Coordonnées bancaires pour virement</div>
-        <p>Titulaire : AquaClim Prestige – Le Blevennec Loïc</p>
-        <p>Banque : Banque Fictive</p>
-        <p>IBAN : FR76 1234 5678 9012 3456 7890 123</p>
-        <p>BIC : FICTFRPPXXX</p>
+        <p>Titulaire : ${getCompanySettings().ribHolder}</p>
+        <p>Banque : ${getCompanySettings().bankName}</p>
+        <p>IBAN : ${getCompanySettings().iban}</p>
+        <p>BIC : ${getCompanySettings().bic}</p>
       </div>
     `;
   }
+
 
   let notesHtml = "";
   if (isDevis) {
@@ -10249,13 +10433,14 @@ img.sig-client {
   <div class="page-main">
     <div class="header">
       <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
-      <h1>AquaClim Prestige</h1>
-      <p class="subtitle">Entretien & Dépannage - Climatisations & Piscines</p>
+         <h1>${getCompanySettings().companyName}</h1>
+      <p class="subtitle">${getCompanySettings().subtitle}</p>
       <p class="contact">
-        Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice<br>
-        Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com<br>
-        SIRET : <strong>XXXXXXXXXXXXX</strong>
+        ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
+        Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
+        SIRET : <strong>${getCompanySettings().siret}</strong>
       </p>
+
     </div>
 
 <div class="doc-header-center">
@@ -10653,7 +10838,8 @@ function hideAllSections() {
     "devisView",
     "factureView",
     "contratView",
-    "attestationView"
+    "attestationView",
+ "settingsView"  
   ];
 
   views.forEach(id => {
@@ -10680,6 +10866,8 @@ function showHome() {
   const formView        = document.getElementById("formView");
   const contractView    = document.getElementById("contractView");
   const attestationView = document.getElementById("attestationView");
+const settingsView    = document.getElementById("settingsView");
+settingsView    && settingsView.classList.add("hidden");
 
   // Onglets
   tabHome     && tabHome.classList.add("active");
@@ -10733,6 +10921,7 @@ function openFromHome(type) {
   const formView        = document.getElementById("formView");
   const contractView    = document.getElementById("contractView");
   const attestationView = document.getElementById("attestationView");
+const settingsView = document.getElementById("settingsView");
 
   // On affiche la liste (devis/factures/contrats)
   homeView        && homeView.classList.add("hidden");
@@ -10740,6 +10929,7 @@ function openFromHome(type) {
   listView        && listView.classList.remove("hidden");
   formView        && formView.classList.add("hidden");
   contractView    && contractView.classList.add("hidden");
+settingsView && settingsView.classList.add("hidden");
 
   // logique existante
   if (typeof switchListType === "function") {
@@ -14749,13 +14939,13 @@ img.sig-client {
 <body>
 <div class="page">
   <div class="header">
-    <img src="${logoSrc}" class="logo" alt="AquaClim Prestige" />
-    <h1>AquaClim Prestige</h1>
-    <p class="subtitle">AquaClim Prestige – Entretien & Maintenance</p>
+         <h1>${getCompanySettings().companyName}</h1>
+    <p class="subtitle">${getCompanySettings().subtitle}</p>
     <p class="contact">
-      Le Blevennec Loïc – SIRET : XXXXXXXXXXXXX<br>
-      Adresse : 2 avenue Cauvin, 06100 Nice – Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com
+      ${getCompanySettings().legalName} – SIRET : ${getCompanySettings().siret}<br>
+      Adresse : ${getCompanySettings().address} – Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}
     </p>
+
   </div>
 
   <h2 class="contrat-title">
@@ -14778,11 +14968,12 @@ ${terminationBillingBlockTop}
   <div class="section">
     <div class="section-title">1. Identification des parties</div>
     <div class="block">
-      <p class="label">Prestataire</p>
-      <p>AquaClim Prestige – représentée par M. Le Blevennec Loïc</p>
-      <p>Domiciliation : 2 avenue Cauvin, 06100 Nice</p>
-      <p>SIRET : XXXXXXXXXXXXX</p>
+           <p class="label">Prestataire</p>
+      <p>${getCompanySettings().companyName} – représentée par ${getCompanySettings().legalName}</p>
+      <p>Domiciliation : ${getCompanySettings().address}</p>
+      <p>SIRET : ${getCompanySettings().siret}</p>
       <p>RC Pro : Oui (attestation disponible sur demande)</p>
+
       <br>
 
       <p class="label">${clientBlockTitle}</p>
@@ -16802,6 +16993,8 @@ document.addEventListener("click", () => {
 window.onload = function () {
   loadCustomTemplates();
   loadCustomTexts();
+
+  applyCompanySettingsToUI();
 
   setTVA(0);
   if (typeof refreshClientDatalist === "function") {
