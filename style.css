@@ -1243,11 +1243,46 @@ textarea {
     font-size: 14px;
 }
 
+/* Boutons dans les popups : ne pas prendre 100% de la largeur */
 .popup-buttons {
     display: flex;
     gap: 10px;
     justify-content: flex-end;
+    flex-wrap: wrap; /* au cas où ça passe sur 2 lignes sur petit écran */
 }
+
+.popup-buttons .btn {
+    width: auto !important;   /* annule le width:100% du mobile */
+    flex: 0 0 auto;           /* garde la taille du contenu */
+}
+/* Uniformise la hauteur et le look des boutons dans les popups */
+.popup-buttons .btn {
+  height: 40px;
+  line-height: 40px;
+  padding: 0 15px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.popup-buttons {
+  display: flex;
+  justify-content: center; /* centrage parfait */
+  gap: 12px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+
+/* Popup "Envoyer au client" un peu plus large */
+#sendPopup .popup {
+  width: 480px;
+  max-width: 95%;
+}
+
+
+
 
 /* Confirmation Modal */
 #confirmOverlay {
@@ -2358,6 +2393,17 @@ textarea {
   font-size: 12px;
   background: #fff;
 }
+
+/* Centrer les titres du tableau CA mensuel détaillé */
+.ca-table thead th {
+    text-align: center !important;
+    vertical-align: middle;
+}
+
+.ca-table tbody td {
+    text-align: center;
+}
+
 
 .ca-table th,
 .ca-table td {

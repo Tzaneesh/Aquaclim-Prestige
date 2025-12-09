@@ -257,7 +257,15 @@
     <div class="rapport-header-grid">
       <div>
         <label>Nom du client</label>
-        <input type="text" id="rapClientName">
+        <input
+  type="text"
+  id="rapClientName"
+  list="clientsList"
+  autocomplete="off"
+  onchange="onRapportClientNameChange()"
+  onblur="onRapportClientNameChange()"
+/>
+
       </div>
 
       <div>
@@ -309,7 +317,15 @@
     <h2>Attestation d’entretien clim</h2>
 
     <label>Nom du client</label>
-    <input type="text" id="attClientName">
+    <input
+  type="text"
+  id="attClientName"
+  list="clientsList"
+  autocomplete="off"
+  onchange="onAttClientNameChange()"
+  onblur="onAttClientNameChange()"
+/>
+
 
     <label>Adresse</label>
     <input type="text" id="attClientAddress">
@@ -553,7 +569,14 @@
       <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
       <button id="transformButton" class="btn btn-success" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+<button id="rapportFromDevisButton" class="btn action-button" onclick="onGenerateRapportFromCurrent()">
+  📝 Générer rapport d’intervention
+</button>
+
+
   <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
+<button class="btn action-button" type="button" onclick="openSendPopup()">📤 Envoyer au client</button>
+
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
 
@@ -889,7 +912,14 @@
       <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
       <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
       <button id="transformButton" class="btn btn-success" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+<button id="rapportFromDevisButton" class="btn action-button" onclick="onGenerateRapportFromCurrent()">
+  📝 Générer rapport d’intervention
+</button>
+
+
   <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
+<button class="btn action-button" type="button" onclick="openSendPopup()">📤 Envoyer au client</button>
+
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
 
@@ -1539,6 +1569,28 @@
 
     <div class="ca-footer">
       <button type="button" class="btn btn-light" onclick="closeCAReport()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- POPUP ENVOI DOCUMENT AU CLIENT -->
+<div id="sendPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Envoyer au client</h3>
+
+    <p id="sendDocInfo" style="margin-bottom:8px; font-weight:600;"></p>
+
+    <label>Message proposé</label>
+    <textarea id="sendMessagePreview" rows="7"></textarea>
+
+    <div class="popup-buttons">
+<div class="popup-buttons">
+  <button class="btn btn-primary btn-small" type="button" onclick="sendByEmail()">✉️ Envoyer par email</button>
+  <button class="btn btn-success btn-small" type="button" onclick="sendByWhatsApp()">💬 Envoyer par WhatsApp</button>
+  <button class="btn btn-secondary btn-small" type="button" onclick="closeSendPopup()">Fermer</button>
+</div>
+
     </div>
   </div>
 </div>

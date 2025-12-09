@@ -45,10 +45,11 @@ function endOfMonthISO(iso) {
     return d.toISOString().slice(0, 10);
 }
 
-// Compare deux ISO (retourne -1, 0, 1)
 function compareISO(a, b) {
-    return new Date(a) - new Date(b);
+  const diff = new Date(a) - new Date(b);
+  return diff < 0 ? -1 : diff > 0 ? 1 : 0;
 }
+
 
 // Date d’aujourd’hui au format ISO
 function todayISO() {
@@ -1211,6 +1212,55 @@ function onContractClientNameChange() {
   }
 }
 
+// --- Attestation clim : remplir adresse depuis la liste de clients ---
+function onAttClientNameChange() {
+  const input = document.getElementById("attClientName");
+  if (!input) return;
+
+  const value = (input.value || "").trim().toLowerCase();
+  if (!value) return;
+
+  const clients = getClients ? getClients() : [];
+  const client = clients.find(
+    c => (c.name || "").trim().toLowerCase() === value
+  );
+  if (!client) return;
+
+  const addr = document.getElementById("attClientAddress");
+  if (addr) {
+    addr.value = client.address || "";
+  }
+}
+
+// --- Rapport d'intervention : remplir nom + adresse ---
+function fillRapportClientFromObject(client) {
+  if (!client) return;
+
+  const nameEl = document.getElementById("rapClientName");
+  const addrEl = document.getElementById("rapClientAddress");
+
+  if (nameEl) nameEl.value = client.name || "";
+  if (addrEl) addrEl.value = client.address || "";
+}
+
+function onRapportClientNameChange() {
+  const input = document.getElementById("rapClientName");
+  if (!input) return;
+
+  const value = (input.value || "").trim().toLowerCase();
+  if (!value) return;
+
+  const clients = getClients ? getClients() : [];
+  const client = clients.find(
+    c => (c.name || "").trim().toLowerCase() === value
+  );
+  if (!client) return;
+
+  fillRapportClientFromObject(client);
+}
+
+
+
 let currentAttestationId = null;
 let currentRapportId = null;
 /* ================== ATTESTATIONS & RAPPORTS ================== */
@@ -1414,6 +1464,217 @@ function generatePDFAttestation(mode = "print") {
   closeAttestationPopup();
 }
 
+function detectRapportTypeFromDevis(devis) {
+  const text = JSON.stringify(devis.prestations || []).toLowerCase();
+
+  if (text.includes("entretien piscine")) return "entretien_piscine";
+  if (text.includes("piscine sel")) return "entretien_piscine";
+  if (text.includes("chlore")) return "entretien_piscine";
+  if (text.includes("traitement choc")) return "traitement_choc";
+  if (text.includes("diagnostic filtration")) return "diagnostic_filtration";
+
+  if (text.includes("electrolyseur")) return "installation_electrolyseur";
+  if (text.includes("pompe filtration")) return "installation_pompe_pac";
+  if (text.includes("roulement")) return "remplacement_roulements";
+
+  if (text.includes("clim") && text.includes("entretien")) return "entretien_clim";
+  if (text.includes("clim") && text.includes("diag")) return "depannage_clim";
+
+  // fallback si rien trouvé
+  return null;
+}
+
+function generateAutoChecklist(rapportType, devis) {
+  const template = RAPPORT_TEMPLATES.find(t => t.id === rapportType);
+  if (!template) return [];
+
+  const txt = JSON.stringify(devis.prestations || []).toLowerCase();
+  let checklist = [];
+
+  template.sections.forEach(section => {
+    section.items.forEach(item => {
+      const keywords = item.toLowerCase().split(" ").slice(0, 2).join(" ");
+      
+      const checked = txt.includes(keywords);
+
+      checklist.push({
+        text: item,
+        checked
+      });
+    });
+  });
+
+  return checklist;
+}
+
+function createRapportFromDevis(devis) {
+  if (!devis) {
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Aucun devis fourni",
+        message: "Sélectionne d’abord un devis avant de générer un rapport d’intervention.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "info",
+        icon: "ℹ️"
+      });
+    } else {
+      alert("Aucun devis fourni pour générer le rapport.");
+    }
+    return null;
+  }
+
+  const typeId = detectRapportTypeFromDevis(devis);
+  if (!typeId) {
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Type de rapport non détecté",
+        message: "Impossible de déterminer automatiquement le type de rapport à partir de ce devis.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "⚠️"
+      });
+    } else {
+      alert("Impossible de déterminer automatiquement le type de rapport.");
+    }
+    return null;
+  }
+
+  const tpl = RAPPORT_TEMPLATES.find(t => t.id === typeId) || null;
+
+  // ✅ Checklist "intelligente" à partir du devis
+  const flatChecklist = generateAutoChecklist(typeId, devis);
+
+  // on mappe ça sur la structure `sections` utilisée par les rapports
+  const checkedSet = new Set(
+    flatChecklist.filter(it => it.checked).map(it => it.text)
+  );
+
+  const sectionsData = [];
+  if (tpl) {
+    tpl.sections.forEach(section => {
+      const items = section.items.filter(item => {
+        // si aucune info → on coche tout
+        if (checkedSet.size === 0) return true;
+        return checkedSet.has(item);
+      });
+
+      if (items.length) {
+        sectionsData.push({
+          title: section.title,
+          items
+        });
+      }
+    });
+  }
+
+  const id = (typeof generateId === "function")
+    ? generateId("RAP")
+    : "RAP-" + Date.now();
+
+  const rapport = {
+    id,
+    typeId,
+    typeLabel: tpl ? tpl.label : "",
+    clientName: devis.client?.name || "",
+    clientAddress: devis.client?.address || "",
+    date: new Date().toISOString().slice(0, 10),
+    notes: "",
+    sections: sectionsData,
+    analysis: {
+      ph: null,
+      chlore: null
+    },
+    autoGenerated: true,
+    createdAt: new Date().toISOString(),
+    sourceDocId: devis.id || null,
+    sourceDocNumber: devis.number || null
+  };
+
+  const all = getAllRapports();
+  all.push(rapport);
+  saveRapports(all);
+
+  return rapport;
+}
+
+function onGenerateRapportFromCurrent() {
+  // Vérifie qu’on a bien un document ouvert
+  if (!currentDocumentId) {
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Aucun devis ouvert",
+        message: "Ouvre d’abord un devis avant de générer un rapport d’intervention.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "info",
+        icon: "ℹ️"
+      });
+    } else {
+      alert("Aucun devis ouvert. Ouvre d’abord un devis avant de générer un rapport.");
+    }
+    return;
+  }
+
+  const doc = getDocument(currentDocumentId);
+  if (!doc) {
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Document introuvable",
+        message: "Impossible de retrouver ce document dans la base.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "danger",
+        icon: "⚠️"
+      });
+    } else {
+      alert("Document introuvable dans la base.");
+    }
+    return;
+  }
+
+  // Only devis
+  if (doc.type !== "devis") {
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Action impossible",
+        message: "Le rapport d’intervention ne peut être généré qu’à partir d’un devis.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "🧾"
+      });
+    } else {
+      alert("Le rapport technique ne peut être généré qu’à partir d’un devis.");
+    }
+    return;
+  }
+
+  // ✅ Génère le rapport intelligent à partir de ce devis (sans ouvrir de popup)
+  const rapport = createRapportFromDevis(doc);
+  if (!rapport) return;
+
+  const numero = doc.number || doc.id || "";
+
+  // 🔔 Message pro de confirmation
+  if (typeof showConfirmDialog === "function") {
+    showConfirmDialog({
+      title: "Rapport d’intervention créé",
+      message:
+        `Un rapport technique a été créé pour le devis ${numero}.\n` +
+        `Tu pourras le consulter et l’imprimer depuis l’onglet "Attestations & Rapports".`,
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "success",
+      icon: "📝"
+    });
+  } else {
+    alert("Un rapport d’intervention a été créé pour le devis " + numero + ".");
+  }
+}
+
+
 function openPiscineRapportGenerator(docId = null) {
   // 👉 on est en mode "nouveau"
   currentRapportId = null;
@@ -1447,9 +1708,7 @@ function openPiscineRapportGenerator(docId = null) {
   // 🔹 cacher l’analyse tant qu’on n’a pas choisi "entretien_piscine"
   updateRapportAnalyseVisibility("");
 
-updateRapportAnalyseVisibility("");
-
-  const overlay = document.getElementById("rapportPopup");
+const overlay = document.getElementById("rapportPopup");
   if (!overlay) return;
 
   overlay.classList.remove("hidden");
@@ -1474,16 +1733,30 @@ function closeRapportPopup() {
 function rebuildRapportChecklist() {
   const type = document.getElementById("rapportType").value;
 
-  // 🔹 ICI : on gère l’affichage du bloc analyse
+  // gère affichage bloc analyse
   updateRapportAnalyseVisibility(type);
 
   const tpl = RAPPORT_TEMPLATES.find(t => t.id === type);
   const box = document.getElementById("rapportChecklist");
-  box.innerHTML = "";
+  if (!box) return;
 
+  box.innerHTML = "";
   if (!tpl) return;
 
- tpl.sections.forEach(section => {
+  // 🔎 si on édite un rapport existant, on récupère ses items cochés
+  let checkedSet = null;
+  if (currentRapportId) {
+    const list = getAllRapports();
+    const rec = list.find(r => r.id === currentRapportId);
+    if (rec && Array.isArray(rec.sections)) {
+      checkedSet = new Set();
+      rec.sections.forEach(sec => {
+        (sec.items || []).forEach(text => checkedSet.add(text));
+      });
+    }
+  }
+
+  tpl.sections.forEach(section => {
     const div = document.createElement("div");
     div.className = "rapport-section";
 
@@ -1492,10 +1765,15 @@ function rebuildRapportChecklist() {
     div.appendChild(h);
 
     section.items.forEach(item => {
+      const isChecked =
+        !checkedSet || checkedSet.size === 0
+          ? true              // nouveau rapport → tout coché
+          : checkedSet.has(item);
+
       const row = document.createElement("label");
       row.className = "rapport-item";
       row.innerHTML = `
-        <input type="checkbox" checked data-text="${item}">
+        <input type="checkbox" ${isChecked ? "checked" : ""} data-text="${item}">
         <span class="rapport-item-text">${item}</span>
       `;
       div.appendChild(row);
@@ -1504,6 +1782,7 @@ function rebuildRapportChecklist() {
     box.appendChild(div);
   });
 }
+
 
 function updateRapportAnalyseVisibility(typeId) {
   const bloc = document.getElementById("rapportAnalyse");
@@ -1876,29 +2155,6 @@ function confirmRenewPopup() {
   closeRenewPopup();
 }
 
-
-function rebuildClientsPopupList(searchQuery) {
-  const base = getClients();
-  let list = base.map((c, index) => ({ client: c, index }));
-
-  const q = (searchQuery || "").toLowerCase().trim();
-  if (q) {
-    list = list.filter(({ client }) =>
-      (client.name || "").toLowerCase().includes(q) ||
-      (client.address || "").toLowerCase().includes(q) ||
-      (client.phone || "").toLowerCase().includes(q) ||
-      (client.email || "").toLowerCase().includes(q)
-    );
-  }
-
-  // tri alphabétique A->Z sur le nom
-  list.sort((a, b) =>
-    (a.client.name || "").toLowerCase()
-      .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
-  );
-
-  clientsPopupList = list;
-}
 function rebuildClientsPopupList(searchText = "") {
   const all = getClients();
 
@@ -2754,6 +3010,175 @@ function saveDocuments(docs) {
   localStorage.setItem("documents", JSON.stringify(docs));
 }
 
+// ===== ENVOI EMAIL / WHATSAPP POUR UN DOCUMENT =====
+
+let currentSendDoc = null;
+
+function buildSendMessage(doc) {
+  const clientName = (doc.client && doc.client.name) ? doc.client.name : "Madame, Monsieur";
+  const typeLabel = doc.type === "facture" ? "facture" : "devis";
+  const number = doc.number || "";
+  const subject = doc.subject || "";
+  const total =
+    typeof doc.totalTTC === "number"
+      ? doc.totalTTC.toFixed(2).replace(".", ",")
+      : "";
+  const validity =
+    doc.type === "devis" && doc.validityDate
+      ? fromISO(doc.validityDate).replace(/-/g, "/")
+      : null;
+
+  let body = `Bonjour ${clientName},\n\n`;
+
+  if (doc.type === "devis") {
+    const status = doc.status || "en_attente";
+
+    if (status === "accepte") {
+      body += `Comme convenu, je vous envoie le devis ${number} concernant ${subject}, que nous avons validé ensemble, pour un montant de ${total} € TTC.`;
+    } else if (status === "refuse") {
+      body += `Je vous renvoie le devis ${number} concernant ${subject}, pour un montant de ${total} € TTC.`;
+    } else if (status === "expire") {
+      body += `Je vous rappelle le devis ${number} concernant ${subject}, d’un montant de ${total} € TTC.`;
+    } else {
+      body += `Je vous envoie le devis ${number} concernant ${subject}, pour un montant de ${total} € TTC.`;
+    }
+
+    if (validity) {
+      body += `\nIl est valable jusqu’au ${validity}.`;
+    }
+  } else {
+    // FACTURE
+    if (doc.paid) {
+      body += `Veuillez trouver ci-joint votre facture acquittée ${number} concernant ${subject}, d’un montant de ${total} € TTC.`;
+    } else {
+      body += `Je vous envoie la facture ${number} concernant ${subject}, pour un montant de ${total} € TTC.\nMerci d’en effectuer le règlement dès que possible.`;
+    }
+  }
+
+  body += `\n\nCordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
+
+  const mailSubject =
+    (doc.type === "facture" ? "Facture " : "Devis ") +
+    number +
+    (subject ? " – " + subject : "");
+
+  return { mailSubject, body };
+}
+
+function openSendPopup() {
+  if (!currentDocumentId) {
+    showConfirmDialog({
+      title: "Aucun document ouvert",
+      message: "Ouvre d’abord un devis ou une facture avant de l’envoyer.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
+    return;
+  }
+
+  const doc = getDocument(currentDocumentId);
+  if (!doc) return;
+
+  currentSendDoc = doc;
+  const { body } = buildSendMessage(doc);
+
+  const infoEl = document.getElementById("sendDocInfo");
+  const txtArea = document.getElementById("sendMessagePreview");
+  const overlay = document.getElementById("sendPopup");
+
+  if (infoEl) {
+    const typeLabel = doc.type === "facture" ? "Facture" : "Devis";
+    const clientName = doc.client && doc.client.name ? doc.client.name : "";
+    infoEl.textContent = `${typeLabel} ${doc.number || ""} – ${clientName}`;
+  }
+
+  if (txtArea) {
+    txtArea.value = body;
+  }
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) {
+      void popup.offsetWidth;
+      popup.classList.add("show");
+    }
+  }
+}
+
+function closeSendPopup() {
+  const overlay = document.getElementById("sendPopup");
+  if (!overlay) return;
+  const popup = overlay.querySelector(".popup");
+  if (popup) popup.classList.remove("show");
+  overlay.classList.add("hidden");
+  currentSendDoc = null;
+}
+
+function sendByEmail() {
+  if (!currentSendDoc) return;
+
+  const email = currentSendDoc.client && currentSendDoc.client.email
+    ? currentSendDoc.client.email.trim()
+    : "";
+
+  if (!email) {
+    showConfirmDialog({
+      title: "Email manquant",
+      message: "Aucune adresse email n’est renseignée pour ce client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const { mailSubject } = buildSendMessage(currentSendDoc);
+  const body = document.getElementById("sendMessagePreview").value || "";
+
+  const url =
+    "mailto:" + encodeURIComponent(email) +
+    "?subject=" + encodeURIComponent(mailSubject) +
+    "&body=" + encodeURIComponent(body);
+
+  window.location.href = url;   // ouvre l’app mail
+
+  closeSendPopup();
+}
+
+function sendByWhatsApp() {
+  if (!currentSendDoc) return;
+
+  const phoneRaw = currentSendDoc.client && currentSendDoc.client.phone
+    ? currentSendDoc.client.phone
+    : "";
+
+  const phone = phoneRaw.replace(/[^0-9]/g, "");
+
+  if (!phone) {
+    showConfirmDialog({
+      title: "Téléphone manquant",
+      message: "Aucun numéro de téléphone n’est renseigné pour ce client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const body = document.getElementById("sendMessagePreview").value || "";
+  const waUrl = "https://wa.me/" + phone + "?text=" + encodeURIComponent(body);
+
+  window.open(waUrl, "_blank");   // ouvre WhatsApp (mobile) ou WhatsApp Web
+
+  closeSendPopup();
+}
+
+
 // ================== LOCALSTORAGE ATTESTATIONS ==================
 
 function getAllAttestations() {
@@ -3479,6 +3904,7 @@ const tabCA       = document.getElementById("tabCA");
   if (formView)     formView.classList.add("hidden");
 
   // Reset bandeau contrats quand on quitte l’onglet
+
   const alertBox = document.getElementById("contractsAlert");
   if (alertBox) {
     alertBox.classList.add("hidden");
@@ -3606,6 +4032,29 @@ function getCurrentClientType() {
 }
 
 function setTVA(rate) {
+  const seuilMicro = 36800;  // seuil micro → ajuste si besoin
+  const currentCA = (typeof computeCA === "function") ? computeCA() : 0;
+
+  // ======================================================
+  // 🚫 BLOCAGE TVA 20% si CA < seuil micro-entreprise
+  // ======================================================
+  if (rate === 20 && currentCA < seuilMicro) {
+    alert("Impossible : tant que vous êtes sous le seuil micro-entreprise, la TVA 20% est interdite.");
+
+    // On rétablit 0% dans l’UI
+    const tva0 = document.getElementById("tva0");
+    const tva20 = document.getElementById("tva20");
+
+    if (tva20) tva20.checked = false;
+    if (tva0)  tva0.checked = true;
+
+    rate = 0; // on force la TVA à 0%
+  }
+
+  // ======================================================
+  // (Ton code original ci-dessous — inchangé)
+  // ======================================================
+
   const tvaInput   = document.getElementById("tvaRate");
   const tvaNote    = document.getElementById("tvaNote");
   const totalLabel = document.getElementById("totalLabel");
@@ -3702,10 +4151,12 @@ function updateDocType() {
 function updateTransformButtonVisibility() {
   const transformBtn = document.getElementById("transformButton");
   const contractBtn = document.getElementById("contractFromDevisButton");
+  const rapportBtn = document.getElementById("rapportFromDevisButton");
   const typeSelect = document.getElementById("docType");
   const type = typeSelect ? typeSelect.value : "devis";
 
   const canTransform = type === "devis" && !!currentDocumentId;
+  const isDevis = type === "devis";
 
   if (transformBtn) {
     transformBtn.style.display = canTransform ? "inline-block" : "none";
@@ -3713,7 +4164,12 @@ function updateTransformButtonVisibility() {
   if (contractBtn) {
     contractBtn.style.display = canTransform ? "inline-block" : "none";
   }
+  // 🔥 Ici : le bouton rapport n’apparaît que pour les devis
+  if (rapportBtn) {
+    rapportBtn.style.display = isDevis ? "inline-block" : "none";
+  }
 }
+
 
 
 function onDocDateChange() {
@@ -4792,6 +5248,16 @@ calculateTotals(); // et on laisse faire la logique dégressive normale
     console.error("Erreur renderHistory:", e);
   }
 
+// ====================================================
+// 🔘 Empêcher le bouton "Bon pour accord" d'être coché 
+//      si aucune signature n'existe
+// ====================================================
+const sigRadio = document.getElementById("signatureRadio");
+if (sigRadio) {
+    sigRadio.checked = !!doc.signature; // cochée SEULEMENT si déjà signé
+}
+
+
 if (typeof refreshDocumentHealthUI === "function") {
   refreshDocumentHealthUI(doc);
 }
@@ -4958,6 +5424,9 @@ try {
   const notes = document.getElementById("notes").value;
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
   const wasPaid = existing ? !!existing.paid : false;   // 🧠 état avant sauvegarde
+  // ancien statut (pour détecter le passage en "cloture")
+  const oldStatus = existing ? (existing.status || "") : "";
+
 
   let conditionsType = existing ? existing.conditionsType || "" : "";
   const cbClientPart = document.getElementById("clientParticulier");
@@ -4977,6 +5446,11 @@ try {
   } else {
     status = existing && existing.status ? existing.status : "";
   }
+
+// ==== DÉTECTION PASSAGE EN "CLOTURÉ" ====
+// On mémorise si l'ancien doc était un devis NON clôturé
+let wasCloture = existing?.status === "cloture";
+let willBeCloture = status === "cloture";
 
   let paymentMode = "";
   let paymentDate = "";
@@ -5054,6 +5528,27 @@ try {
     createdAt: existing ? existing.createdAt : new Date().toISOString()
   };
 
+  // 📌 Un devis qui vient de passer en "cloture" ?
+  const justClotured =
+    doc.type === "devis" &&
+    oldStatus !== "cloture" &&
+    doc.status === "cloture";
+
+  // on gardera ici la référence vers le rapport auto
+  let autoRapportRecord = null;
+
+
+// =======================
+// 📌 Création auto rapport intelligent
+// =======================
+let shouldCreateRapport = false;
+
+// Un devis passe en clôturé → création rapport
+if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
+  shouldCreateRapport = true;
+}
+
+
 
   // 1) S'il existait déjà un document → on calcule le diff
   if (existing) {
@@ -5081,6 +5576,26 @@ try {
   saveDocuments(docs);
   saveSingleDocumentToFirestore(doc);
 
+// =======================================
+// 📄 Création automatique du rapport depuis devis clôturé
+// =======================================
+if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
+
+  createRapportFromDevis(doc); // ⚡ Génère le rapport intelligent !!!
+
+  // Option : popup confirmation
+  showConfirmDialog({
+    title: "Rapport généré",
+    message: 
+      "Le devis a été clôturé et un rapport d’intervention intelligent a été créé automatiquement.",
+    confirmLabel: "OK",
+    cancelLabel: "",
+    variant: "success",
+    icon: "📝"
+  });
+}
+
+
   // 💥 Si on vient de passer une facture de NON PAYÉE à PAYÉE depuis le formulaire
   if (
     doc.type === "facture" &&
@@ -5091,6 +5606,43 @@ try {
   ) {
     handleAfterInvoicePaid(doc);
   }
+
+  // ===============================
+  // 📝 Création automatique d'un rapport depuis un devis clôturé
+  // ===============================
+  if (justClotured && typeof createRapportFromDevis === "function") {
+    try {
+      // 1) on crée le rapport intelligent (lié au devis)
+      autoRapportRecord = createRapportFromDevis(doc); // doit retourner l'objet rapport
+
+      // 2) on propose de l'ouvrir tout de suite
+      if (autoRapportRecord && typeof showConfirmDialog === "function") {
+        showConfirmDialog({
+          title: "Rapport d’intervention créé",
+          message:
+            "Le devis a été clôturé et un rapport technique a été généré automatiquement.\n" +
+            "Souhaites-tu ouvrir ce rapport maintenant pour le compléter ?",
+          confirmLabel: "Ouvrir le rapport",
+          cancelLabel: "Plus tard",
+          variant: "info",
+          icon: "📝",
+          // 👉 si ta showConfirmDialog gère des callbacks
+          onConfirm: () => {
+            if (typeof openRapportPopupForEdit === "function") {
+              openRapportPopupForEdit(autoRapportRecord.id);
+            } else if (typeof openPiscineRapportGenerator === "function") {
+              // fallback : si ton édition utilise cette fonction
+              openPiscineRapportGenerator(autoRapportRecord.id);
+            }
+          },
+          onCancel: () => {}
+        });
+      }
+    } catch (e) {
+      console.error("Erreur création rapport auto depuis devis cloturé :", e);
+    }
+  }
+
 
   // Mise à jour client SI la fonction existe (évite une erreur JS)
   if (typeof updateClientsFromDocument === "function") {
@@ -5374,46 +5926,53 @@ function backToContracts() {
 // 📊 CALCUL CA ANNUEL / MENSUEL
 // =====================================
 function computeCA() {
-  const docs = getAllDocuments().filter(d => d.type === "facture");
-  const today = new Date();
-  const year = today.getFullYear();
-  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
 
-  let total = 0;
-  let paid = 0;
-  let unpaid = 0;
-  let currentMonthTotal = 0;
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+
+  let totalYear      = 0;   // CA annuel (affiché)
+  let totalPaidYear  = 0;   // CA réellement encaissé → micro-entreprise
+  let totalUnpaid    = 0;
+  let monthTotal     = 0;
 
   docs.forEach(f => {
     const amount = Number(f.totalTTC || 0);
+    if (!amount) return;
 
-    // total annuel
-    if (f.date?.startsWith(String(year))) {
-      total += amount;
-    }
+    const isPaid  = !!f.paid;
+    const payDate = f.paymentDate || f.date;
 
-    // payé / impayé (ton ancien code utilisait status === "paid")
-    if (f.paid) {
-      paid += amount;
-    } else {
-      unpaid += amount;
-    }
+    // --------------------------
+    // CA affiché = basé sur la DATE FACTURE
+    // --------------------------
+    if (f.date.startsWith(String(year))) {
+      totalYear += amount;
 
-    // mois courant
-    if (f.date?.startsWith(`${year}-${month}`)) {
-      currentMonthTotal += amount;
+      if (isPaid) totalPaidYear += amount;
+      else        totalUnpaid   += amount;
+
+      // mois courant
+      if (f.date.startsWith(`${year}-${month}`)) {
+        monthTotal += amount;
+      }
     }
   });
 
-  document.getElementById("dashCATotal").textContent  = "CA total : "   + formatEuro(total);
-  document.getElementById("dashCAPaid").textContent   = "Payé : "       + formatEuro(paid);
-  document.getElementById("dashCAUnpaid").textContent = "Impayé : "     + formatEuro(unpaid);
-  document.getElementById("dashCAMonth").textContent  = "Mois en cours : " + formatEuro(currentMonthTotal);
+  // Mise à jour UI
+  document.getElementById("dashCATotal").textContent      = "CA total : " + formatEuro(totalYear);
+  document.getElementById("dashCAPaid").textContent       = "Payé : " + formatEuro(totalPaidYear);
+  document.getElementById("dashCAUnpaid").textContent     = "Impayé : " + formatEuro(totalUnpaid);
+  document.getElementById("dashCAMonth").textContent      = "Mois en cours : " + formatEuro(monthTotal);
 
-  // 🔎 à chaque recalcul du CA, on surveille le seuil micro TVA
+  // Surveiller le seuil TVA micro
   if (typeof checkMicroTVAThreshold === "function") {
     checkMicroTVAThreshold(false);
   }
+
+  // TRÈS IMPORTANT : renvoyer le CA encaissé (micro)
+  return totalPaidYear;
 }
 
 // =====================================
@@ -7754,8 +8313,188 @@ function handleAfterInvoicePaid(doc) {
   }
 }
 
+// ===============================
+// 🧾 Création d'une facture à partir d'un devis accepté
+// ===============================
+function createInvoiceFromDevis(devis) {
+  if (!devis || devis.type !== "devis") return null;
 
+  const todayISO = new Date().toISOString().slice(0, 10);
 
+  // Numérotation facture
+  let number = "";
+  if (typeof getNextNumber === "function") {
+    number = getNextNumber("facture");
+  } else if (devis.number) {
+    // petit fallback : remplace le préfixe D par F si besoin
+    number = devis.number.replace(/^D/i, "F");
+  } else {
+    number = "FAC-" + Date.now();
+  }
+
+  // Id interne
+  const id = (typeof generateId === "function")
+    ? generateId("FAC")
+    : Date.now().toString();
+
+  // Sujet : on reprend celui du devis ou on en fabrique un
+  const subject =
+    devis.subject ||
+    `Facture suite au devis ${devis.number || ""}`;
+
+  // Copie profonde des prestations pour ne pas modifier le devis par erreur
+  const prestations = Array.isArray(devis.prestations)
+    ? devis.prestations.map(p => ({ ...p }))
+    : [];
+
+  const tvaRate        = Number(devis.tvaRate) || 0;
+  const subtotal       = Number(devis.subtotal) || 0;
+  const discountRate   = Number(devis.discountRate) || 0;
+  const discountAmount = Number(devis.discountAmount) || 0;
+  const tvaAmount      = Number(devis.tvaAmount) || 0;
+  const totalTTC       = Number(devis.totalTTC) || 0;
+
+  const notesBase = devis.notes || "";
+  const notesSuffix = devis.number
+    ? `\n\nFacture générée automatiquement à partir du devis ${devis.number}.`
+    : `\n\nFacture générée automatiquement à partir d’un devis accepté.`;
+
+  const invoice = {
+    id,
+    type: "facture",
+    number,
+    date: todayISO,
+    validityDate: "",
+
+    subject,
+
+    // Client (même structure que dans saveDocument)
+    client: {
+      civility: devis.client?.civility || "",
+      name:     devis.client?.name     || "",
+      address:  devis.client?.address  || "",
+      phone:    devis.client?.phone    || "",
+      email:    devis.client?.email    || ""
+    },
+
+    // Lieu
+    siteCivility: devis.siteCivility || "",
+    siteName:     devis.siteName     || "",
+    siteAddress:  devis.siteAddress  || "",
+
+    prestations,
+    tvaRate,
+    subtotal,
+    discountRate,
+    discountAmount,
+    tvaAmount,
+    totalTTC,
+
+    notes: (notesBase + notesSuffix).trim(),
+
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+
+    conditionsType: devis.conditionsType || "",
+
+    // Lien vers le devis d'origine (pratique pour filtrer plus tard)
+    sourceDevisId: devis.id || null,
+    sourceDevisNumber: devis.number || null,
+
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  // Sauvegarde locale
+  const docs = getAllDocuments();
+  docs.push(invoice);
+  saveDocuments(docs);
+
+  // Firestore si dispo
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(invoice);
+  }
+
+  // Option : vérifier le seuil micro-entreprise
+  if (typeof checkMicroTVAThreshold === "function") {
+    try {
+      checkMicroTVAThreshold(true);
+    } catch (e) {
+      console.warn("Erreur checkMicroTVAThreshold sur facture auto :", e);
+    }
+  }
+
+  return invoice;
+}
+
+function setPaymentMode(id, mode) {
+  const docs = getAllDocuments();
+  const doc = docs.find((d) => d.id === id);
+  if (!doc) return;
+
+  const wasPaid = !!doc.paid; // état avant modification
+
+  if (!mode) {
+    // 🔴 Non réglée
+    doc.paymentMode = "";
+    doc.paid = false;
+    doc.paymentDate = "";
+  } else {
+    // 🟢 Réglée
+    doc.paymentMode = mode;
+    doc.paid = true;
+
+    // Date de paiement
+    if (mode === "virement" || mode === "cheque") {
+      doc.paymentDate = doc.paymentDate || doc.date;
+    } else {
+      doc.paymentDate = doc.date;
+    }
+  }
+
+  // 💾 On sauvegarde d'abord la facture modifiée
+  saveDocuments(docs);
+
+  // ⚠️ Sécurité : on sauvegarde aussi dans Firestore si dispo
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(doc);
+  }
+
+  // -------------------------------------------------------------------
+  // 🔗 MISE À JOUR AUTOMATIQUE DU DEVIS LIÉ
+  // -------------------------------------------------------------------
+  if (doc.type === "facture" && doc.sourceDevisId && typeof setDevisStatus === "function") {
+
+    // Passage NON PAYÉ → PAYÉ
+    if (!wasPaid && doc.paid) {
+      setDevisStatus(doc.sourceDevisId, "cloture");
+    }
+
+    // Passage PAYÉ → NON PAYÉ
+    if (wasPaid && !doc.paid) {
+      setDevisStatus(doc.sourceDevisId, "accepte");
+    }
+  }
+
+  // -------------------------------------------------------------------
+  // 🚀 SI FACTURE DE CLIM RÉGLÉE → génération automatique attestation
+  // -------------------------------------------------------------------
+  if (doc.type === "facture" && !wasPaid && doc.paid && typeof handleAfterInvoicePaid === "function") {
+    handleAfterInvoicePaid(doc);
+  }
+
+  // -------------------------------------------------------------------
+  // 🔄 Rafraîchissement interface
+  // -------------------------------------------------------------------
+  if (typeof loadDocumentsList === "function") {
+    loadDocumentsList();
+  }
+  if (typeof computeCA === "function") {
+    computeCA();
+  }
+}
 
 function setDevisStatus(id, status) {
   const docs = getAllDocuments();
@@ -7776,17 +8515,53 @@ function setDevisStatus(id, status) {
   if (typeof saveSingleDocumentToFirestore === "function") {
     saveSingleDocumentToFirestore(doc);
   }
-  if (doc.type === "facture") {
-    // On re-check le seuil micro à chaque facture
-    checkMicroTVAThreshold(true);
-  }
-
 
   if (typeof loadDocumentsList === "function") {
     loadDocumentsList();
   }
 
-  // 2) Si on vient de passer à "accepte"
+  // 2) Si on vient de passer à "cloture" → créer un rapport technique auto
+  if (
+    status === "cloture" &&
+    oldStatus !== "cloture" &&
+    typeof createRapportFromDevis === "function"
+  ) {
+    try {
+      const rapports = (typeof getAllRapports === "function" ? getAllRapports() : []) || [];
+
+      // évite de générer plusieurs rapports pour le même devis
+      const already = rapports.find(r =>
+        r.source &&
+        r.source.type === "devis" &&
+        r.source.id === doc.id
+      );
+
+      if (!already) {
+        const rapport = createRapportFromDevis(doc); // ⚠️ doit juste créer + sauver, pas ouvrir de popup
+
+        const numero = doc.number || doc.id || "";
+
+        if (typeof showConfirmDialog === "function") {
+          showConfirmDialog({
+            title: "Rapport d’intervention créé",
+            message:
+              `Le devis ${numero} a été clôturé et un rapport technique d’intervention ` +
+              `a été généré automatiquement.`,
+            confirmLabel: "OK",
+            cancelLabel: "",
+            variant: "success",
+            icon: "📝"
+          });
+        } else {
+          console.log("[Devis] Rapport technique créé pour le devis", numero, rapport && rapport.id);
+        }
+      }
+    } catch (e) {
+      console.error("Erreur lors de la création automatique du rapport depuis un devis clôturé :", e);
+    }
+  }
+
+  // 3) Si on vient de passer à "accepte" → logique contrats + facture auto (comme avant)
   if (status === "accepte" && oldStatus !== "accepte") {
 
     const contracts = (typeof getAllContracts === "function"
@@ -7849,7 +8624,8 @@ function setDevisStatus(id, status) {
     }
   }
 
- try {
+  // 4) Historique de changement de statut
+  try {
     addHistoryEntry(id, {
       type: "status",
       detail: `Statut modifié : ${oldStatus || "—"} → ${status || "—"}`
@@ -7858,105 +8634,6 @@ function setDevisStatus(id, status) {
     console.error("Erreur historique statut devis:", e);
   }
 }
-
-// Crée (ou récupère) une facture à partir d'un devis
-function createInvoiceFromDevis(devis, options = {}) {
-  if (!devis || devis.type !== "devis") return null;
-
-  const docs = getAllDocuments();
-  const opts = options || {};
-
-  // 🔒 Si une facture existe déjà pour ce devis → on la réutilise (sauf force === true)
-  if (!opts.force) {
-    const existing = docs.find(
-      d => d.type === "facture" && d.sourceDevisId === devis.id
-    );
-    if (existing) {
-      return existing;
-    }
-  }
-
-  const facture = JSON.parse(JSON.stringify(devis));
-
-  facture.id = generateId("FAC");
-  facture.type = "facture";
-  facture.number = getNextNumber("facture");
-  facture.date = new Date().toISOString().split("T")[0];
-  facture.validityDate = "";
-  facture.paid = false;
-  facture.paymentMode = "";
-  facture.paymentDate = "";
-  facture.status = "";
-  facture.createdAt = new Date().toISOString();
-
-  // 🔗 Lien vers le devis d'origine
-  facture.sourceDevisId = devis.id;
-  facture.sourceDevisNumber = devis.number || "";
-
-  docs.push(facture);
-  saveDocuments(docs);
-  if (typeof saveSingleDocumentToFirestore === "function") {
-    saveSingleDocumentToFirestore(facture);
-  }
-
-  return facture;
-}
-
-// ================== TRANSFORMATION DEVIS -> FACTURE ==================
-
-function transformToInvoice() {
-  if (!currentDocumentId) {
-    showConfirmDialog({
-      title: "Aucun devis ouvert",
-      message: "Ouvre d'abord un devis avant de le transformer en facture.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "info",
-      icon: "ℹ️"
-    });
-    return;
-  }
-
-  const devis = getDocument(currentDocumentId);
-  if (!devis || devis.type !== "devis") {
-    showConfirmDialog({
-      title: "Action impossible",
-      message: "Ce document n'est pas un devis, il ne peut pas être transformé en facture.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "warning",
-      icon: "⚠️"
-    });
-    return;
-  }
-
-  // ✅ crée une facture si besoin, sinon réutilise celle déjà liée au devis
-  const facture = createInvoiceFromDevis(devis);
-
-  if (!facture) {
-    showConfirmDialog({
-      title: "Erreur",
-      message: "Impossible de créer une facture à partir de ce devis.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "error",
-      icon: "❌"
-    });
-    return;
-  }
-
-  showConfirmDialog({
-    title: "Devis transformé",
-    message: "Le devis a été transformé en facture : " + facture.number,
-    confirmLabel: "OK",
-    cancelLabel: "",
-    variant: "success",
-    icon: "✅"
-  });
-
-  loadDocument(facture.id);
-}
-
 
 
 // ================== EXPORT CSV FACTURES ==================
@@ -10558,70 +11235,6 @@ function getVisitsPerWeekForDate(contract, refDate) {
   let visits = Math.round(perMonth / 4); // approx 4 semaines / mois
   if (visits < 1) visits = 1;            // s’il y a des passages, au moins 1
 
-  return visits;
-}
-
-function changePlanningWeek(delta) {
-  planningWeekOffset += delta;
-  renderPlanningWeek();
-}
-
-function getMondayOfWeek(offset) {
-  const today = new Date();
-  const day = today.getDay(); // 0 = dimanche
-  const monday = new Date(today);
-  const diffToMonday = (day + 6) % 7;
-  monday.setDate(today.getDate() - diffToMonday + offset * 7);
-  monday.setHours(0, 0, 0, 0);
-  return monday;
-}
-
-function getContractEndDate(contract) {
-  const pr = contract.pricing || {};
-
-  if (pr.endDateLabel) {
-    const d = new Date(pr.endDateLabel + "T00:00:00");
-    if (!isNaN(d.getTime())) return d;
-  }
-
-  if (pr.startDate && pr.durationMonths) {
-    const start = new Date(pr.startDate + "T00:00:00");
-    if (!isNaN(start.getTime())) {
-      const end = new Date(start);
-      end.setMonth(end.getMonth() + Number(pr.durationMonths || 0));
-      end.setDate(end.getDate() - 1);
-      end.setHours(0, 0, 0, 0);
-      return end;
-    }
-  }
-
-  return null;
-}
-
-function contractIsActiveDuringWeek(contract, monday, sunday) {
-  const pr = contract.pricing || {};
-  if (!pr.startDate) return false;
-
-  const start = new Date(pr.startDate + "T00:00:00");
-  if (isNaN(start.getTime())) return false;
-
-  const end = getContractEndDate(contract) || new Date(start.getTime());
-  return !(end < monday || start > sunday);
-}
-
-function getVisitsPerWeekForDate(contract, refDate) {
-  const pr = contract.pricing || {};
-  const month = refDate.getMonth() + 1;
-
-  const perMonth =
-    month >= 5 && month <= 9
-      ? Number(pr.passEte || 0)
-      : Number(pr.passHiver || 0);
-
-  if (!perMonth) return 0;
-
-  let visits = Math.round(perMonth / 4);
-  if (visits < 1) visits = 1;
   return visits;
 }
 
@@ -14826,13 +15439,6 @@ function openInvoiceFromSchedule(invoiceId) {
   if (typeof loadDocument === "function") {
     loadDocument(invoiceId);
   }
-}
-
-
-function monthYearFr(dateISO) {
-  const d = new Date(dateISO + "T00:00:00");
-  if (isNaN(d.getTime())) return "";
-  return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
 }
 
 function closeContractSchedulePopup() {
