@@ -52,7 +52,7 @@ function compareISO(a, b) {
 
 // Date d’aujourd’hui au format ISO
 function todayISO() {
-    return new Date().toISOString().slice(0, 10);
+return formatDateYMD(new Date());
 }
 
 
@@ -312,21 +312,87 @@ const PRESTATION_TEMPLATES = [
 /* ================== RAPPORTS (TEMPLATES) ================== */
 
 const RAPPORT_TEMPLATES = [
-  {
+   {
     id: "entretien_clim",
     label: "Entretien climatisation",
-    applicableKinds: ["entretien_clim"],
+    showAnalysis: false,
     sections: [
       {
-        title: "Détail de l’intervention",
+        title: "Unité intérieure",
         items: [
-          "Nettoyage des filtres intérieurs",
-          "Nettoyage des batteries (évaporateur + condenseur)",
-          "Application d’un traitement antibactérien",
+          "Nettoyage et désinfection des filtres",
+          "Nettoyage des batteries (évaporateur)",
           "Nettoyage des turbines",
-          "Vérification des écoulements et du bac à condensats",
-          "Contrôle des connexions et câblage",
-          "Contrôle du soufflage et test de fonctionnement"
+          "Nettoyage du carter / façade",
+          "Vérification de l’écoulement des condensats",
+          "Contrôle des fixations"
+        ]
+      },
+      {
+        title: "Unité extérieure",
+        items: [
+          "Nettoyage du condenseur",
+          "Dépoussiérage complet",
+          "Contrôle du ventilateur externe",
+          "Contrôle des fixations et silentblocs",
+          "Contrôle des liaisons frigorifiques"
+        ]
+      },
+      {
+        title: "Contrôles électriques & fonctionnement",
+        items: [
+          "Contrôle des connexions électriques",
+          "Contrôle du serrage des borniers",
+          "Vérification tensions / intensités",
+          "Test des différents modes chaud / froid",
+          "Mesure soufflage / reprise",
+          "Test global de fonctionnement"
+        ]
+      }
+    ]
+  },
+  {
+    id: "depannage_clim",
+    label: "Dépannage / diagnostic climatisation",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Constats & diagnostic",
+        items: [
+          "Prise en compte du problème signalé",
+          "Contrôle visuel des unités intérieure et extérieure",
+          "Lecture codes défauts / voyants",
+          "Contrôle des flux d'air",
+          "Recherche de bruits anormaux",
+          "Contrôle de la température soufflée"
+        ]
+      },
+      {
+        title: "Tests électriques & composants",
+        items: [
+          "Contrôle de l’alimentation électrique",
+          "Contrôle des protections / disjoncteurs",
+          "Test du ventilateur",
+          "Vérification du compresseur",
+          "Vérification des sondes"
+        ]
+      },
+      {
+        title: "Actions réalisées",
+        items: [
+          "Remise à zéro du système",
+          "Nettoyage partiel si nécessaire",
+          "Correction du paramétrage",
+          "Réparation / remplacement d’éléments",
+          "Tests finaux de fonctionnement"
+        ]
+      },
+      {
+        title: "Recommandations",
+        items: [
+          "Conseils d'entretien",
+          "Recommandation d'un entretien complet",
+          "Conseils d'utilisation optimale"
         ]
       }
     ]
@@ -335,108 +401,251 @@ const RAPPORT_TEMPLATES = [
   {
     id: "entretien_piscine",
     label: "Entretien piscine – visite",
-    applicableKinds: ["piscine_chlore", "piscine_sel"],
+    showAnalysis: true,
     sections: [
       {
-        title: "Préfiltre & skimmers",
+        title: "Type de traitement",
         items: [
-          "Nettoyage du panier de pompe",
+          "Piscine au chlore",
+          "Piscine au sel"
+        ]
+      },
+      {
+        title: "Préfiltration & skimmers",
+        items: [
           "Nettoyage du panier de skimmer",
-          "Nettoyage du filtre de skimmer"
+          "Nettoyage du panier de pompe",
+          "Nettoyage du filtre de skimmer",
+          "Contrôle du niveau d’eau"
         ]
       },
       {
         title: "Nettoyage du bassin",
         items: [
-          "Passage de l’aspirateur manuel",
-          "Retrait des débris en surface à l’épuisette",
-          "Contrôle visuel des parois et de la ligne d’eau"
+          "Épuisette surface",
+          "Épuisette fond",
+          "Brossage des parois",
+          "Brossage ligne d’eau",
+          "Passage aspirateur manuel / robot"
         ]
       },
       {
-        title: "Analyse & correction de l’eau",
+        title: "Filtration",
         items: [
-          "Mesure du pH et correction si nécessaire",
-          "Mesure du chlore libre / production par électrolyse",
-          "Contrôle de la clarté générale du bassin"
+          "Contrôle pression manomètre",
+          "Contre-lavage du filtre (si sable)",
+          "Rinçage filtre",
+          "Nettoyage filtre cartouche (si applicable)",
+          "Contrôle absence de fuites hydraulique"
         ]
       },
       {
-        title: "Filtration / Local technique",
+        title: "Traitement & analyse",
         items: [
-          "Vérification de la durée de filtration",
-          "Contrôle du manomètre / pression de filtration",
-          "Contrôle visuel du local technique"
+          "Mesure du pH",
+          "Mesure du chlore libre / redox",
+          "Correction du pH si nécessaire",
+          "Correction du désinfectant si nécessaire",
+          "Contrôle du stabilisant (si chlore)",
+          "Contrôle du TAC",
+          "Réglage électrolyseur (si piscine au sel)"
+        ]
+      },
+      {
+        title: "Local technique & sécurité",
+        items: [
+          "Contrôle visuel local technique",
+          "Contrôle coffret électrique",
+          "Contrôle programmation filtration",
+          "Contrôle général de sécurité"
         ]
       }
     ]
   },
 
   {
-    id: "traitement_choc_sel",
-    label: "Piscine au sel – traitement choc",
-    applicableKinds: ["piscine_sel", "traitement_choc"],
+    id: "traitement_choc",
+    label: "Traitement choc piscine",
+    showAnalysis: true,
     sections: [
       {
-        title: "Traitement",
+        title: "Préparation du bassin",
         items: [
-          "Traitement chlore choc dans le bassin",
-          "Brossage complet des parois et du fond",
-          "Aspiration manuelle du bassin",
-          "Nettoyage du panier de pompe",
-          "Nettoyage ou remplacement du filtre"
+          "Contrôle qualité d’eau avant traitement",
+          "Nettoyage paniers skimmer",
+          "Nettoyage panier pompe",
+          "Épuisette surface / fond",
+          "Brossage des parois"
         ]
       },
       {
-        title: "Analyse",
+        title: "Traitement choc",
         items: [
-          "Mesure du pH et ajustement",
-          "Mesure du chlore libre après traitement",
-          "Contrôle de la salinité si nécessaire"
+          "Ajout du produit choc (chlore / sel / oxygène actif)",
+          "Ajout de floculant si nécessaire",
+          "Augmentation temps de filtration",
+          "Activation filtration manuelle"
         ]
       },
       {
-        title: "Réglages",
+        title: "Analyse & corrections",
         items: [
-          "Remise en service de l’électrolyseur",
-          "Réglage de la production de sel",
-          "Programmation de la filtration adaptée"
+          "Contrôle du pH avant treatment",
+          "Correction du pH",
+          "Contrôle redox / chlore après traitement",
+          "Contrôle salinité (si sel)"
+        ]
+      },
+      {
+        title: "Suivi",
+        items: [
+          "Conseils au client post-traitement",
+          "Planification d’un contrôle de suivi si nécessaire"
         ]
       }
     ]
   },
 
   {
-    id: "roulements_pompe",
+    id: "diagnostic_filtration",
+    label: "Diagnostic filtration piscine",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Hydraulique générale",
+        items: [
+          "Contrôle circulation eau",
+          "Contrôle refoulements / skimmers",
+          "Recherche de fuites hydrauliques",
+          "Contrôle des niveaux"
+        ]
+      },
+      {
+        title: "Préfiltre & aspiration",
+        items: [
+          "Vérification panier pompe",
+          "Contrôle étanchéité du couvercle",
+          "Contrôle tuyauterie aspiration",
+          "Recherche prise d’air éventuelle"
+        ]
+      },
+      {
+        title: "Filtration",
+        items: [
+          "Contrôle pression manomètre",
+          "Évaluation état du média filtrant",
+          "Contrôle crépines (si possible)",
+          "Contrôle filtre cartouche (si applicable)",
+          "Contrôle vanne 6 voies",
+          "Contrôle absence de fuites"
+        ]
+      },
+      {
+        title: "Pompe de filtration",
+        items: [
+          "Contrôle bruit / vibration",
+          "Contrôle débit",
+          "Contrôle présence bulles d’air",
+          "Vérification amorçage"
+        ]
+      },
+      {
+        title: "Équipements annexes",
+        items: [
+          "Contrôle électrolyseur",
+          "Contrôle régulation pH",
+          "Contrôle PAC (si présente)",
+          "Contrôle coffret électrique"
+        ]
+      },
+      {
+        title: "Recommandations",
+        items: [
+          "Actions suggérées au client",
+          "Remplacement / entretien recommandé",
+          "Conseils sécurité / usage"
+        ]
+      }
+    ]
+  },
+
+  {
+    id: "depannage_piscine",
+    label: "Dépannage piscine",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Constat & premiers contrôles",
+        items: [
+          "Prise en compte du problème signalé",
+          "Contrôle local technique",
+          "Analyse bruit / vibration",
+          "Contrôle coffret électrique"
+        ]
+      },
+      {
+        title: "Recherche de panne",
+        items: [
+          "Contrôle pompe filtration",
+          "Contrôle absence de fuite",
+          "Contrôle vanne 6 voies",
+          "Contrôle pression filtre",
+          "Tests aspiration / refoulement"
+        ]
+      },
+      {
+        title: "Actions réalisées",
+        items: [
+          "Purge de l’air",
+          "Nettoyage préfiltre",
+          "Réparation hydraulique mineure",
+          "Correction câblage / connexion",
+          "Remplacement élément défectueux"
+        ]
+      },
+      {
+        title: "Recommandations",
+        items: [
+          "Conseils d’usage",
+          "Avertissement sur usure",
+          "Recommandation d’un entretien régulier"
+        ]
+      }
+    ]
+  },
+
+  {
+    id: "remplacement_roulements",
     label: "Remplacement roulements pompe",
-    applicableKinds: ["remplacement_roulement"],
+    showAnalysis: false,
     sections: [
       {
-        title: "Dépose",
+        title: "Dépose ancienne pompe",
         items: [
-          "Coupure de l’alimentation électrique",
-          "Démontage de la pompe de filtration",
-          "Décâblage électrique et sécurisation",
-          "Séparation moteur / corps de pompe"
+          "Coupure alimentation",
+          "Déconnexion hydraulique",
+          "Déconnexion électrique",
+          "Démontage pompe / moteur"
         ]
       },
       {
-        title: "Travaux moteur",
+        title: "Remplacement des roulements",
         items: [
-          "Démontage complet du moteur",
           "Extraction des anciens roulements",
-          "Nettoyage de l’arbre moteur",
-          "Pose de roulements neufs",
-          "Test de rotation à vide"
+          "Nettoyage arbre moteur",
+          "Mise en place nouveaux roulements",
+          "Graissage si nécessaire"
         ]
       },
       {
-        title: "Repose",
+        title: "Remontage & tests",
         items: [
-          "Remontage moteur sur la pompe",
+          "Remontage moteur",
           "Raccordements hydrauliques",
           "Raccordements électriques",
-          "Mise en service et contrôle bruit / pression"
+          "Test en charge",
+          "Contrôle absence de vibration",
+          "Contrôle absence de fuite"
         ]
       }
     ]
@@ -445,30 +654,245 @@ const RAPPORT_TEMPLATES = [
   {
     id: "remplacement_pompe",
     label: "Remplacement pompe filtration",
-    applicableKinds: ["remplacement_pompe_mo"],
+    showAnalysis: false,
     sections: [
       {
-        title: "Dépose de l’ancienne pompe",
+        title: "Dépose ancienne pompe",
         items: [
-          "Coupure de l’alimentation électrique",
-          "Vidange partielle de la tuyauterie",
-          "Déconnexion des raccords hydrauliques",
-          "Décâblage complet de la pompe"
+          "Coupure alimentation",
+          "Vidange partielle si nécessaire",
+          "Démontage raccords hydrauliques",
+          "Déconnexion électrique"
         ]
       },
       {
-        title: "Installation de la nouvelle pompe",
+        title: "Installation nouvelle pompe",
         items: [
-          "Mise en place de la nouvelle pompe",
-          "Raccordements hydrauliques",
-          "Raccordements électriques",
-          "Amorçage et test de la filtration"
+          "Mise en place pompe neuve",
+          "Alignement et réglages",
+          "Collage / raccordement PVC",
+          "Branchement électrique",
+          "Sécurisation installation"
+        ]
+      },
+      {
+        title: "Essais",
+        items: [
+          "Mise en route installation",
+          "Contrôle débit",
+          "Contrôle fuite / suintement",
+          "Contrôle bruit / vibration",
+          "Contrôle fonctionnement filtration"
         ]
       }
     ]
-  }
-];
+  },
 
+  {
+    id: "travaux_pvc",
+    label: "Travaux PVC / Local technique",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Dépose & préparation",
+        items: [
+          "Vidange partielle installation",
+          "Découpe PVC existant",
+          "Nettoyage zone de travail",
+          "Mise en sécurité"
+        ]
+      },
+      {
+        title: "Pose & collage PVC",
+        items: [
+          "Mise en place nouvelles vannes / raccords",
+          "Collage PVC sous pression",
+          "Respect temps de séchage",
+          "Mise en pression progressive"
+        ]
+      },
+      {
+        title: "Ventilation / aménagement local",
+        items: [
+          "Installation grille / extracteur d’air",
+          "Aération améliorée du local technique",
+          "Nettoyage & organisation local",
+          "Contrôle sécurité électrique"
+        ]
+      },
+      {
+        title: "Tests finaux",
+        items: [
+          "Contrôle absence de fuite",
+          "Contrôle circulation eau",
+          "Validation fonctionnement complet"
+        ]
+      }
+    ]
+  },
+
+  {
+    id: "entretien_jacuzzi",
+    label: "Entretien jacuzzi / spa",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Nettoyage & entretien courant",
+        items: [
+          "Nettoyage de la ligne d’eau",
+          "Nettoyage de la cuve",
+          "Nettoyage du couvercle / capot",
+          "Nettoyage des filtres",
+          "Nettoyage des repose-têtes"
+        ]
+      },
+      {
+        title: "Hydromassage & circulation",
+        items: [
+          "Contrôle fonctionnement buses hydromassage",
+          "Contrôle pompe de circulation",
+          "Contrôle absence de fuites",
+          "Contrôle niveau d’eau"
+        ]
+      },
+      {
+        title: "Traitement & désinfection",
+        items: [
+          "Mesure pH",
+          "Correction pH",
+          "Traitement désinfectant (chlore / brome)",
+          "Ajout produit anti-calcaire / clarifiant si nécessaire"
+        ]
+      },
+      {
+        title: "Contrôles techniques",
+        items: [
+          "Contrôle tableau de commande",
+          "Contrôle chauffage",
+          "Contrôle capteurs / sondes",
+          "Contrôle éclairage"
+        ]
+      }
+    ]
+  },
+  {
+    id: "vidange_jacuzzi",
+    label: "Vidange + nettoyage jacuzzi",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Vidange & préparation",
+        items: [
+          "Arrêt installation",
+          "Vidange complète du spa",
+          "Vidange canalisations si nécessaire",
+          "Nettoyage complet de la cuve",
+          "Nettoyage ligne d’eau"
+        ]
+      },
+      {
+        title: "Entretien & remise en eau",
+        items: [
+          "Nettoyage filtres",
+          "Remplissage du spa",
+          "Purge circulation eau",
+          "Traitement désinfectant initial",
+          "Réglage température"
+        ]
+      },
+      {
+        title: "Contrôles finaux",
+        items: [
+          "Test fonctionnement hydromassage",
+          "Test pompe de circulation",
+          "Test chauffage",
+          "Test éclairage"
+        ]
+      }
+    ]
+  },
+  {
+    id: "installation_electrolyseur",
+    label: "Installation électrolyseur au sel",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Préparation installation",
+        items: [
+          "Dépose ancienne cellule si présente",
+          "Nettoyage zone de travail",
+          "Découpe PVC existant",
+          "Mise en sécurité électrique"
+        ]
+      },
+      {
+        title: "Pose électrolyseur",
+        items: [
+          "Installation nouvelle cellule",
+          "Raccordements PVC",
+          "Collage et séchage",
+          "Branchement électrique sécurisée",
+          "Paramétrage de la production"
+        ]
+      },
+      {
+        title: "Tests & réglages",
+        items: [
+          "Test de production de chlore",
+          "Contrôle absence de fuite",
+          "Contrôle circulation eau",
+          "Réglage horloge / mode boost",
+          "Explication de fonctionnement au client"
+        ]
+      }
+    ]
+  },
+  {
+    id: "installation_pompe_pac",
+    label: "Installation pompe + PAC",
+    showAnalysis: false,
+    sections: [
+      {
+        title: "Dépose ancien matériel",
+        items: [
+          "Coupure alimentation",
+          "Vidange partielle installation",
+          "Dépose ancienne pompe",
+          "Déconnexion hydraulique et électrique"
+        ]
+      },
+      {
+        title: "Installation nouvelle pompe",
+        items: [
+          "Installation pompe neuve",
+          "Alignement et niveau",
+          "Raccordements PVC",
+          "Branchement électrique",
+          "Contrôle débit"
+        ]
+      },
+      {
+        title: "Installation PAC",
+        items: [
+          "Installation PAC à l’extérieur",
+          "Raccordements hydrauliques By-pass",
+          "Raccordements électriques",
+          "Mise en service PAC",
+          "Contrôle montée en température"
+        ]
+      },
+      {
+        title: "Tests finaux",
+        items: [
+          "Contrôle absence de fuite",
+          "Contrôle bruit / vibration",
+          "Contrôle fonctionnement global",
+          "Explication client"
+        ]
+      }
+    ]
+  },
+];
 
 const MARGIN_MULTIPLIER = 1.4;
 
@@ -787,21 +1211,34 @@ function onContractClientNameChange() {
   }
 }
 
-
+let currentAttestationId = null;
+let currentRapportId = null;
 /* ================== ATTESTATIONS & RAPPORTS ================== */
 
 function showAttestations() {
-  hideAllSections();
-  document.getElementById("attestationView").classList.remove("hidden");
-
+  // ===== Onglets =====
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById("tabAttest").classList.add("active");
+  const tabAttest = document.getElementById("tabAttest");
+  if (tabAttest) tabAttest.classList.add("active");
 
+  // ===== Vues =====
+  const viewsToHide = ["homeView", "listView", "formView", "contractView"];
+  viewsToHide.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
+
+  const attestationView = document.getElementById("attestationView");
+  if (attestationView) attestationView.classList.remove("hidden");
+
+  // ===== Listes attestations + rapports =====
   if (typeof loadAttestationsList === "function") {
     loadAttestationsList();
   }
+  if (typeof loadRapportsList === "function") {
+    loadRapportsList();
+  }
 }
-
 
 
 /* ========== ATTESTATION CLIM ========== */
@@ -810,24 +1247,61 @@ function openClimAttestationGenerator() {
   const overlay = document.getElementById("attestationPopup");
   if (!overlay) return;
 
-  // on garde les valeurs si elles ont été préremplies avant
+  // 👉 on est en création, pas en édition
+  currentAttestationId = null;
+
+  // on vide / remet les champs
   const name  = document.getElementById("attClientName");
   const addr  = document.getElementById("attClientAddress");
   const date  = document.getElementById("attDate");
   const units = document.getElementById("attUnits");
   const notes = document.getElementById("attNotes");
 
-  if (name)  name.value  = name.value || "";
-  if (addr)  addr.value  = addr.value || "";
-  if (date)  date.value  = date.value || "";
-  if (units) units.value = units.value || 1;
-  if (notes) notes.value = notes.value || "";
+  if (name)  name.value  = "";
+  if (addr)  addr.value  = "";
+  if (date)  date.value  = "";
+  if (units) units.value = 1;
+  if (notes) notes.value = "";
 
   overlay.classList.remove("hidden");
 
   const popup = overlay.querySelector(".popup");
-  if (popup) popup.classList.add("show");
+  if (popup) {
+    void popup.offsetWidth;        // petit reflow pour l’animation
+    popup.classList.add("show");
+  }
 }
+
+function openAttestationPopupForEdit(attId) {
+  const list = getAllAttestations();
+  const rec = list.find(a => a.id === attId);
+  if (!rec) return;
+
+  currentAttestationId = rec.id;
+
+  const name  = document.getElementById("attClientName");
+  const addr  = document.getElementById("attClientAddress");
+  const date  = document.getElementById("attDate");
+  const units = document.getElementById("attUnits");
+  const notes = document.getElementById("attNotes");
+
+  if (name)  name.value  = rec.clientName  || "";
+  if (addr)  addr.value  = rec.clientAddress || "";
+  if (date)  date.value  = rec.date        || "";
+  if (units) units.value = rec.units != null ? rec.units : 1;
+  if (notes) notes.value = rec.notes       || "";
+
+  const overlay = document.getElementById("attestationPopup");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+
+  const popup = overlay.querySelector(".popup");
+  if (popup) {
+    void popup.offsetWidth;
+    popup.classList.add("show");
+  }
+}
+
 
 function closeAttestationPopup() {
   const overlay = document.getElementById("attestationPopup");
@@ -839,7 +1313,6 @@ function closeAttestationPopup() {
   overlay.classList.add("hidden");
 }
 
-
 function saveAttestationFromForm() {
   const name  = document.getElementById("attClientName")?.value || "";
   const addr  = document.getElementById("attClientAddress")?.value || "";
@@ -847,24 +1320,57 @@ function saveAttestationFromForm() {
   const units = document.getElementById("attUnits")?.value || "1";
   const notes = document.getElementById("attNotes")?.value || "";
 
-  const record = {
-    id: generateId("ATT"),
-    type: "attestation_clim",
-    clientName: name,
-    clientAddress: addr,
-    date: date,
-    units: Number(units) || 1,
-    notes: notes,
-    createdAt: new Date().toISOString(),
-    sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
-    sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
-  };
-
   const list = getAllAttestations();
-  list.push(record);
-  saveAttestations(list);
+  let record;
 
-  // On remet la source à zéro après usage
+  if (currentAttestationId) {
+    // ✏️ MODE ÉDITION
+    const idx = list.findIndex(a => a.id === currentAttestationId);
+    if (idx !== -1) {
+      record = {
+        ...list[idx],
+        clientName: name,
+        clientAddress: addr,
+        date,
+        units: Number(units) || 1,
+        notes
+      };
+      list[idx] = record;
+    } else {
+      // sécurité : si pas trouvé, on recrée
+      record = {
+        id: generateId("ATT"),
+        type: "attestation_clim",
+        clientName: name,
+        clientAddress: addr,
+        date,
+        units: Number(units) || 1,
+        notes,
+        createdAt: new Date().toISOString(),
+        sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
+        sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+      };
+      list.push(record);
+    }
+  } else {
+    // ➕ MODE CRÉATION
+    record = {
+      id: generateId("ATT"),
+      type: "attestation_clim",
+      clientName: name,
+      clientAddress: addr,
+      date,
+      units: Number(units) || 1,
+      notes,
+      createdAt: new Date().toISOString(),
+      sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
+      sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+    };
+    list.push(record);
+  }
+
+  saveAttestations(list);
+  currentAttestationId = record.id;
   currentAttestationSource = null;
 
   if (typeof loadAttestationsList === "function") {
@@ -872,103 +1378,86 @@ function saveAttestationFromForm() {
   }
 }
 
+function generatePDFAttestation(mode = "print") {
+  const name  = document.getElementById("attClientName")?.value || "";
+  const addr  = document.getElementById("attClientAddress")?.value || "";
+  const date  = document.getElementById("attDate")?.value || "";
+  const units = document.getElementById("attUnits")?.value || "1";
+  const notes = document.getElementById("attNotes")?.value || "";
 
-function generatePDFAttestation() {
-  if (!window.jspdf || !window.jspdf.jsPDF) {
-    alert("Librairie jsPDF manquante pour générer le PDF.");
-    return;
-  }
+  // 1) on sauvegarde / met à jour dans le localStorage
+  saveAttestationFromForm();
 
-  const name  = document.getElementById("attClientName").value || "";
-  const addr  = document.getElementById("attClientAddress").value || "";
-  const date  = document.getElementById("attDate").value || "";
-  const units = document.getElementById("attUnits").value || "1";
-  const notes = document.getElementById("attNotes").value || "";
+  // 2) on récupère l’enregistrement à jour
+  const list = getAllAttestations();
+  const rec = list
+    .slice()
+    .reverse()
+    .find(a =>
+      (a.clientName || "") === name &&
+      (a.clientAddress || "") === addr &&
+      (a.date || "") === date
+    ) || {
+      clientName: name,
+      clientAddress: addr,
+      date,
+      units: Number(units) || 1,
+      notes
+    };
 
-  const doc = new window.jspdf.jsPDF();
+  rec.units = Number(units) || 1;
 
-  doc.setFontSize(16);
-  doc.text("Attestation d’entretien climatisation", 10, 20);
+  // 3) on génère le PDF premium
+  generatePDFAttestationFromRecord(rec, mode);
 
-  doc.setFontSize(12);
-  let y = 40;
-
-  if (name) {
-    doc.text("Client : " + name, 10, y);
-    y += 7;
-  }
-  if (addr) {
-    doc.text("Adresse : " + addr, 10, y);
-    y += 7;
-  }
-  if (date) {
-    const frDate = date.split("-").reverse().join("/");
-    doc.text("Date d’intervention : " + frDate, 10, y);
-    y += 7;
-  }
-
-  doc.text("Nombre d’unités entretenues : " + units, 10, y);
-  y += 12;
-
-  doc.text("Détail des opérations effectuées :", 10, y);
-  y += 7;
-
-  const ops = [
-    "Nettoyage des filtres intérieurs",
-    "Nettoyage des batteries (évaporateur + condenseur)",
-    "Application d’un traitement antibactérien",
-    "Nettoyage des turbines",
-    "Vérification des écoulements et du bac à condensats",
-    "Contrôle des connexions électriques",
-    "Contrôle du soufflage et test de fonctionnement"
-  ];
-
-  ops.forEach(op => {
-    doc.text("- " + op, 12, y);
-    y += 6;
-  });
-
-  if (notes) {
-    y += 8;
-    doc.text("Remarques :", 10, y);
-    y += 6;
-    const wrapped = doc.splitTextToSize(notes, 180);
-    doc.text(wrapped, 12, y);
-  }
-
-  doc.text("Fait pour servir et valoir ce que de droit.", 10, 280);
-
-  doc.save("attestation-entretien-clim.pdf");
-
-  // 🧾 Sauvegarde dans l'historique
-  if (typeof saveAttestationFromForm === "function") {
-    saveAttestationFromForm();
-  }
-
+  // on ferme la popup
   closeAttestationPopup();
 }
 
-
 function openPiscineRapportGenerator(docId = null) {
+  // 👉 on est en mode "nouveau"
+  currentRapportId = null;
+
   const sel = document.getElementById("rapportType");
   if (!sel) return;
 
   sel.innerHTML = `<option value="">— Choisir —</option>`;
-
   RAPPORT_TEMPLATES.forEach(t => {
     sel.innerHTML += `<option value="${t.id}">${t.label}</option>`;
   });
 
+  // on vide les champs
+  const name  = document.getElementById("rapClientName");
+  const addr  = document.getElementById("rapClientAddress");
+  const date  = document.getElementById("rapDate");
+  const notes = document.getElementById("rapNotes");
+  const ph    = document.getElementById("rapPH");
+  const chl   = document.getElementById("rapChlore");
+
+  if (name)  name.value  = "";
+  if (addr)  addr.value  = "";
+  if (date)  date.value  = "";
+  if (notes) notes.value = "";
+  if (ph)    ph.value    = "";
+  if (chl)   chl.value   = "";
+
   const checklist = document.getElementById("rapportChecklist");
   if (checklist) checklist.innerHTML = "";
+
+  // 🔹 cacher l’analyse tant qu’on n’a pas choisi "entretien_piscine"
+  updateRapportAnalyseVisibility("");
+
+updateRapportAnalyseVisibility("");
 
   const overlay = document.getElementById("rapportPopup");
   if (!overlay) return;
 
   overlay.classList.remove("hidden");
-
   const popup = overlay.querySelector(".popup");
-  if (popup) popup.classList.add("show");
+  if (popup) {
+    void popup.offsetWidth;     // pour l’animation
+    popup.classList.add("show");
+  }
 }
 
 function closeRapportPopup() {
@@ -979,17 +1468,22 @@ function closeRapportPopup() {
   if (popup) popup.classList.remove("show");
 
   overlay.classList.add("hidden");
+  currentRapportId = null;   // 🧹
 }
 
 function rebuildRapportChecklist() {
   const type = document.getElementById("rapportType").value;
+
+  // 🔹 ICI : on gère l’affichage du bloc analyse
+  updateRapportAnalyseVisibility(type);
+
   const tpl = RAPPORT_TEMPLATES.find(t => t.id === type);
   const box = document.getElementById("rapportChecklist");
   box.innerHTML = "";
 
   if (!tpl) return;
 
-  tpl.sections.forEach(section => {
+ tpl.sections.forEach(section => {
     const div = document.createElement("div");
     div.className = "rapport-section";
 
@@ -1010,6 +1504,25 @@ function rebuildRapportChecklist() {
     box.appendChild(div);
   });
 }
+
+function updateRapportAnalyseVisibility(typeId) {
+  const bloc = document.getElementById("rapportAnalyse");
+  if (!bloc) return;
+
+  // On montre l'analyse uniquement pour "entretien_piscine"
+  const show = typeId === "entretien_piscine";
+
+  bloc.style.display = show ? "block" : "none";
+
+  // Si on cache, on vide les champs
+  if (!show) {
+    const ph  = document.getElementById("rapPH");
+    const chl = document.getElementById("rapChlore");
+    if (ph)  ph.value  = "";
+    if (chl) chl.value = "";
+  }
+}
+
 
 
 
@@ -2264,6 +2777,63 @@ function saveAttestationOnly() {
   closeAttestationPopup();
 }
 
+function autoCreateClimAttestationForInvoice(doc) {
+  if (!doc) return;
+
+  const list = getAllAttestations();
+
+  // ⚠️ Si une attestation existe déjà pour cette facture, on ne recrée pas
+  if (doc.id && list.some(att => att.sourceDocId === doc.id)) {
+    return;
+  }
+
+  // Données de base depuis la facture
+  const name  = (doc.client && doc.client.name)    || "";
+  const addr  = (doc.client && doc.client.address) || "";
+  const date  = doc.date || new Date().toISOString().slice(0, 10);
+
+  // 🔢 Nombre d’unités = somme des quantités sur les lignes de clim
+  let units = 1;
+  if (Array.isArray(doc.prestations)) {
+    const climLines = doc.prestations.filter(p =>
+      p && ["entretien_clim", "depannage_clim"].includes(p.kind)
+    );
+
+    if (climLines.length) {
+      const totalQty = climLines.reduce((sum, p) => {
+        const q = Number(p.qty);
+        return sum + (isNaN(q) ? 0 : q);
+      }, 0);
+
+      if (totalQty > 0) {
+        units = totalQty; // ex : 3 splits → 3 unités
+      }
+    }
+  }
+
+  const record = {
+    id: generateId("ATT"),
+    type: "attestation_clim",
+    clientName: name,
+    clientAddress: addr,
+    date,
+    units,
+    notes: "",
+    createdAt: new Date().toISOString(),
+    sourceDocId: doc.id || null,
+    sourceDocNumber: doc.number || null
+  };
+
+  list.push(record);
+  saveAttestations(list);
+
+  // Si tu es sur l’onglet Attestations, on rafraîchit la liste
+  if (typeof loadAttestationsList === "function") {
+    loadAttestationsList();
+  }
+}
+
+
 // ============ LOCALSTORAGE RAPPORTS ============
 
 function getAllRapports() {
@@ -2283,63 +2853,103 @@ function saveRapports(list) {
 }
 
 function saveRapportFromForm() {
-  const name  = document.getElementById("rapClientName")?.value || "";
-  const addr  = document.getElementById("rapClientAddress")?.value || "";
-  const date  = document.getElementById("rapDate")?.value || "";
-  const notes = document.getElementById("rapNotes")?.value || "";
+  const name   = document.getElementById("rapClientName")?.value || "";
+  const addr   = document.getElementById("rapClientAddress")?.value || "";
+  const date   = document.getElementById("rapDate")?.value || "";
+  const notes  = document.getElementById("rapNotes")?.value || "";
   const typeId = document.getElementById("rapportType")?.value || "";
 
   const tpl = RAPPORT_TEMPLATES.find(t => t.id === typeId) || null;
 
-  // 🔎 Analyse de l'eau (nouveaux champs)
   const phInput     = document.getElementById("rapPH");
   const chloreInput = document.getElementById("rapChlore");
-
   const phValue     = phInput ? phInput.value.trim() : "";
   const chloreValue = chloreInput ? chloreInput.value.trim() : "";
 
-  // On récupère les items cochés
+  // Items cochés
   const sectionsData = [];
   document.querySelectorAll("#rapportChecklist .rapport-section").forEach(sectionEl => {
     const title = sectionEl.querySelector("h4")?.textContent || "";
     const items = [];
     sectionEl.querySelectorAll("input[type='checkbox']").forEach(cb => {
-      if (cb.checked) {
-        items.push(cb.dataset.text || "");
-      }
+      if (cb.checked) items.push(cb.dataset.text || "");
     });
-    if (items.length) {
-      sectionsData.push({ title, items });
-    }
+    if (items.length) sectionsData.push({ title, items });
   });
 
-  const record = {
-    id: generateId("RAP"),
-    typeId,
-    typeLabel: tpl ? tpl.label : "",
-    clientName: name,
-    clientAddress: addr,
-    date,
-    notes,
-    sections: sectionsData,
-    // 💧 Bloc analyse de l'eau
-    analysis: {
-      ph: phValue || null,
-      chlore: chloreValue || null
-    },
-    createdAt: new Date().toISOString(),
-    sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
-    sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
-  };
-
   const list = getAllRapports();
-  list.push(record);
+  let record;
+
+  if (currentRapportId) {
+    // ✏️ on met à jour
+    const idx = list.findIndex(r => r.id === currentRapportId);
+    if (idx !== -1) {
+      record = {
+        ...list[idx],
+        typeId,
+        typeLabel: tpl ? tpl.label : "",
+        clientName: name,
+        clientAddress: addr,
+        date,
+        notes,
+        sections: sectionsData,
+        analysis: {
+          ph: phValue || null,
+          chlore: chloreValue || null
+        }
+      };
+      list[idx] = record;
+    } else {
+      // fallback création
+      record = {
+        id: generateId("RAP"),
+        typeId,
+        typeLabel: tpl ? tpl.label : "",
+        clientName: name,
+        clientAddress: addr,
+        date,
+        notes,
+        sections: sectionsData,
+        analysis: {
+          ph: phValue || null,
+          chlore: chloreValue || null
+        },
+        createdAt: new Date().toISOString(),
+        sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
+        sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+      };
+      list.push(record);
+    }
+  } else {
+    // ➕ création
+    record = {
+      id: generateId("RAP"),
+      typeId,
+      typeLabel: tpl ? tpl.label : "",
+      clientName: name,
+      clientAddress: addr,
+      date,
+      notes,
+      sections: sectionsData,
+      analysis: {
+        ph: phValue || null,
+        chlore: chloreValue || null
+      },
+      createdAt: new Date().toISOString(),
+      sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
+      sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+    };
+    list.push(record);
+  }
+
   saveRapports(list);
+  currentRapportId = record.id;
 
   if (typeof loadRapportsList === "function") {
     loadRapportsList();
   }
 }
+
 
 function saveRapportOnly() {
   saveRapportFromForm();
@@ -2350,11 +2960,9 @@ function loadRapportsList() {
   const tbody = document.getElementById("rapportsTableBody");
   if (!tbody) return;
 
-  const list = getAllRapports().slice().sort((a, b) => {
-    const ad = a.date || "";
-    const bd = b.date || "";
-    return ad.localeCompare(bd);
-  });
+  const list = getAllRapports()
+    .slice()
+    .sort((a, b) => (a.date || "").localeCompare(b.date || ""));
 
   tbody.innerHTML = "";
 
@@ -2370,29 +2978,50 @@ function loadRapportsList() {
   }
 
   list.forEach(r => {
+    const tr = document.createElement("tr");
+
     const frDate = r.date ? r.date.split("-").reverse().join("/") : "";
     const source = r.sourceDocNumber ? `Facture ${r.sourceDocNumber}` : "";
 
-    tbody.innerHTML += `
-      <tr>
-        <td class="col-date">${frDate}</td>
-        <td class="col-client">${r.clientName || ""}</td>
-        <td class="col-type">${r.typeLabel || ""}</td>
-        <td class="col-source">${source}</td>
-        <td class="col-actions">
-          <button class="btn btn-secondary btn-small" onclick="downloadRapport('${r.id}')">
-            Télécharger
-          </button>
-          <button class="btn btn-danger btn-small" onclick="deleteRapport('${r.id}')">
-            Supprimer
-          </button>
-        </td>
-      </tr>
+    tr.innerHTML = `
+      <td>${frDate}</td>
+      <td>${escapeHtml(r.clientName || "")}</td>
+      <td>${escapeHtml(r.typeLabel || "")}</td>
+      <td>${escapeHtml(source)}</td>
+      <td class="col-actions"></td>
     `;
+
+    const tdActions = tr.querySelector(".col-actions");
+
+    const btnOpen = document.createElement("button");
+    btnOpen.className = "btn btn-small btn-primary";
+    btnOpen.textContent = "Ouvrir";
+    btnOpen.onclick = () => openRapportPopupForEdit(r.id);
+
+    const btnPreview = document.createElement("button");
+    btnPreview.className = "btn btn-small btn-secondary";
+    btnPreview.textContent = "Aperçu";
+    btnPreview.onclick = () => openRapportPreview(r.id);
+
+    const btnPrint = document.createElement("button");
+    btnPrint.className = "btn btn-small btn-success";
+    btnPrint.textContent = "Imprimer";
+    btnPrint.onclick = () => printRapport(r.id);
+
+    const btnDelete = document.createElement("button");
+    btnDelete.className = "btn btn-small btn-danger";
+    btnDelete.textContent = "Supprimer";
+    btnDelete.onclick = () => deleteRapport(r.id);
+
+    tdActions.appendChild(btnOpen);
+    tdActions.appendChild(btnPreview);
+    tdActions.appendChild(btnPrint);
+    tdActions.appendChild(btnDelete);
+
+    tbody.appendChild(tr);
   });
 }
-
-function generatePDFRapportFromRecord(record) {
+function generatePDFRapportFromRecord(record, mode = "print") {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert("Librairie jsPDF manquante.");
     return;
@@ -2400,82 +3029,248 @@ function generatePDFRapportFromRecord(record) {
 
   const doc = new window.jspdf.jsPDF();
 
+  // ========= BANDEAU HAUT =========
+  doc.setFillColor(25, 118, 210);
+  doc.rect(0, 0, 210, 28, "F");
+
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(18);
-  doc.text(record.typeLabel || "Rapport d’intervention", 10, 20);
+  doc.text("AquaClim Prestige", 12, 16);
 
-  doc.setFontSize(12);
-  let y = 32;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Entretien & Dépannage – Climatisation & Piscine", 12, 22);
 
-  // === Infos client ===
+  // Cartouche titre à droite
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(130, 8, 70, 14, 2, 2, "F");
+  doc.setTextColor(25, 118, 210);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("RAPPORT TECHNIQUE", 133, 17);
+
+  // ========= INFOS SOCIÉTÉ =========
+  doc.setTextColor(60, 60, 60);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  let y = 34;
+  doc.text("Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice", 12, y); y += 5;
+  doc.text("Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com", 12, y);
+
+  // ========= TITRE DOCUMENT =========
+  y += 10;
+  const title = record.typeLabel || "Rapport d’intervention";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(25, 118, 210);
+  doc.text(title, 12, y);
+  y += 6;
+
+  doc.setDrawColor(220);
+  doc.line(12, y, 198, y);
+  y += 8;
+
+  // ========= ENCAR CLIENT / INTERVENTION =========
+  const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
+
+  // Bloc client
+  doc.setFillColor(248, 249, 252);
+  doc.roundedRect(12, y, 90, 30, 2, 2, "F");
+  doc.setDrawColor(225, 228, 234);
+  doc.roundedRect(12, y, 90, 30, 2, 2);
+
+  let yy = y + 7;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(33, 33, 33);
+  doc.text("Client", 16, yy);
+  yy += 5;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
   if (record.clientName) {
-    doc.text("Client : " + record.clientName, 10, y); 
-    y += 6;
+    doc.text(record.clientName, 16, yy); yy += 4;
   }
   if (record.clientAddress) {
-    doc.text("Adresse : " + record.clientAddress, 10, y); 
-    y += 6;
-  }
-  if (record.date) {
-    const frDate = record.date.split("-").reverse().join("/");
-    doc.text("Date d’intervention : " + frDate, 10, y); 
-    y += 8;
+    const addrLines = doc.splitTextToSize(record.clientAddress, 80);
+    addrLines.forEach(line => {
+      doc.text(line, 16, yy);
+      yy += 4;
+    });
   }
 
-  // === Bloc analyse de l'eau (NOUVEAU) ===
+  // Bloc intervention
+  doc.setFillColor(248, 249, 252);
+  doc.roundedRect(110, y, 88, 30, 2, 2, "F");
+  doc.setDrawColor(225, 228, 234);
+  doc.roundedRect(110, y, 88, 30, 2, 2);
+
+  yy = y + 7;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(33, 33, 33);
+  doc.text("Intervention", 114, yy);
+  yy += 5;
+
+  doc.setFont("helvetica", "normal");
+  if (frDate) {
+    doc.text("Date : " + frDate, 114, yy); yy += 4;
+  }
+  if (record.typeLabel) {
+    doc.text("Type : " + record.typeLabel, 114, yy); yy += 4;
+  }
+
+  y += 38;
+
+  // ========= BLOC ANALYSE DE L’EAU (SI PRÉSENT) =========
   if (record.analysis && (record.analysis.ph || record.analysis.chlore)) {
-    doc.setFontSize(13);
-    doc.text("Analyse de l’eau :", 10, y);
-    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(25, 118, 210);
+    doc.text("Analyse de l’eau", 12, y);
+    y += 5;
+    doc.setDrawColor(230);
+    doc.line(12, y, 198, y);
+    y += 5;
 
-    doc.setFontSize(12);
+    doc.setFillColor(249, 250, 252);
+    doc.roundedRect(12, y, 186, 20, 2, 2, "F");
+    doc.setDrawColor(230);
+    doc.roundedRect(12, y, 186, 20, 2, 2);
+
+    let ax = 16;
+    let ay = y + 7;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
 
     if (record.analysis.ph) {
-      doc.text("• pH mesuré : " + record.analysis.ph, 14, y);
-      y += 6;
+      doc.text(`pH mesuré : ${record.analysis.ph}`, ax, ay);
+      ay += 5;
+      doc.setTextColor(120, 120, 120);
+      doc.text("Plage recommandée : 7,2 – 7,6", ax, ay);
+      doc.setTextColor(50, 50, 50);
     }
 
     if (record.analysis.chlore) {
-      doc.text("• Chlore libre : " + record.analysis.chlore + " mg/L", 14, y);
-      y += 6;
+      let ax2 = 110;
+      let ay2 = y + 7;
+      doc.setTextColor(50, 50, 50);
+      doc.text(`Chlore libre : ${record.analysis.chlore} mg/L`, ax2, ay2);
+      ay2 += 5;
+      doc.setTextColor(120, 120, 120);
+      doc.text("Plage recommandée : 1,0 – 3,0 mg/L", ax2, ay2);
+      doc.setTextColor(50, 50, 50);
     }
 
-    y += 4; // petit espace avant les sections
+    y += 26;
   }
 
-  // === Sections checklist ===
-  (record.sections || []).forEach(sec => {
-    doc.setFontSize(13);
-    doc.text(sec.title || "", 10, y);
-    y += 6;
+  // ========= CHECKLIST / SECTIONS =========
+ (record.sections || []).forEach(sec => {
+  if (y > 260) { doc.addPage(); y = 20; }
 
-    doc.setFontSize(12);
-    (sec.items || []).forEach(txt => {
-      doc.text("• " + txt, 14, y);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.setTextColor(25, 118, 210);
+  doc.text(sec.title || "", 12, y);
+  y += 5;
+  doc.setDrawColor(230);
+  doc.line(12, y, 198, y);
+  y += 5;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(50, 50, 50);
+
+  (sec.items || []).forEach(txtRaw => {
+    if (y > 270) { doc.addPage(); y = 20; }
+
+    // 🔧 on enlève les éventuelles puces déjà présentes dans le texte ("• ", "-", etc.)
+    const clean = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
+
+    // pastille bleue
+    doc.setFillColor(25, 118, 210);
+    doc.circle(14, y - 1.5, 1, "F");
+
+    const wrapped = doc.splitTextToSize(clean, 178);
+    wrapped.forEach(line => {
+      doc.text(line, 18, y);
       y += 5;
     });
-    y += 3;
+    y += 1;
   });
 
-  // === Remarques ===
-  if (record.notes) {
-    y += 5;
-    doc.setFontSize(13);
-    doc.text("Remarques :", 10, y);
-    y += 6;
+  y += 3;
+});
 
-    doc.setFontSize(12);
+  // ========= REMARQUES =========
+  if (record.notes) {
+    if (y > 260) { doc.addPage(); y = 20; }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(25, 118, 210);
+    doc.text("Remarques / anomalies", 12, y);
+    y += 5;
+    doc.setDrawColor(230);
+    doc.line(12, y, 198, y);
+    y += 5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+
     const wrapped = doc.splitTextToSize(record.notes, 180);
-    doc.text(wrapped, 12, y);
+    wrapped.forEach(line => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      doc.text(line, 14, y);
+      y += 5;
+    });
   }
 
-  // === Export ===
+  // ========= PIED =========
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(140, 140, 140);
+  doc.text(
+    "AquaClim Prestige – SIRET XXXXXXXXXXXXX – Entretien & Dépannage climatisation / piscine",
+    105,
+    287,
+    { align: "center" }
+  );
+
   const fileName =
     "rapport-" +
     (record.clientName ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_") : "intervention") +
     ".pdf";
 
-  doc.save(fileName);
+  if (mode === "download") {
+    doc.save(fileName);
+  } else {
+    if (mode === "print") {
+      doc.autoPrint();
+    }
+    const url = doc.output("bloburl");
+    window.open(url, "_blank");
+  }
 }
+
+function openRapportPreview(rapportId) {
+  const list = getAllRapports();
+  const rec = list.find(r => r.id === rapportId);
+  if (!rec) return;
+  generatePDFRapportFromRecord(rec, "preview");
+}
+
+function printRapport(rapportId) {
+  const list = getAllRapports();
+  const rec = list.find(r => r.id === rapportId);
+  if (!rec) return;
+  generatePDFRapportFromRecord(rec, "print");
+}
+
 
 function downloadRapport(rapId) {
   const list = getAllRapports();
@@ -2499,6 +3294,43 @@ function deleteRapport(rapId) {
     }
   });
 }
+
+function openRapportPopupForEdit(rapportId) {
+  const list = getAllRapports();
+  const rec = list.find(r => r.id === rapportId);
+  if (!rec) return;
+
+  currentRapportId = rec.id;
+
+  document.getElementById("rapClientName").value = rec.clientName || "";
+  document.getElementById("rapClientAddress").value = rec.clientAddress || "";
+  document.getElementById("rapDate").value = rec.date || "";
+  document.getElementById("rapNotes").value = rec.notes || "";
+  document.getElementById("rapportType").value = rec.typeId || "";
+
+  // 🔹 on affiche/cache l’analyse selon le type du rapport
+  updateRapportAnalyseVisibility(rec.typeId || "");
+
+  rebuildRapportChecklist();
+
+  if (rec.analysis) {
+    const phEl = document.getElementById("rapPH");
+    const chlEl = document.getElementById("rapChlore");
+    if (phEl)  phEl.value  = rec.analysis.ph || "";
+    if (chlEl) chlEl.value = rec.analysis.chlore || "";
+  }
+
+  const overlay = document.getElementById("rapportPopup");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+
+  const popup = overlay.querySelector(".popup");
+  if (popup) {
+    void popup.offsetWidth;
+    popup.classList.add("show");
+  }
+}
+
 
 
 // ================== NUMÉROTATION DOCUMENTS ==================
@@ -2915,21 +3747,28 @@ function onPayModeChange() {
   const sel = document.querySelector('input[name="payMode"]:checked');
   const wrapper = document.getElementById("paymentDateWrapper");
   const dateInput = document.getElementById("paymentDate");
+
   if (!wrapper || !dateInput) return;
 
+  // Si "Facture non réglée"
   if (!sel || !sel.value) {
     wrapper.style.display = "none";
     dateInput.value = "";
     return;
   }
 
+  // Sinon : on affiche la date de règlement
   wrapper.style.display = "block";
 
+  // On pré-remplit avec la date de doc ou aujourd’hui
   if (!dateInput.value) {
-    const docDate = document.getElementById("docDate")?.value;
-    dateInput.value = docDate || new Date().toISOString().split("T")[0];
+    const docDateInput = document.getElementById("docDate");
+    const today = new Date().toISOString().slice(0, 10);
+    dateInput.value = (docDateInput && docDateInput.value) || today;
   }
 }
+
+
 
 
 // ================== RÉDUCTION ==================
@@ -3956,10 +4795,13 @@ calculateTotals(); // et on laisse faire la logique dégressive normale
 if (typeof refreshDocumentHealthUI === "function") {
   refreshDocumentHealthUI(doc);
 }
-
-
 }
+
+
+
+
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
+
 function saveDocument() {
 
 // ==== BLOCAGE TVA MICRO ====
@@ -5927,7 +6769,7 @@ function loadAttestationsList() {
   list.forEach(att => {
     const frDate = att.date ? att.date.split("-").reverse().join("/") : "";
     const source = att.sourceDocNumber ? `Facture ${att.sourceDocNumber}` : "";
-    const units = att.units != null ? att.units : "";
+    const units  = att.units != null ? att.units : "";
 
     tbody.innerHTML += `
       <tr>
@@ -5936,15 +6778,28 @@ function loadAttestationsList() {
         <td>${att.clientAddress || ""}</td>
         <td>${units}</td>
         <td>${source}</td>
-<td class="col-actions">
-  <button class="btn btn-secondary btn-small" onclick="downloadAttestation('${att.id}')">
-    Télécharger
-  </button>
-  <button class="btn btn-danger btn-small" onclick="deleteAttestation('${att.id}')">
-    Supprimer
-  </button>
-</td>
-
+        <td class="col-actions">
+          <button
+            class="btn btn-small btn-primary"
+            onclick="openAttestationPopupForEdit('${att.id}')">
+            Ouvrir
+          </button>
+          <button
+            class="btn btn-small btn-secondary"
+            onclick="openAttestationPreview('${att.id}')">
+            Aperçu
+          </button>
+          <button
+            class="btn btn-small btn-success"
+            onclick="printAttestation('${att.id}')">
+            Imprimer
+          </button>
+          <button
+            class="btn btn-danger btn-small"
+            onclick="deleteAttestation('${att.id}')">
+            Supprimer
+          </button>
+        </td>
       </tr>
     `;
   });
@@ -5967,83 +6822,260 @@ function deleteAttestation(attId) {
 }
 
 
+function openAttestationForInvoice(doc) {
+  if (!doc) return;
 
-function generatePDFAttestationFromRecord(attId) {
+  // On mémorise la facture source
+  if (typeof currentAttestationSource === "undefined") {
+    window.currentAttestationSource = null;
+  }
+
+  currentAttestationSource = {
+    id: doc.id || null,
+    number: doc.number || null
+  };
+
+  // Pré-remplissage des champs de la popup
+  const attName  = document.getElementById("attClientName");
+  const attAddr  = document.getElementById("attClientAddress");
+  const attDate  = document.getElementById("attDate");
+  const attUnits = document.getElementById("attUnits");
+  const attNotes = document.getElementById("attNotes");
+
+  if (attName)  attName.value  = (doc.client && doc.client.name)    || "";
+  if (attAddr)  attAddr.value  = (doc.client && doc.client.address) || "";
+  if (attDate)  attDate.value  = doc.date || new Date().toISOString().slice(0, 10);
+  if (attUnits && !attUnits.value) attUnits.value = 1;
+  if (attNotes) attNotes.value = "";
+
+  // On ouvre la popup (elle garde ce qu’on vient de mettre)
+  openClimAttestationGenerator();
+}
+
+
+
+// Utilisé par Aperçu / Imprimer
+function generatePDFAttestationFromRecord(record, mode = "print") {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert("Librairie jsPDF manquante pour générer le PDF.");
     return;
   }
 
-  const list = getAllAttestations();
-  const att = list.find(a => a.id === attId);
-  if (!att) return;
+  const doc = new window.jspdf.jsPDF("p", "mm", "a4");
 
-  const doc = new window.jspdf.jsPDF();
+  const blue = { r: 26, g: 116, b: 217 };   // #1a74d9
+  const light = { r: 248, g: 250, b: 252 }; // fond cartes
+  const margin = 15;
 
+  /* ================= HEADER ================= */
+
+  // bandeau bleu en haut
+  doc.setFillColor(blue.r, blue.g, blue.b);
+  doc.rect(0, 0, 210, 30, "F");
+
+  // titre AquaClim en blanc
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(16);
-  doc.text("Attestation d’entretien climatisation", 10, 20);
+  doc.text("AquaClim Prestige", margin, 18);
 
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text("Entretien & Dépannage – Climatisation & Piscine", margin, 24);
+
+// Petit badge "ATTESTATION D'ENTRETIEN / CLIMATISATION" en haut à droite
+
+const pageWidth = doc.internal.pageSize.getWidth();
+
+const pillW = 90;      // <<< beaucoup plus petit
+const pillH = 16;
+const pillRight = 10;  // marge à droite
+const pillY = 16;
+
+const pillX = pageWidth - pillRight - pillW;
+
+doc.setFillColor(255, 255, 255);
+doc.setDrawColor(255, 255, 255);
+doc.roundedRect(pillX, pillY, pillW, pillH, 6, 6, "FD");
+
+doc.setFont("helvetica", "bold");
+doc.setFontSize(7);    // plus petit pour tenir dans un petit badge
+doc.setTextColor(blue.r, blue.g, blue.b);
+
+// texte sur 2 lignes, centré dans le petit badge
+doc.text("ATTESTATION D'ENTRETIEN", pillX + pillW / 2, pillY + 6, { align: "center" });
+doc.text("CLIMATISATION",          pillX + pillW / 2, pillY + 12, { align: "center" });
+
+
+
+
+  /* ================= COORDONNÉES ================= */
+
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(10);
+  let y = 38;
+
+  doc.text("Le Blevennec Loïc – 2 avenue Cauvin, 06100 Nice", margin, y); y += 5;
+  doc.text("Tél : 06 03 53 77 73 – Email : aquaclimprestige@gmail.com", margin, y); y += 8;
+
+  /* ================= TITRE DOCUMENT ================= */
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.setTextColor(blue.r, blue.g, blue.b);
+  doc.text("Attestation d’entretien de climatisation", margin, y);
+  y += 6;
+
+  doc.setDrawColor(230, 233, 239);
+  doc.line(margin, y, 210 - margin, y);
+  y += 10;
+
+  /* ================= CARTES CLIENT / INTERVENTION ================= */
+
+  const cardW = (210 - 2 * margin - 10) / 2; // deux cartes côte à côte
+  const cardH = 30;
+  const cardY = y;
+
+  // CLIENT
+  doc.setFillColor(light.r, light.g, light.b);
+  doc.setDrawColor(230, 233, 239);
+  doc.roundedRect(margin, cardY, cardW, cardH, 3, 3, "FD");
+
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0, 0, 0);
+  doc.text("Client", margin + 5, cardY + 6);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  let clientTextY = cardY + 12;
+
+  if (record.clientName) {
+    const lines = doc.splitTextToSize(record.clientName, cardW - 10);
+    doc.text(lines, margin + 5, clientTextY);
+    clientTextY += lines.length * 4;
+  }
+  if (record.clientAddress) {
+    const lines = doc.splitTextToSize(record.clientAddress, cardW - 10);
+    doc.text(lines, margin + 5, clientTextY);
+  }
+
+  // INTERVENTION
+  const card2X = margin + cardW + 10;
+  doc.setFillColor(light.r, light.g, light.b);
+  doc.setDrawColor(230, 233, 239);
+  doc.roundedRect(card2X, cardY, cardW, cardH, 3, 3, "FD");
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text("Intervention", card2X + 5, cardY + 6);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  let interY = cardY + 12;
+
+  if (record.date) {
+    const frDate = record.date.split("-").reverse().join("/");
+    doc.text("Date : " + frDate, card2X + 5, interY);
+    interY += 5;
+  }
+
+  const unitsText =
+    "Unités entretenues : " +
+    (record.units != null ? record.units : 1);
+  doc.text(unitsText, card2X + 5, interY);
+
+  y = cardY + cardH + 12;
+
+  /* ================= DÉTAIL OPÉRATIONS ================= */
+
+  doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
-  let y = 40;
+  doc.setTextColor(blue.r, blue.g, blue.b);
+  doc.text("Détail des opérations effectuées", margin, y);
+  y += 6;
 
-  if (att.clientName) {
-    doc.text("Client : " + att.clientName, 10, y);
-    y += 7;
-  }
-  if (att.clientAddress) {
-    doc.text("Adresse : " + att.clientAddress, 10, y);
-    y += 7;
-  }
-  if (att.date) {
-    const frDate = att.date.split("-").reverse().join("/");
-    doc.text("Date d’intervention : " + frDate, 10, y);
-    y += 7;
-  }
-
-  doc.text("Nombre d’unités entretenues : " + (att.units || 1), 10, y);
-  y += 12;
-
-  doc.text("Détail des opérations effectuées :", 10, y);
-  y += 7;
+  doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
 
   const ops = [
     "Nettoyage des filtres intérieurs",
-    "Dépoussiérage de l’unité intérieure",
-    "Nettoyage des échangeurs",
-    "Contrôle visuel de l’unité extérieure",
-    "Nettoyage éventuel des ailettes (si accessible)",
-    "Contrôle des températures de fonctionnement",
+    "Nettoyage des batteries (évaporateur + condenseur)",
+    "Application d’un traitement antibactérien",
+    "Nettoyage des turbines",
     "Vérification des écoulements et du bac à condensats",
     "Contrôle des connexions électriques",
     "Contrôle du soufflage et test de fonctionnement"
   ];
 
-  ops.forEach(op => {
-    doc.text("- " + op, 12, y);
-    y += 6;
+  ops.forEach(line => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    const txt = "• " + line;
+    doc.text(txt, margin, y);
+    y += 5;
   });
 
-  if (att.notes) {
+  /* ================= REMARQUES ================= */
+
+  if (record.notes) {
     y += 8;
-    doc.text("Remarques :", 10, y);
-    y += 6;
-    const wrapped = doc.splitTextToSize(att.notes, 180);
-    doc.text(wrapped, 12, y);
+    if (y > 260) { doc.addPage(); y = 20; }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(blue.r, blue.g, blue.b);
+    doc.text("Remarques :", margin, y);
+    y += 5;
+
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(0, 0, 0);
+    const wrapped = doc.splitTextToSize(record.notes, 210 - 2 * margin);
+    doc.text(wrapped, margin, y);
+    y += wrapped.length * 4;
   }
 
-  doc.text("Fait pour servir et valoir ce que de droit.", 10, 280);
+  /* ================= FORMULE FINALE ================= */
+
+  if (y < 260) y = 260;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Fait pour servir et valoir ce que de droit.", margin, y);
 
   const fileName =
-    "attestation-" +
-    (att.clientName ? att.clientName.replace(/[^a-z0-9\-]+/gi, "_") : "entretien") +
+    "attestation-clim-" +
+    (record.clientName
+      ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_")
+      : "client") +
     ".pdf";
 
-  doc.save(fileName);
+  // Sortie : print / preview / download
+  if (mode === "download") {
+    doc.save(fileName);
+  } else {
+    if (mode === "print") {
+      if (doc.autoPrint) doc.autoPrint();
+    }
+    const url = doc.output("bloburl");
+    window.open(url, "_blank");
+  }
 }
 
-function downloadAttestation(attId) {
-  generatePDFAttestationFromRecord(attId);
+
+function openAttestationPreview(attId) {
+  const list = getAllAttestations();
+  const rec = list.find(a => a.id === attId);
+  if (!rec) return;
+  generatePDFAttestationFromRecord(rec, "preview");
 }
+
+function printAttestation(attId) {
+  const list = getAllAttestations();
+  const rec = list.find(a => a.id === attId);
+  if (!rec) return;
+  generatePDFAttestationFromRecord(rec, "print");
+}
+
 
 
 // ================= STATUTS + RÉSILIATION + RENOUVELLEMENT =================
@@ -6695,299 +7727,33 @@ function loadContractsList() {
 
 function handleAfterInvoicePaid(doc) {
   try {
-    const prestations = Array.isArray(doc.prestations) ? doc.prestations : [];
-    const kinds = prestations
-      .map((p) => p && p.kind)
-      .filter((k) => typeof k === "string" && k.trim() !== "");
+    if (!doc || doc.type !== "facture") return;
 
-    if (!kinds.length) {
-      return;
-    }
-
-    // 1️⃣ Attestation entretien clim
-    if (kinds.includes("entretien_clim")) {
-      // Pré-remplissage des champs si possible
-      const client = doc.client || {};
-      const nameInput = document.getElementById("attClientName");
-      const addrInput = document.getElementById("attClientAddress");
-      const dateInput = document.getElementById("attDate");
-      const unitsInput = document.getElementById("attUnits");
-
-      if (nameInput) {
-        nameInput.value = client.name || client.raisonSociale || client.nom || "";
-      }
-      if (addrInput) {
-        addrInput.value = client.address || client.adresse || "";
-      }
-      if (dateInput && doc.date) {
-        // doc.date est déjà au format ISO YYYY-MM-DD
-        dateInput.value = doc.date;
-      }
-      if (unitsInput) {
-        // on essaie de déduire le nombre d'unités depuis la quantité totale d'entretien clim
-        const totalUnits = prestations
-          .filter((p) => p.kind === "entretien_clim")
-          .reduce((sum, p) => sum + (Number(p.qty || p.quantity || 0)), 0);
-        unitsInput.value = totalUnits > 0 ? totalUnits : 1;
-      }
-
-     // 🔗 on mémorise la facture source pour la sauvegarde de l’attestation
-      currentAttestationSource = {
-        id: doc.id,
-        number: doc.number || ""
-      };
-
-      if (typeof openClimAttestationGenerator === "function") {
-        openClimAttestationGenerator();
-      }
-      return; // priorité à l'attestation clim
-    }
-
-    // 2️⃣ Rapport piscine (chlore / sel)
-    if (typeof RAPPORT_TEMPLATES !== "undefined" && Array.isArray(RAPPORT_TEMPLATES)) {
-      const matchingTemplate = RAPPORT_TEMPLATES.find((tpl) =>
-        Array.isArray(tpl.applicableKinds) &&
-        tpl.applicableKinds.some((k) => kinds.includes(k))
+    // 1) On regarde les prestations
+    const hasClimKind = Array.isArray(doc.prestations) &&
+      doc.prestations.some(p =>
+        p && ["entretien_clim", "depannage_clim"].includes(p.kind)
       );
 
-      if (matchingTemplate && typeof openPiscineRapportGenerator === "function") {
+    // 2) On regarde aussi l'objet, au cas où tu écris "Entretien clim"
+    const subj = (doc.subject || "").toLowerCase();
+    const looksLikeClim =
+      subj.includes("clim") || subj.includes("climatisation");
 
-        // 🔗 on mémorise aussi la facture comme source pour le rapport
-        currentAttestationSource = {
-          id: doc.id,
-          number: doc.number || ""
-        };
-
-        // on ouvre la popup rapport
-        openPiscineRapportGenerator(doc.id || null);
-
-        // pré-sélection du type de rapport
-        const sel = document.getElementById("rapportType");
-        if (sel) {
-          sel.value = matchingTemplate.id;
-          if (typeof rebuildRapportChecklist === "function") {
-            rebuildRapportChecklist();
-          }
-        }
-
-        // préremplissage des champs client / adresse / date
-        const client = doc.client || {};
-        const nameRap = document.getElementById("rapClientName");
-        const addrRap = document.getElementById("rapClientAddress");
-        const dateRap = document.getElementById("rapDate");
-
-        if (nameRap) {
-          nameRap.value =
-            client.name ||
-            client.raisonSociale ||
-            client.nom ||
-            "";
-        }
-        if (addrRap) {
-          addrRap.value =
-            client.address ||
-            client.adresse ||
-            "";
-        }
-        if (dateRap && doc.date) {
-          // doc.date est déjà en AAAA-MM-JJ
-          dateRap.value = doc.date;
-        }
-      }
-    }
-
-  } catch (e) {
-    console.warn("handleAfterInvoicePaid error:", e);
-  }
-}
-
-
-/**
- * Appelée quand une facture vient de passer NON PAYÉE -> PAYÉE.
- * Génère automatiquement une attestation clim si la facture
- * contient une prestation d'entretien clim.
- */
-function handleAfterInvoicePaid(doc) {
-  try {
-    if (!doc || !Array.isArray(doc.prestations)) return;
-
-    // Est-ce qu'il y a au moins une prestation clim ?
-    const hasClim = doc.prestations.some((p) =>
-      ["entretien_clim", "depannage_clim"].includes(p.kind)
-    );
-
-    if (!hasClim) {
-      return; // rien à faire
-    }
-
-    // On pré-remplit les champs de la popup d'attestation
-    const client = doc.client || {};
-
-    const nameInput  = document.getElementById("attClientName");
-    const addrInput  = document.getElementById("attClientAddress");
-    const dateInput  = document.getElementById("attDate");
-    const unitsInput = document.getElementById("attUnits");
-    const notesInput = document.getElementById("attNotes");
-
-    if (nameInput) {
-      nameInput.value =
-        client.name ||
-        client.raisonSociale ||
-        client.nom ||
-        "";
-    }
-
-    if (addrInput) {
-      addrInput.value =
-        client.address ||
-        client.adresse ||
-        "";
-    }
-
-    // On met la date de la facture par défaut
-    if (dateInput && doc.date) {
-      dateInput.value = doc.date; // format YYYY-MM-DD déjà OK
-    }
-
-    // On essaie de déduire le nb d’unités entretenues
-    if (unitsInput) {
-      const totalUnits = doc.prestations
-        .filter((p) => ["entretien_clim", "depannage_clim"].includes(p.kind))
-        .reduce((sum, p) => sum + (Number(p.qty || p.quantity || 0) || 0), 0);
-
-      unitsInput.value = totalUnits > 0 ? totalUnits : 1;
-    }
-
-    // Optionnel : on peut rajouter une remarque auto
-    if (notesInput && !notesInput.value) {
-      notesInput.value = `Attestation générée automatiquement à partir de la facture ${doc.number || ""}.`;
-    }
-
-    // Et là on génère directement le PDF
-    if (typeof generatePDFAttestation === "function") {
-      generatePDFAttestation(); // 👉 déclenche le téléchargement
-    } else {
-      console.warn("generatePDFAttestation() non disponible.");
-    }
-  } catch (e) {
-    console.warn("handleAfterInvoicePaid error:", e);
-  }
-}
-
-function handleAfterInvoicePaid(doc) {
-  try {
-    if (!doc || !Array.isArray(doc.prestations)) return;
-
-    const kinds = doc.prestations
-      .map((p) => p && p.kind)
-      .filter((k) => typeof k === "string" && k.trim() !== "");
-
-    // 👉 Attestation entretien clim
-    if (kinds.includes("entretien_clim")) {
-      const client = doc.client || {};
-
-      const nameInput  = document.getElementById("attClientName");
-      const addrInput  = document.getElementById("attClientAddress");
-      const dateInput  = document.getElementById("attDate");
-      const unitsInput = document.getElementById("attUnits");
-      const notesInput = document.getElementById("attNotes");
-
-      if (nameInput) {
-        nameInput.value =
-          client.name ||
-          client.raisonSociale ||
-          client.nom ||
-          "";
-      }
-
-      if (addrInput) {
-        addrInput.value =
-          client.address ||
-          client.adresse ||
-          "";
-      }
-
-      if (dateInput && doc.date) {
-        dateInput.value = doc.date; // YYYY-MM-DD
-      }
-
-      if (unitsInput) {
-        const totalUnits = doc.prestations
-          .filter((p) => p.kind === "entretien_clim")
-          .reduce((sum, p) => sum + (Number(p.qty || p.quantity || 0) || 0), 0);
-        unitsInput.value = totalUnits > 0 ? totalUnits : 1;
-      }
-
-      if (notesInput && !notesInput.value) {
-        notesInput.value = `Attestation générée automatiquement à partir de la facture ${doc.number || ""}.`;
-      }
-
-      // soit popup :
-      if (typeof openClimAttestationGenerator === "function") {
-        openClimAttestationGenerator();
-      }
-
-      // soit génération directe :
-      // if (typeof generatePDFAttestation === "function") {
-      //   generatePDFAttestation();
-      // }
-
+    // ❌ Si ce n’est pas une facture de clim → on ne fait rien
+    if (!hasClimKind && !looksLikeClim) {
       return;
     }
 
-    // (si tu veux plus tard gérer les rapports piscine, tu peux rajouter la logique ici)
+    // ✅ Facture de clim payée → on génère l’attestation automatiquement
+    if (typeof autoCreateClimAttestationForInvoice === "function") {
+      autoCreateClimAttestationForInvoice(doc);
+    }
   } catch (e) {
     console.warn("handleAfterInvoicePaid error:", e);
   }
 }
 
-function setPaymentMode(id, mode) {
-  const docs = getAllDocuments();
-  const doc = docs.find((d) => d.id === id);
-  if (!doc) return;
-
-  const wasPaid = !!doc.paid; // état avant modification
-
-  if (!mode) {
-    // 🔴 Non réglée
-    doc.paymentMode = "";
-    doc.paid = false;
-    doc.paymentDate = "";
-  } else {
-    // 🟢 Réglée
-    doc.paymentMode = mode;
-    doc.paid = true;
-
-    // Date de paiement
-    if (mode === "virement" || mode === "cheque") {
-      doc.paymentDate = doc.paymentDate || doc.date;
-    } else {
-      doc.paymentDate = doc.date;
-    }
-  }
-
-    // 💾 On sauvegarde d'abord la facture modifiée
-  saveDocuments(docs);
-  saveSingleDocumentToFirestore(doc);
-
-  // 🔗 SI FACTURE LIÉE À UN DEVIS → on met à jour le statut du devis
-  if (doc.type === "facture" && doc.sourceDevisId && typeof setDevisStatus === "function") {
-    if (!wasPaid && doc.paid) {
-      // Passage NON PAYÉ → PAYÉ => le devis passe en "cloturé"
-      setDevisStatus(doc.sourceDevisId, "cloture");
-    } else if (wasPaid && !doc.paid) {
-      // Passage PAYÉ → NON PAYÉ => on remet le devis en "accepté"
-      setDevisStatus(doc.sourceDevisId, "accepte");
-    }
-  }
-
-  // 🚀 Si on vient de passer une facture en PAYÉE, on génère l'attestation
-  if (doc.type === "facture" && !wasPaid && doc.paid && typeof handleAfterInvoicePaid === "function") {
-    handleAfterInvoicePaid(doc);
-  }
-
-  loadDocumentsList();
-}
 
 
 
@@ -9305,40 +10071,6 @@ function openFromHome(type) {
 }
 
 
-/**
- * Onglet "📑 Attestations"
- * -> on masque tout le reste (accueil, liste, formulaires, contrats)
- *    et on n’affiche que la section #attestationView
- */
-function showAttestations() {
-  const tabHome     = document.getElementById("tabHome");
-  const tabDevis    = document.getElementById("tabDevis");
-  const tabContrats = document.getElementById("tabContrats");
-  const tabFactures = document.getElementById("tabFactures");
-  const tabAttest   = document.getElementById("tabAttest");
-  const tabCA       = document.getElementById("tabCA");
-
-  // Onglets actifs
-  tabHome     && tabHome.classList.remove("active");
-  tabDevis    && tabDevis.classList.remove("active");
-  tabContrats && tabContrats.classList.remove("active");
-  tabFactures && tabFactures.classList.remove("active");
-  tabCA       && tabCA.classList.remove("active");
-  tabAttest   && tabAttest.classList.add("active");
-
-  const homeView        = document.getElementById("homeView");
-  const listView        = document.getElementById("listView");
-  const formView        = document.getElementById("formView");
-  const contractView    = document.getElementById("contractView");
-  const attestationView = document.getElementById("attestationView");
-
-  // Vues
-  homeView        && homeView.classList.add("hidden");
-  listView        && listView.classList.add("hidden");
-  formView        && formView.classList.add("hidden");
-  contractView    && contractView.classList.add("hidden");
-  attestationView && attestationView.classList.remove("hidden");
-}
 
 function refreshHomeStats() {
   // Sécu : si pas de dashboard sur la page, on ne fait rien
@@ -9915,7 +10647,7 @@ function renderPlanningWeek() {
   }
 
   const dayShort = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-  const todayISO = new Date().toISOString().slice(0, 10);
+const todayISO = formatDateYMD(new Date());
 
   const dayColumns = [];
   currentPlanningData = [];
@@ -9923,7 +10655,7 @@ function renderPlanningWeek() {
   for (let i = 0; i < 7; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
-    const dateStr = date.toISOString().slice(0, 10);
+const dateStr = formatDateYMD(date);
 
     const col = document.createElement("div");
     col.className = "day-column";
@@ -15445,6 +16177,18 @@ function fillYearMenu() {
         select.innerHTML += `<option value="${y}">${y}</option>`;
     });
 }
+
+function autoFillDates() {
+  document.querySelectorAll("input[type='date']").forEach(input => {
+    if (!input.value) input.value = todayISO();
+  });
+}
+
+// Appelé quand une popup ou un formulaire apparaît
+document.addEventListener("click", () => {
+  setTimeout(autoFillDates, 50);
+});
+
 
 
 // ================== INIT ==================

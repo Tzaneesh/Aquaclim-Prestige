@@ -2990,3 +2990,274 @@ textarea {
 }
 
 
+/* =========================================================
+   📱 1) iPHONE / PETITS TÉLÉPHONES
+   (écrans ≤ 600px)
+========================================================= */
+@media (max-width: 600px) {
+
+  /* Layout global */
+  .container {
+    max-width: 100%;
+    padding: 10px;
+  }
+
+  body {
+    font-size: 14px;
+  }
+
+  /* En-tête en colonne, centré */
+  .header-inner {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .header-logo {
+    height: 70px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+  }
+
+  .header p {
+    font-size: 13px;
+  }
+
+  /* Barre du haut : 2 colonnes de boutons */
+  .top-nav {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .top-nav .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 13px;
+    padding: 8px 6px;
+  }
+
+  /* Dashboard : 1 carte par ligne */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dash-card {
+    padding: 14px;
+  }
+
+  /* Cartes générales */
+  .card {
+    padding: 14px;
+  }
+
+  .card h2,
+  .section-title {
+    font-size: 18px;
+  }
+
+  /* Planning semaine : une seule colonne */
+  .planning-grid {
+    display: grid;
+    grid-template-columns: 1fr !important;
+    gap: 8px;
+  }
+
+  .planning-header {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .planning-header .btn-small {
+    width: 100%;
+    text-align: center;
+  }
+
+  /* Boutons d’actions empilés proprement */
+  .actions-btns {
+    gap: 6px;
+  }
+
+  .actions-btns-row {
+    flex-wrap: wrap;
+  }
+
+  .actions-btns-row .btn {
+    flex: 1 1 100%;
+    font-size: 12px;
+    padding: 6px 0;
+  }
+
+  /* Formulaires plus lisibles */
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="number"],
+  input[type="date"],
+  textarea,
+  select {
+    font-size: 14px;
+    padding: 8px;
+  }
+
+  label {
+    font-size: 12px;
+  }
+
+  /* Bloc client / colonnes → en colonne */
+  .client-inner-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .client-col.left,
+  .client-col.right {
+    min-width: 100%;
+  }
+
+  /* Lignes de prestations → tout en colonne */
+  .prestation-line {
+    grid-template-columns: 1fr;
+  }
+
+  .prestation-date-row {
+    flex-wrap: wrap;
+  }
+
+  .prestation-date-row .prestation-date {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .qty-price-group {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Totaux : les colonnes l’une sous l’autre */
+  .totals-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Popup : plein écran + scrollable */
+  .popup-overlay {
+    padding: 10px;
+  }
+
+  .popup {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Tableaux : scroll horizontal si trop larges */
+  .card table,
+  table.table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  /* Boutons de la zone actions en haut de la liste */
+  .actions.no-print {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .actions.no-print .btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   💊 2) TABLETTES (iPad, etc.)
+   (600px < écran ≤ 1024px)
+========================================================= */
+@media (min-width: 601px) and (max-width: 1024px) {
+
+  .container {
+    max-width: 960px;
+    padding: 16px;
+  }
+
+  /* Header : encore horizontal mais plus compact */
+  .header-inner {
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .header h1 {
+    font-size: 30px;
+  }
+
+  /* Barre du haut : 3 colonnes de boutons */
+  .top-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .top-nav .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 14px;
+    padding: 10px 8px;
+  }
+
+  /* Dashboard : 2 colonnes */
+  .dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+
+  .dash-card {
+    padding: 18px;
+  }
+
+  /* Cartes / sections */
+  .card {
+    padding: 18px;
+  }
+
+  /* Grilles un peu resserrées */
+  .prestation-line {
+    grid-template-columns: 2.2fr 1.4fr 0.9fr 0.5fr;
+    gap: 8px;
+  }
+
+  .totals-grid {
+    grid-template-columns: 2fr 1fr;
+  }
+
+  .client-inner-row {
+    gap: 14px;
+  }
+
+  /* Planning : 2 colonnes (plus lisible en paysage) */
+  .planning-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  /* Tables : on garde le scroll si ça déborde */
+  .card table,
+  table.table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+}
