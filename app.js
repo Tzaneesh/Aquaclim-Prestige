@@ -7061,7 +7061,7 @@ function refreshDocumentHealthUI(doc) {
     if (billingMode) {
       const mapBilling = {
         mensuel: "Mensuel",
-        annuel_50_50: "Annuel 50/50",
+        annuel_50_50: "Annuel en deux fois",
         trimestriel: "Trimestriel",
         semestriel: "Semestriel",
         annuel: "Annuel"
@@ -9551,6 +9551,90 @@ const signatureClientTitle = "Bon pour accord";
 const signatureClientText  = "Bon pour accord, lu et approuvé.";
 
 
+// =========================================================
+// PLAN DE FACTURATION (affichage PRO dans Contrat + Devis)
+// =========================================================
+
+function buildBillingPlanLine(pr) {
+  if (!pr) return "";
+
+  const mode = (pr.billingMode || "").trim();
+  if (!mode) return "";
+
+  const clientType = pr.clientType || "particulier";
+  const isSyndic = clientType === "syndic";
+
+  // ---- Helpers dates
+  const toFR = (iso) => (typeof fromISO === "function" ? fromISO(iso) : iso);
+  const startISO = pr.startDate || "";
+  const nextISO  = pr.nextInvoiceDate || "";
+
+  // ---- Libellés PRO
+  const wording = {
+    mensuel: "Facturation mensuelle",
+    trimestriel: "Facturation trimestrielle",
+    semestriel: "Facturation semestrielle",
+    annuel: "Facturation annuelle",
+    annuel_50_50: "Facturation annuelle en deux échéances"
+  };
+
+  const echeanceWord = {
+    mensuel: "mensuelle",
+    trimestriel: "trimestrielle",
+    semestriel: "semestrielle",
+    annuel: "annuelle"
+  };
+
+  // =========================================================
+  // ✅ SYNDIC = POST-PAYÉ (terme échu)
+  // 1ère facture = nextInvoiceDate (ou calcul affichage si vide)
+  // =========================================================
+  if (isSyndic) {
+    let firstISO = nextISO;
+
+    // fallback calcul affichage si nextInvoiceDate vide
+    if (!firstISO && startISO) {
+      const start = new Date(startISO + "T00:00:00");
+      let step = 0;
+      if (mode === "mensuel") step = 1;
+      else if (mode === "trimestriel") step = 3;
+      else if (mode === "semestriel") step = 6;
+      else if (mode === "annuel") step = 12;
+
+      if (step) {
+        start.setMonth(start.getMonth() + step);
+        firstISO = start.toISOString().slice(0, 10);
+      }
+    }
+
+    const firstFR = firstISO ? toFR(firstISO) : "—";
+    const label = wording[mode] || "Facturation";
+    const ech = echeanceWord[mode] || "";
+
+    // sécurité : syndic ne devrait pas être en 50/50
+    if (mode === "annuel_50_50") {
+      return `${label} : 1er paiement le ${firstFR}, puis 2e paiement à mi-contrat.`;
+    }
+
+    return ech
+      ? `${label} : facture émise le ${firstFR}, puis à échéance ${ech}.`
+      : `${label} : facture émise le ${firstFR}.`;
+  }
+
+  // =========================================================
+  // ✅ PARTICULIER = ANTICIPÉ (payable d’avance)
+  // Date affichée = startDate (sinon nextInvoiceDate)
+  // =========================================================
+  const refISO = startISO || nextISO || "";
+  const refFR  = refISO ? toFR(refISO) : "—";
+
+  if (mode === "annuel_50_50") {
+    return "Facturation annuelle en deux échéances : 50 % à la souscription, puis 50 % à mi-contrat.";
+  }
+
+  const label = wording[mode] || "Facturation";
+  return `${label} : payable d’avance, à compter du ${refFR}.`;
+}
 
 // ================== IMPRESSION / PDF ==================
 
@@ -9822,18 +9906,47 @@ function openPrintable(id, previewOnly) {
   }
 
 
-  let notesHtml = "";
-  if (isDevis) {
-    const devisConditions =
-      "Paiement à réception de facture.\n" +
-      "Aucun acompte demandé sauf mention contraire.";
-    notesHtml = `
-      <div class="conditions-block">
-        <div class="conditions-title">Conditions de règlement</div>
-        <p>${devisConditions.replace(/\n/g, "<br>")}</p>
-      </div>
-    `;
-  } else {
+let notesHtml = "";
+if (isDevis) {
+let billingLine = "";
+
+try {
+  // 1) Si le devis contient déjà les infos
+  if (doc.billingMode) {
+    billingLine = (typeof buildBillingPlanLine === "function")
+      ? buildBillingPlanLine({
+          billingMode: doc.billingMode || "",
+          nextInvoiceDate: doc.nextInvoiceDate || "",
+          startDate: doc.contractStartDate || "",
+          clientType: doc.conditionsType === "agence" ? "syndic" : "particulier"
+        })
+      : "";
+  }
+
+  // 2) Sinon, si le devis est lié à un contrat, on récupère la pricing du contrat
+  if (!billingLine && doc.contractId && typeof getContract === "function") {
+    const ct = getContract(doc.contractId);
+    if (ct && ct.pricing && typeof buildBillingPlanLine === "function") {
+      billingLine = buildBillingPlanLine(ct.pricing);
+    }
+  }
+} catch (e) {
+  console.error("Erreur billingLine:", e);
+  billingLine = "";
+}
+
+  const devisConditions =
+    (billingLine ? ("Mode de facturation : " + billingLine + "\n\n") : "") +
+    "Paiement à réception de facture.\n" +
+    "Aucun acompte demandé sauf mention contraire.";
+
+  notesHtml = `
+    <div class="conditions-block">
+      <div class="conditions-title">Conditions de règlement</div>
+      <p>${devisConditions.replace(/\n/g, "<br>")}</p>
+    </div>
+  `;
+} else {
     let notesText = doc.notes || "";
     if (doc.paid && notesText) {
       const removeLines = [
@@ -9892,6 +10005,16 @@ if (!isDevis && doc.paid) {
       </div>
     </div>
   `;
+
+// ✅ Sécurité : si ces variables n'existent pas, on met des valeurs par défaut
+const signatureClientTitle =
+  (typeof window.signatureClientTitle !== "undefined" && window.signatureClientTitle) ||
+  "Bon pour accord";
+
+const signatureClientText =
+  (typeof window.signatureClientText !== "undefined" && window.signatureClientText) ||
+  "Bon pour accord, lu et approuvé.";
+
 
  // Date à afficher sous la signature client
 const signatureDisplayDate = doc.signatureDate
@@ -10571,9 +10694,13 @@ function escapeHtml(str) {
 // Calcul du statut en fonction de la date de fin
 
 function computeContractStatus(contract) {
-if (contract.meta && contract.meta.forceStatus === "termine_renouvele") {
-  return CONTRACT_STATUS.TERMINE;
-}
+  // ✅ Statuts forcés (prioritaires sur les dates)
+  if (contract?.meta?.forceStatus === "termine_renouvele") {
+    return CONTRACT_STATUS.TERMINE;
+  }
+  if (contract?.meta?.forceStatus === "termine_sans_renouvellement") {
+    return CONTRACT_STATUS.TERMINE;
+  }
 
   if (!contract || !contract.pricing) return CONTRACT_STATUS.EN_COURS;
 
@@ -10621,8 +10748,20 @@ if (contract.meta && contract.meta.forceStatus === "termine_renouvele") {
 function normalizeContractBeforeSave(contract) {
   if (!contract.meta) contract.meta = {};
 
-  // 1️⃣ Statut calculé proprement
-  contract.status = computeContractStatus(contract);
+  const forced = contract.meta.forceStatus;
+
+  // ✅ 0) ForceStatus = priorité absolue
+  if (forced === "termine_renouvele" || forced === "termine_sans_renouvellement") {
+    contract.status = CONTRACT_STATUS.TERMINE;
+
+  // ✅ 1) Résilié = on n'écrase jamais
+  } else if (contract.status === CONTRACT_STATUS.RESILIE) {
+    contract.status = CONTRACT_STATUS.RESILIE;
+
+  // ✅ 2) Sinon statut calculé depuis les dates
+  } else {
+    contract.status = computeContractStatus(contract);
+  }
 
   const pr = contract.pricing || {};
   const cl = contract.client  || {};
@@ -10638,9 +10777,9 @@ function normalizeContractBeforeSave(contract) {
   }
 
   contract.pricing = pr;
-
   return contract;
 }
+
 
 
 function computeNextInvoiceDate(contract) {
@@ -10956,7 +11095,6 @@ function refreshHomeStats() {
   const devisRefused   = devis.filter(d => d.status === "refuse").length;
   const devisExpired   = devis.filter(d => d.status === "expire").length;
 
-
   const lastDevis = devis
     .slice()
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
@@ -10979,7 +11117,6 @@ function refreshHomeStats() {
       `${devisExpired} expirés`;
   }
 
-
   if (elDevisLast) {
     if (lastDevis) {
       const num  = lastDevis.number || lastDevis.id || "";
@@ -10990,13 +11127,15 @@ function refreshHomeStats() {
     }
   }
 
-  // ========= CONTRATS =========
-  const activeContracts = contracts.filter(c =>
-    c.status === CONTRACT_STATUS.EN_COURS ||
-    c.status === CONTRACT_STATUS.A_RENOUVELER
-  );
+  // ========= CONTRATS (ROBUSTE) =========
+  // ⚠️ On ne se base JAMAIS sur c.status ici : tout vient de computeContractStatus()
+  const activeContracts = contracts.filter(c => {
+    const st = computeContractStatus(c);
+    return st === CONTRACT_STATUS.EN_COURS || st === CONTRACT_STATUS.A_RENOUVELER;
+  });
+
   const toRenew = contracts.filter(c =>
-    c.status === CONTRACT_STATUS.A_RENOUVELER
+    computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER
   );
 
   const elCtCount  = document.getElementById("dashContractCount");
@@ -11024,7 +11163,7 @@ function refreshHomeStats() {
   const elInvCount   = document.getElementById("dashInvoiceCount");
   const elInvUnpaid  = document.getElementById("dashInvoiceUnpaid");
   const elInvAmt     = document.getElementById("dashInvoiceAmount");
-  const elInvHealth  = document.getElementById("dashInvoiceHealth"); // 👈 nouveau
+  const elInvHealth  = document.getElementById("dashInvoiceHealth");
 
   if (elInvCount) {
     elInvCount.textContent =
@@ -11059,7 +11198,6 @@ function refreshHomeStats() {
       if (isNaN(val)) return;
 
       if (!f.date) {
-        // pas de date => on considère "en attente"
         pendingCount++;
         pendingAmount += val;
         return;
@@ -11087,8 +11225,7 @@ function refreshHomeStats() {
         : (Number(v || 0).toFixed(2) + " €");
 
     if (unpaid.length === 0) {
-      elInvHealth.textContent =
-        "Santé facturation : ✅ RAS, tout est payé";
+      elInvHealth.textContent = "Santé facturation : ✅ RAS, tout est payé";
     } else if (lateCount > 0) {
       elInvHealth.textContent =
         `Santé facturation : ⚠️ ${lateCount} en retard (${fmtLocal(lateAmount)})`;
@@ -11113,11 +11250,8 @@ function refreshHomeStats() {
     if (isNaN(val)) return;
 
     caTotal += val;
-    if (f.paid) {
-      caPaid += val;
-    } else {
-      caUnpaid += val;
-    }
+    if (f.paid) caPaid += val;
+    else caUnpaid += val;
 
     if (f.date) {
       const d = new Date(f.date + "T00:00:00");
@@ -11145,7 +11279,6 @@ function refreshHomeStats() {
   if (elCaMonth)  elCaMonth.textContent  = "Mois en cours : " + fmt(caThisMonth);
 
   // ========= TABLEAU SANTÉ GLOBAL =========
-
   const rowFacturesLate    = document.getElementById("healthRowFacturesLate");
   const rowFacturesPending = document.getElementById("healthRowFacturesPending");
   const rowDevis           = document.getElementById("healthRowDevis");
@@ -11197,6 +11330,7 @@ function refreshHomeStats() {
         pendingAmount += val;
         return;
       }
+
       const d = new Date(f.date + "T00:00:00");
       if (isNaN(d.getTime())) return;
 
@@ -11218,12 +11352,9 @@ function refreshHomeStats() {
         ? formatEuro(v)
         : (Number(v || 0).toFixed(2) + " €");
 
-    // === Ligne "Factures critiques"
     if (rowFacturesLate) {
       if (lateCount > 0) {
-        setHealthRow(
-          rowFacturesLate,
-          "bad",
+        setHealthRow(rowFacturesLate, "bad",
           `${lateCount} facture(s) en retard (${fmtLocal(lateAmount)})`
         );
       } else {
@@ -11231,12 +11362,9 @@ function refreshHomeStats() {
       }
     }
 
-    // === Ligne "Factures en attente"
     if (rowFacturesPending) {
       if (pendingCount > 0) {
-        setHealthRow(
-          rowFacturesPending,
-          "warn",
+        setHealthRow(rowFacturesPending, "warn",
           `${pendingCount} facture(s) non payée(s) (${fmtLocal(pendingAmount)})`
         );
       } else {
@@ -11248,61 +11376,31 @@ function refreshHomeStats() {
   // ---- Devis
   if (rowDevis) {
     if (devisExpired > 0) {
-      setHealthRow(
-        rowDevis,
-        "bad",
-        `${devisExpired} devis expiré(s) à traiter`
-      );
+      setHealthRow(rowDevis, "bad", `${devisExpired} devis expiré(s) à traiter`);
     } else if (devisPending > 0) {
-      setHealthRow(
-        rowDevis,
-        "warn",
-        `${devisPending} devis en attente de réponse`
-      );
+      setHealthRow(rowDevis, "warn", `${devisPending} devis en attente de réponse`);
     } else {
-      setHealthRow(
-        rowDevis,
-        "ok",
-        "Aucun devis en attente critique"
-      );
+      setHealthRow(rowDevis, "ok", "Aucun devis en attente critique");
     }
   }
 
-  // ---- Contrats
+  // ---- Contrats (FIX FINAL)
+  // Seul toRenew déclenche l'urgence.
   if (rowContrats) {
-    const endedCount = contracts.length - activeContracts.length;
-
-    if (endedCount > 0) {
-      setHealthRow(
-        rowContrats,
-        "bad",
-        `${endedCount} contrat(s) terminé(s) à renouveler`
-      );
-    } else if (toRenew.length > 0) {
-      setHealthRow(
-        rowContrats,
-        "warn",
-        `${toRenew.length} contrat(s) à renouveler bientôt`
-      );
+    if (toRenew.length > 0) {
+      setHealthRow(rowContrats, "bad", `${toRenew.length} contrat(s) à renouveler`);
     } else if (contracts.length === 0) {
-      setHealthRow(
-        rowContrats,
-        "ok",
-        "Aucun contrat enregistré"
-      );
+      setHealthRow(rowContrats, "ok", "Aucun contrat enregistré");
     } else {
-      setHealthRow(
-        rowContrats,
-        "ok",
-        "Tous les contrats sont à jour"
-      );
+      setHealthRow(rowContrats, "ok", "Tous les contrats sont à jour");
     }
   }
+
   if (typeof renderPlanningWeek === "function") {
     renderPlanningWeek();
   }
-
 }
+
 
 // ====== PLANNING HEBDO ======
 
@@ -12147,7 +12245,13 @@ if (includeWinter) {
     date: todayISO,
     validityDate: "",
 
-    subject,
+subject,
+
+// ✅ Facturation (copiée depuis le contrat) — pour affichage PRO dans le devis PDF
+contractId: contract.id || null,
+billingMode: pr.billingMode || "",
+nextInvoiceDate: pr.nextInvoiceDate || "",
+contractStartDate: pr.startDate || "",
 
     client: {
       civility: c.civility || "",
@@ -15297,9 +15401,10 @@ ${terminationBillingBlockTop}
           `
       }
 
-      <p style="margin-top:6px;">
-        Les modalités de règlement (mensualisation, facturation périodique, etc.) sont précisées dans les devis et factures associés.
-      </p>
+<p style="margin-top:6px;">
+  <strong>Mode de facturation :</strong> ${buildBillingPlanLine(pr) || "—"}
+</p>
+
     </div>
   </div>
 
@@ -15443,6 +15548,44 @@ const sigWrapper = document.getElementById("ctSignatureWrapper");
 if (sigWrapper) {
   sigWrapper.style.display = (type === "syndic") ? "block" : "none";
 }
+}
+
+
+function markContractNoRenew(id) {
+  const c = getContract(id);
+  if (!c) return;
+
+  showConfirmDialog({
+    title: "Ne pas renouveler",
+    message:
+      "Confirmer que ce contrat ne sera pas renouvelé ?\n" +
+      "Il sera marqué comme terminé et ne remontera plus dans les alertes.",
+    confirmLabel: "Oui, terminer",
+    cancelLabel: "Annuler",
+    variant: "warning",
+    icon: "🛑",
+    onConfirm: () => {
+      c.meta = c.meta || {};
+      c.meta.forceStatus = "termine_sans_renouvellement";
+
+      // Optionnel : on force aussi le status stocké (pas obligatoire car computeContractStatus gère)
+      c.status = CONTRACT_STATUS.TERMINE;
+
+      const all = getAllContracts().map(x => (x.id === c.id ? c : x));
+      saveContracts(all);
+
+      if (typeof saveSingleContractToFirestore === "function") {
+        saveSingleContractToFirestore(c);
+      }
+
+      // refresh UI
+      if (typeof updateContractsAlert === "function") updateContractsAlert();
+      if (typeof refreshHomeStats === "function") refreshHomeStats();
+      if (typeof fillContractForm === "function") fillContractForm(c);
+
+      showToast("Contrat marqué : terminé (non renouvelé).");
+    }
+  });
 }
 
 

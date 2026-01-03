@@ -1034,6 +1034,9 @@
   📅 Voir l’échéancier
 </button>
 <button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
+<button class="btn btn-danger" type="button" onclick="markContractNoRenew(currentContractId)">
+  🚫 Ne pas renouveler
+</button>
 <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>
 
@@ -1405,36 +1408,31 @@
 </div>
 
 <div class="contract-tva">
+  <label>TVA</label>
 
-
-
-<div class="contract-tva">
-
-  <label>TVA </label>
   <div class="tva-options">
-<label>
-  <input
-    type="radio"
-    name="tva"
-    id="tva0"
-    value="0"
-    checked
-    onchange="onMainTvaRadioChange(0)"
-  >
-  0 %
-</label>
+    <label>
+      <input
+        type="radio"
+        name="ctTva"
+        id="ctTva0"
+        value="0"
+        checked
+        onchange="onContractTvaRadioChange(0)"
+      >
+      0 %
+    </label>
 
-<label>
-  <input
-    type="radio"
-    name="tva"
-    id="tva20"
-    value="20"
-    onchange="onMainTvaRadioChange(20)"
-  >
-  20 %
-</label>
-
+    <label>
+      <input
+        type="radio"
+        name="ctTva"
+        id="ctTva20"
+        value="20"
+        onchange="onContractTvaRadioChange(20)"
+      >
+      20 %
+    </label>
   </div>
 </div>
 
@@ -1457,7 +1455,9 @@
 
 
 <button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
-
+<button class="btn btn-danger" type="button" onclick="markContractNoRenew(currentContractId)">
+  🚫 Ne pas renouveler
+</button>
 
     <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>

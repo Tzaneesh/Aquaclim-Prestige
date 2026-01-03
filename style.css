@@ -3245,3 +3245,42 @@ textarea {
   overflow-y: auto;
 }
 
+
+/* ✅ FIX iPhone CONTRAT uniquement : radios "Type de client" */
+#contractView .client-type-row{
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: center !important;
+  gap: 14px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+#contractView .client-type-option{
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin: 0 !important;
+  cursor: pointer;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+#contractView .client-type-option input[type="radio"]{
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+  width: 18px !important;
+  height: 18px !important;
+  transform: translateY(-1px) !important; /* micro-fix iOS */
+  -webkit-appearance: radio !important;
+  appearance: auto !important;
+}
+
+/* iPhone : 2 colonnes propres */
+@media (max-width: 430px){
+  #contractView .client-type-option{
+    flex: 1 1 calc(50% - 10px) !important;
+    justify-content: flex-start !important;
+  }
+}
+
