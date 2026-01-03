@@ -3284,3 +3284,32 @@ textarea {
   }
 }
 
+/* ✅ FIX iPhone – "Bon pour accord" CONTRAT uniquement */
+#contractView #ctSignatureWrapper{
+  width: 100%;
+}
+
+#contractView #ctSignatureWrapper label{
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+
+  width: 100% !important;
+  margin: 0 !important;
+  text-align: left !important;
+
+  white-space: normal !important;   /* autorise le retour à la ligne */
+}
+
+#contractView #ctSignatureWrapper input[type="radio"]{
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+  width: 18px !important;
+  height: 18px !important;
+  -webkit-appearance: radio !important;
+  appearance: auto !important;
+  transform: translateY(-1px) !important; /* micro-fix iOS */
+}
+
+
