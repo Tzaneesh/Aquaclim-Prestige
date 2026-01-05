@@ -3194,18 +3194,91 @@ function _getClientTypeFromEntity(entity, client) {
   );
 }
 
+// ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
+
+// Important : variable globale utilisée par openSendPopup / sendByEmail / sendByWhatsApp
+let currentSendDoc = null;
+
+// Helpers
+function _fmtMoneyEUR(n) {
+  const x = Number(n);
+  if (!isFinite(x)) return "";
+  return x.toFixed(2).replace(".", ",") + " €";
+}
+
+function _fmtDateFR(iso) {
+  if (!iso) return "";
+  try {
+    // Si tu as déjà fromISO() dans ton app (tu l'utilises ailleurs), on l'exploite
+    if (typeof fromISO === "function") return fromISO(iso).replace(/-/g, "/");
+  } catch (e) {}
+  // fallback basique
+  return String(iso);
+}
+
+function _getClientFromEntity(entity) {
+  // Devis/Facture
+  if (entity && entity.client) return entity.client;
+
+  // Contrat
+  if (entity && entity.pricing && entity.pricing.client) return entity.pricing.client;
+
+  // fallback "forme"
+  return {
+    name: entity?.clientName || entity?.pricing?.clientName || "",
+    civility: entity?.clientCivility || entity?.pricing?.clientCivility || entity?.civility || "",
+    email: entity?.clientEmail || entity?.pricing?.clientEmail || "",
+    phone: entity?.clientPhone || entity?.pricing?.clientPhone || ""
+  };
+}
+
+function _pickCivility(client = {}) {
+  return (
+    client.civility ||
+    client.civilite ||
+    client.civ ||
+    client.title ||
+    client.civilityLabel ||
+    ""
+  ).toString().trim();
+}
+
+function _buildGreeting(client = {}) {
+  const name = (client?.name || "").toString().trim();
+  const civRaw = _pickCivility(client);
+  const civ = civRaw.toLowerCase();
+
+  // Pas de nom -> formule neutre
+  if (!name) return "Bonjour,";
+
+  // Cas "Monsieur et Madame" (ou variantes)
+  if (civ.includes("monsieur et madame") || civ.includes("madame et monsieur")) {
+    return "Bonjour Madame, Monsieur,";
+  }
+
+  if (civ.includes("monsieur")) return `Bonjour Monsieur ${name},`;
+  if (civ.includes("madame")) return `Bonjour Madame ${name},`;
+
+  // Société / Agence
+  if (civ.includes("soci") || civ.includes("entreprise") || civ.includes("agence")) {
+    return `Bonjour ${name},`;
+  }
+
+  // défaut
+  return `Bonjour ${name},`;
+}
+
 function buildSendMessage(entity) {
-  const kind = entity?._kind || entity?.type || "document"; // "devis" | "facture" | "contrat"
+  const kind = entity?._kind || entity?.type || "document"; // devis | facture | contrat
   const client = _getClientFromEntity(entity);
 
   const greeting = _buildGreeting(client);
-  const clientNameSafe = (client?.name || "").toString().trim() || "Madame, Monsieur";
 
-  // Champs communs
+  // Infos doc
   const number = (entity?.number || "").toString().trim();
   const subject = (entity?.subject || "").toString().trim();
 
-  // Montant (TTC si dispo, sinon HT)
+  // Montants (devis/facture : totalTTC ; contrat : pricing.totalTTC ou totalHT)
   const totalTTC =
     (typeof entity?.totalTTC === "number") ? entity.totalTTC :
     (typeof entity?.pricing?.totalTTC === "number") ? entity.pricing.totalTTC :
@@ -3214,51 +3287,51 @@ function buildSendMessage(entity) {
 
   const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
 
-  // Dates devis
+  // Validité devis
   const validity =
     (entity?.type === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
 
   // Contrat : période
   const periodStart = entity?.pricing?.startDate ? _fmtDateFR(entity.pricing.startDate) : "";
-  const durationMonths = entity?.pricing?.durationMonths || entity?.durationMonths || "";
+  const durationMonths = entity?.pricing?.durationMonths || "";
   const period =
     (periodStart && durationMonths)
       ? `à partir du ${periodStart} (durée ${durationMonths} mois)`
       : (periodStart ? `à partir du ${periodStart}` : "");
 
-  // Type client => délai paiement facture
-  const clientType = _getClientTypeFromEntity(entity, client);
-  const paymentDelayTxt =
-    clientType === "particulier"
-      ? "sous 7 jours"
-      : "sous 30 jours, conformément aux conditions contractuelles";
+  // Délai selon client type (si tu as déjà _getClientTypeFromEntity dans ton app)
+  // - particulier : 7 jours
+  // - agence/syndic : 15 jours (plus réaliste)
+  let delayTxt = "sous 7 jours";
+  try {
+    if (typeof _getClientTypeFromEntity === "function") {
+      const ct = _getClientTypeFromEntity(entity);
+      if (ct === "syndic" || ct === "agence" || ct === "pro") delayTxt = "sous 15 jours";
+    }
+  } catch (e) {}
 
-  // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
 
   let mailSubject = "";
   let body = "";
 
-  // =========================
-  // 1) DEVIS
-  // =========================
+  // ===================== DEVIS =====================
   if (entity?.type === "devis") {
     mailSubject = `Devis ${number}${subject ? " – " + subject : ""}`;
 
     const status = (entity?.status || "en_attente").toString();
 
-    // texte standard (pro, simple, clair)
+    // Base
     body =
 `${greeting}
 
 Je vous transmets le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
-${validity ? `\nValidité : jusqu’au ${validity}.` : ""}
 
-Je reste à votre disposition pour toute question ou ajustement.
+${validity ? `Validité : jusqu’au ${validity}.\n` : ""}Si vous avez la moindre question ou souhaitez ajuster un point, je reste à votre disposition.
 
 ${signature}`;
 
-    // nuance si accepté / expiré (sans faire “roman”)
+    // Nuances (optionnel)
     if (status === "accepte") {
       body =
 `${greeting}
@@ -3276,7 +3349,7 @@ ${signature}`;
 
 Je vous renvoie le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
 
-Si vous souhaitez une mise à jour (dates / prestations / tarifs), je vous le réédite rapidement.
+Si vous souhaitez que je le mette à jour (dates, prestations, tarifs), dites-moi et je vous le réédite.
 
 ${signature}`;
     }
@@ -3284,22 +3357,19 @@ ${signature}`;
     return { mailSubject, body };
   }
 
-  // =========================
-  // 2) FACTURE
-  // =========================
+  // ===================== FACTURE =====================
   if (entity?.type === "facture") {
     mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
 
     const paid = !!entity?.paid;
 
-    // ✅ version “nickel” (pas de “ci-joint” vu qu’on n’attache rien via mailto/wa)
     if (paid) {
       body =
 `${greeting}
 
 Je vous transmets la facture acquittée ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Merci, et je reste disponible si besoin.
+Je vous remercie et reste à votre disposition si besoin.
 
 ${signature}`;
     } else {
@@ -3308,8 +3378,8 @@ ${signature}`;
 
 Je vous transmets la facture ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Merci de procéder au règlement ${paymentDelayTxt}.
-Si vous avez besoin du RIB ou d’une information, je vous l’envoie immédiatement.
+Merci de bien vouloir procéder au règlement ${delayTxt}.
+Si vous souhaitez recevoir le RIB, je peux vous le transmettre.
 
 ${signature}`;
     }
@@ -3317,18 +3387,17 @@ ${signature}`;
     return { mailSubject, body };
   }
 
-  // =========================
-  // 3) CONTRAT
-  // =========================
-  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${clientNameSafe ? " – " + clientNameSafe : ""}`;
+  // ===================== CONTRAT =====================
+  // Ici : entity._kind === "contrat" (ou autre appel)
+  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${client?.name ? " – " + client.name : ""}`;
 
   body =
 `${greeting}
 
 Je vous transmets le contrat d’entretien${number ? " " + number : ""}${period ? ` (${period})` : ""}${totalTxt ? `, pour un montant total de ${totalTxt} TTC.` : "."}
 
-Pour validation : merci de me confirmer votre accord (signature électronique ou mention “Bon pour accord”).
-Dès validation, je confirme le planning et, si nécessaire, l’échéancier de paiement.
+✅ Pour validation : merci de me retourner le contrat signé avec la mention « Bon pour accord ».
+Dès réception, je confirme la mise en place du planning et, si nécessaire, l’échéancier de paiement.
 
 ${signature}`;
 
@@ -17436,6 +17505,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
