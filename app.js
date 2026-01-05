@@ -3268,17 +3268,144 @@ function _buildGreeting(client = {}) {
   return `Bonjour ${name},`;
 }
 
+// ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
+
+let currentSendDoc = null;
+
+// ---------- Helpers format ----------
+function _fmtMoneyEUR(n) {
+  const x = Number(n);
+  if (!isFinite(x)) return "";
+  return x.toFixed(2).replace(".", ",") + " €";
+}
+
+function _fmtDateFR(iso) {
+  if (!iso) return "";
+  try {
+    return fromISO(iso).replace(/-/g, "/");
+  } catch (e) {
+    return iso;
+  }
+}
+
+// ---------- Helpers client ----------
+function _getClientFromEntity(entity) {
+  // Devis/Facture => entity.client
+  if (entity && entity.client) return entity.client;
+
+  // Contrat => parfois entity.client, sinon pricing.client
+  if (entity && entity.pricing && entity.pricing.client) return entity.pricing.client;
+
+  // fallback
+  return {
+    name: entity?.clientName || entity?.pricing?.clientName || "",
+    civility: entity?.clientCivility || entity?.pricing?.clientCivility || entity?.civility || "",
+    email: entity?.clientEmail || entity?.pricing?.clientEmail || "",
+    phone: entity?.clientPhone || entity?.pricing?.clientPhone || "",
+    type: entity?.clientType || entity?.pricing?.clientType || ""
+  };
+}
+
+function _pickCivility(client = {}) {
+  return (
+    client.civility ||
+    client.civilite ||
+    client.civ ||
+    client.title ||
+    client.civilityLabel ||
+    ""
+  ).toString().trim();
+}
+
+function _normalizeCivility(civRaw) {
+  const v = (civRaw || "").toString().toLowerCase().trim();
+
+  if (!v) return ""; // inconnu
+
+  // Monsieur
+  if (
+    v === "m" || v === "mr" || v === "m." || v.includes("monsieur")
+  ) return "monsieur";
+
+  // Madame
+  if (
+    v === "mme" || v === "mrs" || v === "ms" || v === "madame"
+  ) return "madame";
+
+  // Entreprise / Société
+  if (
+    v.includes("soc") || v.includes("soci") || v.includes("entreprise") ||
+    v.includes("sarl") || v.includes("sas") || v.includes("sasu") ||
+    v.includes("eurl") || v.includes("sci") || v.includes("agence") ||
+    v.includes("syndic")
+  ) return "societe";
+
+  return "";
+}
+
+function _buildGreeting(client = {}) {
+  const name = (client?.name || "").toString().trim();
+  const civNorm = _normalizeCivility(_pickCivility(client));
+
+  // pas de nom -> neutre
+  if (!name) return "Bonjour,";
+
+  // société -> pas de Monsieur/Madame
+  if (civNorm === "societe") return `Bonjour ${name},`;
+
+  // Monsieur/Madame si connu
+  if (civNorm === "monsieur") return `Bonjour Monsieur ${name},`;
+  if (civNorm === "madame") return `Bonjour Madame ${name},`;
+
+  // sinon simple
+  return `Bonjour ${name},`;
+}
+
+// ---------- Helpers délai de paiement ----------
+function _normalizeClientType(raw) {
+  const v = (raw || "").toString().toLowerCase().trim();
+  if (!v) return "particulier";
+
+  // tout ce qui ressemble à pro/syndic/agence
+  if (
+    v.includes("syndic") ||
+    v.includes("agence") ||
+    v.includes("pro") ||
+    v.includes("profession") ||
+    v.includes("immobilier") ||
+    v.includes("soc") ||
+    v.includes("entreprise")
+  ) {
+    return "pro";
+  }
+  return "particulier";
+}
+
+function _getClientTypeFromEntity(entity, client) {
+  return _normalizeClientType(
+    entity?.clientType ||
+    entity?.client?.type ||
+    entity?.pricing?.clientType ||
+    entity?.pricing?.client?.type ||
+    entity?.typeClient ||
+    entity?.ctClientType ||
+    client?.type
+  );
+}
+
+// ---------- Builder message ----------
 function buildSendMessage(entity) {
-  const kind = entity?._kind || entity?.type || "document"; // devis | facture | contrat
+  const kind = entity?._kind || entity?.type || "document"; // "devis" | "facture" | "contrat"
   const client = _getClientFromEntity(entity);
 
   const greeting = _buildGreeting(client);
+  const clientNameSafe = (client?.name || "").toString().trim() || "Madame, Monsieur";
 
-  // Infos doc
+  // Champs communs
   const number = (entity?.number || "").toString().trim();
   const subject = (entity?.subject || "").toString().trim();
 
-  // Montants (devis/facture : totalTTC ; contrat : pricing.totalTTC ou totalHT)
+  // Montant (TTC si dispo, sinon HT)
   const totalTTC =
     (typeof entity?.totalTTC === "number") ? entity.totalTTC :
     (typeof entity?.pricing?.totalTTC === "number") ? entity.pricing.totalTTC :
@@ -3287,51 +3414,49 @@ function buildSendMessage(entity) {
 
   const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
 
-  // Validité devis
+  // Dates devis
   const validity =
     (entity?.type === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
 
   // Contrat : période
   const periodStart = entity?.pricing?.startDate ? _fmtDateFR(entity.pricing.startDate) : "";
-  const durationMonths = entity?.pricing?.durationMonths || "";
+  const durationMonths = entity?.pricing?.durationMonths || entity?.durationMonths || "";
   const period =
     (periodStart && durationMonths)
       ? `à partir du ${periodStart} (durée ${durationMonths} mois)`
       : (periodStart ? `à partir du ${periodStart}` : "");
 
-  // Délai selon client type (si tu as déjà _getClientTypeFromEntity dans ton app)
-  // - particulier : 7 jours
-  // - agence/syndic : 15 jours (plus réaliste)
-  let delayTxt = "sous 7 jours";
-  try {
-    if (typeof _getClientTypeFromEntity === "function") {
-      const ct = _getClientTypeFromEntity(entity);
-      if (ct === "syndic" || ct === "agence" || ct === "pro") delayTxt = "sous 15 jours";
-    }
-  } catch (e) {}
+  // Type client => délai paiement facture
+  const clientType = _getClientTypeFromEntity(entity, client);
+  const paymentDelayTxt =
+    clientType === "particulier"
+      ? "sous 7 jours"
+      : "sous 30 jours, conformément aux conditions contractuelles";
 
+  // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
 
   let mailSubject = "";
   let body = "";
 
-  // ===================== DEVIS =====================
+  // =========================
+  // 1) DEVIS
+  // =========================
   if (entity?.type === "devis") {
     mailSubject = `Devis ${number}${subject ? " – " + subject : ""}`;
 
     const status = (entity?.status || "en_attente").toString();
 
-    // Base
     body =
 `${greeting}
 
 Je vous transmets le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+${validity ? `\nValidité : jusqu’au ${validity}.` : ""}
 
-${validity ? `Validité : jusqu’au ${validity}.\n` : ""}Si vous avez la moindre question ou souhaitez ajuster un point, je reste à votre disposition.
+Je reste à votre disposition pour toute question ou ajustement.
 
 ${signature}`;
 
-    // Nuances (optionnel)
     if (status === "accepte") {
       body =
 `${greeting}
@@ -3349,7 +3474,7 @@ ${signature}`;
 
 Je vous renvoie le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
 
-Si vous souhaitez que je le mette à jour (dates, prestations, tarifs), dites-moi et je vous le réédite.
+Si vous souhaitez une mise à jour (dates / prestations / tarifs), je vous le réédite rapidement.
 
 ${signature}`;
     }
@@ -3357,19 +3482,22 @@ ${signature}`;
     return { mailSubject, body };
   }
 
-  // ===================== FACTURE =====================
+  // =========================
+  // 2) FACTURE
+  // =========================
   if (entity?.type === "facture") {
     mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
 
     const paid = !!entity?.paid;
 
+    // ✅ important : pas de “ci-joint” car mailto/WhatsApp n’attache rien
     if (paid) {
       body =
 `${greeting}
 
 Je vous transmets la facture acquittée ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Je vous remercie et reste à votre disposition si besoin.
+Merci, et je reste disponible si besoin.
 
 ${signature}`;
     } else {
@@ -3378,8 +3506,8 @@ ${signature}`;
 
 Je vous transmets la facture ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Merci de bien vouloir procéder au règlement ${delayTxt}.
-Si vous souhaitez recevoir le RIB, je peux vous le transmettre.
+Merci de procéder au règlement ${paymentDelayTxt}.
+Si vous avez besoin du RIB ou d’une information, je vous l’envoie immédiatement.
 
 ${signature}`;
     }
@@ -3387,21 +3515,190 @@ ${signature}`;
     return { mailSubject, body };
   }
 
-  // ===================== CONTRAT =====================
-  // Ici : entity._kind === "contrat" (ou autre appel)
-  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${client?.name ? " – " + client.name : ""}`;
+  // =========================
+  // 3) CONTRAT
+  // =========================
+  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${clientNameSafe ? " – " + clientNameSafe : ""}`;
 
   body =
 `${greeting}
 
 Je vous transmets le contrat d’entretien${number ? " " + number : ""}${period ? ` (${period})` : ""}${totalTxt ? `, pour un montant total de ${totalTxt} TTC.` : "."}
 
-✅ Pour validation : merci de me retourner le contrat signé avec la mention « Bon pour accord ».
-Dès réception, je confirme la mise en place du planning et, si nécessaire, l’échéancier de paiement.
+Pour validation : merci de me confirmer votre accord (signature électronique ou mention “Bon pour accord”).
+Dès validation, je confirme le planning et, si nécessaire, l’échéancier de paiement.
 
 ${signature}`;
 
   return { mailSubject, body };
+}
+
+// ---------- Popup ----------
+function openSendPopup() {
+  if (!currentDocumentId) {
+    showConfirmDialog({
+      title: "Aucun document ouvert",
+      message: "Ouvre d’abord un devis ou une facture avant de l’envoyer.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
+    return;
+  }
+
+  const doc = getDocument(currentDocumentId);
+  if (!doc) return;
+
+  currentSendDoc = doc;
+  const { body } = buildSendMessage(doc);
+
+  const infoEl = document.getElementById("sendDocInfo");
+  const txtArea = document.getElementById("sendMessagePreview");
+  const overlay = document.getElementById("sendPopup");
+
+  if (infoEl) {
+    const typeLabel = doc.type === "facture" ? "Facture" : "Devis";
+    const clientName = doc.client && doc.client.name ? doc.client.name : "";
+    infoEl.textContent = `${typeLabel} ${doc.number || ""} – ${clientName}`;
+  }
+
+  if (txtArea) txtArea.value = body;
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) {
+      void popup.offsetWidth;
+      popup.classList.add("show");
+    }
+  }
+}
+
+function openSendPopupContract() {
+  if (!currentContractId) {
+    showConfirmDialog({
+      title: "Aucun contrat ouvert",
+      message: "Ouvre d’abord un contrat avant de l’envoyer.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
+    return;
+  }
+
+  const ct = getContract(currentContractId);
+  if (!ct) return;
+
+  ct._kind = "contrat"; // 👈 important
+
+  currentSendDoc = ct;
+  const { body } = buildSendMessage(ct);
+
+  const infoEl = document.getElementById("sendDocInfo");
+  const txtArea = document.getElementById("sendMessagePreview");
+  const overlay = document.getElementById("sendPopup");
+
+  if (infoEl) {
+    const clientName = _getClientFromEntity(ct)?.name || "";
+    infoEl.textContent = `Contrat – ${clientName}`;
+  }
+
+  if (txtArea) txtArea.value = body;
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) {
+      void popup.offsetWidth;
+      popup.classList.add("show");
+    }
+  }
+}
+
+function closeSendPopup() {
+  const overlay = document.getElementById("sendPopup");
+  if (!overlay) return;
+  const popup = overlay.querySelector(".popup");
+  if (popup) popup.classList.remove("show");
+  overlay.classList.add("hidden");
+  currentSendDoc = null;
+}
+
+// ---------- Email / WhatsApp ----------
+function sendByEmail() {
+  if (!currentSendDoc) return;
+
+  const client = _getClientFromEntity(currentSendDoc);
+  const email = client?.email ? client.email.trim() : "";
+
+  if (!email) {
+    showConfirmDialog({
+      title: "Email manquant",
+      message: "Aucune adresse email n’est renseignée pour ce client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const { mailSubject } = buildSendMessage(currentSendDoc);
+  const body = document.getElementById("sendMessagePreview")?.value || "";
+
+  const url =
+    "mailto:" + encodeURIComponent(email) +
+    "?subject=" + encodeURIComponent(mailSubject) +
+    "&body=" + encodeURIComponent(body);
+
+  window.location.href = url;
+  closeSendPopup();
+}
+
+function _normalizePhoneToWhatsApp(phoneRaw) {
+  if (!phoneRaw) return "";
+  let p = String(phoneRaw).trim();
+
+  // Retire tout sauf chiffres + +
+  p = p.replace(/[^\d+]/g, "");
+
+  // Si commence par 0 -> FR +33
+  if (p.startsWith("0")) p = "+33" + p.slice(1);
+
+  // Si pas de +, on suppose FR
+  if (!p.startsWith("+")) p = "+33" + p;
+
+  return p;
+}
+
+function sendByWhatsApp() {
+  if (!currentSendDoc) return;
+
+  const client = _getClientFromEntity(currentSendDoc);
+  const phone = _normalizePhoneToWhatsApp(client?.phone || "");
+
+  if (!phone) {
+    showConfirmDialog({
+      title: "Téléphone manquant",
+      message: "Aucun numéro n’est renseigné pour ce client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  const body = document.getElementById("sendMessagePreview")?.value || "";
+
+  // WhatsApp: wa.me ne prend pas le "+" => on enlève le +
+  const waPhone = phone.replace("+", "");
+  const url = "https://wa.me/" + encodeURIComponent(waPhone) + "?text=" + encodeURIComponent(body);
+
+  window.open(url, "_blank");
+  closeSendPopup();
 }
 
 
@@ -17505,6 +17802,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
