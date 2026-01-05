@@ -3209,16 +3209,22 @@ function _fmtMoneyEUR(n) {
 function _fmtDateFR(iso) {
   if (!iso) return "";
   try {
+    // Si tu as déjà fromISO() dans ton app (tu l'utilises ailleurs), on l'exploite
     if (typeof fromISO === "function") return fromISO(iso).replace(/-/g, "/");
   } catch (e) {}
+  // fallback basique
   return String(iso);
 }
 
 // ---------- Helpers client ----------
 function _getClientFromEntity(entity) {
-  if (entity?.client) return entity.client; // devis/facture
-  if (entity?.pricing?.client) return entity.pricing.client; // contrat
+  // Devis/Facture
+  if (entity?.client) return entity.client;
 
+  // Contrat
+  if (entity?.pricing?.client) return entity.pricing.client;
+
+  // fallback
   return {
     name: entity?.clientName || entity?.pricing?.clientName || "",
     civility: entity?.clientCivility || entity?.pricing?.clientCivility || entity?.civility || "",
@@ -3241,11 +3247,15 @@ function _pickCivility(client = {}) {
 
 function _normalizeCivility(civRaw) {
   const v = (civRaw || "").toString().toLowerCase().trim();
-  if (!v) return "";
+  if (!v) return ""; // inconnu
 
+  // Monsieur
   if (v === "m" || v === "mr" || v === "m." || v.includes("monsieur")) return "monsieur";
+
+  // Madame
   if (v === "mme" || v === "mrs" || v === "ms" || v === "madame") return "madame";
 
+  // Entreprise / Société
   if (
     v.includes("soc") || v.includes("soci") || v.includes("entreprise") ||
     v.includes("sarl") || v.includes("sas") || v.includes("sasu") ||
@@ -3260,10 +3270,17 @@ function _buildGreeting(client = {}) {
   const name = (client?.name || "").toString().trim();
   const civNorm = _normalizeCivility(_pickCivility(client));
 
+  // pas de nom -> neutre
   if (!name) return "Bonjour,";
+
+  // société -> pas de Monsieur/Madame
   if (civNorm === "societe") return `Bonjour ${name},`;
+
+  // Monsieur/Madame si connu
   if (civNorm === "monsieur") return `Bonjour Monsieur ${name},`;
   if (civNorm === "madame") return `Bonjour Madame ${name},`;
+
+  // sinon simple
   return `Bonjour ${name},`;
 }
 
@@ -3272,9 +3289,14 @@ function _normalizeClientType(raw) {
   const v = (raw || "").toString().toLowerCase().trim();
   if (!v) return "particulier";
 
+  // tout ce qui ressemble à pro/syndic/agence
   if (
-    v.includes("syndic") || v.includes("agence") || v.includes("pro") ||
-    v.includes("profession") || v.includes("immobilier") || v.includes("soc") ||
+    v.includes("syndic") ||
+    v.includes("agence") ||
+    v.includes("pro") ||
+    v.includes("profession") ||
+    v.includes("immobilier") ||
+    v.includes("soc") ||
     v.includes("entreprise")
   ) return "pro";
 
@@ -3295,13 +3317,17 @@ function _getClientTypeFromEntity(entity, client) {
 
 // ---------- Builder message ----------
 function buildSendMessage(entity) {
+  const kind = entity?._kind || entity?.type || "document"; // "devis" | "facture" | "contrat"
   const client = _getClientFromEntity(entity);
+
   const greeting = _buildGreeting(client);
   const clientNameSafe = (client?.name || "").toString().trim() || "Madame, Monsieur";
 
+  // Champs communs
   const number = (entity?.number || "").toString().trim();
   const subject = (entity?.subject || "").toString().trim();
 
+  // Montant (TTC si dispo, sinon HT)
   const totalTTC =
     (typeof entity?.totalTTC === "number") ? entity.totalTTC :
     (typeof entity?.pricing?.totalTTC === "number") ? entity.pricing.totalTTC :
@@ -3310,9 +3336,11 @@ function buildSendMessage(entity) {
 
   const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
 
+  // Dates devis
   const validity =
-    (entity?.type === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
+    (kind === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
 
+  // Contrat : période
   const periodStart = entity?.pricing?.startDate ? _fmtDateFR(entity.pricing.startDate) : "";
   const durationMonths = entity?.pricing?.durationMonths || entity?.durationMonths || "";
   const period =
@@ -3320,19 +3348,23 @@ function buildSendMessage(entity) {
       ? `à partir du ${periodStart} (durée ${durationMonths} mois)`
       : (periodStart ? `à partir du ${periodStart}` : "");
 
+  // Type client => délai paiement facture
   const clientType = _getClientTypeFromEntity(entity, client);
   const paymentDelayTxt =
     clientType === "particulier"
       ? "sous 7 jours"
       : "sous 30 jours, conformément aux conditions contractuelles";
 
+  // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
 
   let mailSubject = "";
   let body = "";
 
+  // =========================
   // 1) DEVIS
-  if (entity?.type === "devis") {
+  // =========================
+  if (kind === "devis") {
     mailSubject = `Devis ${number}${subject ? " – " + subject : ""}`;
     const status = (entity?.status || "en_attente").toString();
 
@@ -3371,11 +3403,14 @@ ${signature}`;
     return { mailSubject, body };
   }
 
+  // =========================
   // 2) FACTURE
-  if (entity?.type === "facture") {
+  // =========================
+  if (kind === "facture") {
     mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
     const paid = !!entity?.paid;
 
+    // ✅ important : pas de “ci-joint” car mailto/WhatsApp n’attache rien
     if (paid) {
       body =
 `${greeting}
@@ -3400,8 +3435,10 @@ ${signature}`;
     return { mailSubject, body };
   }
 
+  // =========================
   // 3) CONTRAT (fallback)
-  mailSubject = `Contrat d’entretien${number ? " " + number : ""} – ${clientNameSafe}`;
+  // =========================
+  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${clientNameSafe ? " – " + clientNameSafe : ""}`;
 
   body =
 `${greeting}
@@ -3474,6 +3511,9 @@ function openSendPopupContract() {
   const ct = getContract(currentContractId);
   if (!ct) return;
 
+  // IMPORTANT : on tag le type pour buildSendMessage()
+  ct._kind = "contrat";
+
   currentSendDoc = ct;
   const { body } = buildSendMessage(ct);
 
@@ -3541,9 +3581,16 @@ function sendByEmail() {
 function _normalizePhoneToWhatsApp(phoneRaw) {
   if (!phoneRaw) return "";
   let p = String(phoneRaw).trim();
+
+  // Retire tout sauf chiffres + +
   p = p.replace(/[^\d+]/g, "");
+
+  // Si commence par 0 -> FR +33
   if (p.startsWith("0")) p = "+33" + p.slice(1);
+
+  // Si pas de +, on suppose FR
   if (!p.startsWith("+")) p = "+33" + p;
+
   return p;
 }
 
@@ -3566,6 +3613,8 @@ function sendByWhatsApp() {
   }
 
   const body = document.getElementById("sendMessagePreview")?.value || "";
+
+  // WhatsApp: wa.me ne prend pas le "+" => on enlève le +
   const waPhone = phone.replace("+", "");
   const url = "https://wa.me/" + encodeURIComponent(waPhone) + "?text=" + encodeURIComponent(body);
 
@@ -17506,6 +17555,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
