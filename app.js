@@ -3162,65 +3162,36 @@ function saveDocuments(docs) {
   localStorage.setItem("documents", JSON.stringify(docs));
 }
 
-// ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
 
-let currentSendDoc = null;
+function _normalizeClientType(raw) {
+  const v = (raw || "").toString().toLowerCase().trim();
+  if (!v) return "particulier";
 
-// Helpers
-function _fmtMoneyEUR(n) {
-  const x = Number(n);
-  if (!isFinite(x)) return "";
-  return x.toFixed(2).replace(".", ",") + " €";
-}
-
-function _fmtDateFR(iso) {
-  if (!iso) return "";
-  try {
-    return fromISO(iso).replace(/-/g, "/");
-  } catch (e) {
-    return iso;
+  // tout ce qui ressemble à pro/syndic/agence
+  if (
+    v.includes("syndic") ||
+    v.includes("agence") ||
+    v.includes("pro") ||
+    v.includes("profession") ||
+    v.includes("immobilier") ||
+    v.includes("soc") ||
+    v.includes("entreprise")
+  ) {
+    return "pro";
   }
+  return "particulier";
 }
 
-function _getClientFromEntity(entity) {
-  // Devis/Facture => entity.client
-  if (entity && entity.client) return entity.client;
-
-  // Contrat => parfois entity.client aussi, sinon pricing.client
-  if (entity && entity.pricing && entity.pricing.client) return entity.pricing.client;
-
-  // fallback (forme)
-  return {
-    name: entity?.clientName || entity?.pricing?.clientName || "",
-    civility: entity?.clientCivility || entity?.pricing?.clientCivility || entity?.civility || "",
-    email: entity?.clientEmail || entity?.pricing?.clientEmail || "",
-    phone: entity?.clientPhone || entity?.pricing?.clientPhone || ""
-  };
-}
-
-function _pickCivility(client = {}) {
-  return (
-    client.civility ||
-    client.civilite ||
-    client.civ ||
-    client.title ||
-    client.civilityLabel ||
-    ""
-  ).toString().trim();
-}
-
-function _buildGreeting(client = {}) {
-  const name = (client?.name || "").toString().trim();
-  const civ = _pickCivility(client).toLowerCase();
-
-  if (!name) return "Bonjour,";
-
-  if (civ.includes("monsieur")) return `Bonjour Monsieur ${name},`;
-  if (civ.includes("madame"))   return `Bonjour Madame ${name},`;
-
-  if (civ.includes("soci") || civ.includes("entreprise")) return `Bonjour ${name},`;
-
-  return `Bonjour ${name},`;
+function _getClientTypeFromEntity(entity, client) {
+  return _normalizeClientType(
+    entity?.clientType ||
+    entity?.client?.type ||
+    entity?.pricing?.clientType ||
+    entity?.pricing?.client?.type ||
+    entity?.typeClient ||          // si tu as un champ comme ça
+    entity?.ctClientType ||        // si tu as un champ comme ça
+    client?.type
+  );
 }
 
 function buildSendMessage(entity) {
@@ -3231,10 +3202,10 @@ function buildSendMessage(entity) {
   const clientNameSafe = (client?.name || "").toString().trim() || "Madame, Monsieur";
 
   // Champs communs
-  const number = (entity?.number || "").trim();
-  const subject = (entity?.subject || "").trim();
+  const number = (entity?.number || "").toString().trim();
+  const subject = (entity?.subject || "").toString().trim();
 
-  // Montant
+  // Montant (TTC si dispo, sinon HT)
   const totalTTC =
     (typeof entity?.totalTTC === "number") ? entity.totalTTC :
     (typeof entity?.pricing?.totalTTC === "number") ? entity.pricing.totalTTC :
@@ -3243,43 +3214,56 @@ function buildSendMessage(entity) {
 
   const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
 
-  // Dates
+  // Dates devis
   const validity =
     (entity?.type === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
 
   // Contrat : période
   const periodStart = entity?.pricing?.startDate ? _fmtDateFR(entity.pricing.startDate) : "";
-  const durationMonths = entity?.pricing?.durationMonths || "";
+  const durationMonths = entity?.pricing?.durationMonths || entity?.durationMonths || "";
   const period =
     (periodStart && durationMonths)
       ? `à partir du ${periodStart} (durée ${durationMonths} mois)`
       : (periodStart ? `à partir du ${periodStart}` : "");
 
+  // Type client => délai paiement facture
+  const clientType = _getClientTypeFromEntity(entity, client);
+  const paymentDelayTxt =
+    clientType === "particulier"
+      ? "sous 7 jours"
+      : "sous 30 jours, conformément aux conditions contractuelles";
+
+  // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
 
   let mailSubject = "";
   let body = "";
 
+  // =========================
   // 1) DEVIS
+  // =========================
   if (entity?.type === "devis") {
     mailSubject = `Devis ${number}${subject ? " – " + subject : ""}`;
 
-    const status = entity?.status || "en_attente";
+    const status = (entity?.status || "en_attente").toString();
 
+    // texte standard (pro, simple, clair)
     body =
 `${greeting}
 
-Je vous transmets le devis ${number}${subject ? " relatif à : " + subject : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Je vous transmets le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+${validity ? `\nValidité : jusqu’au ${validity}.` : ""}
 
-${validity ? `Validité : jusqu’au ${validity}.\n` : ""}Si vous avez la moindre question ou souhaitez ajuster un point, je reste disponible.
+Je reste à votre disposition pour toute question ou ajustement.
 
 ${signature}`;
 
+    // nuance si accepté / expiré (sans faire “roman”)
     if (status === "accepte") {
       body =
 `${greeting}
 
-Comme convenu, je vous confirme l’envoi du devis ${number}${subject ? " relatif à : " + subject : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
+Comme convenu, je vous confirme l’envoi du devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
 
 Nous pouvons planifier l’intervention dès que vous le souhaitez.
 
@@ -3290,9 +3274,9 @@ ${signature}`;
       body =
 `${greeting}
 
-Je vous renvoie le devis ${number}${subject ? " relatif à : " + subject : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
+Je vous renvoie le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
 
-Si vous souhaitez que je le mette à jour (dates, prestations, tarifs), dites-moi et je vous le réédite.
+Si vous souhaitez une mise à jour (dates / prestations / tarifs), je vous le réédite rapidement.
 
 ${signature}`;
     }
@@ -3300,41 +3284,42 @@ ${signature}`;
     return { mailSubject, body };
   }
 
-// 2) FACTURE
-if (entity?.type === "facture") {
-  mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
+  // =========================
+  // 2) FACTURE
+  // =========================
+  if (entity?.type === "facture") {
+    mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
 
-  const paid = !!entity?.paid;
-  const objTxt = subject ? ` (Objet : ${subject})` : "";
-  const amountTxt = totalTxt ? `, d’un montant de ${totalTxt} TTC.` : ".";
+    const paid = !!entity?.paid;
 
-  if (paid) {
-    body =
+    // ✅ version “nickel” (pas de “ci-joint” vu qu’on n’attache rien via mailto/wa)
+    if (paid) {
+      body =
 `${greeting}
 
-Veuillez trouver ci-joint la facture acquittée ${number}${objTxt}${amountTxt}
+Je vous transmets la facture acquittée ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Je vous remercie et reste à votre disposition.
+Merci, et je reste disponible si besoin.
 
 ${signature}`;
-  } else {
-    body =
+    } else {
+      body =
 `${greeting}
 
-Veuillez trouver ci-joint la facture ${number}${objTxt}${amountTxt}
+Je vous transmets la facture ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Merci de procéder au règlement sous 7 jours.
-Je peux vous transmettre le RIB si besoin.
+Merci de procéder au règlement ${paymentDelayTxt}.
+Si vous avez besoin du RIB ou d’une information, je vous l’envoie immédiatement.
 
 ${signature}`;
+    }
+
+    return { mailSubject, body };
   }
 
-  return { mailSubject, body };
-}
-}
-
+  // =========================
   // 3) CONTRAT
-  // Ici : entity._kind === "contrat"
+  // =========================
   mailSubject = `Contrat d’entretien${number ? " " + number : ""}${clientNameSafe ? " – " + clientNameSafe : ""}`;
 
   body =
@@ -3342,8 +3327,8 @@ ${signature}`;
 
 Je vous transmets le contrat d’entretien${number ? " " + number : ""}${period ? ` (${period})` : ""}${totalTxt ? `, pour un montant total de ${totalTxt} TTC.` : "."}
 
-✅ Pour validation : merci de me retourner le contrat signé avec la mention “Bon pour accord”.
-Dès réception, je confirme la mise en place du planning et, si nécessaire, l’échéancier de paiement.
+Pour validation : merci de me confirmer votre accord (signature électronique ou mention “Bon pour accord”).
+Dès validation, je confirme le planning et, si nécessaire, l’échéancier de paiement.
 
 ${signature}`;
 
@@ -17451,6 +17436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
