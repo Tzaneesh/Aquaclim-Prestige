@@ -3161,57 +3161,165 @@ function saveDocuments(docs) {
   localStorage.setItem("documents", JSON.stringify(docs));
 }
 
-// ===== ENVOI EMAIL / WHATSAPP POUR UN DOCUMENT =====
+// ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
 
 let currentSendDoc = null;
 
-function buildSendMessage(doc) {
-  const clientName = (doc.client && doc.client.name) ? doc.client.name : "Madame, Monsieur";
-  const typeLabel = doc.type === "facture" ? "facture" : "devis";
-  const number = doc.number || "";
-  const subject = doc.subject || "";
-  const total =
-    typeof doc.totalTTC === "number"
-      ? doc.totalTTC.toFixed(2).replace(".", ",")
-      : "";
+// Helpers
+function _fmtMoneyEUR(n) {
+  const x = Number(n);
+  if (!isFinite(x)) return "";
+  return x.toFixed(2).replace(".", ",") + " €";
+}
+
+function _fmtDateFR(iso) {
+  if (!iso) return "";
+  try {
+    return fromISO(iso).replace(/-/g, "/"); // tu l'utilises déjà
+  } catch (e) {
+    return iso;
+  }
+}
+
+function _getClientFromEntity(entity) {
+  // Devis/Facture => entity.client
+  if (entity && entity.client) return entity.client;
+
+  // Contrat => souvent entity.client aussi, sinon on tente pricing/client fields
+  if (entity && entity.pricing && entity.pricing.client) return entity.pricing.client;
+
+  // fallback "forme"
+  return {
+    name: entity?.clientName || entity?.pricing?.clientName || "",
+    email: entity?.clientEmail || entity?.pricing?.clientEmail || "",
+    phone: entity?.clientPhone || entity?.pricing?.clientPhone || ""
+  };
+}
+
+function buildSendMessage(entity) {
+  const kind = entity?._kind || entity?.type || "document"; // "devis" | "facture" | "contrat"
+  const client = _getClientFromEntity(entity);
+
+  const clientName = (client?.name && client.name.trim()) ? client.name.trim() : "Madame, Monsieur";
+
+  // Champs communs
+  const number = (entity?.number || "").trim();
+  const subject = (entity?.subject || "").trim();
+
+  // Montant
+  const totalTTC =
+    (typeof entity?.totalTTC === "number") ? entity.totalTTC :
+    (typeof entity?.pricing?.totalTTC === "number") ? entity.pricing.totalTTC :
+    (typeof entity?.pricing?.totalHT === "number") ? entity.pricing.totalHT :
+    null;
+
+  const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
+
+  // Dates
   const validity =
-    doc.type === "devis" && doc.validityDate
-      ? fromISO(doc.validityDate).replace(/-/g, "/")
-      : null;
+    (entity?.type === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
 
-  let body = `Bonjour ${clientName},\n\n`;
+  // Contrat : période (si existante)
+  const periodStart = entity?.pricing?.startDate ? _fmtDateFR(entity.pricing.startDate) : "";
+  const durationMonths = entity?.pricing?.durationMonths || "";
+  const period =
+    (periodStart && durationMonths)
+      ? `à partir du ${periodStart} (durée ${durationMonths} mois)`
+      : (periodStart ? `à partir du ${periodStart}` : "");
 
-  if (doc.type === "devis") {
-    const status = doc.status || "en_attente";
+  // Signature / identité (tu peux centraliser ça plus tard)
+  const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
 
+  // -------- Templates PRO --------
+  let mailSubject = "";
+  let body = "";
+
+  // 1) DEVIS
+  if (entity?.type === "devis") {
+    mailSubject = `Devis ${number}${subject ? " – " + subject : ""}`;
+
+    const status = entity?.status || "en_attente";
+
+    body =
+`Bonjour ${clientName},
+
+Je vous transmets le devis ${number}${subject ? " relatif à : " + subject : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+
+${validity ? `Validité : jusqu’au ${validity}.\n` : ""}
+Si vous avez la moindre question ou souhaitez ajuster un point, je reste disponible.
+
+${signature}`;
+
+    // Petite nuance si accepté / expiré (optionnel mais pro)
     if (status === "accepte") {
-      body += `Comme convenu, je vous envoie le devis ${number} concernant ${subject}, que nous avons validé ensemble, pour un montant de ${total} € TTC.`;
-    } else if (status === "refuse") {
-      body += `Je vous renvoie le devis ${number} concernant ${subject}, pour un montant de ${total} € TTC.`;
-    } else if (status === "expire") {
-      body += `Je vous rappelle le devis ${number} concernant ${subject}, d’un montant de ${total} € TTC.`;
-    } else {
-      body += `Je vous envoie le devis ${number} concernant ${subject}, pour un montant de ${total} € TTC.`;
+      body =
+`Bonjour ${clientName},
+
+Comme convenu, je vous confirme l’envoi du devis ${number}${subject ? " relatif à : " + subject : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
+
+Nous pouvons planifier l’intervention dès que vous le souhaitez.
+
+${signature}`;
     }
 
-    if (validity) {
-      body += `\nIl est valable jusqu’au ${validity}.`;
+    if (status === "expire") {
+      body =
+`Bonjour ${clientName},
+
+Je vous renvoie le devis ${number}${subject ? " relatif à : " + subject : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
+
+Si vous souhaitez que je le mette à jour (dates, prestations, tarifs), dites-moi et je vous le réédite.
+
+${signature}`;
     }
-  } else {
-    // FACTURE
-    if (doc.paid) {
-      body += `Veuillez trouver ci-joint votre facture acquittée ${number} concernant ${subject}, d’un montant de ${total} € TTC.`;
-    } else {
-      body += `Je vous envoie la facture ${number} concernant ${subject}, pour un montant de ${total} € TTC.\nMerci d’en effectuer le règlement dès que possible.`;
-    }
+
+    return { mailSubject, body };
   }
 
-  body += `\n\nCordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
+  // 2) FACTURE
+  if (entity?.type === "facture") {
+    mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
 
-  const mailSubject =
-    (doc.type === "facture" ? "Facture " : "Devis ") +
-    number +
-    (subject ? " – " + subject : "");
+    const paid = !!entity?.paid;
+
+    if (paid) {
+      body =
+`Bonjour ${clientName},
+
+Je vous transmets la facture acquittée ${number}${subject ? " relative à : " + subject : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+
+Merci, et je reste disponible si besoin.
+
+${signature}`;
+    } else {
+      body =
+`Bonjour ${clientName},
+
+Je vous transmets la facture ${number}${subject ? " relative à : " + subject : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+
+Merci d’en effectuer le règlement dès que possible.
+Si vous avez besoin d’un RIB ou d’une information complémentaire, je vous l’envoie.
+
+${signature}`;
+    }
+
+    return { mailSubject, body };
+  }
+
+  // 3) CONTRAT
+  // Ici : entity._kind === "contrat" (on va l’injecter depuis openSendPopupContract)
+  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${clientName ? " – " + clientName : ""}`;
+
+  // “Bon pour accord” + signature
+  body =
+`Bonjour ${clientName},
+
+Je vous transmets le contrat d’entretien${number ? " " + number : ""}${period ? ` (${period})` : ""}${totalTxt ? `, pour un montant total de ${totalTxt} TTC.` : "."}
+
+✅ Pour validation : merci de me retourner le contrat signé avec la mention “Bon pour accord”.
+Dès réception, je confirme la mise en place du planning et, si nécessaire, l’échéancier de paiement.
+
+${signature}`;
 
   return { mailSubject, body };
 }
@@ -3245,9 +3353,50 @@ function openSendPopup() {
     infoEl.textContent = `${typeLabel} ${doc.number || ""} – ${clientName}`;
   }
 
-  if (txtArea) {
-    txtArea.value = body;
+  if (txtArea) txtArea.value = body;
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) {
+      void popup.offsetWidth;
+      popup.classList.add("show");
+    }
   }
+}
+
+function openSendPopupContract() {
+  if (!currentContractId) {
+    showConfirmDialog({
+      title: "Aucun contrat ouvert",
+      message: "Ouvre d’abord un contrat avant de l’envoyer.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️"
+    });
+    return;
+  }
+
+  const ct = getContract(currentContractId);
+  if (!ct) return;
+
+  // IMPORTANT : on tag le type pour buildSendMessage()
+  ct._kind = "contrat";
+
+  currentSendDoc = ct;
+  const { body } = buildSendMessage(ct);
+
+  const infoEl = document.getElementById("sendDocInfo");
+  const txtArea = document.getElementById("sendMessagePreview");
+  const overlay = document.getElementById("sendPopup");
+
+  if (infoEl) {
+    const clientName = _getClientFromEntity(ct)?.name || "";
+    infoEl.textContent = `Contrat – ${clientName}`;
+  }
+
+  if (txtArea) txtArea.value = body;
 
   if (overlay) {
     overlay.classList.remove("hidden");
@@ -3271,9 +3420,8 @@ function closeSendPopup() {
 function sendByEmail() {
   if (!currentSendDoc) return;
 
-  const email = currentSendDoc.client && currentSendDoc.client.email
-    ? currentSendDoc.client.email.trim()
-    : "";
+  const client = _getClientFromEntity(currentSendDoc);
+  const email = client?.email ? client.email.trim() : "";
 
   if (!email) {
     showConfirmDialog({
@@ -3288,31 +3436,43 @@ function sendByEmail() {
   }
 
   const { mailSubject } = buildSendMessage(currentSendDoc);
-  const body = document.getElementById("sendMessagePreview").value || "";
+  const body = document.getElementById("sendMessagePreview")?.value || "";
 
   const url =
     "mailto:" + encodeURIComponent(email) +
     "?subject=" + encodeURIComponent(mailSubject) +
     "&body=" + encodeURIComponent(body);
 
-  window.location.href = url;   // ouvre l’app mail
-
+  window.location.href = url;
   closeSendPopup();
+}
+
+function _normalizePhoneToWhatsApp(phoneRaw) {
+  if (!phoneRaw) return "";
+  let p = String(phoneRaw).trim();
+
+  // Retire tout sauf chiffres + +
+  p = p.replace(/[^\d+]/g, "");
+
+  // Si commence par 0 -> FR +33
+  if (p.startsWith("0")) p = "+33" + p.slice(1);
+
+  // Si pas de +, on suppose FR
+  if (!p.startsWith("+")) p = "+33" + p;
+
+  return p;
 }
 
 function sendByWhatsApp() {
   if (!currentSendDoc) return;
 
-  const phoneRaw = currentSendDoc.client && currentSendDoc.client.phone
-    ? currentSendDoc.client.phone
-    : "";
-
-  const phone = phoneRaw.replace(/[^0-9]/g, "");
+  const client = _getClientFromEntity(currentSendDoc);
+  const phone = _normalizePhoneToWhatsApp(client?.phone || "");
 
   if (!phone) {
     showConfirmDialog({
       title: "Téléphone manquant",
-      message: "Aucun numéro de téléphone n’est renseigné pour ce client.",
+      message: "Aucun numéro n’est renseigné pour ce client.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
@@ -3321,13 +3481,16 @@ function sendByWhatsApp() {
     return;
   }
 
-  const body = document.getElementById("sendMessagePreview").value || "";
-  const waUrl = "https://wa.me/" + phone + "?text=" + encodeURIComponent(body);
+  const body = document.getElementById("sendMessagePreview")?.value || "";
 
-  window.open(waUrl, "_blank");   // ouvre WhatsApp (mobile) ou WhatsApp Web
+  // WhatsApp: wa.me ne prend pas le "+" => on enlève le +
+  const waPhone = phone.replace("+", "");
+  const url = "https://wa.me/" + encodeURIComponent(waPhone) + "?text=" + encodeURIComponent(body);
 
+  window.open(url, "_blank");
   closeSendPopup();
 }
+
 
 
 // ================== LOCALSTORAGE ATTESTATIONS ==================
@@ -17213,4 +17376,5 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
