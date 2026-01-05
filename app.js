@@ -3196,7 +3196,6 @@ function _getClientTypeFromEntity(entity, client) {
 
 // ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
 
-// Important : variable globale utilisée par openSendPopup / sendByEmail / sendByWhatsApp
 let currentSendDoc = null;
 
 // ---------- Helpers format ----------
@@ -3209,19 +3208,17 @@ function _fmtMoneyEUR(n) {
 function _fmtDateFR(iso) {
   if (!iso) return "";
   try {
-    // Si tu as déjà fromISO() dans ton app (tu l'utilises ailleurs), on l'exploite
     if (typeof fromISO === "function") return fromISO(iso).replace(/-/g, "/");
   } catch (e) {}
-  // fallback basique
   return String(iso);
 }
 
 // ---------- Helpers client ----------
 function _getClientFromEntity(entity) {
-  // Devis/Facture
+  // Devis/Facture => entity.client
   if (entity?.client) return entity.client;
 
-  // Contrat
+  // Contrat => pricing.client
   if (entity?.pricing?.client) return entity.pricing.client;
 
   // fallback
@@ -3249,11 +3246,10 @@ function _normalizeCivility(civRaw) {
   const v = (civRaw || "").toString().toLowerCase().trim();
   if (!v) return ""; // inconnu
 
-  // Monsieur
+  // Monsieur/Madame (y compris variantes)
+  if (v.includes("monsieur et madame") || v.includes("madame et monsieur")) return "couple";
   if (v === "m" || v === "mr" || v === "m." || v.includes("monsieur")) return "monsieur";
-
-  // Madame
-  if (v === "mme" || v === "mrs" || v === "ms" || v === "madame") return "madame";
+  if (v === "mme" || v === "mrs" || v === "ms" || v.includes("madame")) return "madame";
 
   // Entreprise / Société
   if (
@@ -3270,17 +3266,18 @@ function _buildGreeting(client = {}) {
   const name = (client?.name || "").toString().trim();
   const civNorm = _normalizeCivility(_pickCivility(client));
 
-  // pas de nom -> neutre
+  // Pas de nom -> neutre
   if (!name) return "Bonjour,";
 
-  // société -> pas de Monsieur/Madame
+  // Couple
+  if (civNorm === "couple") return "Bonjour Madame, Monsieur,";
+
+  // Société -> pas de Monsieur/Madame
   if (civNorm === "societe") return `Bonjour ${name},`;
 
-  // Monsieur/Madame si connu
   if (civNorm === "monsieur") return `Bonjour Monsieur ${name},`;
   if (civNorm === "madame") return `Bonjour Madame ${name},`;
 
-  // sinon simple
   return `Bonjour ${name},`;
 }
 
@@ -3289,7 +3286,6 @@ function _normalizeClientType(raw) {
   const v = (raw || "").toString().toLowerCase().trim();
   if (!v) return "particulier";
 
-  // tout ce qui ressemble à pro/syndic/agence
   if (
     v.includes("syndic") ||
     v.includes("agence") ||
@@ -3353,7 +3349,7 @@ function buildSendMessage(entity) {
   const paymentDelayTxt =
     clientType === "particulier"
       ? "sous 7 jours"
-      : "sous 30 jours, conformément aux conditions contractuelles";
+      : "sous 30 jours, conformément à nos conditions de règlement";
 
   // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
@@ -3371,10 +3367,10 @@ function buildSendMessage(entity) {
     body =
 `${greeting}
 
-Je vous transmets le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Je vous adresse le devis ${number}${subject ? ` relatif à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 ${validity ? `\nValidité : jusqu’au ${validity}.` : ""}
 
-Je reste à votre disposition pour toute question ou ajustement.
+Je reste à votre disposition pour toute précision ou ajustement.
 
 ${signature}`;
 
@@ -3382,9 +3378,9 @@ ${signature}`;
       body =
 `${greeting}
 
-Comme convenu, je vous confirme l’envoi du devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
+Suite à votre accord, je vous confirme l’envoi du devis ${number}${subject ? ` relatif à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Nous pouvons planifier l’intervention dès que vous le souhaitez.
+Nous pouvons planifier l’intervention selon vos disponibilités.
 
 ${signature}`;
     }
@@ -3393,9 +3389,9 @@ ${signature}`;
       body =
 `${greeting}
 
-Je vous renvoie le devis ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, d’un montant de ${totalTxt} TTC.` : "."}
+Je vous renvoie le devis ${number}${subject ? ` relatif à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Si vous souhaitez une mise à jour (dates / prestations / tarifs), je vous le réédite rapidement.
+Si vous souhaitez une mise à jour (dates / prestations / tarifs), je peux vous le rééditer rapidement.
 
 ${signature}`;
     }
@@ -3410,24 +3406,23 @@ ${signature}`;
     mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
     const paid = !!entity?.paid;
 
-    // ✅ important : pas de “ci-joint” car mailto/WhatsApp n’attache rien
     if (paid) {
       body =
 `${greeting}
 
-Je vous transmets la facture acquittée ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Je vous transmets la facture acquittée ${number}${subject ? ` relative à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
-Merci, et je reste disponible si besoin.
+Je vous remercie et reste à votre disposition si besoin.
 
 ${signature}`;
     } else {
       body =
 `${greeting}
 
-Je vous transmets la facture ${number}${subject ? ` concernant : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Je vous transmets la facture ${number}${subject ? ` relative à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
 Merci de procéder au règlement ${paymentDelayTxt}.
-Si vous avez besoin du RIB ou d’une information, je vous l’envoie immédiatement.
+Si vous souhaitez le RIB ou toute information complémentaire, je vous l’envoie immédiatement.
 
 ${signature}`;
     }
@@ -3438,15 +3433,15 @@ ${signature}`;
   // =========================
   // 3) CONTRAT (fallback)
   // =========================
-  mailSubject = `Contrat d’entretien${number ? " " + number : ""}${clientNameSafe ? " – " + clientNameSafe : ""}`;
+  mailSubject = `Contrat d’entretien${number ? " " + number : ""} – ${clientNameSafe}`;
 
   body =
 `${greeting}
 
 Je vous transmets le contrat d’entretien${number ? " " + number : ""}${period ? ` (${period})` : ""}${totalTxt ? `, pour un montant total de ${totalTxt} TTC.` : "."}
 
-Pour validation : merci de me confirmer votre accord (signature électronique ou mention “Bon pour accord”).
-Dès validation, je confirme le planning et, si nécessaire, l’échéancier de paiement.
+Pour validation, merci de me confirmer votre accord (signature électronique ou mention “Bon pour accord”).
+Dès validation, je vous confirme le planning d’intervention et, si nécessaire, l’échéancier de paiement.
 
 ${signature}`;
 
@@ -3478,7 +3473,10 @@ function openSendPopup() {
   const overlay = document.getElementById("sendPopup");
 
   if (infoEl) {
-    const typeLabel = doc.type === "facture" ? "Facture" : "Devis";
+    const typeLabel =
+      (doc.type === "facture") ? "Facture" :
+      (doc.type === "devis") ? "Devis" :
+      "Document";
     const clientName = doc?.client?.name || "";
     infoEl.textContent = `${typeLabel} ${doc.number || ""} – ${clientName}`;
   }
@@ -3511,10 +3509,9 @@ function openSendPopupContract() {
   const ct = getContract(currentContractId);
   if (!ct) return;
 
-  // IMPORTANT : on tag le type pour buildSendMessage()
-  ct._kind = "contrat";
-
+  ct._kind = "contrat"; // 👈 important
   currentSendDoc = ct;
+
   const { body } = buildSendMessage(ct);
 
   const infoEl = document.getElementById("sendDocInfo");
@@ -17555,6 +17552,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
