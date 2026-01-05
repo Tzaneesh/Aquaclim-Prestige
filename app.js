@@ -3300,35 +3300,38 @@ ${signature}`;
     return { mailSubject, body };
   }
 
-  // 2) FACTURE
-  if (entity?.type === "facture") {
-    mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
+// 2) FACTURE
+if (entity?.type === "facture") {
+  mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
 
-    const paid = !!entity?.paid;
+  const paid = !!entity?.paid;
+  const objTxt = subject ? ` (Objet : ${subject})` : "";
+  const amountTxt = totalTxt ? `, d’un montant de ${totalTxt} TTC.` : ".";
 
-    if (paid) {
-      body =
+  if (paid) {
+    body =
 `${greeting}
 
-Je vous transmets la facture acquittée ${number}${subject ? " relative à : " + subject : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Veuillez trouver ci-joint la facture acquittée ${number}${objTxt}${amountTxt}
 
-Merci, et je reste disponible si besoin.
+Je vous remercie et reste à votre disposition.
 
 ${signature}`;
-    } else {
-      body =
+  } else {
+    body =
 `${greeting}
 
-Je vous transmets la facture ${number}${subject ? " relative à : " + subject : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Veuillez trouver ci-joint la facture ${number}${objTxt}${amountTxt}
 
-Merci d’en effectuer le règlement dès que possible.
-Si vous avez besoin d’un RIB ou d’une information complémentaire, je vous l’envoie.
+Merci de procéder au règlement sous 7 jours.
+Je peux vous transmettre le RIB si besoin.
 
 ${signature}`;
-    }
-
-    return { mailSubject, body };
   }
+
+  return { mailSubject, body };
+}
+}
 
   // 3) CONTRAT
   // Ici : entity._kind === "contrat"
@@ -17448,6 +17451,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
