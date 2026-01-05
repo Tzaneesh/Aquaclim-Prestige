@@ -3284,32 +3284,94 @@ textarea {
   }
 }
 
-/* ✅ FIX iPhone – "Bon pour accord" CONTRAT uniquement */
-#contractView #ctSignatureWrapper{
-  width: 100%;
+/* ✅ Fix iPhone : "Bon pour accord" CONTRAT */
+#contractView .devis-signature-trigger label{
+  white-space: normal !important;   /* autorise retour ligne */
+  flex-wrap: wrap !important;
 }
 
-#contractView #ctSignatureWrapper label{
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 10px !important;
-
-  width: 100% !important;
-  margin: 0 !important;
-  text-align: left !important;
-
-  white-space: normal !important;   /* autorise le retour à la ligne */
+/* optionnel : évite que le texte parte trop à droite */
+#contractView .devis-signature-trigger{
+  overflow: hidden;
 }
 
-#contractView #ctSignatureWrapper input[type="radio"]{
-  margin: 0 !important;
-  flex: 0 0 auto !important;
-  width: 18px !important;
-  height: 18px !important;
-  -webkit-appearance: radio !important;
-  appearance: auto !important;
-  transform: translateY(-1px) !important; /* micro-fix iOS */
+/* === Relance client : couleurs boutons === */
+
+/* WhatsApp (CONFIRMER) → seulement quand la popup est info */
+#confirmOverlay .confirm-box.info #confirmOk{
+  background-color: #1e7f43 !important;
+  border-color: #1e7f43 !important;
+  color: #fff !important;
+}
+
+
+/* Email (ANNULER) */
+.confirm-box .btn-cancel,
+.confirm-box #confirmCancel {
+  background-color: #1f6fe5 !important; /* bleu Fermer */
+  border-color: #1f6fe5 !important;
+  color: #fff !important;
+}
+
+/* Fermer (ROUGE DOUX) */
+.confirm-box .btn-close,
+.confirm-box .btn-danger {
+  background-color: #e5533d !important; /* rouge doux */
+  border-color: #e5533d !important;
+  color: #fff !important;
+}
+
+.followup-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.followup-actions{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+.followup-actions select{
+  padding:8px 10px;
+  border-radius:10px;
+  border:1px solid #ddd;
+  background:#fff;
+}
+.table-wrapper{ overflow:auto; }
+.badge-green{
+  color:#1e7f43;
+  font-weight:800;
+}
+.badge-red{
+  color:#c62828;
+  font-weight:900;
+}
+.badge-late{
+  display:inline-block;
+  padding:2px 8px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  border:1px solid rgba(198,40,40,.25);
+  background: rgba(198,40,40,.08);
+  color:#c62828;
+}
+
+/* ✅ SUPPRIMER (OK) → rouge doux quand la popup est danger */
+#confirmOverlay .confirm-box.danger #confirmOk{
+  background-color: #e5533d !important;
+  border-color: #e5533d !important;
+  color: #fff !important;
+}
+#confirmOverlay .confirm-box.danger #confirmOk:hover{
+  background-color: #cf4a36 !important;
+  border-color: #cf4a36 !important;
+}
+#confirmOverlay .confirm-box.danger #confirmOk:active{
+  background-color: #b9402e !important;
+  border-color: #b9402e !important;
 }
 
 

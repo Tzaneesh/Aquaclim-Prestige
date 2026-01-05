@@ -161,6 +161,43 @@
       </table>
     </div> <!-- fin .health-card -->
 
+<!-- 👥 Clients à suivre -->
+<div class="card followup-card">
+  <div class="followup-header">
+    <h2 class="section-title">👥 Clients à suivre</h2>
+
+    <div class="followup-actions">
+      <select id="followupSort" onchange="renderClientsFollowup()">
+        <option value="amount_desc">Impayés (montant)</option>
+        <option value="late_desc">Retard (mois)</option>
+        <option value="name_asc">Nom (A → Z)</option>
+      </select>
+
+      <button class="btn btn-secondary btn-small" type="button" onclick="renderClientsFollowup()">
+        🔄 Rafraîchir
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="documents-table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Impayés</th>
+          <th>Dernière facture</th>
+          <th>Retard</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="followupClientsBody">
+        <tr><td colspan="5" class="no-docs-cell">Chargement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
     <!-- 🗓️ Planning de la semaine -->
    <div class="card planning-card">
   <h2 class="section-title">Planning de la semaine</h2>

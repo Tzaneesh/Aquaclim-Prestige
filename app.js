@@ -1161,6 +1161,7 @@ async function initFirebase() {
 }
 
 
+
 // ================== GESTION CLIENTS ==================
 function getClients() {
   try {
@@ -1210,6 +1211,556 @@ function refreshClientDatalist() {
 }
 
 
+// ================== FICHE CLIENT (POPUP 360) ==================
+
+function _normName(s) {
+  return (s || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function _escapeHtml(str) {
+  return (str || "").toString()
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function _fmtEUR(n) {
+  const x = Number(n || 0);
+  if (!isFinite(x)) return "0,00 €";
+  return x.toFixed(2).replace(".", ",") + " €";
+}
+
+function _fmtDateFRSafe(iso) {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    if (!isNaN(d.getTime())) return d.toLocaleDateString("fr-FR");
+  } catch (e) {}
+  return String(iso);
+}
+
+function _getClientByName(name) {
+  const n = _normName(name);
+  if (!n) return null;
+  const clients = getClients();
+  return clients.find(c => _normName(c.name) === n) || null;
+}
+
+function _getDocsByClientName(name) {
+  const n = _normName(name);
+  if (!n) return [];
+  return (getAllDocuments() || []).filter(d => _normName(d?.client?.name) === n);
+}
+
+function _getContractsByClientName(name) {
+  const n = _normName(name);
+  if (!n) return [];
+  return (getAllContracts() || []).filter(c => _normName(c?.client?.name) === n);
+}
+
+function closeClientSheet() {
+  const el = document.getElementById("clientSheetOverlay");
+  if (el) el.remove();
+}
+
+function _normalizePhoneForWA(phone) {
+  if (!phone) return "";
+  let p = String(phone).trim().replace(/[.\-\s]/g, "");
+  if (p.startsWith("0")) p = "33" + p.slice(1);
+  p = p.replace(/^\+/, "");
+  return p;
+}
+
+// Calcule le retard en mois (basé sur date facture + délai de règlement)
+function _lateMonthsFromInvoiceDate(invoiceDateISO, delaiJours = 30) {
+  if (!invoiceDateISO) return 0;
+  const invDate = new Date(invoiceDateISO);
+  if (isNaN(invDate.getTime())) return 0;
+
+  const due = new Date(invDate);
+  due.setDate(due.getDate() + delaiJours);
+
+  const now = new Date();
+  const diffMs = now.getTime() - due.getTime();
+  if (diffMs <= 0) return 0;
+
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(1, Math.floor(diffDays / 30));
+}
+
+/** ✅ Enregistre une relance dans la facture (meta.relances[]) */
+function _addRelanceToInvoice(invoiceNumber, canal) {
+  const docs = getAllDocuments() || [];
+  const idx = docs.findIndex(d => d.type === "facture" && d.number === invoiceNumber);
+  if (idx < 0) return;
+
+  const f = docs[idx];
+  f.meta = f.meta || {};
+  f.meta.relances = Array.isArray(f.meta.relances) ? f.meta.relances : [];
+
+  f.meta.relances.push({
+    date: new Date().toISOString().slice(0, 10),
+    canal
+  });
+
+  if (typeof saveDocuments === "function") {
+    saveDocuments(docs);
+  } else if (typeof saveAllDocuments === "function") {
+    saveAllDocuments(docs);
+  }
+}
+
+
+/** ✅ Ajoute l'indemnité forfaitaire 40€ (L441-10) UNE SEULE FOIS */
+function _addIndemnite40(invoiceNumber) {
+  const docs = getAllDocuments() || [];
+  const idx = docs.findIndex(d => d.type === "facture" && d.number === invoiceNumber);
+  if (idx < 0) return;
+
+  const f = docs[idx];
+
+  f.prestations = Array.isArray(f.prestations) ? f.prestations : [];
+
+  const already = f.prestations.some(
+    p => p.kind === "indemnite_40" || p.code === "INDEMNITE_40"
+  );
+  if (already) return;
+
+  // ===============================
+  // 1️⃣ AJOUT IMMÉDIAT DANS L’UI
+  // ===============================
+  if (currentDocumentId === f.id && typeof _ensureIndemnite40InFormUI === "function") {
+    _ensureIndemnite40InFormUI(); // 👈 C'EST ÇA LA CLÉ
+  }
+
+  // ===============================
+  // 2️⃣ AJOUT DANS LES DONNÉES
+  // ===============================
+  f.prestations.push({
+    code: "INDEMNITE_40",
+    kind: "indemnite_40",
+    desc: "Indemnité forfaitaire (art. L441-10 C. commerce)",
+    detail: "Indemnité forfaitaire de 40 € pour frais de recouvrement",
+    qty: 1,
+    price: 40,
+    total: 40,
+    unit: "forfait",
+    dates: []
+  });
+
+  delete f.subtotal;
+  delete f.totalTTC;
+
+  // ===============================
+  // 3️⃣ SAUVEGARDE
+  // ===============================
+  if (typeof saveDocuments === "function") {
+    saveDocuments(docs);
+  } else if (typeof saveAllDocuments === "function") {
+    saveAllDocuments(docs);
+  }
+}
+
+
+
+/** ✅ Message auto selon retard + texte légal */
+function _buildRelanceMessageAuto({ factureNumber, factureDate, amountTTC, lateMonths }) {
+  const dateFR = _fmtDateFRSafe(factureDate);
+  const montant = _fmtEUR(amountTTC);
+
+  // Relance 1
+  if (lateMonths < 1) {
+    return `Bonjour,
+
+Sauf erreur de notre part, la facture ${factureNumber || ""} du ${dateFR}, d’un montant de ${montant}, arrivée à échéance, reste impayée à ce jour.
+
+Merci de nous indiquer la date prévue de règlement.
+Je reste disponible si vous avez besoin du RIB.
+
+Cordialement,
+Loïc – AquaClim Prestige`;
+  }
+
+  // Relance 2
+  if (lateMonths < 2) {
+    return `Bonjour,
+
+Malgré notre précédente relance, la facture ${factureNumber || ""} du ${dateFR}, d’un montant de ${montant}, reste impayée.
+
+Merci de procéder au règlement dans les meilleurs délais, conformément à nos conditions de règlement (30 jours fin de mois).
+Je reste disponible si vous avez besoin du RIB.
+
+Cordialement,
+Loïc – AquaClim Prestige`;
+  }
+
+  // Relance 3+
+  return `Bonjour,
+
+La facture ${factureNumber || ""} du ${dateFR}, d’un montant de ${montant}, demeure impayée malgré nos relances.
+
+Conformément à l’article L441-10 du Code de commerce, des pénalités de retard ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement sont applicables.
+
+Merci de régulariser la situation sous 7 jours.
+Je reste disponible si vous avez besoin du RIB.
+
+Cordialement,
+Loïc – AquaClim Prestige`;
+}
+
+function openClientSheet(name) {
+  const n = (name || "").trim();
+  if (!n) {
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Fiche client",
+        message: "Aucun nom client.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "info",
+        icon: "ℹ️"
+      });
+    }
+    return;
+  }
+
+  const client = _getClientByName(n);
+  const docsAll = _getDocsByClientName(n);
+  const contratsAll = _getContractsByClientName(n);
+
+  const factures = docsAll.filter(d => d.type === "facture");
+  const impayees = factures.filter(f => !f.paid);
+
+  const caTTC = factures.reduce((sum, f) => sum + Number(f.totalTTC || 0), 0);
+  const impayesTTC = impayees.reduce((sum, f) => sum + Number(f.totalTTC || 0), 0);
+
+  const lastFactures = [...factures].sort((a, b) => {
+    const da = new Date(a.date || 0).getTime();
+    const db = new Date(b.date || 0).getTime();
+    return db - da;
+  }).slice(0, 10);
+
+  const contratsSorted = [...contratsAll].sort((a, b) => {
+    const da = new Date(a?.pricing?.startDate || 0).getTime();
+    const db = new Date(b?.pricing?.startDate || 0).getTime();
+    return db - da;
+  });
+
+  const address = client?.address || "";
+  const phone   = client?.phone || "";
+  const email   = client?.email || "";
+  const type    = client?.type || client?.clientType || "";
+
+  const html = `
+<div id="clientSheetOverlay" class="popup-overlay">
+  <div style="
+    width: min(980px, 100%); max-height: 92vh; overflow: auto;
+    background: #fff; border-radius: 14px; box-shadow: 0 10px 40px rgba(0,0,0,.25);
+    padding: 16px;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  ">
+    <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
+      <div>
+        <div style="font-size: 20px; font-weight: 800;">Fiche client — ${_escapeHtml(n)}</div>
+        <div style="opacity:.75; margin-top:2px;">
+          ${_escapeHtml(address)} ${type ? "• " + _escapeHtml(type) : ""}
+        </div>
+
+        <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap;">
+          ${phone ? `<a style="text-decoration:none;" href="tel:${_escapeHtml(phone)}">📞 ${_escapeHtml(phone)}</a>` : ""}
+          ${email ? `<a style="text-decoration:none;" href="mailto:${_escapeHtml(email)}">✉️ ${_escapeHtml(email)}</a>` : ""}
+          ${phone ? `<a style="text-decoration:none;" target="_blank" href="https://wa.me/${encodeURIComponent(String(phone).replaceAll(" ","").replaceAll(".","").replaceAll("-","").replaceAll("+",""))}">💬 WhatsApp</a>` : ""}
+        </div>
+      </div>
+
+      <button id="clientSheetCloseBtn" style="
+        border:0; background:#1f6fe5; color:#fff; padding:10px 12px;
+        border-radius:10px; cursor:pointer; font-weight:700;
+      ">Fermer</button>
+    </div>
+
+    <div style="display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 14px;">
+      <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+        <div style="opacity:.7; font-size:12px;">CA facturé (TTC)</div>
+        <div style="font-size:22px; font-weight:900; margin-top:4px; color:#1e7f43;">
+          ${_fmtEUR(caTTC)}
+        </div>
+      </div>
+
+      <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+        <div style="opacity:.7; font-size:12px;">Impayés (TTC)</div>
+        <div style="font-size:22px; font-weight:900; margin-top:4px; color:#c62828;">
+          ${_fmtEUR(impayesTTC)}
+        </div>
+        <div style="opacity:.75; margin-top:2px;">
+          ${impayees.length} facture(s)
+        </div>
+      </div>
+
+      <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+        <div style="opacity:.7; font-size:12px;">Contrats liés</div>
+        <div style="font-size:22px; font-weight:900; margin-top:4px;">
+          ${contratsAll.length}
+        </div>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap: 12px; margin-top: 12px;">
+      <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+        <div style="font-weight:800; margin-bottom: 8px;">Dernières factures</div>
+
+        ${lastFactures.length ? `
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${lastFactures.map(f => {
+              const isPaid = !!f.paid;
+              const delai = (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30);
+              const lateMonths = isPaid ? 0 : _lateMonthsFromInvoiceDate(f.date, delai);
+              const statusColor = isPaid ? "#1e7f43" : "#c62828";
+              const bg = isPaid ? "transparent" : "rgba(198,40,40,0.05)";
+              return `
+                <div style="
+                  display:flex; justify-content:space-between; gap:12px;
+                  border-bottom:1px dashed #eee; padding:8px; border-radius:8px;
+                  background:${bg}; align-items:center;
+                ">
+                  <div style="min-width:0;">
+                    <div style="font-weight:800;">
+                      ${_escapeHtml(f.number || "Facture")}
+                    </div>
+
+                    <div style="font-size:12px; margin-top:3px; font-weight:700; color:${statusColor};">
+                      ${_fmtDateFRSafe(f.date)} • ${isPaid ? "✔ payée" : "✖ impayée"}
+                      ${(!isPaid && lateMonths > 0) ? `
+                        <span style="
+                          margin-left:8px; display:inline-block; padding:2px 8px;
+                          border-radius:999px; font-weight:800; font-size:11px;
+                          color:#c62828; border:1px solid rgba(198,40,40,.25);
+                          background: rgba(198,40,40,.08);
+                        ">
+                          ${lateMonths} mois de retard
+                        </span>
+                      ` : ``}
+                    </div>
+                  </div>
+
+                  <div style="display:flex; align-items:center; gap:10px; flex-shrink:0;">
+                    <div style="font-weight:900; white-space:nowrap; color:${statusColor};">
+                      ${_fmtEUR(f.totalTTC)}
+                    </div>
+
+                    ${!isPaid ? `
+                      <button
+                        class="btn btn-primary btn-small"
+                        type="button"
+                        data-relance="1"
+                        data-client="${_escapeHtml(n)}"
+                        data-number="${_escapeHtml(f.number || "")}"
+                        data-date="${_escapeHtml(f.date || "")}"
+                        data-amount="${_escapeHtml(f.totalTTC || 0)}"
+                        data-latemonths="${_escapeHtml(lateMonths)}"
+                        data-phone="${_escapeHtml(phone || "")}"
+                        data-email="${_escapeHtml(email || "")}"
+                      >💬 Relancer</button>
+
+                      <button
+                        class="btn btn-danger btn-small"
+                        type="button"
+                        data-indemnite="40"
+                        data-number="${_escapeHtml(f.number || "")}"
+                      >➕ 40 €</button>
+                    ` : ``}
+                  </div>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        ` : `
+          <div style="opacity:.7;">Aucune facture trouvée pour ce client.</div>
+        `}
+      </div>
+
+      <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
+        <div style="font-weight:800; margin-bottom: 8px;">Contrats</div>
+        ${contratsSorted.length ? `
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            ${contratsSorted.slice(0, 8).map(c => {
+              const ref = c?.client?.reference || c?.id || "Contrat";
+              const start = c?.pricing?.startDate || "";
+              const endLabel = c?.pricing?.endDateLabel || "";
+              const total = c?.pricing?.totalTTC;
+              return `
+                <div style="border-bottom:1px dashed #eee; padding-bottom:6px;">
+                  <div style="font-weight:700;">${_escapeHtml(ref)}</div>
+                  <div style="opacity:.7; font-size:12px;">
+                    Début: ${_fmtDateFRSafe(start)} ${endLabel ? "• " + _escapeHtml(endLabel) : ""}
+                  </div>
+                  ${total != null ? `<div style="font-weight:800; margin-top:2px;">${_fmtEUR(total)}</div>` : ""}
+                </div>
+              `;
+            }).join("")}
+          </div>
+        ` : `<div style="opacity:.7;">Aucun contrat trouvé.</div>`}
+      </div>
+    </div>
+  </div>
+</div>
+  `;
+
+  closeClientSheet();
+  document.body.insertAdjacentHTML("beforeend", html);
+
+  // ---------- Bind: fermer ----------
+  const btnClose = document.getElementById("clientSheetCloseBtn");
+  if (btnClose) btnClose.addEventListener("click", closeClientSheet);
+
+  const overlay = document.getElementById("clientSheetOverlay");
+  if (overlay) {
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeClientSheet();
+    });
+  }
+
+  // ---------- Bind: indemnité 40€ ----------
+  document.querySelectorAll('#clientSheetOverlay [data-indemnite="40"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const invoiceNumber = btn.getAttribute("data-number") || "";
+      if (!invoiceNumber) return;
+
+      showConfirmDialog({
+        title: "Ajouter l’indemnité 40 € ?",
+        message: "Ajouter l’indemnité forfaitaire de 40 € (art. L441-10) sur cette facture ?",
+        confirmLabel: "Ajouter",
+        cancelLabel: "Annuler",
+        variant: "danger",
+        icon: "⚠️",
+        onConfirm: () => {
+          _addIndemnite40(invoiceNumber);
+          showConfirmDialog({
+            title: "Indemnité ajoutée",
+            message: "La ligne de 40 € a été ajoutée à la facture.",
+            confirmLabel: "OK",
+            cancelLabel: "",
+            variant: "success",
+            icon: "✅"
+          });
+        }
+      });
+    });
+  });
+
+  // ---------- Bind: relance ----------
+  document.querySelectorAll('#clientSheetOverlay [data-relance="1"]').forEach(btn => {
+    btn.addEventListener("click", () => {
+      const invoiceNumber = btn.getAttribute("data-number") || "";
+      const invoiceDate = btn.getAttribute("data-date") || "";
+      const amountTTC = Number(btn.getAttribute("data-amount") || 0);
+      const lateMonths = Number(btn.getAttribute("data-latemonths") || 0);
+
+      const phoneBtn = btn.getAttribute("data-phone") || "";
+      const emailBtn = btn.getAttribute("data-email") || "";
+
+      const hasPhone = !!phoneBtn.trim();
+      const hasEmail = !!emailBtn.trim();
+
+      const message = _buildRelanceMessageAuto({
+        factureNumber: invoiceNumber,
+        factureDate: invoiceDate,
+        amountTTC,
+        lateMonths
+      });
+
+      // aucun contact => copier
+      if (!hasPhone && !hasEmail) {
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(message);
+        showConfirmDialog({
+          title: "Relance copiée",
+          message: "Aucun téléphone/email pour ce client. Le message a été copié, tu peux le coller où tu veux.",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "info",
+          icon: "📋"
+        });
+        return;
+      }
+
+      showConfirmDialog({
+        title: "Relancer le client",
+        message: "Comment souhaitez-vous relancer ce client ?",
+        confirmLabel: "💬 WhatsApp",
+        cancelLabel: "✉️ Email",
+        variant: "info",
+        icon: "📨",
+        onConfirm: () => {
+          const wa = _normalizePhoneForWA(phoneBtn);
+          if (!wa) {
+            showConfirmDialog({
+              title: "WhatsApp indisponible",
+              message: "Aucun numéro WhatsApp valide pour ce client.",
+              confirmLabel: "OK",
+              cancelLabel: "",
+              variant: "warning",
+              icon: "⚠️"
+            });
+            return;
+          }
+
+          _addRelanceToInvoice(invoiceNumber, "whatsapp");
+          const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
+          window.open(url, "_blank");
+        },
+        onCancel: () => {
+          if (!hasEmail) {
+            showConfirmDialog({
+              title: "Email indisponible",
+              message: "Aucune adresse email pour ce client.",
+              confirmLabel: "OK",
+              cancelLabel: "",
+              variant: "warning",
+              icon: "⚠️"
+            });
+            return;
+          }
+
+          _addRelanceToInvoice(invoiceNumber, "email");
+          const subject = `Relance facture ${invoiceNumber}`;
+          const url = `mailto:${emailBtn}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+          window.location.href = url;
+        }
+      });
+
+      // ➕ bouton Fermer rouge doux DANS LA POPUP relance
+      setTimeout(() => {
+        const row = document.querySelector("#confirmOverlay .confirm-buttons");
+        if (!row) return;
+        if (document.getElementById("confirmClose")) return;
+
+        const closeBtn = document.createElement("button");
+        closeBtn.id = "confirmClose";
+        closeBtn.type = "button";
+        closeBtn.className = "btn";
+        closeBtn.textContent = "✖ Fermer";
+        closeBtn.style.background = "#e5533d";
+        closeBtn.style.borderColor = "#e5533d";
+        closeBtn.style.color = "#fff";
+
+        closeBtn.onclick = () => {
+          document.getElementById("confirmOverlay")?.classList.add("hidden");
+        };
+
+        row.appendChild(closeBtn);
+      }, 0);
+    });
+  });
+}
+
+
 // ================== CLIENT (DEVIS / FACTURES) ==================
 
 function onClientNameChange() {
@@ -1240,45 +1791,8 @@ function onClientNameChange() {
 }
 
 
-// Remplit les champs du contrat à partir d'un objet client
-function fillContractClientFromObject(client) {
-  if (!client) return;
-
-  const civ   = document.getElementById("ctClientCivility");
-  const name  = document.getElementById("ctClientName");
-  const addr  = document.getElementById("ctClientAddress");
-  const phone = document.getElementById("ctClientPhone");
-  const email = document.getElementById("ctClientEmail");
-
-  if (civ && !civ.value && client.civility) {
-    civ.value = client.civility;
-  }
-
-  if (name)  name.value  = client.name    || "";
-  if (addr)  addr.value  = client.address || "";
-  if (phone) phone.value = client.phone   || "";
-  if (email) email.value = client.email   || "";
-}
-
-// Quand on tape / choisit un nom dans ctClientName (contrat)
-function onContractClientNameChange() {
-  const input = document.getElementById("ctClientName");
-  if (!input) return;
-
-  const name = (input.value || "").trim();
-  if (!name) return;
-
-  const clients = getClients();
-  const found = clients.find(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
-  );
-
-  if (found) {
-    fillContractClientFromObject(found);
-  }
-}
-
 // --- Attestation clim : remplir adresse depuis la liste de clients ---
+
 function onAttClientNameChange() {
   const input = document.getElementById("attClientName");
   if (!input) return;
@@ -1299,6 +1813,7 @@ function onAttClientNameChange() {
 }
 
 // --- Rapport d'intervention : remplir nom + adresse ---
+
 function fillRapportClientFromObject(client) {
   if (!client) return;
 
@@ -1955,8 +2470,6 @@ function updateRapportAnalyseVisibility(typeId) {
 }
 
 
-
-
 function openCA() {
   // Ouvre la popup CA existante
   openCAReport();
@@ -1964,72 +2477,6 @@ function openCA() {
   // Met le bouton CA en bleu (actif)
   const tabCA = document.getElementById("tabCA");
   if (tabCA) tabCA.classList.add("active");
-}
-
-
-
-
-// Ajoute le client du contrat dans la base clients
-function addCurrentClientFromContract() {
-  const name = (document.getElementById("ctClientName")?.value || "").trim();
-  const address = (document.getElementById("ctClientAddress")?.value || "").trim();
-  const phone = (document.getElementById("ctClientPhone")?.value || "").trim();
-  const email = (document.getElementById("ctClientEmail")?.value || "").trim();
-  const civility = (document.getElementById("ctClientCivility")?.value || "").trim();
-
-  if (!name || !address) {
-    showConfirmDialog({
-      title: "Client incomplet",
-      message: "Nom et adresse sont obligatoires pour enregistrer le client.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "warning",
-      icon: "⚠️"
-    });
-    return;
-  }
-
-  const clients = getClients();
-
-  const existingIdx = clients.findIndex(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
-  );
-
-  let clientObj;
-
-  if (existingIdx >= 0) {
-    const old = clients[existingIdx];
-    clientObj = {
-      ...old,
-      civility,
-      name,
-      address,
-      phone,
-      email
-    };
-    clients[existingIdx] = clientObj;
-  } else {
-    const tmp = { civility, name, address, phone, email };
-    const id = getClientDocId(tmp);
-    clientObj = { ...tmp, id };
-    clients.push(clientObj);
-  }
-
-  saveClients(clients);
-  refreshClientDatalist();
-
-  if (typeof saveSingleClientToFirestore === "function") {
-    saveSingleClientToFirestore(clientObj);
-  }
-
-  showConfirmDialog({
-    title: "Client enregistré",
-    message: "Ce client a été enregistré dans la base.",
-    confirmLabel: "OK",
-    cancelLabel: "",
-    variant: "success",
-    icon: "✅"
-  });
 }
 
 
@@ -2133,11 +2580,13 @@ function addCurrentClientFromContract() {
 }
 
 // Supprime le client courant (depuis l'onglet contrat)
+
 function deleteCurrentClientFromContract() {
   const name = (document.getElementById("ctClientName")?.value || "").trim();
   if (!name) return;
 
   const clients = getClients();
+
   const existingIdx = clients.findIndex(
     (c) => (c.name || "").toLowerCase() === name.toLowerCase()
   );
@@ -2153,14 +2602,20 @@ function deleteCurrentClientFromContract() {
     variant: "danger",
     icon: "⚠️",
     onConfirm: function () {
+      // 🔴 1. Suppression locale
       clients.splice(existingIdx, 1);
       saveClients(clients);
       refreshClientDatalist();
 
-      if (typeof deleteClientFromFirestore === "function" && clientToDelete.id) {
+      // 🔴 2. Suppression Firestore (si possible)
+      if (
+        typeof deleteClientFromFirestore === "function" &&
+        clientToDelete.id
+      ) {
         deleteClientFromFirestore(clientToDelete);
       }
 
+      // ✅ Confirmation utilisateur
       showConfirmDialog({
         title: "Client supprimé",
         message: "Le client a été supprimé de la base.",
@@ -2169,42 +2624,6 @@ function deleteCurrentClientFromContract() {
         variant: "success",
         icon: "✅"
       });
-    }
-  });
-}
-
-
-// Supprimer le client depuis la fiche contrat (en base clients)
-function deleteCurrentClientFromContract() {
-  const name = (document.getElementById("ctClientName")?.value || "").trim();
-  if (!name) return;
-
-  const clients = getClients();
-
-  const existingIdx = clients.findIndex(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
-  );
-  if (existingIdx < 0) return;
-
-  const clientToDelete = clients[existingIdx];
-
-  showConfirmDialog({
-    title: "Supprimer ce client ?",
-    message: `Voulez-vous vraiment supprimer "${name}" de la base clients ?`,
-    confirmLabel: "Supprimer",
-    cancelLabel: "Annuler",
-    variant: "danger",
-    icon: "⚠️",
-    onConfirm: function () {
-      // 🔴 1. LocalStorage
-      clients.splice(existingIdx, 1);
-      saveClients(clients);
-      refreshClientDatalist();
-
-      // 🔴 2. Firestore
-      if (typeof deleteClientFromFirestore === "function") {
-        deleteClientFromFirestore(clientToDelete);
-      }
     }
   });
 }
@@ -3302,6 +3721,7 @@ function _normalizeClientType(raw) {
 function _getClientTypeFromEntity(entity, client) {
   return _normalizeClientType(
     entity?.clientType ||
+    entity?.conditionsType ||         
     entity?.client?.type ||
     entity?.pricing?.clientType ||
     entity?.pricing?.client?.type ||
@@ -3310,6 +3730,43 @@ function _getClientTypeFromEntity(entity, client) {
     client?.type
   );
 }
+
+
+// ================== FACTURE : FORMAT CLIENT ==================
+
+function _formatInvoiceServiceLabel(raw) {
+  if (!raw) return "";
+
+  let s = String(raw);
+
+  // Supprime le nom à la fin (– Noclain Karine)
+  s = s.replace(/\s*[-–]\s*[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?$/i, "");
+
+  // Nettoyage technique
+  s = s.replace(/entretien piscine/ig, "Entretien de piscine");
+  s = s.replace(/prestations du/ig, "Prestations du");
+
+  // Supprime les échéances techniques
+  s = s.replace(/échéance\s+\d{1,2}\/\d{1,2}/ig, "");
+
+  // Nettoyage espaces
+  s = s.replace(/\s{2,}/g, " ").trim();
+
+  return s;
+}
+
+function _detectInvoiceFrequency(raw) {
+  const s = (raw || "").toLowerCase();
+
+  if (s.includes("mensuel") || s.includes("échéance")) return "mensuelle";
+  if (s.includes("trimestr")) return "trimestrielle";
+  if (s.includes("semestr")) return "semestrielle";
+  if (s.includes("annuel") || s.includes("année")) return "annuelle";
+
+  return "";
+}
+
+
 
 // ---------- Builder message ----------
 function buildSendMessage(entity) {
@@ -3345,11 +3802,13 @@ function buildSendMessage(entity) {
       : (periodStart ? `à partir du ${periodStart}` : "");
 
   // Type client => délai paiement facture
-  const clientType = _getClientTypeFromEntity(entity, client);
-  const paymentDelayTxt =
-    clientType === "particulier"
-      ? "sous 7 jours"
-      : "sous 30 jours, conformément à nos conditions de règlement";
+const clientType = _getClientTypeFromEntity(entity, client);
+
+const paymentDelayTxt =
+  clientType === "pro"
+    ? "sous 30 jours, conformément à nos conditions de règlement"
+    : "sous 7 jours";
+
 
   // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
@@ -3402,33 +3861,42 @@ ${signature}`;
   // =========================
   // 2) FACTURE
   // =========================
-  if (kind === "facture") {
-    mailSubject = `Facture ${number}${subject ? " – " + subject : ""}`;
-    const paid = !!entity?.paid;
+ if (entity?.type === "facture") {
+  const rawSubject = entity?.subject || "";
+  const cleanLabel = _formatInvoiceServiceLabel(rawSubject);
+  const frequency = _detectInvoiceFrequency(rawSubject);
 
-    if (paid) {
-      body =
+  mailSubject = `Facture ${number}${cleanLabel ? " – " + cleanLabel : ""}`;
+
+  const paid = !!entity?.paid;
+  const freqTxt = frequency ? ` (facturation ${frequency})` : "";
+
+  if (paid) {
+    body =
 `${greeting}
 
-Je vous transmets la facture acquittée ${number}${subject ? ` relative à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Je vous transmets la facture acquittée ${number}${cleanLabel ? ` relative à ${cleanLabel}` : ""}${freqTxt}.
+${totalTxt ? `Montant : ${totalTxt} TTC.` : ""}
 
-Je vous remercie et reste à votre disposition si besoin.
+Je vous remercie pour votre règlement et reste à votre disposition.
 
 ${signature}`;
-    } else {
-      body =
+  } else {
+    body =
 `${greeting}
 
-Je vous transmets la facture ${number}${subject ? ` relative à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
+Je vous adresse la facture ${number}${cleanLabel ? ` relative à ${cleanLabel}` : ""}${freqTxt}.
+${totalTxt ? `Montant : ${totalTxt} TTC.` : ""}
 
-Merci de procéder au règlement ${paymentDelayTxt}.
+Je vous remercie de bien vouloir procéder au règlement ${paymentDelayTxt}.
 Si vous souhaitez le RIB ou toute information complémentaire, je vous l’envoie immédiatement.
 
 ${signature}`;
-    }
-
-    return { mailSubject, body };
   }
+
+  return { mailSubject, body };
+}
+
 
   // =========================
   // 3) CONTRAT (fallback)
@@ -4735,6 +5203,10 @@ function addPassageDate(btn) {
   input.type = "date";
   input.className = "prestation-date";
 
+const docDate = document.getElementById("docDate")?.value;
+input.value = docDate || new Date().toISOString().slice(0, 10);
+
+
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className =
@@ -4754,30 +5226,17 @@ function removePassageDate(btn) {
   if (!row) return;
 
   const container = row.parentElement;
-  row.remove();
+  const rows = container.querySelectorAll(".prestation-date-row");
 
-  // On s'assure qu'il reste toujours au moins 1 ligne de date
-  if (container.querySelectorAll(".prestation-date-row").length === 0) {
-    const newRow = document.createElement("div");
-    newRow.className = "prestation-date-row";
-
-    const input = document.createElement("input");
-    input.type = "date";
-    input.className = "prestation-date";
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className =
-      "btn btn-danger btn-small date-remove-btn no-print";
-    removeBtn.textContent = "✖";
-    removeBtn.onclick = function () {
-      removePassageDate(removeBtn);
-    };
-
-    newRow.appendChild(input);
-    newRow.appendChild(removeBtn);
-    container.appendChild(newRow);
+  // ✅ Si c'est la dernière ligne : on VIDE la date (on ne recrée rien)
+  if (rows.length <= 1) {
+    const input = row.querySelector(".prestation-date");
+    if (input) input.value = "";
+    return;
   }
+
+  // ✅ Sinon : on supprime juste la ligne
+  row.remove();
 }
 
 
@@ -4910,6 +5369,85 @@ function addPrestation() {
   }
 
   calculateTotals();
+}
+
+function _ensureIndemnite40InFormUI() {
+  const container = document.getElementById("prestationsContainer");
+  if (!container) return;
+
+  // ✅ évite doublon côté UI
+  const lines = container.querySelectorAll(".prestation-line");
+  const alreadyUI = Array.from(lines).some(line => (line.dataset.kind || "") === "indemnite_40");
+  if (alreadyUI) {
+    // au cas où : recalcul pour être sûr que le total est bien à jour
+    try { calculateTotals(); } catch (e) {}
+    return;
+  }
+
+  // ✅ crée une nouvelle ligne UI
+  addPrestation();
+
+  // récupère la dernière ligne ajoutée
+  const newLines = container.querySelectorAll(".prestation-line");
+  const line = newLines[newLines.length - 1];
+  if (!line) return;
+
+  // ✅ marque la ligne comme indemnité
+  line.dataset.kind = "indemnite_40";
+  line.dataset.detail = "Indemnité forfaitaire de 40 € pour frais de recouvrement";
+  line.dataset.autoPrice = "0"; // important : évite que ton système de prix auto écrase 40
+
+  // ✅ remplit les champs
+  const descInput  = line.querySelector(".prestation-desc");
+  const qtyInput   = line.querySelector(".prestation-qty");
+  const unitInput  = line.querySelector(".prestation-unit");
+  const priceInput = line.querySelector(".prestation-price");
+
+  if (descInput)  descInput.value  = "Indemnité forfaitaire (art. L441-10 C. commerce)";
+  if (qtyInput)   qtyInput.value   = 1;
+  if (unitInput)  unitInput.value  = "forfait";
+  if (priceInput) priceInput.value = 40;
+
+  // ✅ déclenche la logique de ton app (totaux + total ligne)
+  try { onPriceChange(priceInput); } catch (e) {}
+  try { calculateTotals(); } catch (e) {}
+
+_lockIndemnite40Line(line);
+
+}
+
+
+function _lockIndemnite40Line(line) {
+  if (!line) return;
+  if ((line.dataset.kind || "") !== "indemnite_40") return;
+
+  // champs
+  const tplSelect = line.querySelector(".prestation-template");
+  const descInput = line.querySelector(".prestation-desc");
+  const qtyInput  = line.querySelector(".prestation-qty");
+  const unitInput = line.querySelector(".prestation-unit");
+  const priceInput = line.querySelector(".prestation-price");
+
+  // verrous
+  if (tplSelect) tplSelect.disabled = true;
+
+  if (descInput) { descInput.readOnly = true; descInput.style.opacity = "0.85"; }
+  if (qtyInput)  { qtyInput.readOnly  = true; qtyInput.style.opacity  = "0.85"; }
+  if (unitInput) { unitInput.readOnly = true; unitInput.style.opacity = "0.85"; }
+  if (priceInput){ priceInput.readOnly = true; priceInput.style.opacity = "0.85"; }
+
+  // empêche la suppression (bouton X)
+  line.querySelectorAll('[onclick^="removePrestation("]').forEach(btn => {
+    btn.style.display = "none";
+  });
+
+  // optionnel : empêche l'ajout de dates
+  const addDateBtn = line.querySelector(".dates-add-btn");
+  if (addDateBtn) addDateBtn.style.display = "none";
+
+  // optionnel : grise la section dates
+  const datesBlock = line.querySelector(".prestation-dates");
+  if (datesBlock) datesBlock.style.opacity = "0.7";
 }
 
 
@@ -5389,18 +5927,18 @@ function setConditions(type) {
     if (notesEl) {
       notesEl.value =
         "Règlement à réception de facture.\n" +
-        "Aucun escompte pour paiement anticipé.\n" +
-        "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
+        "Aucun escompte pour paiement anticipé.";
+      // ✅ pas d'indemnité 40€ en B2C
     }
-  } else if (type === "agence") {
+  } else if (type === "agence") { // chez toi "agence" = syndic/pro
     if (cbClientSyn) cbClientSyn.checked = true;
     if (cbClientPart) cbClientPart.checked = false;
 
     if (notesEl) {
       notesEl.value =
-        "Paiement à 30 jours date de facture.\n" +
+        "Paiement à 30 jours fin de mois.\n" +
         "Aucun escompte pour paiement anticipé.\n" +
-        "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
+        "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
     }
   }
 
@@ -5513,6 +6051,18 @@ if (siteCivilityEl) siteCivilityEl.value = doc.siteCivility || "";
     subjectInput.value = doc.subject || "";
   }
 
+// 🚫 Ne pas afficher le nom du client dans l'objet (quel que soit le client)
+if (subjectInput && doc?.client?.name) {
+  const clientName = String(doc.client.name).trim();
+  if (clientName) {
+    // enlève " - Nom" ou " – Nom" en fin de texte
+    subjectInput.value = String(subjectInput.value || "")
+      .replace(new RegExp(`\\s*[–-]\\s*${clientName}\\s*$`, "i"), "")
+      .trim();
+  }
+}
+doc.subject = subjectInput.value;
+
   const siteBlock = document.getElementById("siteBlock");
   const siteNameInp = document.getElementById("siteName");
   const siteAddrInp = document.getElementById("siteAddress");
@@ -5590,6 +6140,12 @@ doc.prestations.forEach((p) => {
 
   line.dataset.kind = p.kind || "";
   line.dataset.detail = p.detail || "";
+
+if ((p.kind || "") === "indemnite_40") {
+  line.dataset.autoPrice = "0";
+}
+
+
   // ⚠️ on NE met plus basePrice = p.price ici
   updatePurchaseVisibility(line);
   updatePriceLayout(line);
@@ -5710,6 +6266,12 @@ if (sigRadio) {
 if (typeof refreshDocumentHealthUI === "function") {
   refreshDocumentHealthUI(doc);
 }
+
+// 🔒 verrouille automatiquement la ligne indemnité si présente
+if (typeof _lockIndemnite40Line === "function") {
+  document.querySelectorAll(".prestation-line").forEach(_lockIndemnite40Line);
+}
+
 }
 
 
@@ -6171,29 +6733,30 @@ function deleteCurrent() {
     `Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${docNumber} :\n` +
     `« ${subject} » ?\n\nCette action est définitive.`;
 
-  showConfirmDialog({
-    title,
-    message,
-    confirmLabel: "Supprimer",
-    cancelLabel: "Annuler",
-    onConfirm: function () {
-      const idToDelete = currentDocumentId;
-      const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
-      saveDocuments(docs);
+showConfirmDialog({
+  title,
+  message,
+  confirmLabel: "Supprimer",
+  cancelLabel: "Annuler",
+  variant: "danger",
+  icon: "⚠️",
+  onConfirm: function () {
+    const idToDelete = currentDocumentId;
+    const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
+    saveDocuments(docs);
 
-      if (db) {
-        db.collection("documents")
-          .doc(idToDelete)
-          .delete()
-          .catch((err) =>
-            console.error("Erreur Firestore delete :", err)
-          );
-      }
-
-      backToList();
+    if (db) {
+      db.collection("documents")
+        .doc(idToDelete)
+        .delete()
+        .catch((err) =>
+          console.error("Erreur Firestore delete :", err)
+        );
     }
-  });
 
+    backToList();
+  }
+});
 computeCA();
 
 }
@@ -6218,6 +6781,8 @@ function deleteDocument(id) {
     message,
     confirmLabel: "Supprimer",
     cancelLabel: "Annuler",
+  variant: "danger",
+  icon: "⚠️",
     onConfirm: function () {
       const newDocs = docs.filter((d) => d.id !== id);
       saveDocuments(newDocs);
@@ -6284,6 +6849,8 @@ function deleteCurrent() {
     message,
     confirmLabel: "Supprimer",
     cancelLabel: "Annuler",
+  variant: "danger",
+  icon: "⚠️",
     onConfirm: function () {
       const idToDelete = currentDocumentId;
       const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
@@ -6409,11 +6976,6 @@ function computeCA() {
     }
   });
 
-  // Mise à jour UI
-  document.getElementById("dashCATotal").textContent      = "CA total : " + formatEuro(totalYear);
-  document.getElementById("dashCAPaid").textContent       = "Payé : " + formatEuro(totalPaidYear);
-  document.getElementById("dashCAUnpaid").textContent     = "Impayé : " + formatEuro(totalUnpaid);
-  document.getElementById("dashCAMonth").textContent      = "Mois en cours : " + formatEuro(monthTotal);
 
   // Surveiller le seuil TVA micro
   if (typeof checkMicroTVAThreshold === "function") {
@@ -10226,27 +10788,45 @@ try {
   billingLine = "";
 }
 
-  const devisConditions =
-    (billingLine ? ("Mode de facturation : " + billingLine + "\n\n") : "") +
-    "Paiement à réception de facture.\n" +
-    "Aucun acompte demandé sauf mention contraire.";
+// ✅ Conditions devis = mêmes règles que factures (cohérence totale)
+const isSyndic = (doc.conditionsType === "agence"); // chez toi "agence" = syndic/pro
 
-  notesHtml = `
-    <div class="conditions-block">
-      <div class="conditions-title">Conditions de règlement</div>
-      <p>${devisConditions.replace(/\n/g, "<br>")}</p>
-    </div>
-  `;
+const TERMS_DEVIS_PARTICULIER =
+  "Règlement à réception de facture.\n" +
+  "Aucun acompte demandé sauf mention contraire.\n" +
+  "Aucun escompte pour paiement anticipé.";
+
+const TERMS_DEVIS_SYNDIC =
+  "Paiement à 30 jours fin de mois.\n" +
+  "Aucun acompte demandé sauf mention contraire.\n" +
+  "Aucun escompte pour paiement anticipé.\n" +
+  "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
+
+const devisConditions =
+  (billingLine ? ("Mode de facturation : " + billingLine + "\n\n") : "") +
+  (isSyndic ? TERMS_DEVIS_SYNDIC : TERMS_DEVIS_PARTICULIER);
+
+notesHtml = `
+  <div class="conditions-block">
+    <div class="conditions-title">Conditions de règlement</div>
+    <p>${devisConditions.replace(/\n/g, "<br>")}</p>
+  </div>
+`;
+
 } else {
     let notesText = doc.notes || "";
     if (doc.paid && notesText) {
-      const removeLines = [
-        "Paiement à 30 jours date de facture.",
-        "Règlement à réception de facture.",
-        "Aucun escompte pour paiement anticipé.",
-        "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-        "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
-      ];
+const removeLines = [
+  "Paiement à 30 jours date de facture.",
+  "Paiement à 30 jours fin de mois.",
+  "Règlement à réception de facture.",
+  "Aucun acompte demandé sauf mention contraire.",
+  "Aucun escompte pour paiement anticipé.",
+  "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+  "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+  "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
+];
+
       removeLines.forEach((line) => {
         notesText = notesText.replace(line + "\n", "");
         notesText = notesText.replace(line, "");
@@ -16628,6 +17208,19 @@ function formatContractGlobalPeriod(pr) {
   return `${startLabel} à ${endLabel}`;
 }
 
+function buildOriginDevisNote(contract) {
+  const devisNum =
+    contract?.meta?.sourceDevisNumber ||
+    contract?.meta?.devisNumber ||
+    contract?.sourceDevisNumber ||
+    "";
+
+  if (!devisNum) return "";
+  return `Facture générée automatiquement à partir du devis ${devisNum}.`;
+}
+
+
+
 function generateImmediateBilling(contract) {
   const pr = contract.pricing || {};
   const c  = contract.client  || {};
@@ -16709,15 +17302,30 @@ function generateImmediateBilling(contract) {
     lineDesc = `${serviceLabel} – acompte sur contrat d’entretien (${globalPeriod})`;
   }
 
-  const notes = [
-    "Règlement à réception de facture.",
-    "Aucun escompte pour paiement anticipé.",
-    "Des pénalités peuvent être appliquées en cas de retard.",
-    mode === "annuel_50_50"
-      ? "Cette facture correspond au 1er paiement (50 %) du contrat d’entretien."
-      : "Cette facture correspond à la première échéance du contrat d’entretien.",
-    "Les Conditions Générales de Vente sont disponibles sur demande."
-  ].join("\n");
+
+const originNote = buildOriginDevisNote(contract);
+
+const notes = (clientType === "syndic"
+  ? [
+      "Règlement à 30 jours fin de mois.",
+      "Aucun escompte pour paiement anticipé.",
+      "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
+      "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
+      originNote, // ✅ devis d’origine
+      "Les Conditions Générales de Vente sont disponibles sur demande."
+    ]
+  : [
+      "Règlement à réception de facture.",
+      "Aucun escompte pour paiement anticipé.",
+      mode === "annuel_50_50"
+        ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
+        : "Cette facture correspond à une échéance du contrat d’entretien.",
+      originNote, // ✅ devis d’origine
+      "Les Conditions Générales de Vente sont disponibles sur demande."
+    ]
+).filter(Boolean).join("\n");
+
+
 
   return {
     id: generateId("FAC"),
@@ -16825,7 +17433,7 @@ function createAutomaticInvoice(contract) {
 
   const globalPeriod = formatContractGlobalPeriod(pr);
   const moisLabel    = monthYearFr(nextISO);
-  const clientName   = c.name ? ` – ${c.name}` : "";
+
 
   let amountHT;
   let subject = "";
@@ -16839,7 +17447,8 @@ function createAutomaticInvoice(contract) {
       // 2e paiement (solde)
       amountHT = totalHT / 2;
 
-      subject  = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}${clientName}`;
+     subject  = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}`;
+
       lineDesc = `${serviceLabel} – 2e paiement (50 %) (2/2) – solde du contrat d’entretien pour la saison ${globalPeriod}`;
     } else {
       // Mensuel anticipé (échéance i/n)
@@ -16850,7 +17459,8 @@ function createAutomaticInvoice(contract) {
 
       amountHT = totalHT / n;
 
-      subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}${clientName}`;
+      subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}`;
+
       lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
     }
   }
@@ -16912,7 +17522,8 @@ function createAutomaticInvoice(contract) {
     // 🔢 Numéro d’échéance pour le SYNDIC (comme pour le particulier)
     const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
 
-    subject  = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}${clientName}`;
+    subject  = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}`;
+
     lineDesc = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations réalisées du ${startLabel} au ${endLabel}`;
   }
 
@@ -17136,6 +17747,7 @@ function checkScheduledInvoices() {
 
 let signaturePad = null;
 
+
 // Ajuster la taille réelle du canvas (pour les écrans HDPI)
 function resizeSignatureCanvas() {
   const canvas = document.getElementById("signatureCanvas");
@@ -17153,7 +17765,9 @@ function resizeSignatureCanvas() {
 }
 
 // Ouvrir la popup de signature
+
 function openSignaturePopup() {
+window.currentContractSignatureMode = false;
   const popup = document.getElementById("signaturePopup");
   const canvas = document.getElementById("signatureCanvas");
   if (!popup || !canvas) {
@@ -17278,6 +17892,7 @@ document.addEventListener("DOMContentLoaded", () => {
 const closeBtn = document.getElementById("signatureClose");
 if (closeBtn) {
   closeBtn.addEventListener("click", () => {
+    window.currentContractSignatureMode = false; // ✅ reset sécurité
     document.getElementById("signaturePopup").classList.add("hidden");
   });
 }
@@ -17426,11 +18041,118 @@ function syncContractsWithDevis(updatedDevis) {
 }
 
 /* ---- On met à jour le dashboard dès que la page est chargée ---- */
+
 document.addEventListener("DOMContentLoaded", () => {
+  // Dashboard
   if (typeof refreshHomeStats === "function") {
     refreshHomeStats();
   }
+renderClientsFollowup();
+
+
+  // 🧾 Fiche client : double-clic sur nom client
+  const docClientInput = document.getElementById("clientName");   // devis / factures
+  const ctClientInput  = document.getElementById("ctClientName"); // contrats
+
+  if (docClientInput) {
+    docClientInput.addEventListener("dblclick", () => {
+      openClientSheet(docClientInput.value);
+    });
+  }
+
+  if (ctClientInput) {
+    ctClientInput.addEventListener("dblclick", () => {
+      openClientSheet(ctClientInput.value);
+    });
+  }
 });
+
+
+function renderClientsFollowup() {
+  const tbody = document.getElementById("followupClientsBody");
+  if (!tbody) return;
+
+  const docs = getAllDocuments() || [];
+  const factures = docs.filter(d => d.type === "facture");
+  const unpaid = factures.filter(f => !f.paid);
+
+  if (!unpaid.length) {
+    tbody.innerHTML = `<tr><td colspan="5" class="no-docs-cell">✅ Aucun impayé 🎉</td></tr>`;
+    return;
+  }
+
+  // regroupe par client
+  const map = new Map();
+  unpaid.forEach(f => {
+    const name = (f?.client?.name || "").trim();
+    if (!name) return;
+
+    const amount = Number(f.totalTTC || 0);
+    const lateMonths = _lateMonthsFromInvoiceDate(
+      f.date,
+      (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30)
+    );
+
+    if (!map.has(name)) {
+      map.set(name, {
+        name,
+        unpaidTotal: 0,
+        maxLate: 0,
+        lastInvoice: null,
+        lastInvoiceDate: null
+      });
+    }
+
+    const row = map.get(name);
+    row.unpaidTotal += amount;
+    row.maxLate = Math.max(row.maxLate, lateMonths);
+
+    const d = new Date(f.date || 0).getTime();
+    if (!row.lastInvoiceDate || d > row.lastInvoiceDate) {
+      row.lastInvoiceDate = d;
+      row.lastInvoice = f;
+    }
+  });
+
+  let rows = Array.from(map.values());
+
+  const sort = document.getElementById("followupSort")?.value || "amount_desc";
+  if (sort === "amount_desc") rows.sort((a,b) => b.unpaidTotal - a.unpaidTotal);
+  if (sort === "late_desc") rows.sort((a,b) => b.maxLate - a.maxLate);
+  if (sort === "name_asc") rows.sort((a,b) => a.name.localeCompare(b.name));
+
+  rows = rows.slice(0, 10);
+
+  tbody.innerHTML = rows.map(r => {
+    const inv = r.lastInvoice;
+    const invNumber = inv?.number || "—";
+    const invDate = inv?.date ? _fmtDateFRSafe(inv.date) : "—";
+    const late = r.maxLate;
+
+    return `
+      <tr>
+        <td><strong>${_escapeHtml(r.name)}</strong></td>
+        <td><span class="badge-red">${_fmtEUR(r.unpaidTotal)}</span></td>
+        <td>${_escapeHtml(invNumber)}<div style="opacity:.7;font-size:12px;">${_escapeHtml(invDate)}</div></td>
+        <td>${late > 0 ? `<span class="badge-late">${late} mois</span>` : "—"}</td>
+        <td style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-small" type="button" onclick="openClientSheet('${_escapeHtml(r.name)}')">📇 Fiche</button>
+          <button class="btn btn-primary btn-small" type="button" onclick="openClientSheet('${_escapeHtml(r.name)}')">💬 Relancer</button>
+          <button class="btn btn-success btn-small" type="button" onclick="followupOpenInvoice('${_escapeHtml(inv?.id || "")}')">📄 Facture</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function followupOpenInvoice(id) {
+  if (!id) return;
+  if (typeof loadDocument === "function") {
+    openFromHome("facture");
+    loadDocument(id);
+  }
+}
+
 
 // ==========================================
 // AUTO-GÉNÉRATION DES ANNÉES DOCUMENTS
