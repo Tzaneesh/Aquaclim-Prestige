@@ -1,3 +1,4 @@
+
 /********************************************************************
  * 🔥  SYSTEME DE DATES (OBLIGATOIRE)
  * Format interne : YYYY-MM-DD
@@ -12670,6 +12671,54 @@ function newContract() {
   }
 }
 
+function openSendPopupContract() {
+  if (!currentContractId) {
+    alert("Aucun contrat ouvert.");
+    return;
+  }
+
+  const contract = getContract(currentContractId);
+  if (!contract) {
+    alert("Contrat introuvable.");
+    return;
+  }
+
+  // 🔑 Important : on force le type pour le template
+  contract._kind = "contrat";
+
+  currentSendDoc = contract;
+
+  const { body } = buildSendMessage(contract);
+
+  // Remplit le popup
+  const info = document.getElementById("sendDocInfo");
+  const textarea = document.getElementById("sendMessagePreview");
+  const popup = document.getElementById("sendPopup");
+
+  const clientName =
+    contract.client?.name ||
+    contract.pricing?.clientName ||
+    "";
+
+  if (info) {
+    info.textContent = `Contrat – ${clientName}`;
+  }
+
+  if (textarea) {
+    textarea.value = body;
+  }
+
+  if (popup) {
+    popup.classList.remove("hidden");
+    const box = popup.querySelector(".popup");
+    if (box) {
+      void box.offsetWidth;
+      box.classList.add("show");
+    }
+  }
+}
+
+
 
 function openContractFromList(id) {
   const contract = getContract(id);
@@ -17376,5 +17425,6 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
