@@ -1,3 +1,24 @@
+// ===================================
+// PLANNING – OVERRIDES CONTRAT
+// ===================================
+
+let contractPlanningOverrides = loadContractPlanningOverrides();
+let planningSortables = [];
+
+function loadContractPlanningOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem("contractPlanningOverrides")) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveContractPlanningOverrides() {
+  localStorage.setItem(
+    "contractPlanningOverrides",
+    JSON.stringify(contractPlanningOverrides)
+  );
+}
 
 /********************************************************************
  * 🔥  SYSTEME DE DATES (OBLIGATOIRE)
@@ -12296,6 +12317,81 @@ function saveManualPlanningItems() {
   } catch (e) {}
 }
 
+function getOverriddenContractDate(contractId, originalDateISO) {
+  const ov = contractPlanningOverrides.find(o =>
+    o.contractId === contractId &&
+    o.originalDate === originalDateISO
+  );
+  return ov ? ov.newDate : originalDateISO;
+}
+
+function applyContractPlanningOverride(contractId, originalDate, newDate) {
+  contractPlanningOverrides = contractPlanningOverrides.filter(o =>
+    !(o.contractId === contractId && o.originalDate === originalDate)
+  );
+
+  contractPlanningOverrides.push({
+    id: generateId("OVR"),
+    contractId,
+    originalDate,
+    newDate
+  });
+
+  saveContractPlanningOverrides();
+  renderPlanningWeek();
+}
+
+function moveManualPlanningItemToDate(manualId, newDateISO) {
+  const idx = manualPlanningItems.findIndex(it => it.id === manualId);
+  if (idx === -1) return;
+
+  manualPlanningItems[idx].date = newDateISO;
+  saveManualPlanningItems();
+  renderPlanningWeek();
+}
+
+function initPlanningDnD() {
+  planningSortables.forEach(s => {
+    try { s.destroy(); } catch(e) {}
+  });
+  planningSortables = [];
+
+  document.querySelectorAll(".day-visits").forEach(listEl => {
+    const sortable = new Sortable(listEl, {
+      group: "planning",
+      animation: 150,
+      draggable: ".visit-entry",
+
+      onEnd(evt) {
+        const itemEl = evt.item;
+        const newDateISO = evt.to.closest(".day-column")?.dataset?.date;
+        const oldDateISO = evt.from.closest(".day-column")?.dataset?.date;
+        if (!newDateISO || newDateISO === oldDateISO) return;
+
+        // 🟢 MANUEL
+        if (itemEl.classList.contains("visit-manual")) {
+          moveManualPlanningItemToDate(
+            itemEl.dataset.manualId,
+            newDateISO
+          );
+        }
+
+        // 🔵 CONTRAT
+        if (itemEl.classList.contains("visit-contract")) {
+          applyContractPlanningOverride(
+            itemEl.dataset.contractId,
+            itemEl.dataset.originalDate,
+            newDateISO
+          );
+        }
+      }
+    });
+
+    planningSortables.push(sortable);
+  });
+}
+
+
 function getServiceLabelForContract(contract) {
   const pr = contract.pricing || {};
   const mainService = (pr.mainService || contract.pool?.type || "").toLowerCase();
@@ -12419,63 +12515,70 @@ function renderPlanningWeek() {
   }
 
   const dayShort = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
-const todayISO = formatDateYMD(new Date());
+  const todayISO = formatDateYMD(new Date());
 
   const dayColumns = [];
   currentPlanningData = [];
 
+  // ===========================
+  // 1) Colonnes semaine
+  // ===========================
   for (let i = 0; i < 7; i++) {
     const date = new Date(monday);
     date.setDate(monday.getDate() + i);
-const dateStr = formatDateYMD(date);
+    const dateStr = formatDateYMD(date);
 
     const col = document.createElement("div");
     col.className = "day-column";
+    col.dataset.date = dateStr;
+
     if (dateStr === todayISO && planningWeekOffset === 0) {
       col.classList.add("is-today");
     }
     if (i >= 5) {
       col.classList.add("is-weekend");
     }
-    col.dataset.date = dateStr;
 
-   const header = document.createElement("div");
-header.className = "day-column-header";
-header.innerHTML =
-  `<span>${dayShort[i]} ${date.toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "2-digit"
-  })}</span>
-   <button type="button"
-           class="planning-add-btn"
-           data-date="${dateStr}">+</button>`;
+    const header = document.createElement("div");
+    header.className = "day-column-header";
+    header.innerHTML =
+      `<span>${dayShort[i]} ${date.toLocaleDateString("fr-FR", {
+        day: "2-digit",
+        month: "2-digit"
+      })}</span>
+      <button type="button"
+              class="planning-add-btn"
+              data-date="${dateStr}">+</button>`;
 
-// 🔥🔥🔥 AJOUT OBLIGATOIRE : activer le bouton +
-const addBtn = header.querySelector(".planning-add-btn");
-if (addBtn) {
-  addBtn.addEventListener("click", (e) => {
-    e.stopPropagation();   // empêche d’ouvrir les détails du jour
-    openManualPlanningPopup(addBtn.dataset.date);
-  });
-}
+    // ✅ bouton + (ajout manuel)
+    const addBtn = header.querySelector(".planning-add-btn");
+    if (addBtn) {
+      addBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openManualPlanningPopup(addBtn.dataset.date);
+      });
+    }
 
-const list = document.createElement("div");
-list.className = "day-visits";
+    const list = document.createElement("div");
+    list.className = "day-visits";
 
-col.appendChild(header);
-col.appendChild(list);
-grid.appendChild(col);
+    col.appendChild(header);
+    col.appendChild(list);
+    grid.appendChild(col);
 
-col.addEventListener("click", function (e) {
-  if (e.target.closest(".planning-add-btn")) return;
-  openPlanningDayDetails(this.dataset.date);
-});
-
+    // ✅ click colonne = détails du jour (sauf sur +)
+    col.addEventListener("click", function (e) {
+      if (e.target.closest(".planning-add-btn")) return;
+      openPlanningDayDetails(this.dataset.date);
+    });
 
     dayColumns.push({ date, dateStr, list });
     currentPlanningData.push({ date: dateStr, items: [] });
   }
 
+  // ===========================
+  // 2) Prestations CONTRAT (déplaçables via overrides)
+  // ===========================
   const contracts =
     typeof getAllContracts === "function" ? getAllContracts() : [];
 
@@ -12503,13 +12606,29 @@ col.addEventListener("click", function (e) {
     const serviceLabel = getServiceLabelForContract(contract);
 
     for (let i = 0; i < visits; i++) {
-      const dayIndex = Math.min(6, Math.floor((i + 0.5) * 7 / visits));
-      const column = dayColumns[dayIndex];
-      const info = currentPlanningData[dayIndex];
+      // date originale "prévue" pour cette visite (répartition dans la semaine)
+      const dayIndexOriginal = Math.min(6, Math.floor((i + 0.5) * 7 / visits));
+      const originalDateISO = dayColumns[dayIndexOriginal].dateStr;
+
+      // ✅ override éventuel (si déplacée)
+      const finalDateISO = getOverriddenContractDate(
+        contract.id,
+        originalDateISO
+      );
+
+      const dayIndexFinal = currentPlanningData.findIndex(
+        (d) => d.date === finalDateISO
+      );
+      if (dayIndexFinal === -1) continue;
+
+      const column = dayColumns[dayIndexFinal];
+      const info = currentPlanningData[dayIndexFinal];
 
       const div = document.createElement("div");
-      div.className = "visit-entry";
-      // 🔹 dans la case : prestation en gros, client en dessous
+      div.className = "visit-entry visit-contract";
+      div.dataset.contractId = contract.id;
+      div.dataset.originalDate = originalDateISO;
+
       div.innerHTML =
         "<strong>" +
         escapeHtml(serviceLabel) +
@@ -12527,11 +12646,15 @@ col.addEventListener("click", function (e) {
         phone,
         address,
         contractId: contract.id,
+        originalDate: originalDateISO,
+        date: finalDateISO
       });
     }
   });
 
-  // Ajouts manuels (stockés en localStorage)
+  // ===========================
+  // 3) Ajouts MANUELS (déplaçables)
+  // ===========================
   manualPlanningItems.forEach((item) => {
     const index = currentPlanningData.findIndex((d) => d.date === item.date);
     if (index === -1) return;
@@ -12544,6 +12667,8 @@ col.addEventListener("click", function (e) {
 
     const div = document.createElement("div");
     div.className = "visit-entry visit-manual";
+    div.dataset.manualId = item.id;
+
     div.innerHTML =
       "<strong>" +
       escapeHtml(service) +
@@ -12556,19 +12681,20 @@ col.addEventListener("click", function (e) {
 
     column.list.appendChild(div);
 
-info.items.push({
-  id: item.id,               // ← OBLIGATOIRE
-  type: "manual",
-  service,
-  clientName,
-  address: item.address || "",
-  phone: item.phone || "",
-  notes: item.notes || ""
-});
-
+    info.items.push({
+      id: item.id,
+      type: "manual",
+      service,
+      clientName,
+      address: item.address || "",
+      phone: item.phone || "",
+      notes: item.notes || ""
+    });
   });
 
-  // colonnes vides
+  // ===========================
+  // 4) Colonnes vides
+  // ===========================
   currentPlanningData.forEach((d, idx) => {
     if (!dayColumns[idx].list.children.length) {
       const empty = document.createElement("div");
@@ -12577,7 +12703,11 @@ info.items.push({
       dayColumns[idx].list.appendChild(empty);
     }
   });
+
+  // ✅ IMPORTANT : activer drag&drop après rendu
+  initPlanningDnD();
 }
+
 
 function openPlanningDayDetails(dateStr) {
   const detailsEl = document.getElementById("planningDetails");
@@ -18274,6 +18404,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
