@@ -1899,60 +1899,25 @@
 <!-- jsPDF pour génération des PDF -->
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-  <!-- SortableJS-->
+<!-- SortableJS-->
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-
-<!-- App JS -->
-<script src="app.js"></script>
 
 <!-- POPUP SIGNATURE (UNIQUE) -->
 <div id="signaturePopup" class="signature-overlay hidden">
-  <div class="signature-box">
-    <h2 class="signature-title">Signature du client</h2>
-
-    <canvas id="signatureCanvas"></canvas>
-
-<div class="signature-actions">
-  <button id="signatureClear" class="btn btn-warning">Effacer</button>
-<button id="signatureClose" class="btn btn-secondary">Fermer</button>
-
-  <button id="signatureValidate" class="btn btn-primary">Valider</button>
+  ...
 </div>
 
-  </div>
-</div>
-<!-- =========================
-     PDF VIEWER (iPhone fix)
-========================= -->
+<!-- PDF VIEWER (iPhone fix) -->
 <div id="pdfViewerOverlay" class="pdf-overlay hidden">
-  <div class="pdf-topbar">
-    <button
-      type="button"
-      class="btn btn-secondary btn-small"
-      onclick="closePdfViewer()">
-      ← Retour
-    </button>
-
-    <div class="pdf-title">Document PDF</div>
-
-    <button
-      type="button"
-      class="btn btn-secondary btn-small"
-      onclick="closePdfViewer()">
-      ✕
-    </button>
-  </div>
-
-  <iframe
-    id="pdfViewerFrame"
-    class="pdf-frame"
-    title="PDF Viewer">
-  </iframe>
+  ...
 </div>
 
-  
+<!-- ✅ App JS EN DERNIER -->
+<script src="app.js"></script>
 </body>
 </html>
+
+
 
 
 
