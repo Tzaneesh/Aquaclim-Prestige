@@ -427,13 +427,29 @@
   </div>
 </div>
 
-    <label>Remarques / anomalies</label>
-    <textarea id="rapNotes" rows="3"></textarea>
+<label>Remarques / anomalies</label>
+<textarea id="rapNotes" rows="3"></textarea>
 
-    <div class="popup-buttons">
-      <button class="btn btn-success" onclick="saveRapportOnly()">Enregistrer</button>
-      <button class="btn btn-secondary" onclick="closeRapportPopup()">Fermer</button>
-    </div>
+<!-- 📸 PHOTOS RAPPORT -->
+<div style="margin-top:12px;">
+  <label style="font-weight:700;">Photos</label>
+
+  <input
+    id="rapPhotosInput"
+    type="file"
+    accept="image/*"
+    multiple
+    style="display:block;margin-top:6px;"
+  />
+
+  <div id="rapPhotosPreview" style="margin-top:10px;"></div>
+</div>
+
+<div class="popup-buttons">
+  <button class="btn btn-success" onclick="saveRapportOnly()">Enregistrer</button>
+  <button class="btn btn-secondary" onclick="closeRapportPopup()">Fermer</button>
+</div>
+
   </div>
 </div>
 
@@ -1862,6 +1878,7 @@
 
 </body>
 </html>
+
 
 
 
