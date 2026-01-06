@@ -2806,19 +2806,28 @@ function renderClientsList() {
 
   pageItems.forEach(({ client, index }) => {
     const item = document.createElement("div");
-    item.className = "client-item";
-    item.innerHTML = `
-      <strong>${client.name}</strong><br>
-      ${client.address || ""}<br>
-      Tel : ${client.phone || "—"}<br>
-      Mail : ${client.email || "—"}<br>
-      <div style="margin-top:6px; display:flex; gap:10px;">
-        <button class="modify-btn" onclick="editClient(${index})">✏️ Modifier</button>
-        <button class="delete-btn" onclick="deleteClientFromList(${index})">🗑️ Supprimer</button>
-      </div>
-    `;
-    container.appendChild(item);
-  });
+item.className = "client-item";
+item.innerHTML = `
+  <strong>${client.name}</strong><br>
+  ${client.address || ""}<br>
+  Tel : ${client.phone || "—"}<br>
+  Mail : ${client.email || "—"}<br>
+  <div style="margin-top:6px; display:flex; gap:10px;">
+    <button class="modify-btn" onclick="editClient(${index})">✏️ Modifier</button>
+    <button class="delete-btn" onclick="deleteClientFromList(${index})">🗑️ Supprimer</button>
+  </div>
+`;
+
+item.style.cursor = "pointer";
+item.title = "Ouvrir la fiche client";
+
+item.addEventListener("click", (e) => {
+  if (e.target.closest("button")) return; // ne pas ouvrir si clic sur un bouton
+  openClientSheet(client.name);
+});
+
+container.appendChild(item);
+});
 
   if (pageInfoEl) {
     pageInfoEl.textContent = `Page ${currentClientPage} / ${totalPages}`;
@@ -18450,6 +18459,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
