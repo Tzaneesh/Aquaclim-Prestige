@@ -2452,11 +2452,6 @@ renderRapportFilesList();
   // 🔹 cacher l’analyse tant qu’on n’a pas choisi "entretien_piscine"
   updateRapportAnalyseVisibility("");
 
-      // ===== PHOTOS RAPPORT (NOUVEAU) =====
-  currentRapportPhotos = [];
-  const inp = document.getElementById("rapPhotosInput");
-  if (inp) inp.onchange = onRapportPhotosSelected;
-  _renderRapportPhotosPreview();
 
 const overlay = document.getElementById("rapportPopup");
   if (!overlay) return;
@@ -4515,8 +4510,10 @@ function saveRapportFromForm() {
         date,
         notes,
         sections: sectionsData,
-          photos: Array.isArray(currentRapportPhotos) ? currentRapportPhotos : [],
-          attachments: Array.isArray(currentRapportDocs) ? currentRapportDocs : [],
+       photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
+
+       attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
+,
 
 
         analysis: {
@@ -4536,8 +4533,10 @@ function saveRapportFromForm() {
         date,
         notes,
         sections: sectionsData,
-          photos: Array.isArray(currentRapportPhotos) ? currentRapportPhotos : [],
-          attachments: Array.isArray(currentRapportDocs) ? currentRapportDocs : [],
+          photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
+
+       attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
+
 
 
         analysis: {
@@ -4561,8 +4560,10 @@ function saveRapportFromForm() {
       date,
       notes,
       sections: sectionsData,
-        photos: Array.isArray(currentRapportPhotos) ? currentRapportPhotos : [],
-        attachments: Array.isArray(currentRapportDocs) ? currentRapportDocs : [],
+      photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
+
+       attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
+
 
 
       analysis: {
@@ -5180,10 +5181,7 @@ function openRapportPopupForEdit(rapportId) {
     if (chlEl) chlEl.value = rec.analysis.chlore || "";
   }
   // ===== PHOTOS RAPPORT (EDIT) =====
-  currentRapportPhotos = Array.isArray(rec.photos) ? rec.photos : [];
-  const inp = document.getElementById("rapPhotosInput");
-  if (inp) inp.onchange = onRapportPhotosSelected;
-  _renderRapportPhotosPreview();
+
 currentRapportPhotosTemp = Array.isArray(rec.photos) ? rec.photos.slice() : [];
 currentRapportAttachmentsTemp = Array.isArray(rec.attachments) ? rec.attachments.slice() : [];
 renderRapportPhotosPreview();
@@ -19082,6 +19080,7 @@ const rapFiles = document.getElementById("rapFilesInput");
 if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
 
 });
+
 
 
 
