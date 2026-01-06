@@ -434,22 +434,27 @@
 <div class="rapport-media-section">
 
   <h4 class="rapport-section-title">📸 Photos de l’intervention</h4>
-
   <div class="rapport-upload-box">
-    <input
-      id="rapPhotosInput"
-      type="file"
-      accept="image/*"
-      multiple
-    />
-    <p class="rapport-upload-hint">
-      Ajoute des photos avant / après, matériel, anomalies…
-    </p>
+    <input id="rapPhotosInput" type="file" accept="image/*" multiple />
+    <p class="rapport-upload-hint">Ajoute des photos avant / après, matériel, anomalies…</p>
   </div>
-
   <div id="rapPhotosPreview" class="rapport-photos-grid"></div>
 
+  <h4 class="rapport-section-title" style="margin-top:14px;">📎 Documents joints</h4>
+  <div class="rapport-upload-box">
+    <input
+      id="rapFilesInput"
+      type="file"
+      multiple
+      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    />
+    <p class="rapport-upload-hint">Ajoute un PDF, un Word, des photos, etc.</p>
+  </div>
+
+  <div id="rapFilesList" class="rapport-files-list"></div>
+
 </div>
+
 
 <!-- ================= ACTIONS ================= -->
 <div class="popup-buttons popup-buttons-split">
@@ -493,7 +498,7 @@
 </div>
 
 </div>
-
+</div>
 
 
 <div id="attestationPopup" class="popup-overlay hidden">
@@ -1919,6 +1924,7 @@
 
 </body>
 </html>
+
 
 
 
