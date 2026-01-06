@@ -18636,6 +18636,58 @@ function checkScheduledInvoices() {
 
 }
 
+// =====================================
+// PDF VIEWER – iPhone / PWA
+// =====================================
+let lastAppViewBeforePDF = null;
+
+function openPdfViewer(blobUrl) {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  const frame = document.getElementById("pdfViewerFrame");
+
+  if (!overlay || !frame) {
+    console.error("PDF viewer non trouvé");
+    return;
+  }
+
+  lastAppViewBeforePDF = getCurrentAppView();
+
+  frame.src = blobUrl;
+  overlay.classList.remove("hidden");
+}
+
+function closePdfViewer() {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  const frame = document.getElementById("pdfViewerFrame");
+
+  if (!overlay || !frame) return;
+
+  frame.src = "";
+  overlay.classList.add("hidden");
+
+  if (lastAppViewBeforePDF) {
+    showView(lastAppViewBeforePDF);
+  } else {
+    showHome();
+  }
+}
+
+function getCurrentAppView() {
+  const views = [
+    "homeView",
+    "listView",
+    "formView",
+    "contractView",
+    "attestationView"
+  ];
+
+  return views.find(id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains("hidden");
+  });
+}
+
+
 /* ======================
    SIGNATURE ELECTRONIQUE
 ====================== */
@@ -19184,6 +19236,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
