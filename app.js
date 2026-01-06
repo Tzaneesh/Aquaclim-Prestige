@@ -1269,6 +1269,16 @@ function closeClientSheet() {
   const el = document.getElementById("clientSheetOverlay");
   if (el) el.remove();
 }
+function _cleanPhoneForTel(phone) {
+  return (phone || "").toString().trim().replace(/[.\-\s]/g, "");
+}
+
+function openGoogleMapsItinerary(address) {
+  const a = (address || "").toString().trim();
+  if (!a) return;
+  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`;
+  window.open(url, "_blank");
+}
 
 function _normalizePhoneForWA(phone) {
   if (!phone) return "";
@@ -1516,12 +1526,24 @@ function openClientSheet(name) {
     <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
       <div>
         <div style="font-size: 20px; font-weight: 800;">Fiche client — ${_escapeHtml(n)}</div>
-        <div style="opacity:.75; margin-top:2px;">
-          ${_escapeHtml(address)} ${type ? "• " + _escapeHtml(type) : ""}
-        </div>
+    <div style="opacity:.75; margin-top:2px;">
+  ${
+    address
+      ? `<a
+           href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(address)}"
+           target="_blank"
+           style="text-decoration:none;color:#1f6fe5;font-weight:700;"
+           title="Ouvrir l’itinéraire Google Maps"
+         >📍 ${_escapeHtml(address)}</a>`
+      : ""
+  }
+  ${type ? " • " + _escapeHtml(type) : ""}
+</div>
+
 
         <div style="margin-top:6px; display:flex; gap:10px; flex-wrap:wrap;">
-          ${phone ? `<a style="text-decoration:none;" href="tel:${_escapeHtml(phone)}">📞 ${_escapeHtml(phone)}</a>` : ""}
+         ${phone ? `<a style="text-decoration:none;font-weight:700;" href="tel:${_cleanPhoneForTel(phone)}" title="Appeler le client">📞 ${_escapeHtml(phone)}</a>` : ""}
+
           ${email ? `<a style="text-decoration:none;" href="mailto:${_escapeHtml(email)}">✉️ ${_escapeHtml(email)}</a>` : ""}
           ${phone ? `<a style="text-decoration:none;" target="_blank" href="https://wa.me/${encodeURIComponent(String(phone).replaceAll(" ","").replaceAll(".","").replaceAll("-","").replaceAll("+",""))}">💬 WhatsApp</a>` : ""}
         </div>
@@ -12890,8 +12912,26 @@ function openPlanningDayDetails(dateStr) {
       if (item.type === "contract") {
         html += `<div class="planning-details-entry">
           <strong>${escapeHtml(item.clientName)}</strong><br>
-          ${item.address ? escapeHtml(item.address) + "<br>" : ""}
-          ${item.phone ? "📞 " + escapeHtml(item.phone) + "<br>" : ""}
+       ${
+  item.address
+    ? `<a
+         href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}"
+         target="_blank"
+         style="text-decoration:none;color:#1f6fe5;font-weight:700;"
+         title="Ouvrir l’itinéraire Google Maps"
+       >📍 ${escapeHtml(item.address)}</a><br>`
+    : ""
+}
+${
+  item.phone
+    ? `<a
+         href="tel:${_cleanPhoneForTel(item.phone)}"
+         style="text-decoration:none;font-weight:700;"
+         title="Appeler le client"
+       >📞 ${escapeHtml(item.phone)}</a><br>`
+    : ""
+}
+
           ${
             item.serviceLabel
               ? `<span class="visit-pool">${escapeHtml(item.serviceLabel)}</span>`
@@ -12903,8 +12943,26 @@ function openPlanningDayDetails(dateStr) {
   html += `<div class="planning-details-entry">
     <strong>${escapeHtml(service)}</strong><br>
     ${item.clientName ? escapeHtml(item.clientName) + "<br>" : ""}
-    ${item.address ? escapeHtml(item.address) + "<br>" : ""}
-    ${item.phone ? "📞 " + escapeHtml(item.phone) + "<br>" : ""}
+${
+  item.address
+    ? `<a
+         href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}"
+         target="_blank"
+         style="text-decoration:none;color:#1f6fe5;font-weight:700;"
+         title="Ouvrir l’itinéraire Google Maps"
+       >📍 ${escapeHtml(item.address)}</a><br>`
+    : ""
+}
+${
+  item.phone
+    ? `<a
+         href="tel:${_cleanPhoneForTel(item.phone)}"
+         style="text-decoration:none;font-weight:700;"
+         title="Appeler le client"
+       >📞 ${escapeHtml(item.phone)}</a><br>`
+    : ""
+}
+
 
     <button class="delete-manual-btn"
       onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
@@ -18558,6 +18616,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
