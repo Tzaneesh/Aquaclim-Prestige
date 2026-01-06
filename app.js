@@ -4513,7 +4513,7 @@ function saveRapportFromForm() {
        photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
        attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
         analysis: {
-          ph: phValue || null,
+          ph: phValue || null
           chlore: chloreValue || null
         }
       };
@@ -19076,6 +19076,7 @@ const rapFiles = document.getElementById("rapFilesInput");
 if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
 
 });
+
 
 
 
