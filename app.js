@@ -9875,14 +9875,29 @@ function openTarifsPanelAny() {
   const listView = document.getElementById("listView");
   const homeView = document.getElementById("homeView");
 
-  // Si on est sur l’accueil (ou si listView est caché), on bascule sur la liste
-  if ((homeView && !homeView.classList.contains("hidden")) || (listView && listView.classList.contains("hidden"))) {
-    if (typeof openFromHome === "function") openFromHome("devis"); // ça affiche listView
+  const needShowList =
+    (homeView && !homeView.classList.contains("hidden")) ||
+    (listView && listView.classList.contains("hidden"));
+
+  if (needShowList && typeof openFromHome === "function") {
+    openFromHome("devis"); // affiche la vue liste
+
+    // ✅ attendre que le DOM/affichage se mette à jour, puis ouvrir le panel
+    setTimeout(() => {
+      openTarifsPanel();
+      const panel = document.getElementById("tarifsPanel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 0);
+
+    return;
   }
 
-  // Puis on ouvre le panel tarifs
+  // si déjà sur listView
   openTarifsPanel();
+  const panel = document.getElementById("tarifsPanel");
+  if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 function openTarifsPanel() {
@@ -18471,6 +18486,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
