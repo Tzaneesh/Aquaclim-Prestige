@@ -4750,7 +4750,20 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   // ========= PHOTOS =========
   const photos = Array.isArray(record.photos) ? record.photos : [];
   if (photos.length) {
-    if (y > 250) { doc.addPage(); y = 20; }
+    // ✅ Anti-titre orphelin : si titre + 1ère ligne de photos ne tient pas, on saute page AVANT "Photos"
+const imgH = 58;           // (garde la même valeur que plus bas)
+const titleH = 6;          // hauteur du titre "Photos"
+const rowGap = 6;          // marge après une ligne de photos
+const pageBottom = 275;    // ta limite actuelle (tu l'utilises plus bas)
+const topY = 20;
+
+const minBlock = titleH + imgH + rowGap; // titre + au moins 1 photo dessous
+
+if (y + minBlock > pageBottom) {
+  doc.addPage();
+  y = topY;
+}
+
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
@@ -4762,7 +4775,7 @@ function generatePDFRapportFromRecord(record, mode = "print") {
     const marginX = 12;
     const gap = 6;
     const colW = (pageW - marginX * 2 - gap) / 2;
-    const imgH = 58;
+    
     let col = 0;
 
     for (const p of photos) {
@@ -18770,6 +18783,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
