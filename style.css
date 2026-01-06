@@ -2145,8 +2145,10 @@ textarea {
     align-items: center;
     gap: 10px;
     margin: 0;
-    white-space: nowrap;
+    white-space: normal; /* ✅ évite les effets de bord desktop */
+    flex-wrap: wrap;     /* ✅ sécurité */
 }
+
 
 
 .devis-signature-trigger input[type="radio"] {
@@ -3437,40 +3439,7 @@ textarea {
   display: flex;
   gap: 10px;
 }
-/* =========================
-   SIGNATURE TRIGGER (DEVS/CONTRAT) - FIX FINAL
-========================= */
 
-/* DEVIS : label aligné (comme ton inline style mais en CSS) */
-#formView .devis-signature-trigger > label{
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-  white-space: normal;
-  flex-wrap: wrap;
-}
-#formView .devis-signature-trigger input[type="radio"]{
-  margin: 0;
-  flex: 0 0 auto;
-}
-
-/* CONTRAT : fix strict (radio + texte toujours alignés) */
-#contractView #ctSignatureWrapper > label{
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 12px !important;
-  margin: 0 !important;
-  white-space: normal !important;
-  flex-wrap: wrap !important;
-  line-height: 1.2 !important;
-}
-
-#contractView #ctSignatureWrapper input[type="radio"]{
-  margin: 0 !important;
-  flex: 0 0 auto !important;
-}
 
 /* ✅ iPhone : on ne touche pas (tu as déjà tes règles iPhone) */
 
@@ -3507,21 +3476,31 @@ textarea {
   background:#fff;
 }
 
-/* ✅ FIX CONTRAT : "Bon pour accord" (radio + texte alignés) */
-#contractView #ctSignatureWrapper.devis-signature-trigger label{
-  display: flex !important;
-  align-items: center !important;
-  justify-content: flex-start !important;
-  gap: 12px !important;
-  white-space: normal !important;
-  flex-wrap: wrap !important;
-  margin: 0 !important;
+/* =========================================================
+   ✅ CONTRAT — Fix stable "Bon pour accord"
+   Cause: styles génériques sur inputs + règles redondantes
+========================================================= */
+
+#contractView #ctSignatureWrapper > label{
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  margin: 0;
+  text-align: left;
+  white-space: normal;
+  flex-wrap: wrap;
+  line-height: 1.2;
 }
 
-#contractView #ctSignatureWrapper.devis-signature-trigger input[type="radio"]{
-  margin: 0 !important;
-  flex: 0 0 auto !important;
+/* Le radio ne doit JAMAIS être full width */
+#contractView #ctSignatureWrapper input[type="radio"]{
+  width: auto;
+  padding: 0;
+  margin: 0;
+  flex: 0 0 auto;
 }
+
 
 
 
