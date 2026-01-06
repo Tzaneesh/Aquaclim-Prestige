@@ -1278,6 +1278,37 @@ function _normalizePhoneForWA(phone) {
   return p;
 }
 
+function _isSyndicInvoice(f) {
+  const t = (f?.client?.type || f?.client?.clientType || f?.conditionsType || "").toString().toLowerCase();
+  return t.includes("syndic") || t.includes("agence");
+}
+
+function _dueDateFromInvoice(f, delaiJours = 30) {
+  if (!f?.date) return null;
+
+  const inv = new Date(f.date + "T00:00:00");
+  if (isNaN(inv.getTime())) return null;
+
+  // ✅ SYNDIC = 30 jours fin de mois
+  if (_isSyndicInvoice(f)) {
+    const endMonth = new Date(inv);
+    endMonth.setMonth(endMonth.getMonth() + 1);
+    endMonth.setDate(0); // dernier jour du mois de la facture
+    endMonth.setHours(0, 0, 0, 0);
+
+    const due = new Date(endMonth);
+    due.setDate(due.getDate() + delaiJours);
+    return due;
+  }
+
+  // ✅ Particulier = date facture + délai
+  const due = new Date(inv);
+  due.setDate(due.getDate() + delaiJours);
+  due.setHours(0, 0, 0, 0);
+  return due;
+}
+
+
 // Calcule le retard en mois (basé sur date facture + délai de règlement)
 function _lateMonthsFromInvoiceDate(invoiceDateISO, delaiJours = 30) {
   if (!invoiceDateISO) return 0;
@@ -12128,40 +12159,31 @@ function refreshHomeStats() {
 
   // 🧠 Analyse "santé" facturation
   if (elInvHealth) {
-    const DELAI_REGLEMENT_JOURS = 30;
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+const DELAI_REGLEMENT_JOURS = 30;
+const today = new Date();
+today.setHours(0, 0, 0, 0);
 
-    let lateCount     = 0;
-    let lateAmount    = 0;
-    let pendingCount  = 0;
-    let pendingAmount = 0;
+unpaid.forEach((f) => {
+  const val = Number(f.totalTTC || 0);
+  if (isNaN(val)) return;
 
-    unpaid.forEach((f) => {
-      const val = Number(f.totalTTC || 0);
-      if (isNaN(val)) return;
+  const due = _dueDateFromInvoice(f, DELAI_REGLEMENT_JOURS);
 
-      if (!f.date) {
-        pendingCount++;
-        pendingAmount += val;
-        return;
-      }
+  if (!due) {
+    pendingCount++;
+    pendingAmount += val;
+    return;
+  }
 
-      const d = new Date(f.date + "T00:00:00");
-      d.setHours(0, 0, 0, 0);
+  if (today.getTime() > due.getTime()) {
+    lateCount++;
+    lateAmount += val;
+  } else {
+    pendingCount++;
+    pendingAmount += val;
+  }
+});
 
-      const diffDays = Math.floor(
-        (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
-      );
-
-      if (!isNaN(diffDays) && diffDays > DELAI_REGLEMENT_JOURS) {
-        lateCount++;
-        lateAmount += val;
-      } else {
-        pendingCount++;
-        pendingAmount += val;
-      }
-    });
 
     const fmtLocal = (v) =>
       (typeof formatEuro === "function")
@@ -18486,6 +18508,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
