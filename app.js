@@ -1308,23 +1308,39 @@ function _dueDateFromInvoice(f, delaiJours = 30) {
   return due;
 }
 
+// Calcule le retard en mois (basé sur date d'échéance réelle)
+// ✅ Particulier : date facture + délai
+// ✅ Syndic/Agence : 30 jours fin de mois + délai
+function _lateMonthsFromInvoiceDate(fOrDate, delaiJours = 30) {
+  let due = null;
 
-// Calcule le retard en mois (basé sur date facture + délai de règlement)
-function _lateMonthsFromInvoiceDate(invoiceDateISO, delaiJours = 30) {
-  if (!invoiceDateISO) return 0;
-  const invDate = new Date(invoiceDateISO);
-  if (isNaN(invDate.getTime())) return 0;
+  // Si on passe une facture complète -> on peut appliquer la vraie règle syndic
+  if (fOrDate && typeof fOrDate === "object") {
+    due = _dueDateFromInvoice(fOrDate, delaiJours);
+  } else {
+    // fallback : si on passe juste une date ISO
+    const invoiceDateISO = fOrDate;
+    if (!invoiceDateISO) return 0;
+    const invDate = new Date(invoiceDateISO);
+    if (isNaN(invDate.getTime())) return 0;
 
-  const due = new Date(invDate);
-  due.setDate(due.getDate() + delaiJours);
+    due = new Date(invDate);
+    due.setDate(due.getDate() + delaiJours);
+    due.setHours(0, 0, 0, 0);
+  }
+
+  if (!due) return 0;
 
   const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
   const diffMs = now.getTime() - due.getTime();
   if (diffMs <= 0) return 0;
 
   const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(1, Math.floor(diffDays / 30));
 }
+
 
 /** ✅ Enregistre une relance dans la facture (meta.relances[]) */
 function _addRelanceToInvoice(invoiceNumber, canal) {
@@ -9902,6 +9918,40 @@ function syncTarifRow(input) {
     part.value = Math.round(newPart * 100) / 100;
   }
 }
+
+function _isSyndicInvoice(f) {
+  const t = (f?.client?.type || f?.client?.clientType || f?.conditionsType || "")
+    .toString()
+    .toLowerCase();
+  return t.includes("syndic") || t.includes("agence");
+}
+
+function _dueDateFromInvoice(f, delaiJours = 30) {
+  if (!f?.date) return null;
+
+  const inv = new Date(f.date + "T00:00:00");
+  if (isNaN(inv.getTime())) return null;
+
+  // ✅ Syndic/Agence : 30 jours fin de mois
+  if (_isSyndicInvoice(f)) {
+    const endMonth = new Date(inv);
+    endMonth.setMonth(endMonth.getMonth() + 1);
+    endMonth.setDate(0); // dernier jour du mois
+    endMonth.setHours(0, 0, 0, 0);
+
+    const due = new Date(endMonth);
+    due.setDate(due.getDate() + delaiJours);
+    return due;
+  }
+
+  // ✅ Particulier : date facture + délai
+  const due = new Date(inv);
+  due.setDate(due.getDate() + delaiJours);
+  due.setHours(0, 0, 0, 0);
+  return due;
+}
+
+
 function openTarifsPanelAny() {
   const listView = document.getElementById("listView");
   const homeView = document.getElementById("homeView");
@@ -12288,30 +12338,28 @@ unpaid.forEach((f) => {
     let pendingCount  = 0;
     let pendingAmount = 0;
 
-    unpaid.forEach((f) => {
-      const val = Number(f.totalTTC || 0) || 0;
+  unpaid.forEach((f) => {
+    const val = Number(f.totalTTC || 0) || 0;
 
-      if (!f.date) {
-        pendingCount++;
-        pendingAmount += val;
-        return;
-      }
+    const due = _dueDateFromInvoice(f, DELAI_REGLEMENT_JOURS);
 
-      const d = new Date(f.date + "T00:00:00");
-      if (isNaN(d.getTime())) return;
+    // pas de date = on met en "attente"
+    if (!due) {
+      pendingCount++;
+      pendingAmount += val;
+      return;
+    }
 
-      const diffDays = Math.floor(
-        (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
-      );
+    // ✅ retard basé sur l’échéance (fin de mois + 30j pour syndics)
+    if (today.getTime() > due.getTime()) {
+      lateCount++;
+      lateAmount += val;
+    } else {
+      pendingCount++;
+      pendingAmount += val;
+    }
+  });
 
-      if (diffDays > DELAI_REGLEMENT_JOURS) {
-        lateCount++;
-        lateAmount += val;
-      } else {
-        pendingCount++;
-        pendingAmount += val;
-      }
-    });
 
     const fmtLocal = (v) =>
       (typeof formatEuro === "function")
@@ -18508,6 +18556,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
