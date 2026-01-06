@@ -1717,8 +1717,20 @@ function openClientSheet(name) {
           window.open(url, "_blank");
         },
 onCancel: () => {
-  // ✅ On récupère l'email au moment du clic (source fiable)
-  const email = (emailBtn || "").toString().trim();
+  // 1) email depuis le bouton
+  let email = (emailBtn || "").toString().trim();
+
+  // 2) fallback : email depuis la fiche client (si dispo)
+  if ((!email || !email.includes("@")) && client?.email) {
+    email = String(client.email).trim();
+  }
+
+  // 3) fallback : email depuis la facture elle-même (hyper fiable)
+  if ((!email || !email.includes("@")) && invoiceNumber) {
+    const inv = (getAllDocuments() || []).find(d => d?.type === "facture" && d?.number === invoiceNumber);
+    const invMail = inv?.client?.email;
+    if (invMail) email = String(invMail).trim();
+  }
 
   if (!email || !email.includes("@")) {
     showConfirmDialog({
@@ -1735,7 +1747,9 @@ onCancel: () => {
   _addRelanceToInvoice(invoiceNumber, "email");
   const subject = `Relance facture ${invoiceNumber}`;
   const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-  window.location.href = url;
+
+  // ✅ IMPORTANT : ne pas “naviguer” dans ton app (évite l’effet “ça efface”)
+  window.open(url, "_blank");
 }
 
       });
@@ -18436,6 +18450,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
