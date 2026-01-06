@@ -8145,6 +8145,55 @@ function onMainTvaRadioChange(rate) {
   setTVA(rate);
 }
 
+// =====================================
+// 🚫 CONTRAT – Interdire TVA 20% si micro
+// =====================================
+function enforceContractMicroTVA() {
+  const status = getMicroTvaStatus(); // "franchise" ou "obligatoire"
+
+  // Champ TVA utilisé aussi par les contrats
+  const tvaInput = document.getElementById("tvaRate");
+  if (!tvaInput) return;
+
+  const rate = Number(tvaInput.value || 0);
+
+  // 🟥 Encore en franchise → TVA 20% INTERDITE
+  if (status === "franchise" && rate === 20) {
+
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "TVA non applicable",
+        message:
+          "Votre chiffre d'affaires est encore inférieur au seuil micro (" +
+          MICRO_TVA_THRESHOLD_BASE.toLocaleString("fr-FR") +
+          " €).\n\n" +
+          "Il est impossible d'appliquer une TVA de 20 % sur un contrat.\n\n" +
+          "➡️ La TVA est automatiquement remise à 0 %.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "⚠️"
+      });
+    }
+
+    // Forcer TVA 0 %
+    tvaInput.value = "0";
+
+    // Radios si présentes
+    document.getElementById("tva20")?.checked && (document.getElementById("tva20").checked = false);
+    document.getElementById("tva0")?.checked  && (document.getElementById("tva0").checked  = true);
+
+    // Recalcul contrat si la fonction existe
+    if (typeof recomputeContract === "function") {
+      recomputeContract();
+    }
+
+    return false; // ❌ TVA refusée
+  }
+
+  return true; // ✅ OK
+}
+
 
 /* =======================================================
    MODULE 3 — AUDIT INTELLIGENT
@@ -14930,6 +14979,12 @@ function buildContractFromForm(showErrors) {
     .replace(/\s|€|€/g, "")
     .replace(",", ".");
 
+// 🚫 Blocage TVA micro pour CONTRAT
+if (!enforceContractMicroTVA()) {
+  return; // ❌ on empêche la sauvegarde du contrat
+}
+
+    
   // TVA pour le contrat (on lit le même champ que devis/factures)
   const tvaRateInput = document.getElementById("tvaRate");
   const tvaRate = tvaRateInput ? parseFloat(tvaRateInput.value) || 0 : 0;
@@ -19115,13 +19170,22 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 
-    const rapPhotos = document.getElementById("rapPhotosInput");
-if (rapPhotos) rapPhotos.addEventListener("change", _onRapportPhotosChange);
+  const rapPhotos = document.getElementById("rapPhotosInput");
+  if (rapPhotos) rapPhotos.addEventListener("change", _onRapportPhotosChange);
 
-const rapFiles = document.getElementById("rapFilesInput");
-if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
+  const rapFiles = document.getElementById("rapFilesInput");
+  if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
 
+  // 🚫 CONTRAT – Blocage TVA 20% si micro
+  const tvaInput = document.getElementById("tvaRate");
+  if (tvaInput) {
+    tvaInput.addEventListener("change", () => {
+      enforceContractMicroTVA();
+    });
+  }
 });
+
+
 
 
 
