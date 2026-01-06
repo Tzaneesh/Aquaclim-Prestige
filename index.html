@@ -430,28 +430,68 @@
 <label>Remarques / anomalies</label>
 <textarea id="rapNotes" rows="3"></textarea>
 
-<!-- 📸 PHOTOS RAPPORT -->
-<div class="rapport-photos" style="margin-top:12px;">
-  <label style="font-weight:700;">Photos</label>
+<!-- ================= PHOTOS & DOCUMENTS ================= -->
+<div class="rapport-media-section">
 
-  <input
-    id="rapPhotosInput"
-    type="file"
-    accept="image/*"
-    multiple
-    style="display:block;margin-top:6px;"
-  />
+  <h4 class="rapport-section-title">📸 Photos de l’intervention</h4>
 
-  <div id="rapPhotosPreview" style="margin-top:10px;"></div>
-</div>
-
-<div class="popup-buttons">
-  <button class="btn btn-success" type="button" onclick="saveRapportOnly()">Enregistrer</button>
-  <button class="btn btn-secondary" type="button" onclick="closeRapportPopup()">Fermer</button>
-</div>
-
-
+  <div class="rapport-upload-box">
+    <input
+      id="rapPhotosInput"
+      type="file"
+      accept="image/*"
+      multiple
+    />
+    <p class="rapport-upload-hint">
+      Ajoute des photos avant / après, matériel, anomalies…
+    </p>
   </div>
+
+  <div id="rapPhotosPreview" class="rapport-photos-grid"></div>
+
+</div>
+
+<!-- ================= ACTIONS ================= -->
+<div class="popup-buttons popup-buttons-split">
+
+  <div class="popup-buttons-left">
+    <button
+      class="btn btn-secondary"
+      type="button"
+      onclick="exportRapportWordCurrent()"
+    >
+      🟦 Export Word
+    </button>
+
+    <button
+      class="btn btn-primary"
+      type="button"
+      onclick="transferRapportToClientCurrent()"
+    >
+      📤 Transférer au client
+    </button>
+  </div>
+
+  <div class="popup-buttons-right">
+    <button
+      class="btn btn-success"
+      type="button"
+      onclick="saveRapportOnly()"
+    >
+      💾 Enregistrer
+    </button>
+
+    <button
+      class="btn btn-secondary"
+      type="button"
+      onclick="closeRapportPopup()"
+    >
+      Fermer
+    </button>
+  </div>
+
+</div>
+
 </div>
 
 
@@ -1879,6 +1919,7 @@
 
 </body>
 </html>
+
 
 
 
