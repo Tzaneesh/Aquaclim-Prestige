@@ -10385,10 +10385,12 @@ function showConfirmDialog({
   btnOk.onclick = null;
   btnCancel.onclick = null;
 
-  // Cancel = fermer
-  btnCancel.onclick = function () {
-    overlay.classList.add("hidden");
-  };
+// Cancel = fermer + callback (IMPORTANT pour Email)
+btnCancel.onclick = function () {
+  overlay.classList.add("hidden");
+  if (typeof onCancel === "function") onCancel(); // ✅ AJOUT
+};
+;
 
   // OK = fermer + callback
   btnOk.onclick = function () {
@@ -18413,6 +18415,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
