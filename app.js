@@ -10391,6 +10391,12 @@ function showConfirmDialog({
       row.appendChild(closeBtn);
     }
   }
+// 🎨 Couleurs des boutons (règle globale)
+btnOk.classList.remove("btn-danger", "btn-secondary");
+btnCancel.classList.remove("btn-danger", "btn-secondary");
+
+btnOk.classList.add("btn-primary");     // OK = bleu
+btnCancel.classList.add("btn-danger");  // Annuler = rouge
 
   // Afficher la popup
   overlay.classList.remove("hidden");
@@ -18409,6 +18415,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
