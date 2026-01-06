@@ -1697,6 +1697,7 @@ function openClientSheet(name) {
         cancelLabel: "✉️ Email",
         variant: "info",
         icon: "📨",
+            showCloseButton: true,
         onConfirm: () => {
           const wa = _normalizePhoneForWA(phoneBtn);
           if (!wa) {
@@ -1734,31 +1735,6 @@ function openClientSheet(name) {
           window.location.href = url;
         }
       });
-
-      // ➕ bouton Fermer rouge doux DANS LA POPUP relance
-      setTimeout(() => {
-        const row = document.querySelector("#confirmOverlay .confirm-buttons");
-        if (!row) return;
-        if (document.getElementById("confirmClose")) return;
-
-        const closeBtn = document.createElement("button");
-        closeBtn.id = "confirmClose";
-        closeBtn.type = "button";
-        closeBtn.className = "btn";
-        closeBtn.textContent = "✖ Fermer";
-        closeBtn.style.background = "#e5533d";
-        closeBtn.style.borderColor = "#e5533d";
-        closeBtn.style.color = "#fff";
-
-        closeBtn.onclick = () => {
-          document.getElementById("confirmOverlay")?.classList.add("hidden");
-        };
-
-        row.appendChild(closeBtn);
-      }, 0);
-    });
-  });
-}
 
 
 // ================== CLIENT (DEVIS / FACTURES) ==================
@@ -10311,9 +10287,10 @@ function showConfirmDialog({
   confirmLabel = "OK",
   cancelLabel = "Annuler",
   onConfirm,
-      onCancel, 
+  onCancel,
   variant = "info",   // "default" | "info" | "warning" | "danger" | "success"
-  icon                 // ex: "⚠️", "ℹ️", "✅", "🧾"
+  icon,               // ex: "⚠️", "ℹ️", "✅", "🧾"
+  showCloseButton = false
 }) {
   const overlay = document.getElementById("confirmOverlay");
   const box = overlay ? overlay.querySelector(".confirm-box") : null;
@@ -10331,6 +10308,9 @@ function showConfirmDialog({
     return;
   }
 
+  // ✅ Nettoyage bouton Fermer custom si présent (évite doublons)
+  document.getElementById("confirmClose")?.remove();
+
   // Texte titre + message
   titleEl.textContent = title || "";
   msgEl.textContent = message || "";
@@ -10347,9 +10327,7 @@ function showConfirmDialog({
 
   // Reset classes de variante
   box.classList.remove("danger", "success", "info");
-  if (iconEl) {
-    iconEl.classList.remove("danger", "success", "info");
-  }
+  if (iconEl) iconEl.classList.remove("danger", "success", "info");
 
   // Normalisation du variant ("warning" → "danger", "default" → "info")
   let v = variant || "info";
@@ -10366,7 +10344,6 @@ function showConfirmDialog({
     if (iconEl) iconEl.classList.add("success");
     if (!icon) icon = "✅";
   } else {
-    // info
     box.classList.add("info");
     if (iconEl) iconEl.classList.add("info");
     if (!icon) icon = "ℹ️";
@@ -10386,12 +10363,11 @@ function showConfirmDialog({
   btnOk.onclick = null;
   btnCancel.onclick = null;
 
-// Cancel = fermer + callback (IMPORTANT pour Email)
-btnCancel.onclick = function () {
-  overlay.classList.add("hidden");
-  if (typeof onCancel === "function") onCancel(); // ✅ AJOUT
-};
-;
+  // Cancel = fermer + callback (IMPORTANT pour Email)
+  btnCancel.onclick = function () {
+    overlay.classList.add("hidden");
+    if (typeof onCancel === "function") onCancel();
+  };
 
   // OK = fermer + callback
   btnOk.onclick = function () {
@@ -10399,9 +10375,27 @@ btnCancel.onclick = function () {
     if (typeof onConfirm === "function") onConfirm();
   };
 
+  // ➕ Bouton Fermer optionnel (uniquement si demandé)
+  if (showCloseButton) {
+    const row = overlay.querySelector(".confirm-buttons");
+    if (row) {
+      const closeBtn = document.createElement("button");
+      closeBtn.id = "confirmClose";
+      closeBtn.type = "button";
+      closeBtn.className = "btn";
+      closeBtn.textContent = "✖ Fermer";
+      closeBtn.style.background = "#e5533d";
+      closeBtn.style.borderColor = "#e5533d";
+      closeBtn.style.color = "#fff";
+      closeBtn.onclick = () => overlay.classList.add("hidden");
+      row.appendChild(closeBtn);
+    }
+  }
+
   // Afficher la popup
   overlay.classList.remove("hidden");
 }
+
 
 const signatureClientTitle = "Bon pour accord";
 const signatureClientText  = "Bon pour accord, lu et approuvé.";
@@ -18415,6 +18409,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
