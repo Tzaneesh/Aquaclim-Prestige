@@ -44,6 +44,8 @@
   <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
   <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
   <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
+  <button class="btn tab-btn" onclick="openTarifsPanel()">📋 Tarifs prestations</button>
+<button class="btn tab-btn" type="button" onclick="openClientsListPopup()">👥 Clients</button>
   <button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
   <button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
   <button id="tabSettings" class="btn tab-btn" onclick="showSettings()">⚙️ Paramètres</button>
@@ -513,14 +515,6 @@
 
   <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
 
-  <button class="btn btn-devis tarifs-button" onclick="openTarifsPanel()">📋 Tarifs prestations</button>
-  <button
-    class="btn btn-primary"
-    type="button"
-    onclick="openClientsListPopup()"
-  >
-    👥 Clients
-  </button>
 </div>
 
 
@@ -1868,6 +1862,7 @@
 
 </body>
 </html>
+
 
 
 
