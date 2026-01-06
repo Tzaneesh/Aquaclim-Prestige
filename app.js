@@ -1,24 +1,3 @@
-// ===================================
-// PLANNING – OVERRIDES CONTRAT
-// ===================================
-
-let contractPlanningOverrides = loadContractPlanningOverrides();
-let planningSortables = [];
-
-function loadContractPlanningOverrides() {
-  try {
-    return JSON.parse(localStorage.getItem("contractPlanningOverrides")) || [];
-  } catch {
-    return [];
-  }
-}
-
-function saveContractPlanningOverrides() {
-  localStorage.setItem(
-    "contractPlanningOverrides",
-    JSON.stringify(contractPlanningOverrides)
-  );
-}
 
 /********************************************************************
  * 🔥  SYSTEME DE DATES (OBLIGATOIRE)
@@ -12301,6 +12280,25 @@ let manualPlanningItems = loadManualPlanningItems();
 let currentPlanningData = [];
 let manualPopupDate = null;
 
+// ✅ OVERRIDES CONTRAT + DND INSTANCES
+let contractPlanningOverrides = loadContractPlanningOverrides();
+let planningSortables = [];
+
+function loadContractPlanningOverrides() {
+  try {
+    return JSON.parse(localStorage.getItem("contractPlanningOverrides") || "[]") || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveContractPlanningOverrides() {
+  try {
+    localStorage.setItem("contractPlanningOverrides", JSON.stringify(contractPlanningOverrides));
+  } catch (e) {}
+}
+
+
 function loadManualPlanningItems() {
   try {
     const raw = localStorage.getItem("manualPlanningItems") || "[]";
@@ -12351,38 +12349,48 @@ function moveManualPlanningItemToDate(manualId, newDateISO) {
 }
 
 function initPlanningDnD() {
-  planningSortables.forEach(s => {
-    try { s.destroy(); } catch(e) {}
+  // ✅ Sortable pas chargé => pas de drag
+  if (typeof Sortable === "undefined") {
+    console.warn("❌ SortableJS manquant. Ajoute le <script Sortable.min.js> dans index.html.");
+    return;
+  }
+
+  // ✅ reset anciennes instances
+  planningSortables.forEach((s) => {
+    try { s.destroy(); } catch (e) {}
   });
   planningSortables = [];
 
-  document.querySelectorAll(".day-visits").forEach(listEl => {
+  document.querySelectorAll(".day-visits").forEach((listEl) => {
     const sortable = new Sortable(listEl, {
       group: "planning",
       animation: 150,
       draggable: ".visit-entry",
+      forceFallback: true,
+      fallbackOnBody: true,
 
       onEnd(evt) {
         const itemEl = evt.item;
+
         const newDateISO = evt.to.closest(".day-column")?.dataset?.date;
         const oldDateISO = evt.from.closest(".day-column")?.dataset?.date;
         if (!newDateISO || newDateISO === oldDateISO) return;
 
         // 🟢 MANUEL
         if (itemEl.classList.contains("visit-manual")) {
-          moveManualPlanningItemToDate(
-            itemEl.dataset.manualId,
-            newDateISO
-          );
+          const manualId = itemEl.dataset.manualId;
+          if (!manualId) return;
+          moveManualPlanningItemToDate(manualId, newDateISO);
+          return;
         }
 
         // 🔵 CONTRAT
         if (itemEl.classList.contains("visit-contract")) {
-          applyContractPlanningOverride(
-            itemEl.dataset.contractId,
-            itemEl.dataset.originalDate,
-            newDateISO
-          );
+          const contractId = itemEl.dataset.contractId;
+          const originalDate = itemEl.dataset.originalDate;
+          if (!contractId || !originalDate) return;
+
+          applyContractPlanningOverride(contractId, originalDate, newDateISO);
         }
       }
     });
@@ -12390,6 +12398,7 @@ function initPlanningDnD() {
     planningSortables.push(sortable);
   });
 }
+
 
 
 function getServiceLabelForContract(contract) {
@@ -18404,6 +18413,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
