@@ -4516,6 +4516,8 @@ function saveRapportFromForm() {
         notes,
         sections: sectionsData,
           photos: Array.isArray(currentRapportPhotos) ? currentRapportPhotos : [],
+          attachments: Array.isArray(currentRapportDocs) ? currentRapportDocs : [],
+
 
         analysis: {
           ph: phValue || null,
@@ -4535,6 +4537,8 @@ function saveRapportFromForm() {
         notes,
         sections: sectionsData,
           photos: Array.isArray(currentRapportPhotos) ? currentRapportPhotos : [],
+          attachments: Array.isArray(currentRapportDocs) ? currentRapportDocs : [],
+
 
         analysis: {
           ph: phValue || null,
@@ -4558,6 +4562,8 @@ function saveRapportFromForm() {
       notes,
       sections: sectionsData,
         photos: Array.isArray(currentRapportPhotos) ? currentRapportPhotos : [],
+        attachments: Array.isArray(currentRapportDocs) ? currentRapportDocs : [],
+
 
       analysis: {
         ph: phValue || null,
@@ -19068,7 +19074,15 @@ document.addEventListener("DOMContentLoaded", () => {
   if (navigator.onLine && db) {
     processSyncQueue();
   }
+
+    const rapPhotos = document.getElementById("rapPhotosInput");
+if (rapPhotos) rapPhotos.addEventListener("change", _onRapportPhotosChange);
+
+const rapFiles = document.getElementById("rapFilesInput");
+if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
+
 });
+
 
 
 
