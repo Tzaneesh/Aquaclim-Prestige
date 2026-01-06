@@ -1716,24 +1716,28 @@ function openClientSheet(name) {
           const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
           window.open(url, "_blank");
         },
-        onCancel: () => {
-          if (!hasEmail) {
-            showConfirmDialog({
-              title: "Email indisponible",
-              message: "Aucune adresse email pour ce client.",
-              confirmLabel: "OK",
-              cancelLabel: "",
-              variant: "warning",
-              icon: "⚠️"
-            });
-            return;
-          }
+onCancel: () => {
+  // ✅ On récupère l'email au moment du clic (source fiable)
+  const email = (emailBtn || "").toString().trim();
 
-          _addRelanceToInvoice(invoiceNumber, "email");
-          const subject = `Relance facture ${invoiceNumber}`;
-          const url = `mailto:${emailBtn}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-          window.location.href = url;
-        }
+  if (!email || !email.includes("@")) {
+    showConfirmDialog({
+      title: "Email indisponible",
+      message: "Aucune adresse email valide pour ce client.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️"
+    });
+    return;
+  }
+
+  _addRelanceToInvoice(invoiceNumber, "email");
+  const subject = `Relance facture ${invoiceNumber}`;
+  const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+  window.location.href = url;
+}
+
       });
 
 
@@ -18428,6 +18432,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
