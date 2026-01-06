@@ -9871,6 +9871,18 @@ function syncTarifRow(input) {
     part.value = Math.round(newPart * 100) / 100;
   }
 }
+function openTarifsPanelAny() {
+  const listView = document.getElementById("listView");
+  const homeView = document.getElementById("homeView");
+
+  // Si on est sur l’accueil (ou si listView est caché), on bascule sur la liste
+  if ((homeView && !homeView.classList.contains("hidden")) || (listView && listView.classList.contains("hidden"))) {
+    if (typeof openFromHome === "function") openFromHome("devis"); // ça affiche listView
+  }
+
+  // Puis on ouvre le panel tarifs
+  openTarifsPanel();
+}
 
 
 function openTarifsPanel() {
@@ -18459,6 +18471,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
