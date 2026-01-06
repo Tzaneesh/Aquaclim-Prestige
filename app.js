@@ -10311,6 +10311,7 @@ function showConfirmDialog({
   confirmLabel = "OK",
   cancelLabel = "Annuler",
   onConfirm,
+      onCancel, 
   variant = "info",   // "default" | "info" | "warning" | "danger" | "success"
   icon                 // ex: "⚠️", "ℹ️", "✅", "🧾"
 }) {
@@ -18415,6 +18416,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
