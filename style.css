@@ -3447,3 +3447,36 @@ textarea {
 
 /* ✅ iPhone : on ne touche pas (tu as déjà tes règles iPhone) */
 
+.pdf-overlay{
+  position: fixed;
+  inset: 0;
+  background: #0b1220;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+}
+.pdf-overlay.hidden{ display:none !important; }
+
+.pdf-topbar{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px;
+  background: rgba(255,255,255,0.08);
+}
+
+.pdf-title{
+  color:#fff;
+  font-weight:700;
+  font-size:14px;
+  opacity:0.9;
+}
+
+.pdf-frame{
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background:#fff;
+}
+
