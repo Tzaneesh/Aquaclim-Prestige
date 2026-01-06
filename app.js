@@ -1280,7 +1280,8 @@ function openGoogleMapsItinerary(address) {
   const a = (address || "").toString().trim();
   if (!a) return;
   const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`;
-  window.open(url, "_blank");
+  openPdfViewer(url);
+
 }
 
 function _normalizePhoneForWA(phone) {
@@ -1786,7 +1787,7 @@ function openClientSheet(name) {
 
           _addRelanceToInvoice(invoiceNumber, "whatsapp");
           const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
-          window.open(url, "_blank");
+          openPdfViewer(url);
         },
 onCancel: () => {
   // 1) email depuis le bouton
@@ -1821,7 +1822,7 @@ onCancel: () => {
   const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 
   // ✅ IMPORTANT : ne pas “naviguer” dans ton app (évite l’effet “ça efface”)
-  window.open(url, "_blank");
+  openPdfViewer(url);
 }
 
       });
@@ -4170,7 +4171,7 @@ function sendByWhatsApp() {
   const waPhone = phone.replace("+", "");
   const url = "https://wa.me/" + encodeURIComponent(waPhone) + "?text=" + encodeURIComponent(body);
 
-  window.open(url, "_blank");
+  openPdfViewer(url);
   closeSendPopup();
 }
 
@@ -4793,7 +4794,7 @@ ${company.companyName || "AquaClim Prestige"}`;
       // ouvre WhatsApp
       const wa = phone.replace(/\D/g, "");
       const url = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
-      window.open(url, "_blank");
+      openPdfViewer(url);
     },
     onCancel: () => {
       if (!email) {
@@ -4822,6 +4823,51 @@ function transferRapportToClientCurrent() {
   saveRapportFromForm();
   transferRapportToClient(currentRapportId);
 }
+
+// =========================
+// PDF VIEWER (iPhone FIX)
+// =========================
+
+function openPdfViewer(url) {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  const frame = document.getElementById("pdfViewerFrame");
+
+  // sécurité fallback
+  if (!overlay || !frame) {
+    window.open(url, "_blank");
+    return;
+  }
+
+  frame.src = url;
+  overlay.classList.remove("hidden");
+
+  // permet le bouton retour iPhone
+  try {
+    history.pushState({ pdfOpen: true }, "", location.href);
+  } catch (e) {}
+}
+
+function closePdfViewer() {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  const frame = document.getElementById("pdfViewerFrame");
+
+  if (frame) frame.src = "about:blank";
+  if (overlay) overlay.classList.add("hidden");
+
+  try {
+    if (history.state && history.state.pdfOpen) {
+      history.back();
+    }
+  } catch (e) {}
+}
+
+// Bouton "retour" iPhone / Android
+window.addEventListener("popstate", () => {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  if (overlay && !overlay.classList.contains("hidden")) {
+    closePdfViewer();
+  }
+});
 
 
 function generatePDFRapportFromRecord(record, mode = "print") {
@@ -5110,7 +5156,7 @@ if (y + minBlock > pageBottom) {
       doc.autoPrint();
     }
     const url = doc.output("bloburl");
-    window.open(url, "_blank");
+    openPdfViewer(url);
   }
 }
 
@@ -9155,7 +9201,7 @@ const company = getCompanySettings();
       if (doc.autoPrint) doc.autoPrint();
     }
     const url = doc.output("bloburl");
-    window.open(url, "_blank");
+    openPdfViewer(url);
   }
 }
 
@@ -19076,6 +19122,7 @@ const rapFiles = document.getElementById("rapFilesInput");
 if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
 
 });
+
 
 
 
