@@ -3420,19 +3420,39 @@ textarea {
   display: flex;
   gap: 10px;
 }
+/* =========================
+   SIGNATURE TRIGGER (DEVS/CONTRAT) - FIX FINAL
+========================= */
 
-/* ✅ Desktop / grand écran : on rend le bloc "Bon pour accord" plus clean */
-@media (min-width: 769px){
-  .devis-signature-trigger{
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 14px;
-  }
-  .devis-signature-trigger label{
-    white-space: normal;      /* autorise retour ligne sur PC si besoin */
-    flex-wrap: wrap;
-  }
+/* DEVIS : label aligné (comme ton inline style mais en CSS) */
+#formView .devis-signature-trigger > label{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  white-space: normal;
+  flex-wrap: wrap;
+}
+#formView .devis-signature-trigger input[type="radio"]{
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+/* CONTRAT : fix strict (radio + texte toujours alignés) */
+#contractView #ctSignatureWrapper > label{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  margin: 0 !important;
+  white-space: normal !important;
+  flex-wrap: wrap !important;
+  line-height: 1.2 !important;
+}
+
+#contractView #ctSignatureWrapper input[type="radio"]{
+  margin: 0 !important;
+  flex: 0 0 auto !important;
 }
 
 /* ✅ iPhone : on ne touche pas (tu as déjà tes règles iPhone) */
@@ -3485,5 +3505,6 @@ textarea {
   margin: 0 !important;
   flex: 0 0 auto !important;
 }
+
 
 
