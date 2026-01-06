@@ -1921,9 +1921,39 @@
 
   </div>
 </div>
+<!-- =========================
+     PDF VIEWER (iPhone fix)
+========================= -->
+<div id="pdfViewerOverlay" class="pdf-overlay hidden">
+  <div class="pdf-topbar">
+    <button
+      type="button"
+      class="btn btn-secondary btn-small"
+      onclick="closePdfViewer()">
+      ← Retour
+    </button>
 
+    <div class="pdf-title">Document PDF</div>
+
+    <button
+      type="button"
+      class="btn btn-secondary btn-small"
+      onclick="closePdfViewer()">
+      ✕
+    </button>
+  </div>
+
+  <iframe
+    id="pdfViewerFrame"
+    class="pdf-frame"
+    title="PDF Viewer">
+  </iframe>
+</div>
+
+  
 </body>
 </html>
+
 
 
 
