@@ -3431,3 +3431,19 @@ textarea {
   gap: 10px;
 }
 
+/* ✅ Desktop / grand écran : on rend le bloc "Bon pour accord" plus clean */
+@media (min-width: 769px){
+  .devis-signature-trigger{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+  }
+  .devis-signature-trigger label{
+    white-space: normal;      /* autorise retour ligne sur PC si besoin */
+    flex-wrap: wrap;
+  }
+}
+
+/* ✅ iPhone : on ne touche pas (tu as déjà tes règles iPhone) */
+
