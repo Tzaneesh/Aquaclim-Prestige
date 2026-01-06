@@ -12214,11 +12214,11 @@ const today = new Date();
 today.setHours(0, 0, 0, 0);
 
 unpaid.forEach((f) => {
-  const val = Number(f.totalTTC || 0);
-  if (isNaN(val)) return;
+  const val = Number(f.totalTTC || 0) || 0;
 
   const due = _dueDateFromInvoice(f, DELAI_REGLEMENT_JOURS);
 
+  // pas de date => on considère "en attente"
   if (!due) {
     pendingCount++;
     pendingAmount += val;
@@ -12233,6 +12233,7 @@ unpaid.forEach((f) => {
     pendingAmount += val;
   }
 });
+
 
 
     const fmtLocal = (v) =>
@@ -18370,10 +18371,11 @@ function renderClientsFollowup() {
     if (!name) return;
 
     const amount = Number(f.totalTTC || 0);
-    const lateMonths = _lateMonthsFromInvoiceDate(
-      f.date,
-      (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30)
-    );
+const lateMonths = _lateMonthsFromInvoiceDate(
+  f,
+  (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30)
+);
+
 
     if (!map.has(name)) {
       map.set(name, {
@@ -18556,6 +18558,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
