@@ -10302,37 +10302,36 @@ function showConfirmDialog({
 
   // Fallback : si jamais le HTML n'est pas là -> confirm() natif
   if (!overlay || !box || !titleEl || !msgEl || !btnOk || !btnCancel) {
-    if (window.confirm(message)) {
+    if (window.confirm(message || "")) {
       if (typeof onConfirm === "function") onConfirm();
     }
     return;
   }
 
-  // ✅ Nettoyage bouton Fermer custom si présent (évite doublons)
+  // ✅ Nettoyage bouton Fermer custom (évite doublons / persistance)
   document.getElementById("confirmClose")?.remove();
-
-  // Texte titre + message
-  titleEl.textContent = title || "";
-  msgEl.textContent = message || "";
-
-  // Libellés des boutons
-  btnOk.textContent = confirmLabel || "OK";
-
-  if (cancelLabel === "" || cancelLabel == null) {
-    btnCancel.style.display = "none";
-  } else {
-    btnCancel.style.display = "inline-block";
-    btnCancel.textContent = cancelLabel;
-  }
-
-  // Reset classes de variante
-  box.classList.remove("danger", "success", "info");
-  if (iconEl) iconEl.classList.remove("danger", "success", "info");
 
   // Normalisation du variant ("warning" → "danger", "default" → "info")
   let v = variant || "info";
   if (v === "warning") v = "danger";
   if (v === "default") v = "info";
+
+  // ✅ Règles UI globales
+  // - jamais de bouton Fermer sur success
+  if (v === "success") showCloseButton = false;
+
+  // - sur success : OK seul par défaut
+  if (v === "success" && (cancelLabel === "Annuler" || cancelLabel == null)) {
+    cancelLabel = "";
+  }
+
+  // Texte titre + message
+  titleEl.textContent = title || "";
+  msgEl.textContent = message || "";
+
+  // Reset classes de variante
+  box.classList.remove("danger", "success", "info");
+  if (iconEl) iconEl.classList.remove("danger", "success", "info");
 
   // Appliquer la variante + icône par défaut si non fournie
   if (v === "danger") {
@@ -10359,11 +10358,30 @@ function showConfirmDialog({
     }
   }
 
+  // Libellés des boutons
+  btnOk.textContent = confirmLabel || "OK";
+
+  if (cancelLabel === "" || cancelLabel == null) {
+    btnCancel.style.display = "none";
+  } else {
+    btnCancel.style.display = "inline-block";
+    btnCancel.textContent = cancelLabel;
+  }
+
+  // 🎨 Couleurs globales (FIABLE, même sans CSS)
+  btnOk.style.background = "#1a74d9";
+  btnOk.style.borderColor = "#1a74d9";
+  btnOk.style.color = "#fff";
+
+  btnCancel.style.background = "#e5533d";
+  btnCancel.style.borderColor = "#e5533d";
+  btnCancel.style.color = "#fff";
+
   // Nettoyage des anciens handlers
   btnOk.onclick = null;
   btnCancel.onclick = null;
 
-  // Cancel = fermer + callback (IMPORTANT pour Email)
+  // Cancel = fermer + callback
   btnCancel.onclick = function () {
     overlay.classList.add("hidden");
     if (typeof onCancel === "function") onCancel();
@@ -10375,7 +10393,7 @@ function showConfirmDialog({
     if (typeof onConfirm === "function") onConfirm();
   };
 
-  // ➕ Bouton Fermer optionnel (uniquement si demandé)
+  // ➕ Bouton Fermer optionnel (uniquement si demandé, et jamais en success)
   if (showCloseButton) {
     const row = overlay.querySelector(".confirm-buttons");
     if (row) {
@@ -10391,16 +10409,11 @@ function showConfirmDialog({
       row.appendChild(closeBtn);
     }
   }
-// 🎨 Couleurs des boutons (règle globale)
-btnOk.classList.remove("btn-danger", "btn-secondary");
-btnCancel.classList.remove("btn-danger", "btn-secondary");
-
-btnOk.classList.add("btn-primary");     // OK = bleu
-btnCancel.classList.add("btn-danger");  // Annuler = rouge
 
   // Afficher la popup
   overlay.classList.remove("hidden");
 }
+
 
 
 const signatureClientTitle = "Bon pour accord";
@@ -18415,6 +18428,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
