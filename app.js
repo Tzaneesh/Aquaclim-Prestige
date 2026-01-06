@@ -12389,6 +12389,7 @@ function initPlanningDnD() {
       group: "planning",
       animation: 150,
       draggable: ".visit-entry",
+          filter: ".visit-empty", 
       forceFallback: true,
       fallbackOnBody: true,
 
@@ -18435,6 +18436,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
