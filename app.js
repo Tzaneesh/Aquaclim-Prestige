@@ -4537,7 +4537,7 @@ function saveRapportFromForm() {
 
         analysis: {
           ph: phValue || null,
-          chlore: chloreValue || null
+          chlore: chloreValue || null,
         },
         createdAt: new Date().toISOString(),
         sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
@@ -19076,6 +19076,7 @@ const rapFiles = document.getElementById("rapFilesInput");
 if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
 
 });
+
 
 
 
