@@ -1222,6 +1222,112 @@ function _normName(s) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+// ================== PHOTOS RAPPORT ==================
+let currentRapportPhotos = []; // [{ dataUrl, name, ts }]
+
+function _isImageFile(file) {
+  return file && file.type && file.type.startsWith("image/");
+}
+
+function _resizeImageFileToDataUrl(file, maxW = 1400, maxH = 1400, quality = 0.78) {
+  return new Promise((resolve, reject) => {
+    if (!_isImageFile(file)) return reject(new Error("Fichier non image"));
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Lecture fichier impossible"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Image invalide"));
+      img.onload = () => {
+        let w = img.width;
+        let h = img.height;
+
+        // scale down
+        const ratio = Math.min(maxW / w, maxH / h, 1);
+        w = Math.round(w * ratio);
+        h = Math.round(h * ratio);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+
+        // fond blanc pour éviter transparence moche en JPEG
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+
+        const dataUrl = canvas.toDataURL("image/jpeg", quality);
+        resolve(dataUrl);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function _renderRapportPhotosPreview() {
+  const box = document.getElementById("rapPhotosPreview");
+  if (!box) return;
+
+  if (!Array.isArray(currentRapportPhotos) || currentRapportPhotos.length === 0) {
+    box.innerHTML = `<div style="opacity:.7;font-size:12px;">Aucune photo ajoutée.</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex; flex-wrap:wrap; gap:10px;">
+      ${currentRapportPhotos.map((p, idx) => `
+        <div style="
+          width:120px; border:1px solid #e6e6e6; border-radius:10px;
+          padding:8px; background:#fff;
+        ">
+          <img src="${p.dataUrl}" style="
+            width:100%; height:90px; object-fit:cover;
+            border-radius:8px; display:block;
+          ">
+          <button
+            type="button"
+            class="btn btn-danger btn-small"
+            style="width:100%; margin-top:8px;"
+            onclick="removeRapportPhoto(${idx})"
+          >🗑️ Supprimer</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function removeRapportPhoto(index) {
+  currentRapportPhotos = (currentRapportPhotos || []).filter((_, i) => i !== index);
+  _renderRapportPhotosPreview();
+}
+
+async function onRapportPhotosSelected(evt) {
+  const files = Array.from(evt.target.files || []);
+  if (!files.length) return;
+
+  for (const f of files) {
+    if (!_isImageFile(f)) continue;
+
+    try {
+      const dataUrl = await _resizeImageFileToDataUrl(f, 1400, 1400, 0.78);
+      currentRapportPhotos.push({
+        dataUrl,
+        name: f.name || "photo",
+        ts: Date.now()
+      });
+    } catch (e) {
+      console.error("Erreur resize photo rapport:", e);
+    }
+  }
+
+  // reset input pour pouvoir re-sélectionner les mêmes fichiers
+  evt.target.value = "";
+  _renderRapportPhotosPreview();
+}
+
+
 function _escapeHtml(str) {
   return (str || "").toString()
     .replaceAll("&", "&amp;")
@@ -18616,6 +18722,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
