@@ -3470,4 +3470,20 @@ textarea {
   background:#fff;
 }
 
+/* ✅ FIX CONTRAT : "Bon pour accord" (radio + texte alignés) */
+#contractView #ctSignatureWrapper.devis-signature-trigger label{
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 12px !important;
+  white-space: normal !important;
+  flex-wrap: wrap !important;
+  margin: 0 !important;
+}
+
+#contractView #ctSignatureWrapper.devis-signature-trigger input[type="radio"]{
+  margin: 0 !important;
+  flex: 0 0 auto !important;
+}
+
 
