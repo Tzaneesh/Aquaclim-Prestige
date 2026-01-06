@@ -221,10 +221,6 @@ body {
     background: #1b5e20;
 }
 
-.btn-danger {
-    background: #dc3545;
-    color: #fff;
-}
 
 .btn-danger:hover:not(:disabled) {
     background: #c82333;
@@ -268,11 +264,9 @@ body {
 }
 
 .btn-small {
-    padding: 6px 12px;
-    font-size: 13px;
-    /* On rend les btn-small un peu plus élégants */
     padding: 6px 14px;
-    border-radius: 999px;
+    font-size: 13px;
+border-radius: 999px;
 }
 
 /* Boutons d’action spécifiques (devis/facture) */
@@ -1195,10 +1189,6 @@ textarea {
 
 .popup-overlay.hidden {
     display: none;
-}
-
-.hidden {
-  display: none !important;
 }
 
 /* popup centrée + fade */
@@ -3479,4 +3469,5 @@ textarea {
   border: 0;
   background:#fff;
 }
+
 
