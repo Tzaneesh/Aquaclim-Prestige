@@ -3374,4 +3374,6 @@ textarea {
   border-color: #b9402e !important;
 }
 
+.visit-empty { pointer-events: none; }
+
 
