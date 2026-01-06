@@ -1739,6 +1739,9 @@ onCancel: () => {
 }
 
       });
+            });   
+  });    
+} 
 
 
 // ================== CLIENT (DEVIS / FACTURES) ==================
@@ -18432,6 +18435,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
