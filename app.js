@@ -1913,6 +1913,9 @@ function onRapportClientNameChange() {
 
 let currentAttestationId = null;
 let currentRapportId = null;
+let currentRapportPhotosTemp = [];      // [{name,type,dataUrl}]
+let currentRapportAttachmentsTemp = []; // [{name,type,dataUrl}]
+
 /* ================== ATTESTATIONS & RAPPORTS ================== */
 
 function showAttestations() {
@@ -2414,6 +2417,11 @@ function onGenerateRapportFromCurrent() {
 function openPiscineRapportGenerator(docId = null) {
   // 👉 on est en mode "nouveau"
   currentRapportId = null;
+    currentRapportPhotosTemp = [];
+currentRapportAttachmentsTemp = [];
+renderRapportPhotosPreview();
+renderRapportFilesList();
+
 
   const sel = document.getElementById("rapportType");
   if (!sel) return;
@@ -4364,6 +4372,108 @@ function saveRapports(list) {
   localStorage.setItem("rapports", JSON.stringify(list));
 }
 
+function _fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+async function _onRapportPhotosChange() {
+  const input = document.getElementById("rapPhotosInput");
+  if (!input || !input.files) return;
+
+  const files = Array.from(input.files || []);
+  for (const f of files) {
+    const dataUrl = await _fileToDataUrl(f);
+    currentRapportPhotosTemp.push({
+      name: f.name,
+      type: f.type || "image/jpeg",
+      dataUrl
+    });
+  }
+
+  input.value = "";
+  renderRapportPhotosPreview();
+}
+
+function removeRapportPhoto(index) {
+  currentRapportPhotosTemp.splice(index, 1);
+  renderRapportPhotosPreview();
+}
+
+function renderRapportPhotosPreview() {
+  const box = document.getElementById("rapPhotosPreview");
+  if (!box) return;
+
+  if (!currentRapportPhotosTemp.length) {
+    box.innerHTML = `<div style="color:#888;font-size:13px;">Aucune photo</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex;flex-wrap:wrap;gap:10px;">
+      ${currentRapportPhotosTemp.map((p, i) => `
+        <div style="width:140px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">
+          <img src="${p.dataUrl}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;display:block;">
+          <div style="font-size:11px;color:#555;margin-top:6px;word-break:break-word;">${escapeHtml(p.name || "")}</div>
+          <button type="button" class="btn btn-danger btn-small" style="margin-top:6px;width:100%;"
+            onclick="removeRapportPhoto(${i})">Supprimer</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+async function _onRapportFilesChange() {
+  const input = document.getElementById("rapFilesInput");
+  if (!input || !input.files) return;
+
+  const files = Array.from(input.files || []);
+  for (const f of files) {
+    const dataUrl = await _fileToDataUrl(f);
+    currentRapportAttachmentsTemp.push({
+      name: f.name,
+      type: f.type || "application/octet-stream",
+      dataUrl
+    });
+  }
+
+  input.value = "";
+  renderRapportFilesList();
+}
+
+function removeRapportFile(index) {
+  currentRapportAttachmentsTemp.splice(index, 1);
+  renderRapportFilesList();
+}
+
+function renderRapportFilesList() {
+  const box = document.getElementById("rapFilesList");
+  if (!box) return;
+
+  if (!currentRapportAttachmentsTemp.length) {
+    box.innerHTML = `<div style="color:#888;font-size:13px;">Aucun document joint</div>`;
+    return;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${currentRapportAttachmentsTemp.map((f, i) => `
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;">
+          <div style="font-size:13px;color:#333;word-break:break-word;">
+            📎 ${escapeHtml(f.name || "document")}
+          </div>
+          <button type="button" class="btn btn-danger btn-small" onclick="removeRapportFile(${i})">Supprimer</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+
 function saveRapportFromForm() {
   const name   = document.getElementById("rapClientName")?.value || "";
   const addr   = document.getElementById("rapClientAddress")?.value || "";
@@ -4539,6 +4649,178 @@ function loadRapportsList() {
     tbody.appendChild(tr);
   });
 }
+function _escapeTextForWord(s) {
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function exportRapportWord(rapId) {
+  const record = (getAllRapports() || []).find(r => r.id === rapId);
+  if (!record) return;
+
+  const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
+  const company = getCompanySettings();
+
+  const sectionsHtml = (record.sections || []).map(sec => {
+    const items = (sec.items || []).map(it => `<li>${_escapeTextForWord(it)}</li>`).join("");
+    return `
+      <h3 style="color:#1976d2;margin:16px 0 8px;">${_escapeTextForWord(sec.title || "")}</h3>
+      <ul>${items}</ul>
+    `;
+  }).join("");
+
+  const notesHtml = record.notes
+    ? `<h3 style="color:#1976d2;margin:16px 0 8px;">Remarques / anomalies</h3><p>${_escapeTextForWord(record.notes).replace(/\n/g,"<br>")}</p>`
+    : "";
+
+  const photosHtml = (record.photos || [])
+    .filter(p => p && p.dataUrl)
+    .map(p => `
+      <div style="margin:10px 0;">
+        <img src="${p.dataUrl}" style="max-width:650px;width:100%;height:auto;border:1px solid #ddd;border-radius:8px;">
+        <div style="font-size:11px;color:#666;margin-top:4px;">${_escapeTextForWord(p.name || "")}</div>
+      </div>
+    `).join("");
+
+  const attachmentsHtml = (record.attachments || []).length
+    ? `
+      <h3 style="color:#1976d2;margin:16px 0 8px;">Documents joints</h3>
+      <ul>
+        ${(record.attachments || []).map(a => `<li>${_escapeTextForWord(a.name || "document")}</li>`).join("")}
+      </ul>
+    `
+    : "";
+
+  const html = `
+  <html><head><meta charset="utf-8"></head>
+  <body style="font-family:Calibri,Arial;">
+    <h1 style="margin:0;color:#1976d2;">Rapport d’intervention</h1>
+    <p style="margin:6px 0 12px;color:#444;">
+      <strong>${_escapeTextForWord(company.companyName || "AquaClim Prestige")}</strong><br>
+      ${_escapeTextForWord(company.legalName || "")} – ${_escapeTextForWord(company.address || "")}<br>
+      Tél : ${_escapeTextForWord(company.phone || "")} – Email : ${_escapeTextForWord(company.email || "")}
+    </p>
+
+    <hr>
+
+    <h2 style="margin:12px 0 6px;">Client</h2>
+    <p style="margin:0 0 10px;">
+      <strong>${_escapeTextForWord(record.clientName || "")}</strong><br>
+      ${_escapeTextForWord(record.clientAddress || "")}
+    </p>
+
+    <h2 style="margin:12px 0 6px;">Intervention</h2>
+    <p style="margin:0 0 10px;">
+      Date : ${_escapeTextForWord(frDate)}<br>
+      Type : ${_escapeTextForWord(record.typeLabel || "")}
+    </p>
+
+    ${sectionsHtml}
+    ${notesHtml}
+
+    ${photosHtml ? `<h3 style="color:#1976d2;margin:16px 0 8px;">Photos</h3>${photosHtml}` : ""}
+
+    ${attachmentsHtml}
+  </body></html>`;
+
+  const blob = new Blob([html], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+
+  const safeName = (record.clientName ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_") : "intervention");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rapport-${safeName}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function exportRapportWordCurrent() {
+  // si pas encore sauvegardé, on sauvegarde d'abord pour avoir un id + stocker photos/docs
+  saveRapportFromForm();
+  exportRapportWord(currentRapportId);
+}
+
+function transferRapportToClient(rapId) {
+  const record = (getAllRapports() || []).find(r => r.id === rapId);
+  if (!record) return;
+
+  // on tente de récupérer email/tel depuis ta base clients via le nom
+  const client = (getClients() || []).find(c => (c.name || "") === (record.clientName || ""));
+  const phone = client?.phone || "";
+  const email = client?.email || "";
+
+  const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
+  const company = getCompanySettings();
+
+  const msg =
+`Bonjour,
+
+Je vous transmets le rapport d’intervention du ${frDate}.
+
+Cordialement,
+${company.companyName || "AquaClim Prestige"}`;
+
+  showConfirmDialog({
+    title: "Transférer au client",
+    message: "Comment souhaitez-vous envoyer ce rapport ? (Le PDF va s’ouvrir, tu pourras l’ajouter en pièce jointe.)",
+    confirmLabel: "💬 WhatsApp",
+    cancelLabel: "✉️ Email",
+    variant: "info",
+    icon: "📤",
+    showCloseButton: true,
+    onConfirm: () => {
+      if (!phone) {
+        showConfirmDialog({
+          title: "WhatsApp indisponible",
+          message: "Aucun numéro trouvé pour ce client (vérifie la fiche client).",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "warning",
+          icon: "⚠️"
+        });
+        return;
+      }
+      // ouvre le PDF
+      generatePDFRapportFromRecord(record, "preview");
+
+      // ouvre WhatsApp
+      const wa = phone.replace(/\D/g, "");
+      const url = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+      window.open(url, "_blank");
+    },
+    onCancel: () => {
+      if (!email) {
+        showConfirmDialog({
+          title: "Email indisponible",
+          message: "Aucune adresse email trouvée pour ce client (vérifie la fiche client).",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "warning",
+          icon: "⚠️"
+        });
+        return;
+      }
+      // ouvre le PDF
+      generatePDFRapportFromRecord(record, "preview");
+
+      // ouvre l’email
+      const subject = `Rapport d’intervention - ${record.clientName || ""} - ${frDate}`;
+      const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
+      window.location.href = mailto;
+    }
+  });
+}
+
+function transferRapportToClientCurrent() {
+  saveRapportFromForm();
+  transferRapportToClient(currentRapportId);
+}
+
+
 function generatePDFRapportFromRecord(record, mode = "print") {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert("Librairie jsPDF manquante.");
@@ -4896,6 +5178,10 @@ function openRapportPopupForEdit(rapportId) {
   const inp = document.getElementById("rapPhotosInput");
   if (inp) inp.onchange = onRapportPhotosSelected;
   _renderRapportPhotosPreview();
+currentRapportPhotosTemp = Array.isArray(rec.photos) ? rec.photos.slice() : [];
+currentRapportAttachmentsTemp = Array.isArray(rec.attachments) ? rec.attachments.slice() : [];
+renderRapportPhotosPreview();
+renderRapportFilesList();
 
   const overlay = document.getElementById("rapportPopup");
   if (!overlay) return;
@@ -18783,6 +19069,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
