@@ -13075,8 +13075,8 @@ function generateDevisFromContract(contract) {
   const label    = getContractLabel(poolType);
 
   const globalPeriod = formatContractGlobalPeriod(pr);
-  const clientName   = (c.name || "").trim();
-  const suffixClient = clientName ? " – " + clientName : "";
+const suffixClient = "";
+
 
   const subjectBase = globalPeriod
     ? `${label} – saison ${globalPeriod}`
@@ -17418,8 +17418,7 @@ function generateImmediateBilling(contract) {
   const number = getNextNumber("facture");
 
   const moisLabel    = monthYearFr(invoiceDateISO); // "décembre 2025"
-  const clientName   = (c.name || "").trim();
-  const suffixClient = clientName ? " – " + clientName : "";
+const suffixClient = "";
 
   // Type de service
   const poolType = pr.mainService || "";
@@ -18416,6 +18415,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
