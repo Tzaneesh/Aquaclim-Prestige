@@ -4747,7 +4747,48 @@ function generatePDFRapportFromRecord(record, mode = "print") {
       y += 5;
     });
   }
+  // ========= PHOTOS =========
+  const photos = Array.isArray(record.photos) ? record.photos : [];
+  if (photos.length) {
+    if (y > 250) { doc.addPage(); y = 20; }
 
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(25, 118, 210);
+    doc.text("Photos", 12, y);
+    y += 6;
+
+    const pageW = 210;
+    const marginX = 12;
+    const gap = 6;
+    const colW = (pageW - marginX * 2 - gap) / 2;
+    const imgH = 58;
+    let col = 0;
+
+    for (const p of photos) {
+      if (!p || !p.dataUrl) continue;
+
+      if (y + imgH > 275) {
+        doc.addPage();
+        y = 20;
+        col = 0;
+      }
+
+      const x = marginX + (col === 0 ? 0 : colW + gap);
+      try {
+        doc.addImage(p.dataUrl, "JPEG", x, y, colW, imgH, undefined, "FAST");
+      } catch (e) {
+        console.error("addImage photo rapport error:", e);
+      }
+
+      col = (col + 1) % 2;
+      if (col === 0) y += imgH + 6;
+    }
+
+    if (col !== 0) y += imgH + 6;
+  }
+
+    
   // ========= PIED =========
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
@@ -18729,6 +18770,7 @@ document.addEventListener("DOMContentLoaded", () => {
     processSyncQueue();
   }
 });
+
 
 
 
