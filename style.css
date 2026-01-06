@@ -1018,22 +1018,6 @@ textarea {
   font-size: 14px;
 }
 
-/* Fix alignement "Bon pour accord" (CONTRAT) */
-#ctSignatureWrapper > label{
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  gap:10px;
-  text-align:left;
-}
-
-#ctSignatureWrapper input[type="radio"]{
-  width:auto;
-  padding:0;
-  margin:0;
-  flex:0 0 auto;
-}
-
 
 /* Layout des lignes dans le contrat (on reste en flex dédié contrat) */
 #contractView .row {
@@ -3500,6 +3484,7 @@ textarea {
   margin: 0;
   flex: 0 0 auto;
 }
+
 
 
 
