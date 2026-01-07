@@ -18694,7 +18694,6 @@ function getCurrentAppView() {
 
 let signaturePad = null;
 
-
 // Ajuster la taille réelle du canvas (pour les écrans HDPI)
 function resizeSignatureCanvas() {
   const canvas = document.getElementById("signatureCanvas");
@@ -18703,7 +18702,6 @@ function resizeSignatureCanvas() {
   const ratio = window.devicePixelRatio || 1;
   const rect = canvas.getBoundingClientRect();
 
-  // on multiplie la taille réelle par le ratio
   canvas.width = rect.width * ratio;
   canvas.height = rect.height * ratio;
 
@@ -18711,10 +18709,10 @@ function resizeSignatureCanvas() {
   ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
 }
 
-// Ouvrir la popup de signature
-
+// Ouvrir la popup de signature (mode devis)
 function openSignaturePopup() {
-window.currentContractSignatureMode = false;
+  window.currentContractSignatureMode = false;
+
   const popup = document.getElementById("signaturePopup");
   const canvas = document.getElementById("signatureCanvas");
   if (!popup || !canvas) {
@@ -18723,8 +18721,6 @@ window.currentContractSignatureMode = false;
   }
 
   popup.classList.remove("hidden");
-
-  // ajuste le canvas avant d'initialiser SignaturePad
   resizeSignatureCanvas();
 
   signaturePad = new SignaturePad(canvas, {
@@ -18734,7 +18730,6 @@ window.currentContractSignatureMode = false;
 }
 
 // Enregistrer la signature dans le devis courant
-
 function saveSignatureToCurrentDocument(dataUrl) {
   if (!currentDocumentId) {
     showConfirmDialog({
@@ -18776,7 +18771,6 @@ function saveSignatureToCurrentDocument(dataUrl) {
     return;
   }
 
-  // ✅ On enregistre la signature + date du jour
   doc.signature = dataUrl;
   doc.signatureDate = new Date().toLocaleDateString("fr-FR");
 
@@ -18787,13 +18781,10 @@ function saveSignatureToCurrentDocument(dataUrl) {
     saveSingleDocumentToFirestore(doc);
   }
 
-  // ✅ On passe le devis en "Accepté" via la fonction centrale
-  //    → ça déclenche aussi la facturation du contrat lié
   if (typeof setDevisStatus === "function") {
     setDevisStatus(doc.id, "accepte");
   }
 
-  // Popup jolie au lieu du alert()
   showConfirmDialog({
     title: "Devis signé",
     message: "Signature enregistrée.\nLe devis est maintenant marqué comme accepté.",
@@ -18803,78 +18794,9 @@ function saveSignatureToCurrentDocument(dataUrl) {
     icon: "✅"
   });
 
-  // Rechargement de l'UI
-  if (typeof loadDocument === "function") {
-    loadDocument(doc.id);
-  }
-  if (typeof loadDocumentsList === "function") {
-    loadDocumentsList();
-  }
-
+  if (typeof loadDocument === "function") loadDocument(doc.id);
+  if (typeof loadDocumentsList === "function") loadDocumentsList();
 }
-
-
-// === Boutons de la popup ===
-
-document.addEventListener("DOMContentLoaded", () => {
-  const clearBtn = document.getElementById("signatureClear");
-  const validateBtn = document.getElementById("signatureValidate");
-  const approveRadio = document.getElementById("approveDevis");
-
-  // Bouton devis (inchangé)
-  if (approveRadio) {
-    approveRadio.addEventListener("click", () => {
-      openSignaturePopup();
-    });
-  }
-
-  // bouton Effacer
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      signaturePad?.clear();
-    });
-  }
-
-// bouton Fermer
-const closeBtn = document.getElementById("signatureClose");
-if (closeBtn) {
-  closeBtn.addEventListener("click", () => {
-    window.currentContractSignatureMode = false; // ✅ reset sécurité
-    document.getElementById("signaturePopup").classList.add("hidden");
-  });
-}
-
-
-  // BOUTON VALIDER UNIQUE
-  if (validateBtn) {
-    validateBtn.addEventListener("click", () => {
-      if (!signaturePad || signaturePad.isEmpty()) {
-        showConfirmDialog({
-          title: "Signature manquante",
-          message: "Merci de signer dans la zone prévue avant de valider.",
-          confirmLabel: "OK",
-          variant: "warning",
-          icon: "✍️"
-        });
-        return;
-      }
-
-      const dataUrl = signaturePad.toDataURL("image/png");
-
-      // 🔥🔥🔥 CONTRAT SYNDIC
-      if (window.currentContractSignatureMode) {
-        saveContractSignature(dataUrl);
-        window.currentContractSignatureMode = false;
-      }
-      else {
-        // 🔵 DEVIS (comportement original)
-        saveSignatureToCurrentDocument(dataUrl);
-      }
-
-      document.getElementById("signaturePopup").classList.add("hidden");
-    });
-  }
-});
 
 /* ======================
    SIGNATURE CONTRAT SYNDIC
@@ -18886,23 +18808,18 @@ function openContractSignature() {
   const canvas = document.getElementById("signatureCanvas");
   if (!popup || !canvas) return;
 
-  // on indique qu'on signe un CONTRAT (et pas un devis)
   window.currentContractSignatureMode = true;
 
-  // on affiche la popup
   popup.classList.remove("hidden");
-
-  // ajuste la taille réelle du canvas
   resizeSignatureCanvas();
 
-  // initialise SignaturePad
   signaturePad = new SignaturePad(canvas, {
     penColor: "black",
     backgroundColor: "rgba(0,0,0,0)"
   });
 }
 
-// 👉👉👉 FONCTION UNIQUE À GARDER POUR SAUVER LA SIGNATURE CONTRAT
+// Sauver la signature contrat
 function saveContractSignature(dataUrl) {
   if (!currentContractId) {
     showConfirmDialog({
@@ -18932,7 +18849,6 @@ function saveContractSignature(dataUrl) {
 
   const c = list[idx];
 
-  // 🔥 on stocke la signature DANS LE CONTRAT (syndic)
   c.signature = dataUrl;
   c.signatureDate = new Date().toLocaleDateString("fr-FR");
 
@@ -18943,7 +18859,6 @@ function saveContractSignature(dataUrl) {
     saveSingleContractToFirestore(c);
   }
 
-  // Recharge le formulaire contrat (affiche la signature si tu veux)
   fillContractForm(c);
 
   showConfirmDialog({
@@ -18987,33 +18902,9 @@ function syncContractsWithDevis(updatedDevis) {
   }
 }
 
-/* ---- On met à jour le dashboard dès que la page est chargée ---- */
-
-document.addEventListener("DOMContentLoaded", () => {
-  // Dashboard
-  if (typeof refreshHomeStats === "function") {
-    refreshHomeStats();
-  }
-renderClientsFollowup();
-
-
-  // 🧾 Fiche client : double-clic sur nom client
-  const docClientInput = document.getElementById("clientName");   // devis / factures
-  const ctClientInput  = document.getElementById("ctClientName"); // contrats
-
-  if (docClientInput) {
-    docClientInput.addEventListener("dblclick", () => {
-      openClientSheet(docClientInput.value);
-    });
-  }
-
-  if (ctClientInput) {
-    ctClientInput.addEventListener("dblclick", () => {
-      openClientSheet(ctClientInput.value);
-    });
-  }
-});
-
+/* ======================
+   FOLLOWUP TABLE
+====================== */
 
 function renderClientsFollowup() {
   const tbody = document.getElementById("followupClientsBody");
@@ -19028,18 +18919,16 @@ function renderClientsFollowup() {
     return;
   }
 
-  // regroupe par client
   const map = new Map();
   unpaid.forEach(f => {
     const name = (f?.client?.name || "").trim();
     if (!name) return;
 
     const amount = Number(f.totalTTC || 0);
-const lateMonths = _lateMonthsFromInvoiceDate(
-  f,
-  (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30)
-);
-
+    const lateMonths = _lateMonthsFromInvoiceDate(
+      f,
+      (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30)
+    );
 
     if (!map.has(name)) {
       map.set(name, {
@@ -19101,30 +18990,27 @@ function followupOpenInvoice(id) {
   }
 }
 
+/* ======================
+   AUTO YEARS + DATES
+====================== */
 
-// ==========================================
-// AUTO-GÉNÉRATION DES ANNÉES DOCUMENTS
-// ==========================================
 function fillYearMenu() {
-    const docs = getAllDocuments();
-    const select = document.getElementById("yearMenu");
-    if (!select) return;
+  const docs = getAllDocuments();
+  const select = document.getElementById("yearMenu");
+  if (!select) return;
 
-    const years = new Set(["2025", "2026", "2027"]);
+  const years = new Set(["2025", "2026", "2027"]);
 
-    docs.forEach(d => {
-        if (d.date) {
-            const y = d.date.split("-")[0];
-            years.add(y);
-        }
-    });
+  docs.forEach(d => {
+    if (d.date) years.add(d.date.split("-")[0]);
+  });
 
-    const sorted = Array.from(years).sort();
-    select.innerHTML = '<option value="all">Toutes</option>';
+  const sorted = Array.from(years).sort();
+  select.innerHTML = '<option value="all">Toutes</option>';
 
-    sorted.forEach(y => {
-        select.innerHTML += `<option value="${y}">${y}</option>`;
-    });
+  sorted.forEach(y => {
+    select.innerHTML += `<option value="${y}">${y}</option>`;
+  });
 }
 
 function autoFillDates() {
@@ -19133,14 +19019,9 @@ function autoFillDates() {
   });
 }
 
-// Appelé quand une popup ou un formulaire apparaît
-document.addEventListener("click", () => {
-  setTimeout(autoFillDates, 50);
-});
-
-
-
-// ================== INIT ==================
+/* ======================
+   INIT (tu gardes ton window.onload)
+====================== */
 
 window.onload = function () {
   loadCustomTemplates();
@@ -19149,31 +19030,18 @@ window.onload = function () {
   applyCompanySettingsToUI();
 
   setTVA(0);
-  if (typeof refreshClientDatalist === "function") {
-    refreshClientDatalist();
-  }
+  if (typeof refreshClientDatalist === "function") refreshClientDatalist();
+  if (typeof loadYearFilter === "function") loadYearFilter();
 
-  if (typeof loadYearFilter === "function") {
-    loadYearFilter();
-  }
+  if (typeof switchListType === "function") switchListType("devis");
+  if (typeof updateButtonColors === "function") updateButtonColors();
+  if (typeof showHome === "function") showHome();
 
-  // ⚡ Affichage immédiat des devis depuis localStorage
-  if (typeof switchListType === "function") {
-    switchListType("devis");
-  }
-  if (typeof updateButtonColors === "function") {
-    updateButtonColors();
-  }
-  if (typeof showHome === "function") {
-    showHome();
-  }
-
-  // 🔁 Factures d’échéance auto : seulement si TOUT est défini
   if (typeof checkScheduledInvoices === "function"
       && typeof countContractInstallmentInvoices === "function") {
     checkScheduledInvoices();
   }
-  // 🔒 Si l'utilisateur tape lui-même dans l'objet, on arrête la synchro auto
+
   const subjectInput = document.getElementById("docSubject");
   if (subjectInput && !subjectInput.dataset.boundManualFlag) {
     subjectInput.addEventListener("input", () => {
@@ -19182,21 +19050,16 @@ window.onload = function () {
     subjectInput.dataset.boundManualFlag = "1";
   }
 
-  // 🛰 Synchro Firebase en arrière-plan
   initFirebase();
 
-  if (typeof refreshHomeStats === "function") {
-    refreshHomeStats();
-  }
+  if (typeof refreshHomeStats === "function") refreshHomeStats();
 
-
-  // Contrats UI
-  if (typeof initContractsUI === "function") {
-    initContractsUI();
-  }
+  if (typeof initContractsUI === "function") initContractsUI();
 };
 
-// ================== GESTION ÉTAT RÉSEAU ==================
+/* ======================
+   NET STATE
+====================== */
 
 window.addEventListener("online", () => {
   console.log("[NET] Reconnexion détectée");
@@ -19215,27 +19078,102 @@ window.addEventListener("offline", () => {
   updateOfflineBadge();
 });
 
-// Si le DOM est prêt, on met à jour le badge une première fois
-document.addEventListener("DOMContentLoaded", () => {
-  updateOfflineBadge();
-  if (navigator.onLine && db) {
-    processSyncQueue();
-  }
+/* ======================
+   ✅ UN SEUL DOMContentLoaded
+====================== */
 
+document.addEventListener("DOMContentLoaded", () => {
+  // Anti double-bind (si tu recolle/merge)
+  if (document.body.dataset.domReadyBound === "1") return;
+  document.body.dataset.domReadyBound = "1";
+
+  // Badge + sync queue
+  updateOfflineBadge();
+  if (navigator.onLine && db) processSyncQueue();
+
+  // Rapport inputs
   const rapPhotos = document.getElementById("rapPhotosInput");
   if (rapPhotos) rapPhotos.addEventListener("change", _onRapportPhotosChange);
 
   const rapFiles = document.getElementById("rapFilesInput");
   if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
 
-  // 🚫 CONTRAT – Blocage TVA 20% si micro
+  // Dashboard + followup
+  if (typeof refreshHomeStats === "function") refreshHomeStats();
+  if (typeof renderClientsFollowup === "function") renderClientsFollowup();
+
+  // Double clic fiche client
+  const docClientInput = document.getElementById("clientName");
+  const ctClientInput  = document.getElementById("ctClientName");
+
+  if (docClientInput) {
+    docClientInput.addEventListener("dblclick", () => openClientSheet(docClientInput.value));
+  }
+  if (ctClientInput) {
+    ctClientInput.addEventListener("dblclick", () => openClientSheet(ctClientInput.value));
+  }
+
+  // Signature popup buttons
+  const clearBtn     = document.getElementById("signatureClear");
+  const validateBtn  = document.getElementById("signatureValidate");
+  const approveRadio = document.getElementById("approveDevis");
+  const closeBtn     = document.getElementById("signatureClose");
+
+  if (approveRadio) {
+    approveRadio.addEventListener("click", () => openSignaturePopup());
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => signaturePad?.clear());
+  }
+
+  if (closeBtn) {
+    closeBtn.addEventListener("click", () => {
+      window.currentContractSignatureMode = false;
+      document.getElementById("signaturePopup")?.classList.add("hidden");
+    });
+  }
+
+  if (validateBtn) {
+    validateBtn.addEventListener("click", () => {
+      if (!signaturePad || signaturePad.isEmpty()) {
+        showConfirmDialog({
+          title: "Signature manquante",
+          message: "Merci de signer dans la zone prévue avant de valider.",
+          confirmLabel: "OK",
+          variant: "warning",
+          icon: "✍️"
+        });
+        return;
+      }
+
+      const dataUrl = signaturePad.toDataURL("image/png");
+
+      if (window.currentContractSignatureMode) {
+        saveContractSignature(dataUrl);
+        window.currentContractSignatureMode = false;
+      } else {
+        saveSignatureToCurrentDocument(dataUrl);
+      }
+
+      document.getElementById("signaturePopup")?.classList.add("hidden");
+    });
+  }
+
+  // Auto-fill dates after any click (ton comportement inchangé)
+  document.addEventListener("click", () => {
+    setTimeout(autoFillDates, 50);
+  });
+
+  // 🚫 CONTRAT – Blocage TVA 20% si micro (si tu gardes enforceContractMicroTVA)
   const tvaInput = document.getElementById("tvaRate");
   if (tvaInput) {
     tvaInput.addEventListener("change", () => {
-      enforceContractMicroTVA();
+      if (typeof enforceContractMicroTVA === "function") enforceContractMicroTVA();
     });
   }
 });
+
 
 
 
