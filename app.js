@@ -1,3 +1,10 @@
+// ========= FORMAT MONNAIE GLOBAL =========
+function fmtMoney(v) {
+  return typeof formatEuro === "function"
+    ? formatEuro(v)
+    : Number(v || 0).toFixed(2) + " €";
+}
+
 
 /********************************************************************
  * 🔥  SYSTEME DE DATES (OBLIGATOIRE)
@@ -7,43 +14,43 @@
 
 // Vérifie si une date ISO YYYY-MM-DD est valide
 function isISO(date) {
-    return /^\d{4}-\d{2}-\d{2}$/.test(date);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date);
 }
 
 // Vérifie si une date FR DD-MM-YYYY est valide
 function isFR(date) {
-    return /^\d{2}-\d{2}-\d{4}$/.test(date);
+  return /^\d{2}-\d{2}-\d{4}$/.test(date);
 }
 
 // Convertit DD-MM-YYYY → YYYY-MM-DD
 function toISO(fr) {
-    if (!fr || !isFR(fr)) return fr;
-    const [d, m, y] = fr.split("-");
-    return `${y}-${m}-${d}`;
+  if (!fr || !isFR(fr)) return fr;
+  const [d, m, y] = fr.split("-");
+  return `${y}-${m}-${d}`;
 }
 
 // Convertit YYYY-MM-DD → DD-MM-YYYY
 function fromISO(iso) {
-    if (!iso || !isISO(iso)) return iso;
-    const [y, m, d] = iso.split("-");
-    return `${d}-${m}-${y}`;
+  if (!iso || !isISO(iso)) return iso;
+  const [y, m, d] = iso.split("-");
+  return `${d}-${m}-${y}`;
 }
 
 // Ajoute N mois à une date ISO
 function addMonths(iso, n) {
-    if (!isISO(iso)) return iso;
-    const d = new Date(iso + "T00:00:00");
-    d.setMonth(d.getMonth() + n);
-    return d.toISOString().slice(0, 10);
+  if (!isISO(iso)) return iso;
+  const d = new Date(iso + "T00:00:00");
+  d.setMonth(d.getMonth() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 // Renvoie la date de fin de mois
 function endOfMonthISO(iso) {
-    if (!isISO(iso)) return iso;
-    const d = new Date(iso + "T00:00:00");
-    d.setMonth(d.getMonth() + 1);
-    d.setDate(0);
-    return d.toISOString().slice(0, 10);
+  if (!isISO(iso)) return iso;
+  const d = new Date(iso + "T00:00:00");
+  d.setMonth(d.getMonth() + 1);
+  d.setDate(0);
+  return d.toISOString().slice(0, 10);
 }
 
 function compareISO(a, b) {
@@ -51,10 +58,9 @@ function compareISO(a, b) {
   return diff < 0 ? -1 : diff > 0 ? 1 : 0;
 }
 
-
 // Date d’aujourd’hui au format ISO
 function todayISO() {
-return formatDateYMD(new Date());
+  return formatDateYMD(new Date());
 }
 
 // ================== PARAMÈTRES ENTREPRISE ==================
@@ -73,7 +79,7 @@ function getDefaultCompanySettings() {
     ribHolder: "AquaClim Prestige – Le Blevennec Loïc",
     bankName: "Banque Fictive",
     iban: "FR76 1234 5678 9012 3456 7890 123",
-    bic: "FICTFRPPXXX"
+    bic: "FICTFRPPXXX",
   };
 }
 
@@ -99,29 +105,28 @@ function saveCompanySettings(settings) {
 function applyCompanySettingsToUI(settings) {
   const s = settings || getCompanySettings();
 
-  document.querySelectorAll(".js-company-name").forEach(el => {
+  document.querySelectorAll(".js-company-name").forEach((el) => {
     el.textContent = s.companyName;
   });
-  document.querySelectorAll(".js-company-subtitle").forEach(el => {
+  document.querySelectorAll(".js-company-subtitle").forEach((el) => {
     el.textContent = s.subtitle;
   });
-  document.querySelectorAll(".js-company-legal").forEach(el => {
+  document.querySelectorAll(".js-company-legal").forEach((el) => {
     el.textContent = s.legalName;
   });
-  document.querySelectorAll(".js-company-address").forEach(el => {
+  document.querySelectorAll(".js-company-address").forEach((el) => {
     el.textContent = s.address;
   });
-  document.querySelectorAll(".js-company-phone").forEach(el => {
+  document.querySelectorAll(".js-company-phone").forEach((el) => {
     el.textContent = s.phone;
   });
-  document.querySelectorAll(".js-company-email").forEach(el => {
+  document.querySelectorAll(".js-company-email").forEach((el) => {
     el.textContent = s.email;
   });
-  document.querySelectorAll(".js-company-siret").forEach(el => {
+  document.querySelectorAll(".js-company-siret").forEach((el) => {
     el.textContent = s.siret;
   });
 }
-
 
 // ================== CONSTANTES / MODÈLES ==================
 
@@ -134,7 +139,7 @@ const PRESTATION_TEMPLATES = [
     priceParticulier: null,
     priceSyndic: null,
     descParticulier: "",
-    descSyndic: ""
+    descSyndic: "",
   },
 
   // 1. Entretien climatisation
@@ -147,46 +152,46 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Nettoyage filtres, turbine, évaporateur et bac à condensats. Contrôle évacuation et nettoyage groupe extérieur.",
     descSyndic:
-      "Nettoyage complet intérieur/extérieur, contrôle évacuation, désinfection et vérification installation. Contrôle températures et rapport gestionnaire."
+      "Nettoyage complet intérieur/extérieur, contrôle évacuation, désinfection et vérification installation. Contrôle températures et rapport gestionnaire.",
   },
 
   // 2. Entretien piscine chlore
   {
-     label: "Entretien piscine chlore",
-  kind: "piscine_chlore",
-  title: "Entretien piscine chlore",
-  priceParticulier: 80,
-  priceSyndic: 100,
+    label: "Entretien piscine chlore",
+    kind: "piscine_chlore",
+    title: "Entretien piscine chlore",
+    priceParticulier: 80,
+    priceSyndic: 100,
     descParticulier:
       "Analyse de l’eau, nettoyage bassin, contrôle filtration, rinçage et ajustement traitement.",
     descSyndic:
-      "Analyse complète, nettoyage bassin, contrôle local technique, pression filtre, rinçage, vérification pompe et rapport gestionnaire."
+      "Analyse complète, nettoyage bassin, contrôle local technique, pression filtre, rinçage, vérification pompe et rapport gestionnaire.",
   },
 
   // 3. Entretien piscine sel
   {
-     label: "Entretien piscine sel",
-  kind: "piscine_sel",
-  title: "Entretien piscine sel",
-  priceParticulier: 80,
-  priceSyndic: 100,
+    label: "Entretien piscine sel",
+    kind: "piscine_sel",
+    title: "Entretien piscine sel",
+    priceParticulier: 80,
+    priceSyndic: 100,
     descParticulier:
       "Analyse eau, nettoyage bassin, contrôle cellule électrolyse, pompe et filtration. Réglage production de sel.",
     descSyndic:
-      "Analyse complète, nettoyage, contrôle cellule et production, vérification filtration, réglages boîtier et rapport gestionnaire."
+      "Analyse complète, nettoyage, contrôle cellule et production, vérification filtration, réglages boîtier et rapport gestionnaire.",
   },
 
   // 4. Entretien jacuzzi
   {
-     label: "Entretien jacuzzi / spa",
-  kind: "entretien_jacuzzi",
-  title: "Entretien jacuzzi / spa",
-  priceParticulier: 80,
-  priceSyndic: 100,
+    label: "Entretien jacuzzi / spa",
+    kind: "entretien_jacuzzi",
+    title: "Entretien jacuzzi / spa",
+    priceParticulier: 80,
+    priceSyndic: 100,
     descParticulier:
       "Nettoyage spa, filtres, contrôle eau, désinfection buses et vérification pompe/chauffage.",
     descSyndic:
-      "Nettoyage complet, analyse eau, désinfection, contrôle installation, pompes/chauffage et rapport gestionnaire."
+      "Nettoyage complet, analyse eau, désinfection, contrôle installation, pompes/chauffage et rapport gestionnaire.",
   },
 
   // 5. Hivernage piscine
@@ -199,7 +204,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Nettoyage, baisse niveau eau, ajout produit d’hivernage et sécurisation local technique.",
     descSyndic:
-      "Nettoyage complet, abaissement contrôlé, purge éventuelle, sécurisation local technique et rapport gestionnaire."
+      "Nettoyage complet, abaissement contrôlé, purge éventuelle, sécurisation local technique et rapport gestionnaire.",
   },
 
   // 6. Remise en service piscine
@@ -212,7 +217,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Nettoyage, remise en route filtration, analyse eau et réglages nécessaires.",
     descSyndic:
-      "Redémarrage complet, analyse et réglages, contrôle local technique, étanchéité et rapport gestionnaire."
+      "Redémarrage complet, analyse et réglages, contrôle local technique, étanchéité et rapport gestionnaire.",
   },
 
   // 7. Vidange + nettoyage jacuzzi
@@ -225,7 +230,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Vidange complète, nettoyage cuve/buses, nettoyage filtre, remise en eau et équilibrage.",
     descSyndic:
-      "Vidange complète, nettoyage cuve/buses, remise en eau, équilibrage et rapport gestionnaire."
+      "Vidange complète, nettoyage cuve/buses, remise en eau, équilibrage et rapport gestionnaire.",
   },
 
   // 8. Traitement choc piscine
@@ -238,7 +243,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Application traitement choc, remise en route filtration et rinçage après clarification.",
     descSyndic:
-      "Traitement adapté, suivi filtration, analyse après traitement, rinçage filtre et rapport gestionnaire."
+      "Traitement adapté, suivi filtration, analyse après traitement, rinçage filtre et rapport gestionnaire.",
   },
 
   // 9. Changement sable / charge filtre
@@ -251,7 +256,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Vidange filtre, remplacement charge, rinçage et remise en service.",
     descSyndic:
-      "Vidange complète, nettoyage cuve, contrôle crépines, remplacement charge, rinçage et rapport gestionnaire."
+      "Vidange complète, nettoyage cuve, contrôle crépines, remplacement charge, rinçage et rapport gestionnaire.",
   },
 
   // 10. Remplacement roulement pompe piscine
@@ -263,7 +268,7 @@ const PRESTATION_TEMPLATES = [
     priceSyndic: 220,
     descParticulier: "Remplacement roulements pompe.",
     descSyndic:
-      "Démontage, extraction, remplacement roulement, remontage, test et rapport technicien."
+      "Démontage, extraction, remplacement roulement, remontage, test et rapport technicien.",
   },
 
   // 11. Remplacement pompe piscine (MO)
@@ -275,7 +280,7 @@ const PRESTATION_TEMPLATES = [
     priceSyndic: 180,
     descParticulier: "Remplacement pompe",
     descSyndic:
-      "Dépose/installation, raccordement, réglages et rapport technicien."
+      "Dépose/installation, raccordement, réglages et rapport technicien.",
   },
 
   // 12. Remplacement cellule électrolyseur (MO)
@@ -287,7 +292,7 @@ const PRESTATION_TEMPLATES = [
     priceSyndic: 150,
     descParticulier: "Remplacement cellule, contrôle étanchéité.",
     descSyndic:
-      "Dépose/installation, test production, réglages, contrôle étanchéité et rapport."
+      "Dépose/installation, test production, réglages, contrôle étanchéité et rapport.",
   },
 
   // 13. Nettoyage local technique
@@ -300,7 +305,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Nettoyage local technique, dépoussiérage et contrôle humidité.",
     descSyndic:
-      "Nettoyage complet, dégagement accès appareils, contrôle matériel, ventilation et rapport gestionnaire."
+      "Nettoyage complet, dégagement accès appareils, contrôle matériel, ventilation et rapport gestionnaire.",
   },
 
   // 14. Déplacement
@@ -311,7 +316,7 @@ const PRESTATION_TEMPLATES = [
     priceParticulier: 50,
     priceSyndic: 50,
     descParticulier: "Forfait déplacement.",
-    descSyndic: "Forfait déplacement."
+    descSyndic: "Forfait déplacement.",
   },
 
   // 15. Dépannage climatisation
@@ -324,7 +329,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Diagnostic, tests électriques, vérification soufflage et remise en service si possible. Hors pièces.",
     descSyndic:
-      "Diagnostic complet, contrôle composants, sécurités, soufflage et rapport gestionnaire. Hors pièces."
+      "Diagnostic complet, contrôle composants, sécurités, soufflage et rapport gestionnaire. Hors pièces.",
   },
 
   // 16. Dépannage piscine
@@ -337,7 +342,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Diagnostic installation, filtration, pompe, vanne et accessoires. Hors pièces.",
     descSyndic:
-      "Diagnostic complet : pompe, filtration, électrolyse, tests fuite/pression et rapport gestionnaire. Hors pièces."
+      "Diagnostic complet : pompe, filtration, électrolyse, tests fuite/pression et rapport gestionnaire. Hors pièces.",
   },
 
   // 17. Dépannage jacuzzi
@@ -350,7 +355,7 @@ const PRESTATION_TEMPLATES = [
     descParticulier:
       "Diagnostic panne : pompe, chauffage, fuite, carte. Tests électriques et hydrauliques. Hors pièces.",
     descSyndic:
-      "Diagnostic complet, tests électriques/hydrauliques, recherche fuite/défaut et rapport gestionnaire. Hors pièces."
+      "Diagnostic complet, tests électriques/hydrauliques, recherche fuite/défaut et rapport gestionnaire. Hors pièces.",
   },
 
   // 18. Produits
@@ -361,7 +366,7 @@ const PRESTATION_TEMPLATES = [
     priceParticulier: 0,
     priceSyndic: 0,
     descParticulier: "",
-    descSyndic: ""
+    descSyndic: "",
   },
 
   // 19. Fournitures
@@ -372,14 +377,14 @@ const PRESTATION_TEMPLATES = [
     priceParticulier: 0,
     priceSyndic: 0,
     descParticulier: "",
-    descSyndic: ""
-  }
+    descSyndic: "",
+  },
 ];
 
 /* ================== RAPPORTS (TEMPLATES) ================== */
 
 const RAPPORT_TEMPLATES = [
-   {
+  {
     id: "entretien_clim",
     label: "Entretien climatisation",
     showAnalysis: false,
@@ -392,8 +397,8 @@ const RAPPORT_TEMPLATES = [
           "Nettoyage des turbines",
           "Nettoyage du carter / façade",
           "Vérification de l’écoulement des condensats",
-          "Contrôle des fixations"
-        ]
+          "Contrôle des fixations",
+        ],
       },
       {
         title: "Unité extérieure",
@@ -402,8 +407,8 @@ const RAPPORT_TEMPLATES = [
           "Dépoussiérage complet",
           "Contrôle du ventilateur externe",
           "Contrôle des fixations et silentblocs",
-          "Contrôle des liaisons frigorifiques"
-        ]
+          "Contrôle des liaisons frigorifiques",
+        ],
       },
       {
         title: "Contrôles électriques & fonctionnement",
@@ -413,10 +418,10 @@ const RAPPORT_TEMPLATES = [
           "Vérification tensions / intensités",
           "Test des différents modes chaud / froid",
           "Mesure soufflage / reprise",
-          "Test global de fonctionnement"
-        ]
-      }
-    ]
+          "Test global de fonctionnement",
+        ],
+      },
+    ],
   },
   {
     id: "depannage_clim",
@@ -431,8 +436,8 @@ const RAPPORT_TEMPLATES = [
           "Lecture codes défauts / voyants",
           "Contrôle des flux d'air",
           "Recherche de bruits anormaux",
-          "Contrôle de la température soufflée"
-        ]
+          "Contrôle de la température soufflée",
+        ],
       },
       {
         title: "Tests électriques & composants",
@@ -441,8 +446,8 @@ const RAPPORT_TEMPLATES = [
           "Contrôle des protections / disjoncteurs",
           "Test du ventilateur",
           "Vérification du compresseur",
-          "Vérification des sondes"
-        ]
+          "Vérification des sondes",
+        ],
       },
       {
         title: "Actions réalisées",
@@ -451,18 +456,18 @@ const RAPPORT_TEMPLATES = [
           "Nettoyage partiel si nécessaire",
           "Correction du paramétrage",
           "Réparation / remplacement d’éléments",
-          "Tests finaux de fonctionnement"
-        ]
+          "Tests finaux de fonctionnement",
+        ],
       },
       {
         title: "Recommandations",
         items: [
           "Conseils d'entretien",
           "Recommandation d'un entretien complet",
-          "Conseils d'utilisation optimale"
-        ]
-      }
-    ]
+          "Conseils d'utilisation optimale",
+        ],
+      },
+    ],
   },
 
   {
@@ -472,10 +477,7 @@ const RAPPORT_TEMPLATES = [
     sections: [
       {
         title: "Type de traitement",
-        items: [
-          "Piscine au chlore",
-          "Piscine au sel"
-        ]
+        items: ["Piscine au chlore", "Piscine au sel"],
       },
       {
         title: "Préfiltration & skimmers",
@@ -483,8 +485,8 @@ const RAPPORT_TEMPLATES = [
           "Nettoyage du panier de skimmer",
           "Nettoyage du panier de pompe",
           "Nettoyage du filtre de skimmer",
-          "Contrôle du niveau d’eau"
-        ]
+          "Contrôle du niveau d’eau",
+        ],
       },
       {
         title: "Nettoyage du bassin",
@@ -493,8 +495,8 @@ const RAPPORT_TEMPLATES = [
           "Épuisette fond",
           "Brossage des parois",
           "Brossage ligne d’eau",
-          "Passage aspirateur manuel / robot"
-        ]
+          "Passage aspirateur manuel / robot",
+        ],
       },
       {
         title: "Filtration",
@@ -503,8 +505,8 @@ const RAPPORT_TEMPLATES = [
           "Contre-lavage du filtre (si sable)",
           "Rinçage filtre",
           "Nettoyage filtre cartouche (si applicable)",
-          "Contrôle absence de fuites hydraulique"
-        ]
+          "Contrôle absence de fuites hydraulique",
+        ],
       },
       {
         title: "Traitement & analyse",
@@ -515,8 +517,8 @@ const RAPPORT_TEMPLATES = [
           "Correction du désinfectant si nécessaire",
           "Contrôle du stabilisant (si chlore)",
           "Contrôle du TAC",
-          "Réglage électrolyseur (si piscine au sel)"
-        ]
+          "Réglage électrolyseur (si piscine au sel)",
+        ],
       },
       {
         title: "Local technique & sécurité",
@@ -524,10 +526,10 @@ const RAPPORT_TEMPLATES = [
           "Contrôle visuel local technique",
           "Contrôle coffret électrique",
           "Contrôle programmation filtration",
-          "Contrôle général de sécurité"
-        ]
-      }
-    ]
+          "Contrôle général de sécurité",
+        ],
+      },
+    ],
   },
 
   {
@@ -542,8 +544,8 @@ const RAPPORT_TEMPLATES = [
           "Nettoyage paniers skimmer",
           "Nettoyage panier pompe",
           "Épuisette surface / fond",
-          "Brossage des parois"
-        ]
+          "Brossage des parois",
+        ],
       },
       {
         title: "Traitement choc",
@@ -551,8 +553,8 @@ const RAPPORT_TEMPLATES = [
           "Ajout du produit choc (chlore / sel / oxygène actif)",
           "Ajout de floculant si nécessaire",
           "Augmentation temps de filtration",
-          "Activation filtration manuelle"
-        ]
+          "Activation filtration manuelle",
+        ],
       },
       {
         title: "Analyse & corrections",
@@ -560,17 +562,17 @@ const RAPPORT_TEMPLATES = [
           "Contrôle du pH avant treatment",
           "Correction du pH",
           "Contrôle redox / chlore après traitement",
-          "Contrôle salinité (si sel)"
-        ]
+          "Contrôle salinité (si sel)",
+        ],
       },
       {
         title: "Suivi",
         items: [
           "Conseils au client post-traitement",
-          "Planification d’un contrôle de suivi si nécessaire"
-        ]
-      }
-    ]
+          "Planification d’un contrôle de suivi si nécessaire",
+        ],
+      },
+    ],
   },
 
   {
@@ -584,8 +586,8 @@ const RAPPORT_TEMPLATES = [
           "Contrôle circulation eau",
           "Contrôle refoulements / skimmers",
           "Recherche de fuites hydrauliques",
-          "Contrôle des niveaux"
-        ]
+          "Contrôle des niveaux",
+        ],
       },
       {
         title: "Préfiltre & aspiration",
@@ -593,8 +595,8 @@ const RAPPORT_TEMPLATES = [
           "Vérification panier pompe",
           "Contrôle étanchéité du couvercle",
           "Contrôle tuyauterie aspiration",
-          "Recherche prise d’air éventuelle"
-        ]
+          "Recherche prise d’air éventuelle",
+        ],
       },
       {
         title: "Filtration",
@@ -604,8 +606,8 @@ const RAPPORT_TEMPLATES = [
           "Contrôle crépines (si possible)",
           "Contrôle filtre cartouche (si applicable)",
           "Contrôle vanne 6 voies",
-          "Contrôle absence de fuites"
-        ]
+          "Contrôle absence de fuites",
+        ],
       },
       {
         title: "Pompe de filtration",
@@ -613,8 +615,8 @@ const RAPPORT_TEMPLATES = [
           "Contrôle bruit / vibration",
           "Contrôle débit",
           "Contrôle présence bulles d’air",
-          "Vérification amorçage"
-        ]
+          "Vérification amorçage",
+        ],
       },
       {
         title: "Équipements annexes",
@@ -622,18 +624,18 @@ const RAPPORT_TEMPLATES = [
           "Contrôle électrolyseur",
           "Contrôle régulation pH",
           "Contrôle PAC (si présente)",
-          "Contrôle coffret électrique"
-        ]
+          "Contrôle coffret électrique",
+        ],
       },
       {
         title: "Recommandations",
         items: [
           "Actions suggérées au client",
           "Remplacement / entretien recommandé",
-          "Conseils sécurité / usage"
-        ]
-      }
-    ]
+          "Conseils sécurité / usage",
+        ],
+      },
+    ],
   },
 
   {
@@ -647,8 +649,8 @@ const RAPPORT_TEMPLATES = [
           "Prise en compte du problème signalé",
           "Contrôle local technique",
           "Analyse bruit / vibration",
-          "Contrôle coffret électrique"
-        ]
+          "Contrôle coffret électrique",
+        ],
       },
       {
         title: "Recherche de panne",
@@ -657,8 +659,8 @@ const RAPPORT_TEMPLATES = [
           "Contrôle absence de fuite",
           "Contrôle vanne 6 voies",
           "Contrôle pression filtre",
-          "Tests aspiration / refoulement"
-        ]
+          "Tests aspiration / refoulement",
+        ],
       },
       {
         title: "Actions réalisées",
@@ -667,18 +669,18 @@ const RAPPORT_TEMPLATES = [
           "Nettoyage préfiltre",
           "Réparation hydraulique mineure",
           "Correction câblage / connexion",
-          "Remplacement élément défectueux"
-        ]
+          "Remplacement élément défectueux",
+        ],
       },
       {
         title: "Recommandations",
         items: [
           "Conseils d’usage",
           "Avertissement sur usure",
-          "Recommandation d’un entretien régulier"
-        ]
-      }
-    ]
+          "Recommandation d’un entretien régulier",
+        ],
+      },
+    ],
   },
 
   {
@@ -692,8 +694,8 @@ const RAPPORT_TEMPLATES = [
           "Coupure alimentation",
           "Déconnexion hydraulique",
           "Déconnexion électrique",
-          "Démontage pompe / moteur"
-        ]
+          "Démontage pompe / moteur",
+        ],
       },
       {
         title: "Remplacement des roulements",
@@ -701,8 +703,8 @@ const RAPPORT_TEMPLATES = [
           "Extraction des anciens roulements",
           "Nettoyage arbre moteur",
           "Mise en place nouveaux roulements",
-          "Graissage si nécessaire"
-        ]
+          "Graissage si nécessaire",
+        ],
       },
       {
         title: "Remontage & tests",
@@ -712,10 +714,10 @@ const RAPPORT_TEMPLATES = [
           "Raccordements électriques",
           "Test en charge",
           "Contrôle absence de vibration",
-          "Contrôle absence de fuite"
-        ]
-      }
-    ]
+          "Contrôle absence de fuite",
+        ],
+      },
+    ],
   },
 
   {
@@ -729,8 +731,8 @@ const RAPPORT_TEMPLATES = [
           "Coupure alimentation",
           "Vidange partielle si nécessaire",
           "Démontage raccords hydrauliques",
-          "Déconnexion électrique"
-        ]
+          "Déconnexion électrique",
+        ],
       },
       {
         title: "Installation nouvelle pompe",
@@ -739,8 +741,8 @@ const RAPPORT_TEMPLATES = [
           "Alignement et réglages",
           "Collage / raccordement PVC",
           "Branchement électrique",
-          "Sécurisation installation"
-        ]
+          "Sécurisation installation",
+        ],
       },
       {
         title: "Essais",
@@ -749,10 +751,10 @@ const RAPPORT_TEMPLATES = [
           "Contrôle débit",
           "Contrôle fuite / suintement",
           "Contrôle bruit / vibration",
-          "Contrôle fonctionnement filtration"
-        ]
-      }
-    ]
+          "Contrôle fonctionnement filtration",
+        ],
+      },
+    ],
   },
 
   {
@@ -766,8 +768,8 @@ const RAPPORT_TEMPLATES = [
           "Vidange partielle installation",
           "Découpe PVC existant",
           "Nettoyage zone de travail",
-          "Mise en sécurité"
-        ]
+          "Mise en sécurité",
+        ],
       },
       {
         title: "Pose & collage PVC",
@@ -775,8 +777,8 @@ const RAPPORT_TEMPLATES = [
           "Mise en place nouvelles vannes / raccords",
           "Collage PVC sous pression",
           "Respect temps de séchage",
-          "Mise en pression progressive"
-        ]
+          "Mise en pression progressive",
+        ],
       },
       {
         title: "Ventilation / aménagement local",
@@ -784,18 +786,18 @@ const RAPPORT_TEMPLATES = [
           "Installation grille / extracteur d’air",
           "Aération améliorée du local technique",
           "Nettoyage & organisation local",
-          "Contrôle sécurité électrique"
-        ]
+          "Contrôle sécurité électrique",
+        ],
       },
       {
         title: "Tests finaux",
         items: [
           "Contrôle absence de fuite",
           "Contrôle circulation eau",
-          "Validation fonctionnement complet"
-        ]
-      }
-    ]
+          "Validation fonctionnement complet",
+        ],
+      },
+    ],
   },
 
   {
@@ -810,8 +812,8 @@ const RAPPORT_TEMPLATES = [
           "Nettoyage de la cuve",
           "Nettoyage du couvercle / capot",
           "Nettoyage des filtres",
-          "Nettoyage des repose-têtes"
-        ]
+          "Nettoyage des repose-têtes",
+        ],
       },
       {
         title: "Hydromassage & circulation",
@@ -819,8 +821,8 @@ const RAPPORT_TEMPLATES = [
           "Contrôle fonctionnement buses hydromassage",
           "Contrôle pompe de circulation",
           "Contrôle absence de fuites",
-          "Contrôle niveau d’eau"
-        ]
+          "Contrôle niveau d’eau",
+        ],
       },
       {
         title: "Traitement & désinfection",
@@ -828,8 +830,8 @@ const RAPPORT_TEMPLATES = [
           "Mesure pH",
           "Correction pH",
           "Traitement désinfectant (chlore / brome)",
-          "Ajout produit anti-calcaire / clarifiant si nécessaire"
-        ]
+          "Ajout produit anti-calcaire / clarifiant si nécessaire",
+        ],
       },
       {
         title: "Contrôles techniques",
@@ -837,10 +839,10 @@ const RAPPORT_TEMPLATES = [
           "Contrôle tableau de commande",
           "Contrôle chauffage",
           "Contrôle capteurs / sondes",
-          "Contrôle éclairage"
-        ]
-      }
-    ]
+          "Contrôle éclairage",
+        ],
+      },
+    ],
   },
   {
     id: "vidange_jacuzzi",
@@ -854,8 +856,8 @@ const RAPPORT_TEMPLATES = [
           "Vidange complète du spa",
           "Vidange canalisations si nécessaire",
           "Nettoyage complet de la cuve",
-          "Nettoyage ligne d’eau"
-        ]
+          "Nettoyage ligne d’eau",
+        ],
       },
       {
         title: "Entretien & remise en eau",
@@ -864,8 +866,8 @@ const RAPPORT_TEMPLATES = [
           "Remplissage du spa",
           "Purge circulation eau",
           "Traitement désinfectant initial",
-          "Réglage température"
-        ]
+          "Réglage température",
+        ],
       },
       {
         title: "Contrôles finaux",
@@ -873,10 +875,10 @@ const RAPPORT_TEMPLATES = [
           "Test fonctionnement hydromassage",
           "Test pompe de circulation",
           "Test chauffage",
-          "Test éclairage"
-        ]
-      }
-    ]
+          "Test éclairage",
+        ],
+      },
+    ],
   },
   {
     id: "installation_electrolyseur",
@@ -889,8 +891,8 @@ const RAPPORT_TEMPLATES = [
           "Dépose ancienne cellule si présente",
           "Nettoyage zone de travail",
           "Découpe PVC existant",
-          "Mise en sécurité électrique"
-        ]
+          "Mise en sécurité électrique",
+        ],
       },
       {
         title: "Pose électrolyseur",
@@ -899,8 +901,8 @@ const RAPPORT_TEMPLATES = [
           "Raccordements PVC",
           "Collage et séchage",
           "Branchement électrique sécurisée",
-          "Paramétrage de la production"
-        ]
+          "Paramétrage de la production",
+        ],
       },
       {
         title: "Tests & réglages",
@@ -909,10 +911,10 @@ const RAPPORT_TEMPLATES = [
           "Contrôle absence de fuite",
           "Contrôle circulation eau",
           "Réglage horloge / mode boost",
-          "Explication de fonctionnement au client"
-        ]
-      }
-    ]
+          "Explication de fonctionnement au client",
+        ],
+      },
+    ],
   },
   {
     id: "installation_pompe_pac",
@@ -925,8 +927,8 @@ const RAPPORT_TEMPLATES = [
           "Coupure alimentation",
           "Vidange partielle installation",
           "Dépose ancienne pompe",
-          "Déconnexion hydraulique et électrique"
-        ]
+          "Déconnexion hydraulique et électrique",
+        ],
       },
       {
         title: "Installation nouvelle pompe",
@@ -935,8 +937,8 @@ const RAPPORT_TEMPLATES = [
           "Alignement et niveau",
           "Raccordements PVC",
           "Branchement électrique",
-          "Contrôle débit"
-        ]
+          "Contrôle débit",
+        ],
       },
       {
         title: "Installation PAC",
@@ -945,8 +947,8 @@ const RAPPORT_TEMPLATES = [
           "Raccordements hydrauliques By-pass",
           "Raccordements électriques",
           "Mise en service PAC",
-          "Contrôle montée en température"
-        ]
+          "Contrôle montée en température",
+        ],
       },
       {
         title: "Tests finaux",
@@ -954,10 +956,10 @@ const RAPPORT_TEMPLATES = [
           "Contrôle absence de fuite",
           "Contrôle bruit / vibration",
           "Contrôle fonctionnement global",
-          "Explication client"
-        ]
-      }
-    ]
+          "Explication client",
+        ],
+      },
+    ],
   },
 ];
 
@@ -970,8 +972,6 @@ let prestationCount = 0;
 let currentListType = "devis"; // "devis", "facture" ou "contrat"
 // Source éventuelle d'une attestation (facture liée)
 let currentAttestationSource = null;
-
-
 
 // Firebase Firestore
 let db = null;
@@ -1002,7 +1002,7 @@ function enqueueSync(op) {
   const queue = getSyncQueue();
   queue.push({
     ...op,
-    ts: Date.now()
+    ts: Date.now(),
   });
   saveSyncQueue(queue);
   updateOfflineBadge();
@@ -1079,7 +1079,6 @@ async function processSyncQueue() {
   updateOfflineBadge();
 }
 
-
 // ================== FIREBASE / SYNC ==================
 
 async function initFirebase() {
@@ -1094,7 +1093,7 @@ async function initFirebase() {
     projectId: "aquaclim-prestige-e70d6",
     storageBucket: "aquaclim-prestige-e70d6.firebasestorage.app",
     messagingSenderId: "305566055348",
-    appId: "1:305566055348:web:175c174c115ca457bd50e1"
+    appId: "1:305566055348:web:175c174c115ca457bd50e1",
   };
 
   if (firebase.apps.length === 0) {
@@ -1130,7 +1129,6 @@ async function initFirebase() {
 
     // 3️⃣ SYNC CLIENTS
     await syncClientsWithFirestore();
-
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
@@ -1159,8 +1157,6 @@ async function initFirebase() {
     processSyncQueue();
   }
 }
-
-
 
 // ================== GESTION CLIENTS ==================
 function getClients() {
@@ -1210,7 +1206,6 @@ function refreshClientDatalist() {
   });
 }
 
-
 // ================== FICHE CLIENT (POPUP 360) ==================
 
 function _normName(s) {
@@ -1222,11 +1217,9 @@ function _normName(s) {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-
-
-
 function _escapeHtml(str) {
-  return (str || "").toString()
+  return (str || "")
+    .toString()
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -1253,19 +1246,23 @@ function _getClientByName(name) {
   const n = _normName(name);
   if (!n) return null;
   const clients = getClients();
-  return clients.find(c => _normName(c.name) === n) || null;
+  return clients.find((c) => _normName(c.name) === n) || null;
 }
 
 function _getDocsByClientName(name) {
   const n = _normName(name);
   if (!n) return [];
-  return (getAllDocuments() || []).filter(d => _normName(d?.client?.name) === n);
+  return (getAllDocuments() || []).filter(
+    (d) => _normName(d?.client?.name) === n,
+  );
 }
 
 function _getContractsByClientName(name) {
   const n = _normName(name);
   if (!n) return [];
-  return (getAllContracts() || []).filter(c => _normName(c?.client?.name) === n);
+  return (getAllContracts() || []).filter(
+    (c) => _normName(c?.client?.name) === n,
+  );
 }
 
 function closeClientSheet() {
@@ -1273,7 +1270,10 @@ function closeClientSheet() {
   if (el) el.remove();
 }
 function _cleanPhoneForTel(phone) {
-  return (phone || "").toString().trim().replace(/[.\-\s]/g, "");
+  return (phone || "")
+    .toString()
+    .trim()
+    .replace(/[.\-\s]/g, "");
 }
 
 function openGoogleMapsItinerary(address) {
@@ -1281,50 +1281,23 @@ function openGoogleMapsItinerary(address) {
   if (!a) return;
   const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`;
   openPdfViewer(url);
-
 }
 
 function _normalizePhoneForWA(phone) {
   if (!phone) return "";
-  let p = String(phone).trim().replace(/[.\-\s]/g, "");
+  let p = String(phone)
+    .trim()
+    .replace(/[.\-\s]/g, "");
   if (p.startsWith("0")) p = "33" + p.slice(1);
   p = p.replace(/^\+/, "");
   return p;
 }
 
-function _isSyndicInvoice(f) {
-  const t = (f?.client?.type || f?.client?.clientType || f?.conditionsType || "").toString().toLowerCase();
-  return t.includes("syndic") || t.includes("agence");
-}
-
-function _dueDateFromInvoice(f, delaiJours = 30) {
-  if (!f?.date) return null;
-
-  const inv = new Date(f.date + "T00:00:00");
-  if (isNaN(inv.getTime())) return null;
-
-  // ✅ SYNDIC = 30 jours fin de mois
-  if (_isSyndicInvoice(f)) {
-    const endMonth = new Date(inv);
-    endMonth.setMonth(endMonth.getMonth() + 1);
-    endMonth.setDate(0); // dernier jour du mois de la facture
-    endMonth.setHours(0, 0, 0, 0);
-
-    const due = new Date(endMonth);
-    due.setDate(due.getDate() + delaiJours);
-    return due;
-  }
-
-  // ✅ Particulier = date facture + délai
-  const due = new Date(inv);
-  due.setDate(due.getDate() + delaiJours);
-  due.setHours(0, 0, 0, 0);
-  return due;
-}
 
 // Calcule le retard en mois (basé sur date d'échéance réelle)
 // ✅ Particulier : date facture + délai
 // ✅ Syndic/Agence : 30 jours fin de mois + délai
+
 function _lateMonthsFromInvoiceDate(fOrDate, delaiJours = 30) {
   let due = null;
 
@@ -1355,11 +1328,12 @@ function _lateMonthsFromInvoiceDate(fOrDate, delaiJours = 30) {
   return Math.max(1, Math.floor(diffDays / 30));
 }
 
-
 /** ✅ Enregistre une relance dans la facture (meta.relances[]) */
 function _addRelanceToInvoice(invoiceNumber, canal) {
   const docs = getAllDocuments() || [];
-  const idx = docs.findIndex(d => d.type === "facture" && d.number === invoiceNumber);
+  const idx = docs.findIndex(
+    (d) => d.type === "facture" && d.number === invoiceNumber,
+  );
   if (idx < 0) return;
 
   const f = docs[idx];
@@ -1368,7 +1342,7 @@ function _addRelanceToInvoice(invoiceNumber, canal) {
 
   f.meta.relances.push({
     date: new Date().toISOString().slice(0, 10),
-    canal
+    canal,
   });
 
   if (typeof saveDocuments === "function") {
@@ -1378,11 +1352,12 @@ function _addRelanceToInvoice(invoiceNumber, canal) {
   }
 }
 
-
 /** ✅ Ajoute l'indemnité forfaitaire 40€ (L441-10) UNE SEULE FOIS */
 function _addIndemnite40(invoiceNumber) {
   const docs = getAllDocuments() || [];
-  const idx = docs.findIndex(d => d.type === "facture" && d.number === invoiceNumber);
+  const idx = docs.findIndex(
+    (d) => d.type === "facture" && d.number === invoiceNumber,
+  );
   if (idx < 0) return;
 
   const f = docs[idx];
@@ -1390,14 +1365,17 @@ function _addIndemnite40(invoiceNumber) {
   f.prestations = Array.isArray(f.prestations) ? f.prestations : [];
 
   const already = f.prestations.some(
-    p => p.kind === "indemnite_40" || p.code === "INDEMNITE_40"
+    (p) => p.kind === "indemnite_40" || p.code === "INDEMNITE_40",
   );
   if (already) return;
 
   // ===============================
   // 1️⃣ AJOUT IMMÉDIAT DANS L’UI
   // ===============================
-  if (currentDocumentId === f.id && typeof _ensureIndemnite40InFormUI === "function") {
+  if (
+    currentDocumentId === f.id &&
+    typeof _ensureIndemnite40InFormUI === "function"
+  ) {
     _ensureIndemnite40InFormUI(); // 👈 C'EST ÇA LA CLÉ
   }
 
@@ -1413,7 +1391,7 @@ function _addIndemnite40(invoiceNumber) {
     price: 40,
     total: 40,
     unit: "forfait",
-    dates: []
+    dates: [],
   });
 
   delete f.subtotal;
@@ -1429,10 +1407,13 @@ function _addIndemnite40(invoiceNumber) {
   }
 }
 
-
-
 /** ✅ Message auto selon retard + texte légal */
-function _buildRelanceMessageAuto({ factureNumber, factureDate, amountTTC, lateMonths }) {
+function _buildRelanceMessageAuto({
+  factureNumber,
+  factureDate,
+  amountTTC,
+  lateMonths,
+}) {
   const dateFR = _fmtDateFRSafe(factureDate);
   const montant = _fmtEUR(amountTTC);
 
@@ -1486,7 +1467,7 @@ function openClientSheet(name) {
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "info",
-        icon: "ℹ️"
+        icon: "ℹ️",
       });
     }
     return;
@@ -1496,17 +1477,22 @@ function openClientSheet(name) {
   const docsAll = _getDocsByClientName(n);
   const contratsAll = _getContractsByClientName(n);
 
-  const factures = docsAll.filter(d => d.type === "facture");
-  const impayees = factures.filter(f => !f.paid);
+  const factures = docsAll.filter((d) => d.type === "facture");
+  const impayees = factures.filter((f) => !f.paid);
 
   const caTTC = factures.reduce((sum, f) => sum + Number(f.totalTTC || 0), 0);
-  const impayesTTC = impayees.reduce((sum, f) => sum + Number(f.totalTTC || 0), 0);
+  const impayesTTC = impayees.reduce(
+    (sum, f) => sum + Number(f.totalTTC || 0),
+    0,
+  );
 
-  const lastFactures = [...factures].sort((a, b) => {
-    const da = new Date(a.date || 0).getTime();
-    const db = new Date(b.date || 0).getTime();
-    return db - da;
-  }).slice(0, 10);
+  const lastFactures = [...factures]
+    .sort((a, b) => {
+      const da = new Date(a.date || 0).getTime();
+      const db = new Date(b.date || 0).getTime();
+      return db - da;
+    })
+    .slice(0, 10);
 
   const contratsSorted = [...contratsAll].sort((a, b) => {
     const da = new Date(a?.pricing?.startDate || 0).getTime();
@@ -1515,9 +1501,9 @@ function openClientSheet(name) {
   });
 
   const address = client?.address || "";
-  const phone   = client?.phone || "";
-  const email   = client?.email || "";
-  const type    = client?.type || client?.clientType || "";
+  const phone = client?.phone || "";
+  const email = client?.email || "";
+  const type = client?.type || client?.clientType || "";
 
   const html = `
 <div id="clientSheetOverlay" class="popup-overlay">
@@ -1549,7 +1535,7 @@ function openClientSheet(name) {
          ${phone ? `<a style="text-decoration:none;font-weight:700;" href="tel:${_cleanPhoneForTel(phone)}" title="Appeler le client">📞 ${_escapeHtml(phone)}</a>` : ""}
 
           ${email ? `<a style="text-decoration:none;" href="mailto:${_escapeHtml(email)}">✉️ ${_escapeHtml(email)}</a>` : ""}
-          ${phone ? `<a style="text-decoration:none;" target="_blank" href="https://wa.me/${encodeURIComponent(String(phone).replaceAll(" ","").replaceAll(".","").replaceAll("-","").replaceAll("+",""))}">💬 WhatsApp</a>` : ""}
+          ${phone ? `<a style="text-decoration:none;" target="_blank" href="https://wa.me/${encodeURIComponent(String(phone).replaceAll(" ", "").replaceAll(".", "").replaceAll("-", "").replaceAll("+", ""))}">💬 WhatsApp</a>` : ""}
         </div>
       </div>
 
@@ -1589,15 +1575,23 @@ function openClientSheet(name) {
       <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
         <div style="font-weight:800; margin-bottom: 8px;">Dernières factures</div>
 
-        ${lastFactures.length ? `
+        ${
+          lastFactures.length
+            ? `
           <div style="display:flex; flex-direction:column; gap:8px;">
-            ${lastFactures.map(f => {
-              const isPaid = !!f.paid;
-              const delai = (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30);
-              const lateMonths = isPaid ? 0 : _lateMonthsFromInvoiceDate(f.date, delai);
-              const statusColor = isPaid ? "#1e7f43" : "#c62828";
-              const bg = isPaid ? "transparent" : "rgba(198,40,40,0.05)";
-              return `
+            ${lastFactures
+              .map((f) => {
+                const isPaid = !!f.paid;
+                const delai =
+                  typeof DELAI_REGLEMENT_JOURS !== "undefined"
+                    ? DELAI_REGLEMENT_JOURS
+                    : 30;
+                const lateMonths = isPaid
+                  ? 0
+                  : _lateMonthsFromInvoiceDate(f.date, delai);
+                const statusColor = isPaid ? "#1e7f43" : "#c62828";
+                const bg = isPaid ? "transparent" : "rgba(198,40,40,0.05)";
+                return `
                 <div style="
                   display:flex; justify-content:space-between; gap:12px;
                   border-bottom:1px dashed #eee; padding:8px; border-radius:8px;
@@ -1610,7 +1604,9 @@ function openClientSheet(name) {
 
                     <div style="font-size:12px; margin-top:3px; font-weight:700; color:${statusColor};">
                       ${_fmtDateFRSafe(f.date)} • ${isPaid ? "✔ payée" : "✖ impayée"}
-                      ${(!isPaid && lateMonths > 0) ? `
+                      ${
+                        !isPaid && lateMonths > 0
+                          ? `
                         <span style="
                           margin-left:8px; display:inline-block; padding:2px 8px;
                           border-radius:999px; font-weight:800; font-size:11px;
@@ -1619,7 +1615,9 @@ function openClientSheet(name) {
                         ">
                           ${lateMonths} mois de retard
                         </span>
-                      ` : ``}
+                      `
+                          : ``
+                      }
                     </div>
                   </div>
 
@@ -1628,7 +1626,9 @@ function openClientSheet(name) {
                       ${_fmtEUR(f.totalTTC)}
                     </div>
 
-                    ${!isPaid ? `
+                    ${
+                      !isPaid
+                        ? `
                       <button
                         class="btn btn-primary btn-small"
                         type="button"
@@ -1648,27 +1648,36 @@ function openClientSheet(name) {
                         data-indemnite="40"
                         data-number="${_escapeHtml(f.number || "")}"
                       >➕ 40 €</button>
-                    ` : ``}
+                    `
+                        : ``
+                    }
                   </div>
                 </div>
               `;
-            }).join("")}
+              })
+              .join("")}
           </div>
-        ` : `
+        `
+            : `
           <div style="opacity:.7;">Aucune facture trouvée pour ce client.</div>
-        `}
+        `
+        }
       </div>
 
       <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
         <div style="font-weight:800; margin-bottom: 8px;">Contrats</div>
-        ${contratsSorted.length ? `
+        ${
+          contratsSorted.length
+            ? `
           <div style="display:flex; flex-direction:column; gap:8px;">
-            ${contratsSorted.slice(0, 8).map(c => {
-              const ref = c?.client?.reference || c?.id || "Contrat";
-              const start = c?.pricing?.startDate || "";
-              const endLabel = c?.pricing?.endDateLabel || "";
-              const total = c?.pricing?.totalTTC;
-              return `
+            ${contratsSorted
+              .slice(0, 8)
+              .map((c) => {
+                const ref = c?.client?.reference || c?.id || "Contrat";
+                const start = c?.pricing?.startDate || "";
+                const endLabel = c?.pricing?.endDateLabel || "";
+                const total = c?.pricing?.totalTTC;
+                return `
                 <div style="border-bottom:1px dashed #eee; padding-bottom:6px;">
                   <div style="font-weight:700;">${_escapeHtml(ref)}</div>
                   <div style="opacity:.7; font-size:12px;">
@@ -1677,9 +1686,12 @@ function openClientSheet(name) {
                   ${total != null ? `<div style="font-weight:800; margin-top:2px;">${_fmtEUR(total)}</div>` : ""}
                 </div>
               `;
-            }).join("")}
+              })
+              .join("")}
           </div>
-        ` : `<div style="opacity:.7;">Aucun contrat trouvé.</div>`}
+        `
+            : `<div style="opacity:.7;">Aucun contrat trouvé.</div>`
+        }
       </div>
     </div>
   </div>
@@ -1701,135 +1713,142 @@ function openClientSheet(name) {
   }
 
   // ---------- Bind: indemnité 40€ ----------
-  document.querySelectorAll('#clientSheetOverlay [data-indemnite="40"]').forEach(btn => {
-    btn.addEventListener("click", () => {
-      const invoiceNumber = btn.getAttribute("data-number") || "";
-      if (!invoiceNumber) return;
+  document
+    .querySelectorAll('#clientSheetOverlay [data-indemnite="40"]')
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const invoiceNumber = btn.getAttribute("data-number") || "";
+        if (!invoiceNumber) return;
 
-      showConfirmDialog({
-        title: "Ajouter l’indemnité 40 € ?",
-        message: "Ajouter l’indemnité forfaitaire de 40 € (art. L441-10) sur cette facture ?",
-        confirmLabel: "Ajouter",
-        cancelLabel: "Annuler",
-        variant: "danger",
-        icon: "⚠️",
-        onConfirm: () => {
-          _addIndemnite40(invoiceNumber);
-          showConfirmDialog({
-            title: "Indemnité ajoutée",
-            message: "La ligne de 40 € a été ajoutée à la facture.",
-            confirmLabel: "OK",
-            cancelLabel: "",
-            variant: "success",
-            icon: "✅"
-          });
-        }
-      });
-    });
-  });
-
-  // ---------- Bind: relance ----------
-  document.querySelectorAll('#clientSheetOverlay [data-relance="1"]').forEach(btn => {
-    btn.addEventListener("click", () => {
-      const invoiceNumber = btn.getAttribute("data-number") || "";
-      const invoiceDate = btn.getAttribute("data-date") || "";
-      const amountTTC = Number(btn.getAttribute("data-amount") || 0);
-      const lateMonths = Number(btn.getAttribute("data-latemonths") || 0);
-
-      const phoneBtn = btn.getAttribute("data-phone") || "";
-      const emailBtn = btn.getAttribute("data-email") || "";
-
-      const hasPhone = !!phoneBtn.trim();
-      const hasEmail = !!emailBtn.trim();
-
-      const message = _buildRelanceMessageAuto({
-        factureNumber: invoiceNumber,
-        factureDate: invoiceDate,
-        amountTTC,
-        lateMonths
-      });
-
-      // aucun contact => copier
-      if (!hasPhone && !hasEmail) {
-        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(message);
         showConfirmDialog({
-          title: "Relance copiée",
-          message: "Aucun téléphone/email pour ce client. Le message a été copié, tu peux le coller où tu veux.",
-          confirmLabel: "OK",
-          cancelLabel: "",
-          variant: "info",
-          icon: "📋"
-        });
-        return;
-      }
-
-      showConfirmDialog({
-        title: "Relancer le client",
-        message: "Comment souhaitez-vous relancer ce client ?",
-        confirmLabel: "💬 WhatsApp",
-        cancelLabel: "✉️ Email",
-        variant: "info",
-        icon: "📨",
-            showCloseButton: true,
-        onConfirm: () => {
-          const wa = _normalizePhoneForWA(phoneBtn);
-          if (!wa) {
+          title: "Ajouter l’indemnité 40 € ?",
+          message:
+            "Ajouter l’indemnité forfaitaire de 40 € (art. L441-10) sur cette facture ?",
+          confirmLabel: "Ajouter",
+          cancelLabel: "Annuler",
+          variant: "danger",
+          icon: "⚠️",
+          onConfirm: () => {
+            _addIndemnite40(invoiceNumber);
             showConfirmDialog({
-              title: "WhatsApp indisponible",
-              message: "Aucun numéro WhatsApp valide pour ce client.",
+              title: "Indemnité ajoutée",
+              message: "La ligne de 40 € a été ajoutée à la facture.",
               confirmLabel: "OK",
               cancelLabel: "",
-              variant: "warning",
-              icon: "⚠️"
+              variant: "success",
+              icon: "✅",
             });
-            return;
-          }
-
-          _addRelanceToInvoice(invoiceNumber, "whatsapp");
-          const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
-          openPdfViewer(url);
-        },
-onCancel: () => {
-  // 1) email depuis le bouton
-  let email = (emailBtn || "").toString().trim();
-
-  // 2) fallback : email depuis la fiche client (si dispo)
-  if ((!email || !email.includes("@")) && client?.email) {
-    email = String(client.email).trim();
-  }
-
-  // 3) fallback : email depuis la facture elle-même (hyper fiable)
-  if ((!email || !email.includes("@")) && invoiceNumber) {
-    const inv = (getAllDocuments() || []).find(d => d?.type === "facture" && d?.number === invoiceNumber);
-    const invMail = inv?.client?.email;
-    if (invMail) email = String(invMail).trim();
-  }
-
-  if (!email || !email.includes("@")) {
-    showConfirmDialog({
-      title: "Email indisponible",
-      message: "Aucune adresse email valide pour ce client.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "warning",
-      icon: "⚠️"
-    });
-    return;
-  }
-
-  _addRelanceToInvoice(invoiceNumber, "email");
-  const subject = `Relance facture ${invoiceNumber}`;
-  const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
-
-  // ✅ IMPORTANT : ne pas “naviguer” dans ton app (évite l’effet “ça efface”)
-  openPdfViewer(url);
-}
-
+          },
+        });
       });
-            });   
-  });    
-} 
+    });
 
+  // ---------- Bind: relance ----------
+  document
+    .querySelectorAll('#clientSheetOverlay [data-relance="1"]')
+    .forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const invoiceNumber = btn.getAttribute("data-number") || "";
+        const invoiceDate = btn.getAttribute("data-date") || "";
+        const amountTTC = Number(btn.getAttribute("data-amount") || 0);
+        const lateMonths = Number(btn.getAttribute("data-latemonths") || 0);
+
+        const phoneBtn = btn.getAttribute("data-phone") || "";
+        const emailBtn = btn.getAttribute("data-email") || "";
+
+        const hasPhone = !!phoneBtn.trim();
+        const hasEmail = !!emailBtn.trim();
+
+        const message = _buildRelanceMessageAuto({
+          factureNumber: invoiceNumber,
+          factureDate: invoiceDate,
+          amountTTC,
+          lateMonths,
+        });
+
+        // aucun contact => copier
+        if (!hasPhone && !hasEmail) {
+          if (navigator.clipboard?.writeText)
+            navigator.clipboard.writeText(message);
+          showConfirmDialog({
+            title: "Relance copiée",
+            message:
+              "Aucun téléphone/email pour ce client. Le message a été copié, tu peux le coller où tu veux.",
+            confirmLabel: "OK",
+            cancelLabel: "",
+            variant: "info",
+            icon: "📋",
+          });
+          return;
+        }
+
+        showConfirmDialog({
+          title: "Relancer le client",
+          message: "Comment souhaitez-vous relancer ce client ?",
+          confirmLabel: "💬 WhatsApp",
+          cancelLabel: "✉️ Email",
+          variant: "info",
+          icon: "📨",
+          showCloseButton: true,
+          onConfirm: () => {
+            const wa = _normalizePhoneForWA(phoneBtn);
+            if (!wa) {
+              showConfirmDialog({
+                title: "WhatsApp indisponible",
+                message: "Aucun numéro WhatsApp valide pour ce client.",
+                confirmLabel: "OK",
+                cancelLabel: "",
+                variant: "warning",
+                icon: "⚠️",
+              });
+              return;
+            }
+
+            _addRelanceToInvoice(invoiceNumber, "whatsapp");
+            const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
+            openPdfViewer(url);
+          },
+          onCancel: () => {
+            // 1) email depuis le bouton
+            let email = (emailBtn || "").toString().trim();
+
+            // 2) fallback : email depuis la fiche client (si dispo)
+            if ((!email || !email.includes("@")) && client?.email) {
+              email = String(client.email).trim();
+            }
+
+            // 3) fallback : email depuis la facture elle-même (hyper fiable)
+            if ((!email || !email.includes("@")) && invoiceNumber) {
+              const inv = (getAllDocuments() || []).find(
+                (d) => d?.type === "facture" && d?.number === invoiceNumber,
+              );
+              const invMail = inv?.client?.email;
+              if (invMail) email = String(invMail).trim();
+            }
+
+            if (!email || !email.includes("@")) {
+              showConfirmDialog({
+                title: "Email indisponible",
+                message: "Aucune adresse email valide pour ce client.",
+                confirmLabel: "OK",
+                cancelLabel: "",
+                variant: "warning",
+                icon: "⚠️",
+              });
+              return;
+            }
+
+            _addRelanceToInvoice(invoiceNumber, "email");
+            const subject = `Relance facture ${invoiceNumber}`;
+            const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
+
+            // ✅ IMPORTANT : ne pas “naviguer” dans ton app (évite l’effet “ça efface”)
+            openPdfViewer(url);
+          },
+        });
+      });
+    });
+}
 
 // ================== CLIENT (DEVIS / FACTURES) ==================
 
@@ -1842,24 +1861,23 @@ function onClientNameChange() {
 
   const clients = getClients();
   const client = clients.find(
-    (c) => (c.name || "").trim().toLowerCase() === value
+    (c) => (c.name || "").trim().toLowerCase() === value,
   );
   if (!client) return;
 
-  const addr  = document.getElementById("clientAddress");
+  const addr = document.getElementById("clientAddress");
   const phone = document.getElementById("clientPhone");
   const email = document.getElementById("clientEmail");
 
-  if (addr)  addr.value  = client.address || "";
-  if (phone) phone.value = client.phone   || "";
-  if (email) email.value = client.email   || "";
+  if (addr) addr.value = client.address || "";
+  if (phone) phone.value = client.phone || "";
+  if (email) email.value = client.email || "";
 
   const civ = document.getElementById("clientCivility");
   if (civ && !civ.value && client.civility) {
     civ.value = client.civility;
   }
 }
-
 
 // --- Attestation clim : remplir adresse depuis la liste de clients ---
 
@@ -1872,7 +1890,7 @@ function onAttClientNameChange() {
 
   const clients = getClients ? getClients() : [];
   const client = clients.find(
-    c => (c.name || "").trim().toLowerCase() === value
+    (c) => (c.name || "").trim().toLowerCase() === value,
   );
   if (!client) return;
 
@@ -1903,40 +1921,39 @@ function onRapportClientNameChange() {
 
   const clients = getClients ? getClients() : [];
   const client = clients.find(
-    c => (c.name || "").trim().toLowerCase() === value
+    (c) => (c.name || "").trim().toLowerCase() === value,
   );
   if (!client) return;
 
   fillRapportClientFromObject(client);
 }
 
-
-
 let currentAttestationId = null;
 let currentRapportId = null;
-let currentRapportPhotosTemp = [];      // [{name,type,dataUrl}]
+let currentRapportPhotosTemp = []; // [{name,type,dataUrl}]
 let currentRapportAttachmentsTemp = []; // [{name,type,dataUrl}]
 
 /* ================== ATTESTATIONS & RAPPORTS ================== */
 
 function showAttestations() {
   // ===== Onglets =====
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document
+    .querySelectorAll(".tab-btn")
+    .forEach((b) => b.classList.remove("active"));
   const tabAttest = document.getElementById("tabAttest");
   if (tabAttest) tabAttest.classList.add("active");
 
   // ===== Vues =====
   const viewsToHide = ["homeView", "listView", "formView", "contractView"];
-  viewsToHide.forEach(id => {
+  viewsToHide.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.classList.add("hidden");
   });
 
   const attestationView = document.getElementById("attestationView");
   if (attestationView) attestationView.classList.remove("hidden");
-const settingsView = document.getElementById("settingsView");
-settingsView && settingsView.classList.add("hidden");
-
+  const settingsView = document.getElementById("settingsView");
+  settingsView && settingsView.classList.add("hidden");
 
   // ===== Listes attestations + rapports =====
   if (typeof loadAttestationsList === "function") {
@@ -1951,25 +1968,32 @@ settingsView && settingsView.classList.add("hidden");
 
 function showSettings() {
   // onglets
-  const tabHome     = document.getElementById("tabHome");
-  const tabDevis    = document.getElementById("tabDevis");
+  const tabHome = document.getElementById("tabHome");
+  const tabDevis = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
   const tabFactures = document.getElementById("tabFactures");
-  const tabAttest   = document.getElementById("tabAttest");
-  const tabCA       = document.getElementById("tabCA");
+  const tabAttest = document.getElementById("tabAttest");
+  const tabCA = document.getElementById("tabCA");
   const tabSettings = document.getElementById("tabSettings");
 
-  tabHome     && tabHome.classList.remove("active");
-  tabDevis    && tabDevis.classList.remove("active");
+  tabHome && tabHome.classList.remove("active");
+  tabDevis && tabDevis.classList.remove("active");
   tabContrats && tabContrats.classList.remove("active");
   tabFactures && tabFactures.classList.remove("active");
-  tabAttest   && tabAttest.classList.remove("active");
-  tabCA       && tabCA.classList.remove("active");
+  tabAttest && tabAttest.classList.remove("active");
+  tabCA && tabCA.classList.remove("active");
   tabSettings && tabSettings.classList.add("active");
 
   // vues
-  const views = ["homeView", "listView", "formView", "contractView", "attestationView", "settingsView"];
-  views.forEach(id => {
+  const views = [
+    "homeView",
+    "listView",
+    "formView",
+    "contractView",
+    "attestationView",
+    "settingsView",
+  ];
+  views.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
     if (id === "settingsView") el.classList.remove("hidden");
@@ -1988,16 +2012,16 @@ function fillCompanySettingsForm() {
   };
 
   setVal("confCompanyName", s.companyName);
-  setVal("confSubtitle",    s.subtitle);
-  setVal("confLegalName",   s.legalName);
-  setVal("confSiret",       s.siret);
-  setVal("confAddress",     s.address);
-  setVal("confPhone",       s.phone);
-  setVal("confEmail",       s.email);
-  setVal("confRibHolder",   s.ribHolder);
-  setVal("confBankName",    s.bankName);
-  setVal("confIban",        s.iban);
-  setVal("confBic",         s.bic);
+  setVal("confSubtitle", s.subtitle);
+  setVal("confLegalName", s.legalName);
+  setVal("confSiret", s.siret);
+  setVal("confAddress", s.address);
+  setVal("confPhone", s.phone);
+  setVal("confEmail", s.email);
+  setVal("confRibHolder", s.ribHolder);
+  setVal("confBankName", s.bankName);
+  setVal("confIban", s.iban);
+  setVal("confBic", s.bic);
 }
 
 function saveCompanySettingsFromForm() {
@@ -2005,16 +2029,16 @@ function saveCompanySettingsFromForm() {
 
   const settings = {
     companyName: getVal("confCompanyName"),
-    subtitle:    getVal("confSubtitle"),
-    legalName:   getVal("confLegalName"),
-    siret:       getVal("confSiret"),
-    address:     getVal("confAddress"),
-    phone:       getVal("confPhone"),
-    email:       getVal("confEmail"),
-    ribHolder:   getVal("confRibHolder"),
-    bankName:    getVal("confBankName"),
-    iban:        getVal("confIban"),
-    bic:         getVal("confBic")
+    subtitle: getVal("confSubtitle"),
+    legalName: getVal("confLegalName"),
+    siret: getVal("confSiret"),
+    address: getVal("confAddress"),
+    phone: getVal("confPhone"),
+    email: getVal("confEmail"),
+    ribHolder: getVal("confRibHolder"),
+    bankName: getVal("confBankName"),
+    iban: getVal("confIban"),
+    bic: getVal("confBic"),
   };
 
   saveCompanySettings(settings);
@@ -2025,11 +2049,9 @@ function saveCompanySettingsFromForm() {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 }
-
-
 
 /* ========== ATTESTATION CLIM ========== */
 
@@ -2041,15 +2063,15 @@ function openClimAttestationGenerator() {
   currentAttestationId = null;
 
   // on vide / remet les champs
-  const name  = document.getElementById("attClientName");
-  const addr  = document.getElementById("attClientAddress");
-  const date  = document.getElementById("attDate");
+  const name = document.getElementById("attClientName");
+  const addr = document.getElementById("attClientAddress");
+  const date = document.getElementById("attDate");
   const units = document.getElementById("attUnits");
   const notes = document.getElementById("attNotes");
 
-  if (name)  name.value  = "";
-  if (addr)  addr.value  = "";
-  if (date)  date.value  = "";
+  if (name) name.value = "";
+  if (addr) addr.value = "";
+  if (date) date.value = "";
   if (units) units.value = 1;
   if (notes) notes.value = "";
 
@@ -2057,29 +2079,29 @@ function openClimAttestationGenerator() {
 
   const popup = overlay.querySelector(".popup");
   if (popup) {
-    void popup.offsetWidth;        // petit reflow pour l’animation
+    void popup.offsetWidth; // petit reflow pour l’animation
     popup.classList.add("show");
   }
 }
 
 function openAttestationPopupForEdit(attId) {
   const list = getAllAttestations();
-  const rec = list.find(a => a.id === attId);
+  const rec = list.find((a) => a.id === attId);
   if (!rec) return;
 
   currentAttestationId = rec.id;
 
-  const name  = document.getElementById("attClientName");
-  const addr  = document.getElementById("attClientAddress");
-  const date  = document.getElementById("attDate");
+  const name = document.getElementById("attClientName");
+  const addr = document.getElementById("attClientAddress");
+  const date = document.getElementById("attDate");
   const units = document.getElementById("attUnits");
   const notes = document.getElementById("attNotes");
 
-  if (name)  name.value  = rec.clientName  || "";
-  if (addr)  addr.value  = rec.clientAddress || "";
-  if (date)  date.value  = rec.date        || "";
+  if (name) name.value = rec.clientName || "";
+  if (addr) addr.value = rec.clientAddress || "";
+  if (date) date.value = rec.date || "";
   if (units) units.value = rec.units != null ? rec.units : 1;
-  if (notes) notes.value = rec.notes       || "";
+  if (notes) notes.value = rec.notes || "";
 
   const overlay = document.getElementById("attestationPopup");
   if (!overlay) return;
@@ -2092,7 +2114,6 @@ function openAttestationPopupForEdit(attId) {
   }
 }
 
-
 function closeAttestationPopup() {
   const overlay = document.getElementById("attestationPopup");
   if (!overlay) return;
@@ -2104,9 +2125,9 @@ function closeAttestationPopup() {
 }
 
 function saveAttestationFromForm() {
-  const name  = document.getElementById("attClientName")?.value || "";
-  const addr  = document.getElementById("attClientAddress")?.value || "";
-  const date  = document.getElementById("attDate")?.value || "";
+  const name = document.getElementById("attClientName")?.value || "";
+  const addr = document.getElementById("attClientAddress")?.value || "";
+  const date = document.getElementById("attDate")?.value || "";
   const units = document.getElementById("attUnits")?.value || "1";
   const notes = document.getElementById("attNotes")?.value || "";
 
@@ -2115,7 +2136,7 @@ function saveAttestationFromForm() {
 
   if (currentAttestationId) {
     // ✏️ MODE ÉDITION
-    const idx = list.findIndex(a => a.id === currentAttestationId);
+    const idx = list.findIndex((a) => a.id === currentAttestationId);
     if (idx !== -1) {
       record = {
         ...list[idx],
@@ -2123,7 +2144,7 @@ function saveAttestationFromForm() {
         clientAddress: addr,
         date,
         units: Number(units) || 1,
-        notes
+        notes,
       };
       list[idx] = record;
     } else {
@@ -2137,8 +2158,10 @@ function saveAttestationFromForm() {
         units: Number(units) || 1,
         notes,
         createdAt: new Date().toISOString(),
-        sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
-        sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+        sourceDocId:
+          (currentAttestationSource && currentAttestationSource.id) || null,
+        sourceDocNumber:
+          (currentAttestationSource && currentAttestationSource.number) || null,
       };
       list.push(record);
     }
@@ -2153,8 +2176,10 @@ function saveAttestationFromForm() {
       units: Number(units) || 1,
       notes,
       createdAt: new Date().toISOString(),
-      sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
-      sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+      sourceDocId:
+        (currentAttestationSource && currentAttestationSource.id) || null,
+      sourceDocNumber:
+        (currentAttestationSource && currentAttestationSource.number) || null,
     };
     list.push(record);
   }
@@ -2169,9 +2194,9 @@ function saveAttestationFromForm() {
 }
 
 function generatePDFAttestation(mode = "print") {
-  const name  = document.getElementById("attClientName")?.value || "";
-  const addr  = document.getElementById("attClientAddress")?.value || "";
-  const date  = document.getElementById("attDate")?.value || "";
+  const name = document.getElementById("attClientName")?.value || "";
+  const addr = document.getElementById("attClientAddress")?.value || "";
+  const date = document.getElementById("attDate")?.value || "";
   const units = document.getElementById("attUnits")?.value || "1";
   const notes = document.getElementById("attNotes")?.value || "";
 
@@ -2183,17 +2208,18 @@ function generatePDFAttestation(mode = "print") {
   const rec = list
     .slice()
     .reverse()
-    .find(a =>
-      (a.clientName || "") === name &&
-      (a.clientAddress || "") === addr &&
-      (a.date || "") === date
+    .find(
+      (a) =>
+        (a.clientName || "") === name &&
+        (a.clientAddress || "") === addr &&
+        (a.date || "") === date,
     ) || {
-      clientName: name,
-      clientAddress: addr,
-      date,
-      units: Number(units) || 1,
-      notes
-    };
+    clientName: name,
+    clientAddress: addr,
+    date,
+    units: Number(units) || 1,
+    notes,
+  };
 
   rec.units = Number(units) || 1;
 
@@ -2217,7 +2243,8 @@ function detectRapportTypeFromDevis(devis) {
   if (text.includes("pompe filtration")) return "installation_pompe_pac";
   if (text.includes("roulement")) return "remplacement_roulements";
 
-  if (text.includes("clim") && text.includes("entretien")) return "entretien_clim";
+  if (text.includes("clim") && text.includes("entretien"))
+    return "entretien_clim";
   if (text.includes("clim") && text.includes("diag")) return "depannage_clim";
 
   // fallback si rien trouvé
@@ -2225,21 +2252,21 @@ function detectRapportTypeFromDevis(devis) {
 }
 
 function generateAutoChecklist(rapportType, devis) {
-  const template = RAPPORT_TEMPLATES.find(t => t.id === rapportType);
+  const template = RAPPORT_TEMPLATES.find((t) => t.id === rapportType);
   if (!template) return [];
 
   const txt = JSON.stringify(devis.prestations || []).toLowerCase();
   let checklist = [];
 
-  template.sections.forEach(section => {
-    section.items.forEach(item => {
+  template.sections.forEach((section) => {
+    section.items.forEach((item) => {
       const keywords = item.toLowerCase().split(" ").slice(0, 2).join(" ");
-      
+
       const checked = txt.includes(keywords);
 
       checklist.push({
         text: item,
-        checked
+        checked,
       });
     });
   });
@@ -2252,11 +2279,12 @@ function createRapportFromDevis(devis) {
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "Aucun devis fourni",
-        message: "Sélectionne d’abord un devis avant de générer un rapport d’intervention.",
+        message:
+          "Sélectionne d’abord un devis avant de générer un rapport d’intervention.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "info",
-        icon: "ℹ️"
+        icon: "ℹ️",
       });
     } else {
       alert("Aucun devis fourni pour générer le rapport.");
@@ -2269,11 +2297,12 @@ function createRapportFromDevis(devis) {
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "Type de rapport non détecté",
-        message: "Impossible de déterminer automatiquement le type de rapport à partir de ce devis.",
+        message:
+          "Impossible de déterminer automatiquement le type de rapport à partir de ce devis.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "warning",
-        icon: "⚠️"
+        icon: "⚠️",
       });
     } else {
       alert("Impossible de déterminer automatiquement le type de rapport.");
@@ -2281,20 +2310,20 @@ function createRapportFromDevis(devis) {
     return null;
   }
 
-  const tpl = RAPPORT_TEMPLATES.find(t => t.id === typeId) || null;
+  const tpl = RAPPORT_TEMPLATES.find((t) => t.id === typeId) || null;
 
   // ✅ Checklist "intelligente" à partir du devis
   const flatChecklist = generateAutoChecklist(typeId, devis);
 
   // on mappe ça sur la structure `sections` utilisée par les rapports
   const checkedSet = new Set(
-    flatChecklist.filter(it => it.checked).map(it => it.text)
+    flatChecklist.filter((it) => it.checked).map((it) => it.text),
   );
 
   const sectionsData = [];
   if (tpl) {
-    tpl.sections.forEach(section => {
-      const items = section.items.filter(item => {
+    tpl.sections.forEach((section) => {
+      const items = section.items.filter((item) => {
         // si aucune info → on coche tout
         if (checkedSet.size === 0) return true;
         return checkedSet.has(item);
@@ -2303,15 +2332,14 @@ function createRapportFromDevis(devis) {
       if (items.length) {
         sectionsData.push({
           title: section.title,
-          items
+          items,
         });
       }
     });
   }
 
-  const id = (typeof generateId === "function")
-    ? generateId("RAP")
-    : "RAP-" + Date.now();
+  const id =
+    typeof generateId === "function" ? generateId("RAP") : "RAP-" + Date.now();
 
   const rapport = {
     id,
@@ -2324,12 +2352,12 @@ function createRapportFromDevis(devis) {
     sections: sectionsData,
     analysis: {
       ph: null,
-      chlore: null
+      chlore: null,
     },
     autoGenerated: true,
     createdAt: new Date().toISOString(),
     sourceDocId: devis.id || null,
-    sourceDocNumber: devis.number || null
+    sourceDocNumber: devis.number || null,
   };
 
   const all = getAllRapports();
@@ -2345,14 +2373,17 @@ function onGenerateRapportFromCurrent() {
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "Aucun devis ouvert",
-        message: "Ouvre d’abord un devis avant de générer un rapport d’intervention.",
+        message:
+          "Ouvre d’abord un devis avant de générer un rapport d’intervention.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "info",
-        icon: "ℹ️"
+        icon: "ℹ️",
       });
     } else {
-      alert("Aucun devis ouvert. Ouvre d’abord un devis avant de générer un rapport.");
+      alert(
+        "Aucun devis ouvert. Ouvre d’abord un devis avant de générer un rapport.",
+      );
     }
     return;
   }
@@ -2366,7 +2397,7 @@ function onGenerateRapportFromCurrent() {
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "danger",
-        icon: "⚠️"
+        icon: "⚠️",
       });
     } else {
       alert("Document introuvable dans la base.");
@@ -2379,11 +2410,12 @@ function onGenerateRapportFromCurrent() {
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "Action impossible",
-        message: "Le rapport d’intervention ne peut être généré qu’à partir d’un devis.",
+        message:
+          "Le rapport d’intervention ne peut être généré qu’à partir d’un devis.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "warning",
-        icon: "🧾"
+        icon: "🧾",
       });
     } else {
       alert("Le rapport technique ne peut être généré qu’à partir d’un devis.");
@@ -2407,45 +2439,43 @@ function onGenerateRapportFromCurrent() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "success",
-      icon: "📝"
+      icon: "📝",
     });
   } else {
     alert("Un rapport d’intervention a été créé pour le devis " + numero + ".");
   }
 }
 
-
 function openPiscineRapportGenerator(docId = null) {
   // 👉 on est en mode "nouveau"
   currentRapportId = null;
-    currentRapportPhotosTemp = [];
-currentRapportAttachmentsTemp = [];
-renderRapportPhotosPreview();
-renderRapportFilesList();
-
+  currentRapportPhotosTemp = [];
+  currentRapportAttachmentsTemp = [];
+  renderRapportPhotosPreview();
+  renderRapportFilesList();
 
   const sel = document.getElementById("rapportType");
   if (!sel) return;
 
   sel.innerHTML = `<option value="">— Choisir —</option>`;
-  RAPPORT_TEMPLATES.forEach(t => {
+  RAPPORT_TEMPLATES.forEach((t) => {
     sel.innerHTML += `<option value="${t.id}">${t.label}</option>`;
   });
 
   // on vide les champs
-  const name  = document.getElementById("rapClientName");
-  const addr  = document.getElementById("rapClientAddress");
-  const date  = document.getElementById("rapDate");
+  const name = document.getElementById("rapClientName");
+  const addr = document.getElementById("rapClientAddress");
+  const date = document.getElementById("rapDate");
   const notes = document.getElementById("rapNotes");
-  const ph    = document.getElementById("rapPH");
-  const chl   = document.getElementById("rapChlore");
+  const ph = document.getElementById("rapPH");
+  const chl = document.getElementById("rapChlore");
 
-  if (name)  name.value  = "";
-  if (addr)  addr.value  = "";
-  if (date)  date.value  = "";
+  if (name) name.value = "";
+  if (addr) addr.value = "";
+  if (date) date.value = "";
   if (notes) notes.value = "";
-  if (ph)    ph.value    = "";
-  if (chl)   chl.value   = "";
+  if (ph) ph.value = "";
+  if (chl) chl.value = "";
 
   const checklist = document.getElementById("rapportChecklist");
   if (checklist) checklist.innerHTML = "";
@@ -2453,14 +2483,13 @@ renderRapportFilesList();
   // 🔹 cacher l’analyse tant qu’on n’a pas choisi "entretien_piscine"
   updateRapportAnalyseVisibility("");
 
-
-const overlay = document.getElementById("rapportPopup");
+  const overlay = document.getElementById("rapportPopup");
   if (!overlay) return;
 
   overlay.classList.remove("hidden");
   const popup = overlay.querySelector(".popup");
   if (popup) {
-    void popup.offsetWidth;     // pour l’animation
+    void popup.offsetWidth; // pour l’animation
     popup.classList.add("show");
   }
 }
@@ -2473,7 +2502,7 @@ function closeRapportPopup() {
   if (popup) popup.classList.remove("show");
 
   overlay.classList.add("hidden");
-  currentRapportId = null;   // 🧹
+  currentRapportId = null; // 🧹
 }
 
 function rebuildRapportChecklist() {
@@ -2482,7 +2511,7 @@ function rebuildRapportChecklist() {
   // gère affichage bloc analyse
   updateRapportAnalyseVisibility(type);
 
-  const tpl = RAPPORT_TEMPLATES.find(t => t.id === type);
+  const tpl = RAPPORT_TEMPLATES.find((t) => t.id === type);
   const box = document.getElementById("rapportChecklist");
   if (!box) return;
 
@@ -2493,16 +2522,16 @@ function rebuildRapportChecklist() {
   let checkedSet = null;
   if (currentRapportId) {
     const list = getAllRapports();
-    const rec = list.find(r => r.id === currentRapportId);
+    const rec = list.find((r) => r.id === currentRapportId);
     if (rec && Array.isArray(rec.sections)) {
       checkedSet = new Set();
-      rec.sections.forEach(sec => {
-        (sec.items || []).forEach(text => checkedSet.add(text));
+      rec.sections.forEach((sec) => {
+        (sec.items || []).forEach((text) => checkedSet.add(text));
       });
     }
   }
 
-  tpl.sections.forEach(section => {
+  tpl.sections.forEach((section) => {
     const div = document.createElement("div");
     div.className = "rapport-section";
 
@@ -2510,10 +2539,10 @@ function rebuildRapportChecklist() {
     h.textContent = section.title;
     div.appendChild(h);
 
-    section.items.forEach(item => {
+    section.items.forEach((item) => {
       const isChecked =
         !checkedSet || checkedSet.size === 0
-          ? true              // nouveau rapport → tout coché
+          ? true // nouveau rapport → tout coché
           : checkedSet.has(item);
 
       const row = document.createElement("label");
@@ -2529,7 +2558,6 @@ function rebuildRapportChecklist() {
   });
 }
 
-
 function updateRapportAnalyseVisibility(typeId) {
   const bloc = document.getElementById("rapportAnalyse");
   if (!bloc) return;
@@ -2541,13 +2569,12 @@ function updateRapportAnalyseVisibility(typeId) {
 
   // Si on cache, on vide les champs
   if (!show) {
-    const ph  = document.getElementById("rapPH");
+    const ph = document.getElementById("rapPH");
     const chl = document.getElementById("rapChlore");
-    if (ph)  ph.value  = "";
+    if (ph) ph.value = "";
     if (chl) chl.value = "";
   }
 }
-
 
 function openCA() {
   // Ouvre la popup CA existante
@@ -2558,25 +2585,24 @@ function openCA() {
   if (tabCA) tabCA.classList.add("active");
 }
 
-
 // ================== CLIENTS POUR CONTRATS ==================
 
 function fillContractClientFromObject(client) {
   if (!client) return;
 
-  const civ   = document.getElementById("ctClientCivility");
-  const name  = document.getElementById("ctClientName");
-  const addr  = document.getElementById("ctClientAddress");
+  const civ = document.getElementById("ctClientCivility");
+  const name = document.getElementById("ctClientName");
+  const addr = document.getElementById("ctClientAddress");
   const phone = document.getElementById("ctClientPhone");
   const email = document.getElementById("ctClientEmail");
 
   if (civ && !civ.value && client.civility) {
     civ.value = client.civility;
   }
-  if (name)  name.value  = client.name    || "";
-  if (addr)  addr.value  = client.address || "";
-  if (phone) phone.value = client.phone   || "";
-  if (email) email.value = client.email   || "";
+  if (name) name.value = client.name || "";
+  if (addr) addr.value = client.address || "";
+  if (phone) phone.value = client.phone || "";
+  if (email) email.value = client.email || "";
 }
 
 // Auto-remplissage quand on choisit un client dans ctClientName
@@ -2589,7 +2615,7 @@ function onContractClientNameChange() {
 
   const clients = getClients();
   const found = clients.find(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase(),
   );
 
   if (found) {
@@ -2599,11 +2625,13 @@ function onContractClientNameChange() {
 
 // Ajoute / met à jour le client depuis un contrat
 function addCurrentClientFromContract() {
-  const name    = (document.getElementById("ctClientName")?.value || "").trim();
-  const address = (document.getElementById("ctClientAddress")?.value || "").trim();
-  const phone   = (document.getElementById("ctClientPhone")?.value || "").trim();
-  const email   = (document.getElementById("ctClientEmail")?.value || "").trim();
-  const civ     = (document.getElementById("ctClientCivility")?.value || "").trim();
+  const name = (document.getElementById("ctClientName")?.value || "").trim();
+  const address = (
+    document.getElementById("ctClientAddress")?.value || ""
+  ).trim();
+  const phone = (document.getElementById("ctClientPhone")?.value || "").trim();
+  const email = (document.getElementById("ctClientEmail")?.value || "").trim();
+  const civ = (document.getElementById("ctClientCivility")?.value || "").trim();
 
   if (!name || !address) {
     showConfirmDialog({
@@ -2612,14 +2640,14 @@ function addCurrentClientFromContract() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
 
   const clients = getClients();
   const existingIdx = clients.findIndex(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase(),
   );
 
   let clientObj;
@@ -2631,12 +2659,12 @@ function addCurrentClientFromContract() {
       name,
       address,
       phone,
-      email
+      email,
     };
     clients[existingIdx] = clientObj;
   } else {
     const tmp = { civility: civ, name, address, phone, email };
-    const id  = getClientDocId(tmp);
+    const id = getClientDocId(tmp);
     clientObj = { ...tmp, id };
     clients.push(clientObj);
   }
@@ -2654,7 +2682,7 @@ function addCurrentClientFromContract() {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 }
 
@@ -2667,7 +2695,7 @@ function deleteCurrentClientFromContract() {
   const clients = getClients();
 
   const existingIdx = clients.findIndex(
-    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase(),
   );
   if (existingIdx < 0) return;
 
@@ -2701,13 +2729,11 @@ function deleteCurrentClientFromContract() {
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "success",
-        icon: "✅"
+        icon: "✅",
       });
-    }
+    },
   });
 }
-
-
 
 // Ajouter le client actuel à la base
 
@@ -2725,14 +2751,14 @@ function addCurrentClient() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
 
   const clients = getClients();
   const existingIndex = clients.findIndex(
-    c => (c.name || "").toLowerCase() === name.toLowerCase()
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase(),
   );
 
   let clientObj;
@@ -2752,7 +2778,7 @@ function addCurrentClient() {
       name,
       address,
       phone,
-      email
+      email,
     };
     clients[existingIndex] = clientObj;
   }
@@ -2774,11 +2800,9 @@ function addCurrentClient() {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 }
-
-
 
 let pendingRenewId = null;
 
@@ -2813,23 +2837,27 @@ function rebuildClientsPopupList(searchText = "") {
 
   // On trie seulement pour l'affichage, sans casser les index d'origine
   const sorted = mapped.sort((a, b) =>
-    (a.client.name || "").toLowerCase()
-      .localeCompare((b.client.name || "").toLowerCase(), "fr", { sensitivity: "base" })
+    (a.client.name || "")
+      .toLowerCase()
+      .localeCompare((b.client.name || "").toLowerCase(), "fr", {
+        sensitivity: "base",
+      }),
   );
 
   if (searchText && searchText.trim() !== "") {
     const q = searchText.toLowerCase();
-    clientsPopupList = sorted.filter(item =>
-      (item.client.name || "").toLowerCase().includes(q) ||
-      (item.client.address && item.client.address.toLowerCase().includes(q)) ||
-      (item.client.phone && item.client.phone.toLowerCase().includes(q))
+    clientsPopupList = sorted.filter(
+      (item) =>
+        (item.client.name || "").toLowerCase().includes(q) ||
+        (item.client.address &&
+          item.client.address.toLowerCase().includes(q)) ||
+        (item.client.phone && item.client.phone.toLowerCase().includes(q)),
     );
   } else {
     // Pas de filtre : on garde toute la liste triée
     clientsPopupList = sorted;
   }
 }
-
 
 function openClientsListPopup() {
   const searchInput = document.getElementById("clientSearchInput");
@@ -2888,8 +2916,8 @@ function renderClientsList() {
 
   pageItems.forEach(({ client, index }) => {
     const item = document.createElement("div");
-item.className = "client-item";
-item.innerHTML = `
+    item.className = "client-item";
+    item.innerHTML = `
   <strong>${client.name}</strong><br>
   ${client.address || ""}<br>
   Tel : ${client.phone || "—"}<br>
@@ -2900,16 +2928,16 @@ item.innerHTML = `
   </div>
 `;
 
-item.style.cursor = "pointer";
-item.title = "Ouvrir la fiche client";
+    item.style.cursor = "pointer";
+    item.title = "Ouvrir la fiche client";
 
-item.addEventListener("click", (e) => {
-  if (e.target.closest("button")) return; // ne pas ouvrir si clic sur un bouton
-  openClientSheet(client.name);
-});
+    item.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return; // ne pas ouvrir si clic sur un bouton
+      openClientSheet(client.name);
+    });
 
-container.appendChild(item);
-});
+    container.appendChild(item);
+  });
 
   if (pageInfoEl) {
     pageInfoEl.textContent = `Page ${currentClientPage} / ${totalPages}`;
@@ -2930,7 +2958,6 @@ function nextClientsPage() {
     renderClientsList();
   }
 }
-
 
 function deleteClientFromList(index) {
   const clients = getClients();
@@ -2956,18 +2983,17 @@ function deleteClientFromList(index) {
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "success",
-        icon: "✅"
+        icon: "✅",
       });
-    }
+    },
   });
 }
-
 
 function exportClientsCSV() {
   const clients = getClients();
   let csv = "Nom;Adresse;Téléphone;Email\n";
 
-  clients.forEach(c => {
+  clients.forEach((c) => {
     csv += `${c.name};${c.address};${c.phone || ""};${c.email || ""}\n`;
   });
 
@@ -3020,7 +3046,7 @@ function saveEditedClient() {
     name: document.getElementById("editClientName").value.trim(),
     address: document.getElementById("editClientAddress").value.trim(),
     phone: document.getElementById("editClientPhone").value.trim(),
-    email: document.getElementById("editClientEmail").value.trim()
+    email: document.getElementById("editClientEmail").value.trim(),
   };
 
   // Nom obligatoire
@@ -3031,7 +3057,7 @@ function saveEditedClient() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -3039,7 +3065,10 @@ function saveEditedClient() {
   let title;
   let message;
 
-  if (editingClientIndex === null || typeof editingClientIndex === "undefined") {
+  if (
+    editingClientIndex === null ||
+    typeof editingClientIndex === "undefined"
+  ) {
     // ➕ AJOUT NOUVEAU CLIENT
     clients.push(newClient);
     title = "Client ajouté";
@@ -3062,11 +3091,9 @@ function saveEditedClient() {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 }
-
-
 
 function closeClientsListPopup() {
   const overlay = document.getElementById("clientsPopup");
@@ -3077,7 +3104,7 @@ function closeClientsListPopup() {
 
 function generatePDFRapport() {
   const type = document.getElementById("rapportType").value;
-  const tpl = RAPPORT_TEMPLATES.find(t => t.id === type);
+  const tpl = RAPPORT_TEMPLATES.find((t) => t.id === type);
   if (!tpl) return alert("Sélectionne un modèle.");
 
   const doc = new jspdf.jsPDF();
@@ -3088,12 +3115,12 @@ function generatePDFRapport() {
   doc.setFontSize(12);
 
   let y = 40;
-  document.querySelectorAll(".rapport-section").forEach(section => {
+  document.querySelectorAll(".rapport-section").forEach((section) => {
     const title = section.querySelector("h4").textContent;
     doc.text(title, 10, y);
     y += 6;
 
-    section.querySelectorAll("input:checked").forEach(cb => {
+    section.querySelectorAll("input:checked").forEach((cb) => {
       doc.text("• " + cb.dataset.text, 14, y);
       y += 6;
     });
@@ -3104,7 +3131,6 @@ function generatePDFRapport() {
   doc.save("rapport.pdf");
   closeRapportPopup();
 }
-
 
 function saveSingleDocumentToFirestore(doc) {
   if (!doc || !doc.id) {
@@ -3118,7 +3144,7 @@ function saveSingleDocumentToFirestore(doc) {
       collection: "documents",
       action: "set",
       docId: doc.id,
-      data: doc
+      data: doc,
     });
     if (typeof syncContractsWithDevis === "function") {
       syncContractsWithDevis(doc);
@@ -3133,7 +3159,7 @@ function saveSingleDocumentToFirestore(doc) {
       processSyncQueue();
     })
     .catch((err) =>
-      console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err)
+      console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err),
     );
 
   if (typeof syncContractsWithDevis === "function") {
@@ -3142,7 +3168,7 @@ function saveSingleDocumentToFirestore(doc) {
 }
 
 // ================== LISTE CLIENTS (popup) ==================
-let clientsPopupList = [];      // liste courante affichée dans le popup
+let clientsPopupList = []; // liste courante affichée dans le popup
 let currentClientPage = 1;
 const CLIENTS_PER_PAGE = 10;
 
@@ -3152,19 +3178,11 @@ function formatEuro(value) {
   return (
     (Number(value) || 0).toLocaleString("fr-FR", {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }) + " €"
   );
 }
-function escapeHtml(str) {
-  if (!str) return "";
-  return String(str)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+
 
 /* ================== CHIFFRE D'AFFAIRES – DASHBOARD PRO ================== */
 
@@ -3173,19 +3191,19 @@ function formatEuroCA(v) {
   return n.toLocaleString("fr-FR", {
     style: "currency",
     currency: "EUR",
-    minimumFractionDigits: 2
+    minimumFractionDigits: 2,
   });
 }
 
 function getCAAvailableYears() {
-  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
   if (docs.length === 0) {
     return [new Date().getFullYear()];
   }
   let minYear = 9999;
   let maxYear = 0;
 
-  docs.forEach(d => {
+  docs.forEach((d) => {
     const dt = new Date(d.date);
     const y = dt.getFullYear();
     if (!isNaN(y)) {
@@ -3206,7 +3224,7 @@ function getCAAvailableYears() {
  * year = null => toutes années confondues (utile pour "Toutes").
  */
 function computeCAMonthsForYear(year) {
-  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     month: i + 1,
@@ -3216,10 +3234,10 @@ function computeCAMonthsForYear(year) {
     paidTTC: 0,
     unpaidTTC: 0,
     paidCount: 0,
-    unpaidCount: 0
+    unpaidCount: 0,
   }));
 
-  docs.forEach(d => {
+  docs.forEach((d) => {
     if (!d.date) return;
 
     const dt = new Date(d.date);
@@ -3273,8 +3291,8 @@ function buildCAReport(year) {
       paidTTC: 0,
       unpaidTTC: 0,
       paidCount: 0,
-      unpaidCount: 0
-    }
+      unpaidCount: 0,
+    },
   );
 
   const now = new Date();
@@ -3286,7 +3304,7 @@ function buildCAReport(year) {
     months,
     totals,
     currentMonth,
-    availableYears: getCAAvailableYears()
+    availableYears: getCAAvailableYears(),
   };
 }
 
@@ -3307,7 +3325,7 @@ function initCAYearSelect() {
   optAll.textContent = "Toutes";
   select.appendChild(optAll);
 
-  years.forEach(y => {
+  years.forEach((y) => {
     const opt = document.createElement("option");
     opt.value = String(y);
     opt.textContent = String(y);
@@ -3358,20 +3376,21 @@ function renderCAReport() {
   const summaryTVA = document.getElementById("caSummaryTVA");
   const summaryTVARate = document.getElementById("caSummaryTVARate");
   const summaryCurMonth = document.getElementById("caSummaryCurrentMonth");
-  const summaryCurMonthLabel = document.getElementById("caSummaryCurrentMonthLabel");
+  const summaryCurMonthLabel = document.getElementById(
+    "caSummaryCurrentMonthLabel",
+  );
   const prevCard = document.getElementById("caSummaryPrevYearCard");
   const summaryDelta = document.getElementById("caSummaryDelta");
   const summaryDeltaPct = document.getElementById("caSummaryDeltaPct");
 
   if (summaryTotal) summaryTotal.textContent = formatEuroCA(totalTTC);
-  if (summaryTotalHT) summaryTotalHT.textContent = "HT : " + formatEuroCA(totalHT);
+  if (summaryTotalHT)
+    summaryTotalHT.textContent = "HT : " + formatEuroCA(totalHT);
 
   if (summaryPaid) summaryPaid.textContent = formatEuroCA(paidTTC);
   if (summaryPaidPct) {
     summaryPaidPct.textContent =
-      totalTTC > 0
-        ? `${paidPct.toFixed(1)} % du CA payé`
-        : "Aucune facture";
+      totalTTC > 0 ? `${paidPct.toFixed(1)} % du CA payé` : "Aucune facture";
   }
 
   if (summaryUnpaid) summaryUnpaid.textContent = formatEuroCA(unpaidTTC);
@@ -3391,8 +3410,18 @@ function renderCAReport() {
 
   const now = new Date();
   const monthNames = [
-    "Janvier","Février","Mars","Avril","Mai","Juin",
-    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
   ];
   const curMonth = report.currentMonth || null;
 
@@ -3415,7 +3444,10 @@ function renderCAReport() {
 
       summaryDelta.textContent = (delta >= 0 ? "+" : "") + formatEuroCA(delta);
       summaryDeltaPct.textContent =
-        (delta >= 0 ? "▲ " : "▼ ") + deltaPct.toFixed(1) + " % vs " + (selectedYear - 1);
+        (delta >= 0 ? "▲ " : "▼ ") +
+        deltaPct.toFixed(1) +
+        " % vs " +
+        (selectedYear - 1);
 
       prevCard.style.display = "";
     } else {
@@ -3460,12 +3492,14 @@ function renderCAReport() {
   if (chart) {
     chart.innerHTML = "";
 
-    const currentValues = report.months.map(m => m.totalTTC);
-    const prevValues = prevReport ? prevReport.months.map(m => m.totalTTC) : [];
+    const currentValues = report.months.map((m) => m.totalTTC);
+    const prevValues = prevReport
+      ? prevReport.months.map((m) => m.totalTTC)
+      : [];
     const maxVal = Math.max(
       1,
       ...currentValues,
-      ...(prevReport ? prevValues : [0])
+      ...(prevReport ? prevValues : [0]),
     );
 
     report.months.forEach((m, idx) => {
@@ -3545,8 +3579,18 @@ function exportCAURSSAFCSV() {
   const months = computeCAMonthsForYear(year);
 
   const monthNames = [
-    "Janvier","Février","Mars","Avril","Mai","Juin",
-    "Juillet","Août","Septembre","Octobre","Novembre","Décembre"
+    "Janvier",
+    "Février",
+    "Mars",
+    "Avril",
+    "Mai",
+    "Juin",
+    "Juillet",
+    "Août",
+    "Septembre",
+    "Octobre",
+    "Novembre",
+    "Décembre",
   ];
 
   let csv = "Mois;CA encaissé TTC\n";
@@ -3572,11 +3616,11 @@ function exportCAFullCSV() {
   const value = yearSelect.value || "all";
   const year = value === "all" ? null : parseInt(value, 10) || null;
 
-  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
 
   let csv = "Numero;Date;Client;HT;TVA;TTC;Payee;Date_reglement;Mode\n";
 
-  docs.forEach(d => {
+  docs.forEach((d) => {
     const dt = new Date(d.date);
     const y = dt.getFullYear();
     if (year && y !== year) return;
@@ -3595,12 +3639,18 @@ function exportCAFullCSV() {
         d.number || "",
         dateStr,
         clientName,
-        Number(d.subtotal || 0).toFixed(2).replace(".", ","),
-        Number(d.tvaAmount || 0).toFixed(2).replace(".", ","),
-        Number(d.totalTTC || 0).toFixed(2).replace(".", ","),
+        Number(d.subtotal || 0)
+          .toFixed(2)
+          .replace(".", ","),
+        Number(d.tvaAmount || 0)
+          .toFixed(2)
+          .replace(".", ","),
+        Number(d.totalTTC || 0)
+          .toFixed(2)
+          .replace(".", ","),
         statut,
         dateReg,
-        mode
+        mode,
       ].join(";") + "\n";
   });
 
@@ -3614,7 +3664,6 @@ function exportCAFullCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
 
 function isDevisExpired(docType, validityDate) {
   if (docType !== "devis" || !validityDate) return false;
@@ -3654,7 +3703,7 @@ function getAllDocuments() {
   } catch (e) {
     console.error(
       "Données 'documents' corrompues dans localStorage, réinitialisation :",
-      e
+      e,
     );
     localStorage.removeItem("documents");
     return [];
@@ -3669,37 +3718,6 @@ function saveDocuments(docs) {
   localStorage.setItem("documents", JSON.stringify(docs));
 }
 
-
-function _normalizeClientType(raw) {
-  const v = (raw || "").toString().toLowerCase().trim();
-  if (!v) return "particulier";
-
-  // tout ce qui ressemble à pro/syndic/agence
-  if (
-    v.includes("syndic") ||
-    v.includes("agence") ||
-    v.includes("pro") ||
-    v.includes("profession") ||
-    v.includes("immobilier") ||
-    v.includes("soc") ||
-    v.includes("entreprise")
-  ) {
-    return "pro";
-  }
-  return "particulier";
-}
-
-function _getClientTypeFromEntity(entity, client) {
-  return _normalizeClientType(
-    entity?.clientType ||
-    entity?.client?.type ||
-    entity?.pricing?.clientType ||
-    entity?.pricing?.client?.type ||
-    entity?.typeClient ||          // si tu as un champ comme ça
-    entity?.ctClientType ||        // si tu as un champ comme ça
-    client?.type
-  );
-}
 
 // ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
 
@@ -3731,10 +3749,14 @@ function _getClientFromEntity(entity) {
   // fallback
   return {
     name: entity?.clientName || entity?.pricing?.clientName || "",
-    civility: entity?.clientCivility || entity?.pricing?.clientCivility || entity?.civility || "",
+    civility:
+      entity?.clientCivility ||
+      entity?.pricing?.clientCivility ||
+      entity?.civility ||
+      "",
     email: entity?.clientEmail || entity?.pricing?.clientEmail || "",
     phone: entity?.clientPhone || entity?.pricing?.clientPhone || "",
-    type: entity?.clientType || entity?.pricing?.clientType || ""
+    type: entity?.clientType || entity?.pricing?.clientType || "",
   };
 }
 
@@ -3746,7 +3768,9 @@ function _pickCivility(client = {}) {
     client.title ||
     client.civilityLabel ||
     ""
-  ).toString().trim();
+  )
+    .toString()
+    .trim();
 }
 
 function _normalizeCivility(civRaw) {
@@ -3754,17 +3778,27 @@ function _normalizeCivility(civRaw) {
   if (!v) return ""; // inconnu
 
   // Monsieur/Madame (y compris variantes)
-  if (v.includes("monsieur et madame") || v.includes("madame et monsieur")) return "couple";
-  if (v === "m" || v === "mr" || v === "m." || v.includes("monsieur")) return "monsieur";
-  if (v === "mme" || v === "mrs" || v === "ms" || v.includes("madame")) return "madame";
+  if (v.includes("monsieur et madame") || v.includes("madame et monsieur"))
+    return "couple";
+  if (v === "m" || v === "mr" || v === "m." || v.includes("monsieur"))
+    return "monsieur";
+  if (v === "mme" || v === "mrs" || v === "ms" || v.includes("madame"))
+    return "madame";
 
   // Entreprise / Société
   if (
-    v.includes("soc") || v.includes("soci") || v.includes("entreprise") ||
-    v.includes("sarl") || v.includes("sas") || v.includes("sasu") ||
-    v.includes("eurl") || v.includes("sci") || v.includes("agence") ||
+    v.includes("soc") ||
+    v.includes("soci") ||
+    v.includes("entreprise") ||
+    v.includes("sarl") ||
+    v.includes("sas") ||
+    v.includes("sasu") ||
+    v.includes("eurl") ||
+    v.includes("sci") ||
+    v.includes("agence") ||
     v.includes("syndic")
-  ) return "societe";
+  )
+    return "societe";
 
   return "";
 }
@@ -3789,6 +3823,7 @@ function _buildGreeting(client = {}) {
 }
 
 // ---------- Helpers délai de paiement ----------
+
 function _normalizeClientType(raw) {
   const v = (raw || "").toString().toLowerCase().trim();
   if (!v) return "particulier";
@@ -3801,7 +3836,8 @@ function _normalizeClientType(raw) {
     v.includes("immobilier") ||
     v.includes("soc") ||
     v.includes("entreprise")
-  ) return "pro";
+  )
+    return "pro";
 
   return "particulier";
 }
@@ -3809,16 +3845,15 @@ function _normalizeClientType(raw) {
 function _getClientTypeFromEntity(entity, client) {
   return _normalizeClientType(
     entity?.clientType ||
-    entity?.conditionsType ||         
-    entity?.client?.type ||
-    entity?.pricing?.clientType ||
-    entity?.pricing?.client?.type ||
-    entity?.typeClient ||
-    entity?.ctClientType ||
-    client?.type
+      entity?.conditionsType ||
+      entity?.client?.type ||
+      entity?.pricing?.clientType ||
+      entity?.pricing?.client?.type ||
+      entity?.typeClient ||
+      entity?.ctClientType ||
+      client?.type,
   );
 }
-
 
 // ================== FACTURE : FORMAT CLIENT ==================
 
@@ -3831,11 +3866,11 @@ function _formatInvoiceServiceLabel(raw) {
   s = s.replace(/\s*[-–]\s*[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)?$/i, "");
 
   // Nettoyage technique
-  s = s.replace(/entretien piscine/ig, "Entretien de piscine");
-  s = s.replace(/prestations du/ig, "Prestations du");
+  s = s.replace(/entretien piscine/gi, "Entretien de piscine");
+  s = s.replace(/prestations du/gi, "Prestations du");
 
   // Supprime les échéances techniques
-  s = s.replace(/échéance\s+\d{1,2}\/\d{1,2}/ig, "");
+  s = s.replace(/échéance\s+\d{1,2}\/\d{1,2}/gi, "");
 
   // Nettoyage espaces
   s = s.replace(/\s{2,}/g, " ").trim();
@@ -3854,15 +3889,14 @@ function _detectInvoiceFrequency(raw) {
   return "";
 }
 
-
-
 // ---------- Builder message ----------
 function buildSendMessage(entity) {
   const kind = entity?._kind || entity?.type || "document"; // "devis" | "facture" | "contrat"
   const client = _getClientFromEntity(entity);
 
   const greeting = _buildGreeting(client);
-  const clientNameSafe = (client?.name || "").toString().trim() || "Madame, Monsieur";
+  const clientNameSafe =
+    (client?.name || "").toString().trim() || "Madame, Monsieur";
 
   // Champs communs
   const number = (entity?.number || "").toString().trim();
@@ -3870,33 +3904,42 @@ function buildSendMessage(entity) {
 
   // Montant (TTC si dispo, sinon HT)
   const totalTTC =
-    (typeof entity?.totalTTC === "number") ? entity.totalTTC :
-    (typeof entity?.pricing?.totalTTC === "number") ? entity.pricing.totalTTC :
-    (typeof entity?.pricing?.totalHT === "number") ? entity.pricing.totalHT :
-    null;
+    typeof entity?.totalTTC === "number"
+      ? entity.totalTTC
+      : typeof entity?.pricing?.totalTTC === "number"
+        ? entity.pricing.totalTTC
+        : typeof entity?.pricing?.totalHT === "number"
+          ? entity.pricing.totalHT
+          : null;
 
   const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
 
   // Dates devis
   const validity =
-    (kind === "devis" && entity?.validityDate) ? _fmtDateFR(entity.validityDate) : "";
+    kind === "devis" && entity?.validityDate
+      ? _fmtDateFR(entity.validityDate)
+      : "";
 
   // Contrat : période
-  const periodStart = entity?.pricing?.startDate ? _fmtDateFR(entity.pricing.startDate) : "";
-  const durationMonths = entity?.pricing?.durationMonths || entity?.durationMonths || "";
+  const periodStart = entity?.pricing?.startDate
+    ? _fmtDateFR(entity.pricing.startDate)
+    : "";
+  const durationMonths =
+    entity?.pricing?.durationMonths || entity?.durationMonths || "";
   const period =
-    (periodStart && durationMonths)
+    periodStart && durationMonths
       ? `à partir du ${periodStart} (durée ${durationMonths} mois)`
-      : (periodStart ? `à partir du ${periodStart}` : "");
+      : periodStart
+        ? `à partir du ${periodStart}`
+        : "";
 
   // Type client => délai paiement facture
-const clientType = _getClientTypeFromEntity(entity, client);
+  const clientType = _getClientTypeFromEntity(entity, client);
 
-const paymentDelayTxt =
-  clientType === "pro"
-    ? "sous 30 jours, conformément à nos conditions de règlement"
-    : "sous 7 jours";
-
+  const paymentDelayTxt =
+    clientType === "pro"
+      ? "sous 30 jours, conformément à nos conditions de règlement"
+      : "sous 7 jours";
 
   // Signature
   const signature = `Cordialement,\nLoïc – AquaClim Prestige\n06 03 53 77 73`;
@@ -3911,8 +3954,7 @@ const paymentDelayTxt =
     mailSubject = `Devis ${number}${subject ? " – " + subject : ""}`;
     const status = (entity?.status || "en_attente").toString();
 
-    body =
-`${greeting}
+    body = `${greeting}
 
 Je vous adresse le devis ${number}${subject ? ` relatif à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 ${validity ? `\nValidité : jusqu’au ${validity}.` : ""}
@@ -3922,8 +3964,7 @@ Je reste à votre disposition pour toute précision ou ajustement.
 ${signature}`;
 
     if (status === "accepte") {
-      body =
-`${greeting}
+      body = `${greeting}
 
 Suite à votre accord, je vous confirme l’envoi du devis ${number}${subject ? ` relatif à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
@@ -3933,8 +3974,7 @@ ${signature}`;
     }
 
     if (status === "expire") {
-      body =
-`${greeting}
+      body = `${greeting}
 
 Je vous renvoie le devis ${number}${subject ? ` relatif à : ${subject}` : ""}${totalTxt ? `, pour un montant de ${totalTxt} TTC.` : "."}
 
@@ -3949,19 +3989,18 @@ ${signature}`;
   // =========================
   // 2) FACTURE
   // =========================
- if (entity?.type === "facture") {
-  const rawSubject = entity?.subject || "";
-  const cleanLabel = _formatInvoiceServiceLabel(rawSubject);
-  const frequency = _detectInvoiceFrequency(rawSubject);
+  if (entity?.type === "facture") {
+    const rawSubject = entity?.subject || "";
+    const cleanLabel = _formatInvoiceServiceLabel(rawSubject);
+    const frequency = _detectInvoiceFrequency(rawSubject);
 
-  mailSubject = `Facture ${number}${cleanLabel ? " – " + cleanLabel : ""}`;
+    mailSubject = `Facture ${number}${cleanLabel ? " – " + cleanLabel : ""}`;
 
-  const paid = !!entity?.paid;
-  const freqTxt = frequency ? ` (facturation ${frequency})` : "";
+    const paid = !!entity?.paid;
+    const freqTxt = frequency ? ` (facturation ${frequency})` : "";
 
-  if (paid) {
-    body =
-`${greeting}
+    if (paid) {
+      body = `${greeting}
 
 Je vous transmets la facture acquittée ${number}${cleanLabel ? ` relative à ${cleanLabel}` : ""}${freqTxt}.
 ${totalTxt ? `Montant : ${totalTxt} TTC.` : ""}
@@ -3969,9 +4008,8 @@ ${totalTxt ? `Montant : ${totalTxt} TTC.` : ""}
 Je vous remercie pour votre règlement et reste à votre disposition.
 
 ${signature}`;
-  } else {
-    body =
-`${greeting}
+    } else {
+      body = `${greeting}
 
 Je vous adresse la facture ${number}${cleanLabel ? ` relative à ${cleanLabel}` : ""}${freqTxt}.
 ${totalTxt ? `Montant : ${totalTxt} TTC.` : ""}
@@ -3980,19 +4018,17 @@ Je vous remercie de bien vouloir procéder au règlement ${paymentDelayTxt}.
 Si vous souhaitez le RIB ou toute information complémentaire, je vous l’envoie immédiatement.
 
 ${signature}`;
+    }
+
+    return { mailSubject, body };
   }
-
-  return { mailSubject, body };
-}
-
 
   // =========================
   // 3) CONTRAT (fallback)
   // =========================
   mailSubject = `Contrat d’entretien${number ? " " + number : ""} – ${clientNameSafe}`;
 
-  body =
-`${greeting}
+  body = `${greeting}
 
 Je vous transmets le contrat d’entretien${number ? " " + number : ""}${period ? ` (${period})` : ""}${totalTxt ? `, pour un montant total de ${totalTxt} TTC.` : "."}
 
@@ -4013,7 +4049,7 @@ function openSendPopup() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
-      icon: "ℹ️"
+      icon: "ℹ️",
     });
     return;
   }
@@ -4030,9 +4066,11 @@ function openSendPopup() {
 
   if (infoEl) {
     const typeLabel =
-      (doc.type === "facture") ? "Facture" :
-      (doc.type === "devis") ? "Devis" :
-      "Document";
+      doc.type === "facture"
+        ? "Facture"
+        : doc.type === "devis"
+          ? "Devis"
+          : "Document";
     const clientName = doc?.client?.name || "";
     infoEl.textContent = `${typeLabel} ${doc.number || ""} – ${clientName}`;
   }
@@ -4051,42 +4089,53 @@ function openSendPopup() {
 
 function openSendPopupContract() {
   if (!currentContractId) {
-    showConfirmDialog({
-      title: "Aucun contrat ouvert",
-      message: "Ouvre d’abord un contrat avant de l’envoyer.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "info",
-      icon: "ℹ️"
-    });
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Aucun contrat ouvert",
+        message: "Ouvre d’abord un contrat avant de l’envoyer.",
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "info",
+        icon: "ℹ️"
+      });
+    } else {
+      alert("Aucun contrat ouvert.");
+    }
     return;
   }
 
-  const ct = getContract(currentContractId);
-  if (!ct) return;
+  const contract = getContract(currentContractId);
+  if (!contract) return;
 
-  ct._kind = "contrat"; // 👈 important
-  currentSendDoc = ct;
+  const popup = document.getElementById("sendPopup");
+  const info = document.getElementById("sendPopupInfo");
+  const textarea = document.getElementById("sendMessage");
 
-  const { body } = buildSendMessage(ct);
+  const company = getCompanySettings?.() || {};
+  const clientName =
+    contract.client?.name ||
+    contract.pricing?.clientName ||
+    "";
 
-  const infoEl = document.getElementById("sendDocInfo");
-  const txtArea = document.getElementById("sendMessagePreview");
-  const overlay = document.getElementById("sendPopup");
+  const body =
+`Bonjour,
 
-  if (infoEl) {
-    const clientName = _getClientFromEntity(ct)?.name || "";
-    infoEl.textContent = `Contrat – ${clientName}`;
-  }
+Veuillez trouver ci-joint le contrat.
 
-  if (txtArea) txtArea.value = body;
+Cordialement,
+${company.companyName || "AquaClim Prestige"}`;
 
-  if (overlay) {
-    overlay.classList.remove("hidden");
-    const popup = overlay.querySelector(".popup");
-    if (popup) {
-      void popup.offsetWidth;
-      popup.classList.add("show");
+  if (info) info.textContent = `Contrat – ${clientName}`;
+  if (textarea) textarea.value = body;
+
+  if (popup) {
+    popup.classList.remove("hidden");
+
+    // animation (si présente)
+    const box = popup.querySelector(".popup");
+    if (box) {
+      void box.offsetWidth;
+      box.classList.add("show");
     }
   }
 }
@@ -4114,7 +4163,7 @@ function sendByEmail() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -4123,9 +4172,12 @@ function sendByEmail() {
   const body = document.getElementById("sendMessagePreview")?.value || "";
 
   const url =
-    "mailto:" + encodeURIComponent(email) +
-    "?subject=" + encodeURIComponent(mailSubject) +
-    "&body=" + encodeURIComponent(body);
+    "mailto:" +
+    encodeURIComponent(email) +
+    "?subject=" +
+    encodeURIComponent(mailSubject) +
+    "&body=" +
+    encodeURIComponent(body);
 
   window.location.href = url;
   closeSendPopup();
@@ -4160,7 +4212,7 @@ function sendByWhatsApp() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -4169,13 +4221,15 @@ function sendByWhatsApp() {
 
   // WhatsApp: wa.me ne prend pas le "+" => on enlève le +
   const waPhone = phone.replace("+", "");
-  const url = "https://wa.me/" + encodeURIComponent(waPhone) + "?text=" + encodeURIComponent(body);
+  const url =
+    "https://wa.me/" +
+    encodeURIComponent(waPhone) +
+    "?text=" +
+    encodeURIComponent(body);
 
   openPdfViewer(url);
   closeSendPopup();
 }
-
-
 
 // ================== LOCALSTORAGE ATTESTATIONS ==================
 
@@ -4206,20 +4260,20 @@ function autoCreateClimAttestationForInvoice(doc) {
   const list = getAllAttestations();
 
   // ⚠️ Si une attestation existe déjà pour cette facture, on ne recrée pas
-  if (doc.id && list.some(att => att.sourceDocId === doc.id)) {
+  if (doc.id && list.some((att) => att.sourceDocId === doc.id)) {
     return;
   }
 
   // Données de base depuis la facture
-  const name  = (doc.client && doc.client.name)    || "";
-  const addr  = (doc.client && doc.client.address) || "";
-  const date  = doc.date || new Date().toISOString().slice(0, 10);
+  const name = (doc.client && doc.client.name) || "";
+  const addr = (doc.client && doc.client.address) || "";
+  const date = doc.date || new Date().toISOString().slice(0, 10);
 
   // 🔢 Nombre d’unités = somme des quantités sur les lignes de clim
   let units = 1;
   if (Array.isArray(doc.prestations)) {
-    const climLines = doc.prestations.filter(p =>
-      p && ["entretien_clim", "depannage_clim"].includes(p.kind)
+    const climLines = doc.prestations.filter(
+      (p) => p && ["entretien_clim", "depannage_clim"].includes(p.kind),
     );
 
     if (climLines.length) {
@@ -4244,7 +4298,7 @@ function autoCreateClimAttestationForInvoice(doc) {
     notes: "",
     createdAt: new Date().toISOString(),
     sourceDocId: doc.id || null,
-    sourceDocNumber: doc.number || null
+    sourceDocNumber: doc.number || null,
   };
 
   list.push(record);
@@ -4263,7 +4317,12 @@ function _isImageFile(file) {
   return file && file.type && file.type.startsWith("image/");
 }
 
-function _resizeImageFileToDataUrl(file, maxW = 1400, maxH = 1400, quality = 0.78) {
+function _resizeImageFileToDataUrl(
+  file,
+  maxW = 1400,
+  maxH = 1400,
+  quality = 0.78,
+) {
   return new Promise((resolve, reject) => {
     if (!_isImageFile(file)) return reject(new Error("Fichier non image"));
 
@@ -4298,23 +4357,23 @@ function _resizeImageFileToDataUrl(file, maxW = 1400, maxH = 1400, quality = 0.7
   });
 }
 
-function removeRapportPhoto(index) {
-  currentRapportPhotos = (currentRapportPhotos || []).filter((_, i) => i !== index);
-  _renderRapportPhotosPreview();
-}
-
 function _renderRapportPhotosPreview() {
   const box = document.getElementById("rapPhotosPreview");
   if (!box) return;
 
-  if (!Array.isArray(currentRapportPhotos) || currentRapportPhotos.length === 0) {
+  if (
+    !Array.isArray(currentRapportPhotos) ||
+    currentRapportPhotos.length === 0
+  ) {
     box.innerHTML = `<div style="opacity:.7;font-size:12px;">Aucune photo ajoutée.</div>`;
     return;
   }
 
   box.innerHTML = `
     <div style="display:flex; flex-wrap:wrap; gap:10px;">
-      ${currentRapportPhotos.map((p, idx) => `
+      ${currentRapportPhotos
+        .map(
+          (p, idx) => `
         <div style="width:120px;border:1px solid #e6e6e6;border-radius:10px;padding:8px;background:#fff;">
           <img src="${p.dataUrl}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;display:block;">
           <button
@@ -4324,7 +4383,9 @@ function _renderRapportPhotosPreview() {
             onclick="removeRapportPhoto(${idx})"
           >🗑️ Supprimer</button>
         </div>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </div>
   `;
 }
@@ -4338,7 +4399,11 @@ async function onRapportPhotosSelected(evt) {
 
     try {
       const dataUrl = await _resizeImageFileToDataUrl(f, 1400, 1400, 0.78);
-      currentRapportPhotos.push({ dataUrl, name: f.name || "photo", ts: Date.now() });
+      currentRapportPhotos.push({
+        dataUrl,
+        name: f.name || "photo",
+        ts: Date.now(),
+      });
     } catch (e) {
       console.error("Erreur resize photo rapport:", e);
     }
@@ -4347,8 +4412,6 @@ async function onRapportPhotosSelected(evt) {
   evt.target.value = "";
   _renderRapportPhotosPreview();
 }
-
-
 
 // ============ LOCALSTORAGE RAPPORTS ============
 
@@ -4387,7 +4450,7 @@ async function _onRapportPhotosChange() {
     currentRapportPhotosTemp.push({
       name: f.name,
       type: f.type || "image/jpeg",
-      dataUrl
+      dataUrl,
     });
   }
 
@@ -4396,9 +4459,21 @@ async function _onRapportPhotosChange() {
 }
 
 function removeRapportPhoto(index) {
-  currentRapportPhotosTemp.splice(index, 1);
-  renderRapportPhotosPreview();
+  // Supporte les 2 structures (ancienne + nouvelle)
+  if (Array.isArray(window.currentRapportPhotosTemp)) {
+    currentRapportPhotosTemp.splice(index, 1);
+  } else if (Array.isArray(window.currentRapportPhotos)) {
+    currentRapportPhotos = currentRapportPhotos.filter((_, i) => i !== index);
+  }
+
+  // Supporte les 2 renderers
+  if (typeof renderRapportPhotosPreview === "function") {
+    renderRapportPhotosPreview();
+  } else if (typeof _renderRapportPhotosPreview === "function") {
+    _renderRapportPhotosPreview();
+  }
 }
+
 
 function renderRapportPhotosPreview() {
   const box = document.getElementById("rapPhotosPreview");
@@ -4411,14 +4486,18 @@ function renderRapportPhotosPreview() {
 
   box.innerHTML = `
     <div style="display:flex;flex-wrap:wrap;gap:10px;">
-      ${currentRapportPhotosTemp.map((p, i) => `
+      ${currentRapportPhotosTemp
+        .map(
+          (p, i) => `
         <div style="width:140px;border:1px solid #e5e7eb;border-radius:10px;padding:8px;">
           <img src="${p.dataUrl}" style="width:100%;height:90px;object-fit:cover;border-radius:8px;display:block;">
           <div style="font-size:11px;color:#555;margin-top:6px;word-break:break-word;">${escapeHtml(p.name || "")}</div>
           <button type="button" class="btn btn-danger btn-small" style="margin-top:6px;width:100%;"
             onclick="removeRapportPhoto(${i})">Supprimer</button>
         </div>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </div>
   `;
 }
@@ -4433,7 +4512,7 @@ async function _onRapportFilesChange() {
     currentRapportAttachmentsTemp.push({
       name: f.name,
       type: f.type || "application/octet-stream",
-      dataUrl
+      dataUrl,
     });
   }
 
@@ -4457,50 +4536,55 @@ function renderRapportFilesList() {
 
   box.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:8px;">
-      ${currentRapportAttachmentsTemp.map((f, i) => `
+      ${currentRapportAttachmentsTemp
+        .map(
+          (f, i) => `
         <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid #e5e7eb;border-radius:10px;padding:8px 10px;">
           <div style="font-size:13px;color:#333;word-break:break-word;">
             📎 ${escapeHtml(f.name || "document")}
           </div>
           <button type="button" class="btn btn-danger btn-small" onclick="removeRapportFile(${i})">Supprimer</button>
         </div>
-      `).join("")}
+      `,
+        )
+        .join("")}
     </div>
   `;
 }
 
-
 function saveRapportFromForm() {
-  const name   = document.getElementById("rapClientName")?.value || "";
-  const addr   = document.getElementById("rapClientAddress")?.value || "";
-  const date   = document.getElementById("rapDate")?.value || "";
-  const notes  = document.getElementById("rapNotes")?.value || "";
+  const name = document.getElementById("rapClientName")?.value || "";
+  const addr = document.getElementById("rapClientAddress")?.value || "";
+  const date = document.getElementById("rapDate")?.value || "";
+  const notes = document.getElementById("rapNotes")?.value || "";
   const typeId = document.getElementById("rapportType")?.value || "";
 
-  const tpl = RAPPORT_TEMPLATES.find(t => t.id === typeId) || null;
+  const tpl = RAPPORT_TEMPLATES.find((t) => t.id === typeId) || null;
 
-  const phInput     = document.getElementById("rapPH");
+  const phInput = document.getElementById("rapPH");
   const chloreInput = document.getElementById("rapChlore");
-  const phValue     = phInput ? phInput.value.trim() : "";
+  const phValue = phInput ? phInput.value.trim() : "";
   const chloreValue = chloreInput ? chloreInput.value.trim() : "";
 
   // Items cochés
   const sectionsData = [];
-  document.querySelectorAll("#rapportChecklist .rapport-section").forEach(sectionEl => {
-    const title = sectionEl.querySelector("h4")?.textContent || "";
-    const items = [];
-    sectionEl.querySelectorAll("input[type='checkbox']").forEach(cb => {
-      if (cb.checked) items.push(cb.dataset.text || "");
+  document
+    .querySelectorAll("#rapportChecklist .rapport-section")
+    .forEach((sectionEl) => {
+      const title = sectionEl.querySelector("h4")?.textContent || "";
+      const items = [];
+      sectionEl.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+        if (cb.checked) items.push(cb.dataset.text || "");
+      });
+      if (items.length) sectionsData.push({ title, items });
     });
-    if (items.length) sectionsData.push({ title, items });
-  });
 
   const list = getAllRapports();
   let record;
 
   if (currentRapportId) {
     // ✏️ on met à jour
-    const idx = list.findIndex(r => r.id === currentRapportId);
+    const idx = list.findIndex((r) => r.id === currentRapportId);
     if (idx !== -1) {
       record = {
         ...list[idx],
@@ -4511,12 +4595,16 @@ function saveRapportFromForm() {
         date,
         notes,
         sections: sectionsData,
-       photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
-       attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
+        photos: Array.isArray(currentRapportPhotosTemp)
+          ? currentRapportPhotosTemp
+          : [],
+        attachments: Array.isArray(currentRapportAttachmentsTemp)
+          ? currentRapportAttachmentsTemp
+          : [],
         analysis: {
           ph: phValue || null,
-          chlore: chloreValue || null
-        }
+          chlore: chloreValue || null,
+        },
       };
       list[idx] = record;
     } else {
@@ -4530,19 +4618,23 @@ function saveRapportFromForm() {
         date,
         notes,
         sections: sectionsData,
-          photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
+        photos: Array.isArray(currentRapportPhotosTemp)
+          ? currentRapportPhotosTemp
+          : [],
 
-       attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
-
-
+        attachments: Array.isArray(currentRapportAttachmentsTemp)
+          ? currentRapportAttachmentsTemp
+          : [],
 
         analysis: {
           ph: phValue || null,
           chlore: chloreValue || null,
         },
         createdAt: new Date().toISOString(),
-        sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
-        sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+        sourceDocId:
+          (currentAttestationSource && currentAttestationSource.id) || null,
+        sourceDocNumber:
+          (currentAttestationSource && currentAttestationSource.number) || null,
       };
       list.push(record);
     }
@@ -4557,19 +4649,23 @@ function saveRapportFromForm() {
       date,
       notes,
       sections: sectionsData,
-      photos: Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [],
+      photos: Array.isArray(currentRapportPhotosTemp)
+        ? currentRapportPhotosTemp
+        : [],
 
-       attachments: Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [],
-
-
+      attachments: Array.isArray(currentRapportAttachmentsTemp)
+        ? currentRapportAttachmentsTemp
+        : [],
 
       analysis: {
         ph: phValue || null,
-        chlore: chloreValue || null
+        chlore: chloreValue || null,
       },
       createdAt: new Date().toISOString(),
-      sourceDocId: currentAttestationSource && currentAttestationSource.id || null,
-      sourceDocNumber: currentAttestationSource && currentAttestationSource.number || null
+      sourceDocId:
+        (currentAttestationSource && currentAttestationSource.id) || null,
+      sourceDocNumber:
+        (currentAttestationSource && currentAttestationSource.number) || null,
     };
     list.push(record);
   }
@@ -4581,7 +4677,6 @@ function saveRapportFromForm() {
     loadRapportsList();
   }
 }
-
 
 function saveRapportOnly() {
   saveRapportFromForm();
@@ -4609,7 +4704,7 @@ function loadRapportsList() {
     return;
   }
 
-  list.forEach(r => {
+  list.forEach((r) => {
     const tr = document.createElement("tr");
 
     const frDate = r.date ? r.date.split("-").reverse().join("/") : "";
@@ -4661,38 +4756,45 @@ function _escapeTextForWord(s) {
 }
 
 function exportRapportWord(rapId) {
-  const record = (getAllRapports() || []).find(r => r.id === rapId);
+  const record = (getAllRapports() || []).find((r) => r.id === rapId);
   if (!record) return;
 
   const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
   const company = getCompanySettings();
 
-  const sectionsHtml = (record.sections || []).map(sec => {
-    const items = (sec.items || []).map(it => `<li>${_escapeTextForWord(it)}</li>`).join("");
-    return `
+  const sectionsHtml = (record.sections || [])
+    .map((sec) => {
+      const items = (sec.items || [])
+        .map((it) => `<li>${_escapeTextForWord(it)}</li>`)
+        .join("");
+      return `
       <h3 style="color:#1976d2;margin:16px 0 8px;">${_escapeTextForWord(sec.title || "")}</h3>
       <ul>${items}</ul>
     `;
-  }).join("");
+    })
+    .join("");
 
   const notesHtml = record.notes
-    ? `<h3 style="color:#1976d2;margin:16px 0 8px;">Remarques / anomalies</h3><p>${_escapeTextForWord(record.notes).replace(/\n/g,"<br>")}</p>`
+    ? `<h3 style="color:#1976d2;margin:16px 0 8px;">Remarques / anomalies</h3><p>${_escapeTextForWord(record.notes).replace(/\n/g, "<br>")}</p>`
     : "";
 
   const photosHtml = (record.photos || [])
-    .filter(p => p && p.dataUrl)
-    .map(p => `
+    .filter((p) => p && p.dataUrl)
+    .map(
+      (p) => `
       <div style="margin:10px 0;">
         <img src="${p.dataUrl}" style="max-width:650px;width:100%;height:auto;border:1px solid #ddd;border-radius:8px;">
         <div style="font-size:11px;color:#666;margin-top:4px;">${_escapeTextForWord(p.name || "")}</div>
       </div>
-    `).join("");
+    `,
+    )
+    .join("");
 
   const attachmentsHtml = (record.attachments || []).length
     ? `
       <h3 style="color:#1976d2;margin:16px 0 8px;">Documents joints</h3>
       <ul>
-        ${(record.attachments || []).map(a => `<li>${_escapeTextForWord(a.name || "document")}</li>`).join("")}
+        ${(record.attachments || []).map((a) => `<li>${_escapeTextForWord(a.name || "document")}</li>`).join("")}
       </ul>
     `
     : "";
@@ -4732,7 +4834,9 @@ function exportRapportWord(rapId) {
   const blob = new Blob([html], { type: "application/msword" });
   const url = URL.createObjectURL(blob);
 
-  const safeName = (record.clientName ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_") : "intervention");
+  const safeName = record.clientName
+    ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_")
+    : "intervention";
   const a = document.createElement("a");
   a.href = url;
   a.download = `rapport-${safeName}.doc`;
@@ -4749,19 +4853,20 @@ function exportRapportWordCurrent() {
 }
 
 function transferRapportToClient(rapId) {
-  const record = (getAllRapports() || []).find(r => r.id === rapId);
+  const record = (getAllRapports() || []).find((r) => r.id === rapId);
   if (!record) return;
 
   // on tente de récupérer email/tel depuis ta base clients via le nom
-  const client = (getClients() || []).find(c => (c.name || "") === (record.clientName || ""));
+  const client = (getClients() || []).find(
+    (c) => (c.name || "") === (record.clientName || ""),
+  );
   const phone = client?.phone || "";
   const email = client?.email || "";
 
   const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
   const company = getCompanySettings();
 
-  const msg =
-`Bonjour,
+  const msg = `Bonjour,
 
 Je vous transmets le rapport d’intervention du ${frDate}.
 
@@ -4770,7 +4875,8 @@ ${company.companyName || "AquaClim Prestige"}`;
 
   showConfirmDialog({
     title: "Transférer au client",
-    message: "Comment souhaitez-vous envoyer ce rapport ? (Le PDF va s’ouvrir, tu pourras l’ajouter en pièce jointe.)",
+    message:
+      "Comment souhaitez-vous envoyer ce rapport ? (Le PDF va s’ouvrir, tu pourras l’ajouter en pièce jointe.)",
     confirmLabel: "💬 WhatsApp",
     cancelLabel: "✉️ Email",
     variant: "info",
@@ -4780,11 +4886,12 @@ ${company.companyName || "AquaClim Prestige"}`;
       if (!phone) {
         showConfirmDialog({
           title: "WhatsApp indisponible",
-          message: "Aucun numéro trouvé pour ce client (vérifie la fiche client).",
+          message:
+            "Aucun numéro trouvé pour ce client (vérifie la fiche client).",
           confirmLabel: "OK",
           cancelLabel: "",
           variant: "warning",
-          icon: "⚠️"
+          icon: "⚠️",
         });
         return;
       }
@@ -4800,11 +4907,12 @@ ${company.companyName || "AquaClim Prestige"}`;
       if (!email) {
         showConfirmDialog({
           title: "Email indisponible",
-          message: "Aucune adresse email trouvée pour ce client (vérifie la fiche client).",
+          message:
+            "Aucune adresse email trouvée pour ce client (vérifie la fiche client).",
           confirmLabel: "OK",
           cancelLabel: "",
           variant: "warning",
-          icon: "⚠️"
+          icon: "⚠️",
         });
         return;
       }
@@ -4815,7 +4923,7 @@ ${company.companyName || "AquaClim Prestige"}`;
       const subject = `Rapport d’intervention - ${record.clientName || ""} - ${frDate}`;
       const mailto = `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(msg)}`;
       window.location.href = mailto;
-    }
+    },
   });
 }
 
@@ -4824,24 +4932,43 @@ function transferRapportToClientCurrent() {
   transferRapportToClient(currentRapportId);
 }
 
-// =========================
-// PDF VIEWER (iPhone FIX)
-// =========================
+// =====================================
+// PDF VIEWER – iPhone / PWA (FUSION)
+// =====================================
+let lastAppViewBeforePDF = null;
+
+function getCurrentAppView() {
+  const views = [
+    "homeView",
+    "listView",
+    "formView",
+    "contractView",
+    "attestationView",
+    "settingsView"
+  ];
+
+  return views.find(id => {
+    const el = document.getElementById(id);
+    return el && !el.classList.contains("hidden");
+  });
+}
 
 function openPdfViewer(url) {
   const overlay = document.getElementById("pdfViewerOverlay");
   const frame = document.getElementById("pdfViewerFrame");
 
-  // sécurité fallback
+  // fallback si overlay absent
   if (!overlay || !frame) {
     window.open(url, "_blank");
     return;
   }
 
+  lastAppViewBeforePDF = getCurrentAppView();
+
   frame.src = url;
   overlay.classList.remove("hidden");
 
-  // permet le bouton retour iPhone
+  // bouton "retour" (PWA iPhone/Android)
   try {
     history.pushState({ pdfOpen: true }, "", location.href);
   } catch (e) {}
@@ -4854,20 +4981,42 @@ function closePdfViewer() {
   if (frame) frame.src = "about:blank";
   if (overlay) overlay.classList.add("hidden");
 
+  // si on a pushState → back ferme l’état PDF
   try {
     if (history.state && history.state.pdfOpen) {
       history.back();
+      return;
     }
   } catch (e) {}
+
+  // fallback : retour vue précédente
+  if (lastAppViewBeforePDF && typeof showView === "function") {
+    showView(lastAppViewBeforePDF);
+  } else if (typeof showHome === "function") {
+    showHome();
+  }
 }
 
-// Bouton "retour" iPhone / Android
-window.addEventListener("popstate", () => {
-  const overlay = document.getElementById("pdfViewerOverlay");
-  if (overlay && !overlay.classList.contains("hidden")) {
-    closePdfViewer();
-  }
-});
+// Bind popstate UNE seule fois
+if (!window.__pdfViewerPopstateBound) {
+  window.__pdfViewerPopstateBound = true;
+
+  window.addEventListener("popstate", () => {
+    const overlay = document.getElementById("pdfViewerOverlay");
+    if (overlay && !overlay.classList.contains("hidden")) {
+      // fermeture "soft" (sans reboucler sur history.back)
+      const frame = document.getElementById("pdfViewerFrame");
+      if (frame) frame.src = "about:blank";
+      overlay.classList.add("hidden");
+
+      if (lastAppViewBeforePDF && typeof showView === "function") {
+        showView(lastAppViewBeforePDF);
+      } else if (typeof showHome === "function") {
+        showHome();
+      }
+    }
+  });
+}
 
 
 function generatePDFRapportFromRecord(record, mode = "print") {
@@ -4905,7 +5054,8 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setFontSize(9);
   let y = 34;
   const company = getCompanySettings();
-  doc.text(`${company.legalName} – ${company.address}`, 12, y); y += 5;
+  doc.text(`${company.legalName} – ${company.address}`, 12, y);
+  y += 5;
   doc.text(`Tél : ${company.phone} – Email : ${company.email}`, 12, y);
   // ========= TITRE DOCUMENT =========
   y += 10;
@@ -4939,11 +5089,12 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   if (record.clientName) {
-    doc.text(record.clientName, 16, yy); yy += 4;
+    doc.text(record.clientName, 16, yy);
+    yy += 4;
   }
   if (record.clientAddress) {
     const addrLines = doc.splitTextToSize(record.clientAddress, 80);
-    addrLines.forEach(line => {
+    addrLines.forEach((line) => {
       doc.text(line, 16, yy);
       yy += 4;
     });
@@ -4964,10 +5115,12 @@ function generatePDFRapportFromRecord(record, mode = "print") {
 
   doc.setFont("helvetica", "normal");
   if (frDate) {
-    doc.text("Date : " + frDate, 114, yy); yy += 4;
+    doc.text("Date : " + frDate, 114, yy);
+    yy += 4;
   }
   if (record.typeLabel) {
-    doc.text("Type : " + record.typeLabel, 114, yy); yy += 4;
+    doc.text("Type : " + record.typeLabel, 114, yy);
+    yy += 4;
   }
 
   y += 38;
@@ -5017,46 +5170,55 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   }
 
   // ========= CHECKLIST / SECTIONS =========
- (record.sections || []).forEach(sec => {
-  if (y > 260) { doc.addPage(); y = 20; }
+  (record.sections || []).forEach((sec) => {
+    if (y > 260) {
+      doc.addPage();
+      y = 20;
+    }
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(25, 118, 210);
-  doc.text(sec.title || "", 12, y);
-  y += 5;
-  doc.setDrawColor(230);
-  doc.line(12, y, 198, y);
-  y += 5;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(25, 118, 210);
+    doc.text(sec.title || "", 12, y);
+    y += 5;
+    doc.setDrawColor(230);
+    doc.line(12, y, 198, y);
+    y += 5;
 
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
 
-  (sec.items || []).forEach(txtRaw => {
-    if (y > 270) { doc.addPage(); y = 20; }
+    (sec.items || []).forEach((txtRaw) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
 
-    // 🔧 on enlève les éventuelles puces déjà présentes dans le texte ("• ", "-", etc.)
-    const clean = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
+      // 🔧 on enlève les éventuelles puces déjà présentes dans le texte ("• ", "-", etc.)
+      const clean = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
 
-    // pastille bleue
-    doc.setFillColor(25, 118, 210);
-    doc.circle(14, y - 1.5, 1, "F");
+      // pastille bleue
+      doc.setFillColor(25, 118, 210);
+      doc.circle(14, y - 1.5, 1, "F");
 
-    const wrapped = doc.splitTextToSize(clean, 178);
-    wrapped.forEach(line => {
-      doc.text(line, 18, y);
-      y += 5;
+      const wrapped = doc.splitTextToSize(clean, 178);
+      wrapped.forEach((line) => {
+        doc.text(line, 18, y);
+        y += 5;
+      });
+      y += 1;
     });
-    y += 1;
-  });
 
-  y += 3;
-});
+    y += 3;
+  });
 
   // ========= REMARQUES =========
   if (record.notes) {
-    if (y > 260) { doc.addPage(); y = 20; }
+    if (y > 260) {
+      doc.addPage();
+      y = 20;
+    }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
@@ -5072,8 +5234,11 @@ function generatePDFRapportFromRecord(record, mode = "print") {
     doc.setTextColor(50, 50, 50);
 
     const wrapped = doc.splitTextToSize(record.notes, 180);
-    wrapped.forEach(line => {
-      if (y > 270) { doc.addPage(); y = 20; }
+    wrapped.forEach((line) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
       doc.text(line, 14, y);
       y += 5;
     });
@@ -5082,19 +5247,18 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   const photos = Array.isArray(record.photos) ? record.photos : [];
   if (photos.length) {
     // ✅ Anti-titre orphelin : si titre + 1ère ligne de photos ne tient pas, on saute page AVANT "Photos"
-const imgH = 58;           // (garde la même valeur que plus bas)
-const titleH = 6;          // hauteur du titre "Photos"
-const rowGap = 6;          // marge après une ligne de photos
-const pageBottom = 275;    // ta limite actuelle (tu l'utilises plus bas)
-const topY = 20;
+    const imgH = 58; // (garde la même valeur que plus bas)
+    const titleH = 6; // hauteur du titre "Photos"
+    const rowGap = 6; // marge après une ligne de photos
+    const pageBottom = 275; // ta limite actuelle (tu l'utilises plus bas)
+    const topY = 20;
 
-const minBlock = titleH + imgH + rowGap; // titre + au moins 1 photo dessous
+    const minBlock = titleH + imgH + rowGap; // titre + au moins 1 photo dessous
 
-if (y + minBlock > pageBottom) {
-  doc.addPage();
-  y = topY;
-}
-
+    if (y + minBlock > pageBottom) {
+      doc.addPage();
+      y = topY;
+    }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
@@ -5106,7 +5270,7 @@ if (y + minBlock > pageBottom) {
     const marginX = 12;
     const gap = 6;
     const colW = (pageW - marginX * 2 - gap) / 2;
-    
+
     let col = 0;
 
     for (const p of photos) {
@@ -5132,7 +5296,6 @@ if (y + minBlock > pageBottom) {
     if (col !== 0) y += imgH + 6;
   }
 
-    
   // ========= PIED =========
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
@@ -5141,12 +5304,14 @@ if (y + minBlock > pageBottom) {
     "AquaClim Prestige – SIRET XXXXXXXXXXXXX – Entretien & Dépannage climatisation / piscine",
     105,
     287,
-    { align: "center" }
+    { align: "center" },
   );
 
   const fileName =
     "rapport-" +
-    (record.clientName ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_") : "intervention") +
+    (record.clientName
+      ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_")
+      : "intervention") +
     ".pdf";
 
   if (mode === "download") {
@@ -5162,22 +5327,21 @@ if (y + minBlock > pageBottom) {
 
 function openRapportPreview(rapportId) {
   const list = getAllRapports();
-  const rec = list.find(r => r.id === rapportId);
+  const rec = list.find((r) => r.id === rapportId);
   if (!rec) return;
   generatePDFRapportFromRecord(rec, "preview");
 }
 
 function printRapport(rapportId) {
   const list = getAllRapports();
-  const rec = list.find(r => r.id === rapportId);
+  const rec = list.find((r) => r.id === rapportId);
   if (!rec) return;
   generatePDFRapportFromRecord(rec, "print");
 }
 
-
 function downloadRapport(rapId) {
   const list = getAllRapports();
-  const record = list.find(r => r.id === rapId);
+  const record = list.find((r) => r.id === rapId);
   if (!record) return;
   generatePDFRapportFromRecord(record);
 }
@@ -5191,16 +5355,16 @@ function deleteRapport(rapId) {
     variant: "danger",
     icon: "🗑️",
     onConfirm: () => {
-      const list = getAllRapports().filter(r => r.id !== rapId);
+      const list = getAllRapports().filter((r) => r.id !== rapId);
       saveRapports(list);
       loadRapportsList();
-    }
+    },
   });
 }
 
 function openRapportPopupForEdit(rapportId) {
   const list = getAllRapports();
-  const rec = list.find(r => r.id === rapportId);
+  const rec = list.find((r) => r.id === rapportId);
   if (!rec) return;
 
   currentRapportId = rec.id;
@@ -5219,15 +5383,19 @@ function openRapportPopupForEdit(rapportId) {
   if (rec.analysis) {
     const phEl = document.getElementById("rapPH");
     const chlEl = document.getElementById("rapChlore");
-    if (phEl)  phEl.value  = rec.analysis.ph || "";
+    if (phEl) phEl.value = rec.analysis.ph || "";
     if (chlEl) chlEl.value = rec.analysis.chlore || "";
   }
   // ===== PHOTOS RAPPORT (EDIT) =====
 
-currentRapportPhotosTemp = Array.isArray(rec.photos) ? rec.photos.slice() : [];
-currentRapportAttachmentsTemp = Array.isArray(rec.attachments) ? rec.attachments.slice() : [];
-renderRapportPhotosPreview();
-renderRapportFilesList();
+  currentRapportPhotosTemp = Array.isArray(rec.photos)
+    ? rec.photos.slice()
+    : [];
+  currentRapportAttachmentsTemp = Array.isArray(rec.attachments)
+    ? rec.attachments.slice()
+    : [];
+  renderRapportPhotosPreview();
+  renderRapportFilesList();
 
   const overlay = document.getElementById("rapportPopup");
   if (!overlay) return;
@@ -5240,15 +5408,13 @@ renderRapportFilesList();
   }
 }
 
-
-
 // ================== NUMÉROTATION DOCUMENTS ==================
 
 function getNextNumber(type) {
   const year = new Date().getFullYear();
   const prefix = type === "devis" ? "DEV" : "FAC";
   const docs = getAllDocuments().filter(
-    (d) => d.type === type && typeof d.number === "string"
+    (d) => d.type === type && typeof d.number === "string",
   );
 
   const used = [];
@@ -5277,7 +5443,6 @@ function generateId(prefix) {
     .padStart(6, "0");
   return `${prefix}-${Date.now()}-${rnd}`;
 }
-
 
 function getNextContractReference() {
   const year = new Date().getFullYear();
@@ -5319,32 +5484,34 @@ function switchListType(type) {
 
   currentListType = type;
 
-  const tabDevis    = document.getElementById("tabDevis");
+  const tabDevis = document.getElementById("tabDevis");
   const tabFactures = document.getElementById("tabFactures");
   const tabContrats = document.getElementById("tabContrats");
-const tabCA       = document.getElementById("tabCA");
+  const tabCA = document.getElementById("tabCA");
 
-  if (tabDevis)    tabDevis.classList.toggle("active", type === "devis");
+  if (tabDevis) tabDevis.classList.toggle("active", type === "devis");
   if (tabFactures) tabFactures.classList.toggle("active", type === "facture");
   if (tabContrats) tabContrats.classList.toggle("active", type === "contrat");
-  if (tabCA)       tabCA.classList.remove("active");
+  if (tabCA) tabCA.classList.remove("active");
 
-  const listView     = document.getElementById("listView");
-  const formView     = document.getElementById("formView");
+  const listView = document.getElementById("listView");
+  const formView = document.getElementById("formView");
   const contractView = document.getElementById("contractView");
 
-  const yearFilterContainer   = document.getElementById("yearFilterContainer");
-  const exportContainer       = document.getElementById("exportContainer");
-  const unpaidFilterContainer = document.getElementById("unpaidFilterContainer");
+  const yearFilterContainer = document.getElementById("yearFilterContainer");
+  const exportContainer = document.getElementById("exportContainer");
+  const unpaidFilterContainer = document.getElementById(
+    "unpaidFilterContainer",
+  );
 
-  const btnDevis    = document.getElementById("createDevis");
-  const btnFacture  = document.getElementById("createFacture");
+  const btnDevis = document.getElementById("createDevis");
+  const btnFacture = document.getElementById("createFacture");
   const btnContract = document.getElementById("createContract");
 
-    // 🔵 MODE CONTRATS
+  // 🔵 MODE CONTRATS
   if (type === "contrat") {
-    if (listView)     listView.classList.remove("hidden");
-    if (formView)     formView.classList.add("hidden");
+    if (listView) listView.classList.remove("hidden");
+    if (formView) formView.classList.add("hidden");
     if (contractView) contractView.classList.add("hidden"); // on ouvre le form seulement sur "Modifier" / "Nouveau"
 
     // Titre de la liste
@@ -5352,8 +5519,8 @@ const tabCA       = document.getElementById("tabCA");
     if (listTitle) listTitle.textContent = "Liste des contrats";
 
     // Pas de filtres factures en mode contrat
-    if (yearFilterContainer)   yearFilterContainer.classList.add("hidden");
-    if (exportContainer)       exportContainer.classList.add("hidden");
+    if (yearFilterContainer) yearFilterContainer.classList.add("hidden");
+    if (exportContainer) exportContainer.classList.add("hidden");
     if (unpaidFilterContainer) unpaidFilterContainer.classList.add("hidden");
 
     // Bandeau contrats : on le laissera géré par updateContractsAlert()
@@ -5391,8 +5558,8 @@ const tabCA       = document.getElementById("tabCA");
 
   // 🟡 MODE DEVIS / FACTURES
   if (contractView) contractView.classList.add("hidden");
-  if (listView)     listView.classList.remove("hidden");
-  if (formView)     formView.classList.add("hidden");
+  if (listView) listView.classList.remove("hidden");
+  if (formView) formView.classList.add("hidden");
 
   // Reset bandeau contrats quand on quitte l’onglet
 
@@ -5449,8 +5616,6 @@ const tabCA       = document.getElementById("tabCA");
   loadDocumentsList();
 }
 
-
-
 function onDocumentsSearchChange() {
   loadDocumentsList();
 }
@@ -5470,7 +5635,7 @@ function adjustPriceHTMargin(line) {
 
 function getAllInvoices() {
   // On renvoie toutes les factures stockées dans "documents"
-  return getAllDocuments().filter(d => d.type === "facture");
+  return getAllDocuments().filter((d) => d.type === "facture");
 }
 
 // ================== FILTRE ANNÉE FACTURES ==================
@@ -5483,7 +5648,7 @@ function loadYearFilter() {
   select.innerHTML = '<option value="all">Toutes</option>';
 
   // On prend toutes les FACTURES stockées
-  const docs = getAllDocuments().filter(d => d.type === "facture");
+  const docs = getAllDocuments().filter((d) => d.type === "facture");
 
   const years = new Set();
 
@@ -5523,62 +5688,69 @@ function getCurrentClientType() {
 }
 
 function setTVA(rate) {
-  const seuilMicro = 36800;  // seuil micro → ajuste si besoin
-  const currentCA = (typeof computeCA === "function") ? computeCA() : 0;
+  const seuilMicro = MICRO_TVA_THRESHOLD_BASE; // 37500
+  const { caTTC: currentCA } = computeCurrentYearCAForMicro();
 
-  // ======================================================
-  // 🚫 BLOCAGE TVA 20% si CA < seuil micro-entreprise
-  // ======================================================
-  if (rate === 20 && currentCA < seuilMicro) {
+ // ======================================================
+// 🚫 BLOCAGE TVA 20% si CA < seuil micro-entreprise
+// ======================================================
+ if (rate === 20 && currentCA < seuilMicro) {
+
+  if (typeof showConfirmDialog === "function") {
+    showConfirmDialog({
+      title: "TVA non applicable",
+      message:
+        "Tu es encore sous le seuil micro (37 500 € encaissés TTC).\n\n" +
+        "On reste automatiquement en TVA 0 %.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️",
+    });
+  } else {
     alert("Impossible : tant que vous êtes sous le seuil micro-entreprise, la TVA 20% est interdite.");
-
-    // On rétablit 0% dans l’UI
-    const tva0 = document.getElementById("tva0");
-    const tva20 = document.getElementById("tva20");
-
-    if (tva20) tva20.checked = false;
-    if (tva0)  tva0.checked = true;
-
-    rate = 0; // on force la TVA à 0%
   }
 
-  // ======================================================
-  // (Ton code original ci-dessous — inchangé)
-  // ======================================================
+  // ✅ On rétablit 0% dans l’UI (devis/facture)
+  const tva0 = document.getElementById("tva0");
+  const tva20 = document.getElementById("tva20");
+  if (tva20) tva20.checked = false;
+  if (tva0) tva0.checked = true;
 
-  const tvaInput   = document.getElementById("tvaRate");
-  const tvaNote    = document.getElementById("tvaNote");
+  // ✅ (optionnel) synchro radios CONTRAT si tu les as
+  const ct0 = document.getElementById("ctTva0");
+  const ct20 = document.getElementById("ctTva20");
+  if (ct20) ct20.checked = false;
+  if (ct0) ct0.checked = true;
+
+  // ✅ Force TVA = 0 partout
+  rate = 0;
+
+  // ✅ Et on quitte : pas besoin de continuer avec le rate=20 initial
+  // (le reste de la fonction va s'exécuter normalement avec rate=0 si tu veux)
+  // -> soit return setTVA(0) (non), soit juste continuer, mais propre = return après mise à jour
+  // Ici, le plus safe : on applique tout de suite l'UI TVA 0 et recalcul.
+  const tvaInput = document.getElementById("tvaRate");
+  if (tvaInput) tvaInput.value = "0";
+
+  const tvaNote = document.getElementById("tvaNote");
   const totalLabel = document.getElementById("totalLabel");
-
-  if (tvaInput) {
-    tvaInput.value = rate.toString();
-  }
-
   const clientType = getCurrentClientType();
 
-  if (rate === 0) {
-    if (clientType === "syndic") {
-      if (tvaNote)   tvaNote.textContent   = "";
-      if (totalLabel) totalLabel.textContent = "TOTAL HT :";
-    } else {
-      if (tvaNote)
-        tvaNote.textContent = "TVA non applicable, article 293 B du CGI.";
-      if (totalLabel) totalLabel.textContent = "NET À PAYER :";
-    }
+  if (clientType === "syndic") {
+    if (tvaNote) tvaNote.textContent = "";
+    if (totalLabel) totalLabel.textContent = "TOTAL HT :";
   } else {
-    if (tvaNote)    tvaNote.textContent    = "";
-    if (totalLabel) totalLabel.textContent = "TOTAL TTC :";
+    if (tvaNote) tvaNote.textContent = "TVA non applicable, article 293 B du CGI.";
+    if (totalLabel) totalLabel.textContent = "NET À PAYER :";
   }
 
-  // ➜ recalcul devis/factures
-  calculateTotals();
+  if (typeof calculateTotals === "function") calculateTotals();
+  if (typeof recomputeContract === "function") recomputeContract();
 
-  // ➜ ET recalcul contrat si on est sur l’onglet contrat
-  if (typeof recomputeContract === "function") {
-    recomputeContract();
-  }
+  return; // ✅ STOP ici
 }
-
+}
 function updateButtonColors() {
   const type = document.getElementById("docType").value;
   const isDevis = type === "devis";
@@ -5638,7 +5810,6 @@ function updateDocType() {
   updateButtonColors();
 }
 
-
 function updateTransformButtonVisibility() {
   const transformBtn = document.getElementById("transformButton");
   const contractBtn = document.getElementById("contractFromDevisButton");
@@ -5660,8 +5831,6 @@ function updateTransformButtonVisibility() {
     rapportBtn.style.display = isDevis ? "inline-block" : "none";
   }
 }
-
-
 
 function onDocDateChange() {
   if (document.getElementById("docType").value === "devis") {
@@ -5715,9 +5884,6 @@ function onPayModeChange() {
   }
 }
 
-
-
-
 // ================== RÉDUCTION ==================
 
 function onDiscountToggle() {
@@ -5759,8 +5925,6 @@ function autoFillSubjectFromFirstPrestation() {
   subjectInput.value = val;
 }
 
-
-
 // ================== PRESTATIONS ==================
 function addPassageDate(btn) {
   // On part du bouton "➕ Ajouter une date"
@@ -5777,14 +5941,12 @@ function addPassageDate(btn) {
   input.type = "date";
   input.className = "prestation-date";
 
-const docDate = document.getElementById("docDate")?.value;
-input.value = docDate || new Date().toISOString().slice(0, 10);
-
+  const docDate = document.getElementById("docDate")?.value;
+  input.value = docDate || new Date().toISOString().slice(0, 10);
 
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
-  removeBtn.className =
-    "btn btn-danger btn-small date-remove-btn no-print";
+  removeBtn.className = "btn btn-danger btn-small date-remove-btn no-print";
   removeBtn.textContent = "✖";
   removeBtn.onclick = function () {
     removePassageDate(removeBtn);
@@ -5812,7 +5974,6 @@ function removePassageDate(btn) {
   // ✅ Sinon : on supprime juste la ligne
   row.remove();
 }
-
 
 function addPrestation() {
   prestationCount++;
@@ -5850,14 +6011,15 @@ function addPrestation() {
             type="date"
             class="prestation-date"
           />
-        <button
+<button
   type="button"
   class="btn btn-danger btn-small date-remove-btn no-print"
-  onclick="removePrestation(${prestationCount})"
-  title="Supprimer cette prestation"
+  onclick="removePassageDate(this)"
+  title="Supprimer cette date"
 >
   ✖
 </button>
+
         </div>
       </div>
       <button
@@ -5933,7 +6095,6 @@ function addPrestation() {
     </div>
   `;
 
-
   container.appendChild(line);
 
   // 🧠 Quand on tape l’intitulé, on propose de remplir l’objet automatiquement
@@ -5951,10 +6112,14 @@ function _ensureIndemnite40InFormUI() {
 
   // ✅ évite doublon côté UI
   const lines = container.querySelectorAll(".prestation-line");
-  const alreadyUI = Array.from(lines).some(line => (line.dataset.kind || "") === "indemnite_40");
+  const alreadyUI = Array.from(lines).some(
+    (line) => (line.dataset.kind || "") === "indemnite_40",
+  );
   if (alreadyUI) {
     // au cas où : recalcul pour être sûr que le total est bien à jour
-    try { calculateTotals(); } catch (e) {}
+    try {
+      calculateTotals();
+    } catch (e) {}
     return;
   }
 
@@ -5968,28 +6133,32 @@ function _ensureIndemnite40InFormUI() {
 
   // ✅ marque la ligne comme indemnité
   line.dataset.kind = "indemnite_40";
-  line.dataset.detail = "Indemnité forfaitaire de 40 € pour frais de recouvrement";
+  line.dataset.detail =
+    "Indemnité forfaitaire de 40 € pour frais de recouvrement";
   line.dataset.autoPrice = "0"; // important : évite que ton système de prix auto écrase 40
 
   // ✅ remplit les champs
-  const descInput  = line.querySelector(".prestation-desc");
-  const qtyInput   = line.querySelector(".prestation-qty");
-  const unitInput  = line.querySelector(".prestation-unit");
+  const descInput = line.querySelector(".prestation-desc");
+  const qtyInput = line.querySelector(".prestation-qty");
+  const unitInput = line.querySelector(".prestation-unit");
   const priceInput = line.querySelector(".prestation-price");
 
-  if (descInput)  descInput.value  = "Indemnité forfaitaire (art. L441-10 C. commerce)";
-  if (qtyInput)   qtyInput.value   = 1;
-  if (unitInput)  unitInput.value  = "forfait";
+  if (descInput)
+    descInput.value = "Indemnité forfaitaire (art. L441-10 C. commerce)";
+  if (qtyInput) qtyInput.value = 1;
+  if (unitInput) unitInput.value = "forfait";
   if (priceInput) priceInput.value = 40;
 
   // ✅ déclenche la logique de ton app (totaux + total ligne)
-  try { onPriceChange(priceInput); } catch (e) {}
-  try { calculateTotals(); } catch (e) {}
+  try {
+    onPriceChange(priceInput);
+  } catch (e) {}
+  try {
+    calculateTotals();
+  } catch (e) {}
 
-_lockIndemnite40Line(line);
-
+  _lockIndemnite40Line(line);
 }
-
 
 function _lockIndemnite40Line(line) {
   if (!line) return;
@@ -5998,20 +6167,32 @@ function _lockIndemnite40Line(line) {
   // champs
   const tplSelect = line.querySelector(".prestation-template");
   const descInput = line.querySelector(".prestation-desc");
-  const qtyInput  = line.querySelector(".prestation-qty");
+  const qtyInput = line.querySelector(".prestation-qty");
   const unitInput = line.querySelector(".prestation-unit");
   const priceInput = line.querySelector(".prestation-price");
 
   // verrous
   if (tplSelect) tplSelect.disabled = true;
 
-  if (descInput) { descInput.readOnly = true; descInput.style.opacity = "0.85"; }
-  if (qtyInput)  { qtyInput.readOnly  = true; qtyInput.style.opacity  = "0.85"; }
-  if (unitInput) { unitInput.readOnly = true; unitInput.style.opacity = "0.85"; }
-  if (priceInput){ priceInput.readOnly = true; priceInput.style.opacity = "0.85"; }
+  if (descInput) {
+    descInput.readOnly = true;
+    descInput.style.opacity = "0.85";
+  }
+  if (qtyInput) {
+    qtyInput.readOnly = true;
+    qtyInput.style.opacity = "0.85";
+  }
+  if (unitInput) {
+    unitInput.readOnly = true;
+    unitInput.style.opacity = "0.85";
+  }
+  if (priceInput) {
+    priceInput.readOnly = true;
+    priceInput.style.opacity = "0.85";
+  }
 
   // empêche la suppression (bouton X)
-  line.querySelectorAll('[onclick^="removePrestation("]').forEach(btn => {
+  line.querySelectorAll('[onclick^="removePrestation("]').forEach((btn) => {
     btn.style.display = "none";
   });
 
@@ -6023,8 +6204,6 @@ function _lockIndemnite40Line(line) {
   const datesBlock = line.querySelector(".prestation-dates");
   if (datesBlock) datesBlock.style.opacity = "0.7";
 }
-
-
 
 function removePrestation(id) {
   const line = document.getElementById("prestation-" + id);
@@ -6078,16 +6257,12 @@ function updatePurchaseVisibility(line) {
   if (kind === "produits" || kind === "fournitures") {
     block.style.display = "block";
     reorderPriceFields(line);
-    adjustPriceHTMargin(line);   // ➜ AJOUT ICI
+    adjustPriceHTMargin(line); // ➜ AJOUT ICI
   } else {
     block.style.display = "none";
-    adjustPriceHTMargin(line);   // retire la classe si besoin
+    adjustPriceHTMargin(line); // retire la classe si besoin
   }
 }
-
-
-
-
 
 function applyTemplate(selectEl) {
   const index = parseInt(selectEl.value, 10);
@@ -6193,16 +6368,6 @@ function applyTemplate(selectEl) {
   calculateTotals();
 } // <- fin de applyTemplate
 
-function onPriceChange(input) {
-  const line = input.closest(".prestation-line");
-  if (!line) return;
-
-  // Dès que l'utilisateur modifie le prix manuellement,
-  // on indique que ce n'est plus un prix auto
-  line.dataset.autoPrice = "0";
-  calculateTotals();
-}
-
 
 function onPriceChange(input) {
   const line = input.closest(".prestation-line");
@@ -6228,8 +6393,6 @@ function onPriceChange(input) {
   }
   calculateTotals();
 }
-
-
 
 function onPurchaseChange(input) {
   const line = input.closest(".prestation-line");
@@ -6270,57 +6433,56 @@ function calculateTotals() {
     const kind = line.dataset.kind || "";
     const autoPrice = line.dataset.autoPrice !== "0";
 
-// Entretien clim : gestion du tarif dégressif 100 / 85 / 70
-if (kind === "entretien_clim") {
-  const n = qty <= 0 ? 1 : qty;
+    // Entretien clim : gestion du tarif dégressif 100 / 85 / 70
+    if (kind === "entretien_clim") {
+      const n = qty <= 0 ? 1 : qty;
 
-  // Libellé au pluriel
-  if (descInput) {
-    const plural = n >= 2 ? "s" : "";
-    descInput.value = "Entretien climatisation" + plural;
-  }
-
-  const clientType = getCurrentClientType();
-
-  if (autoPrice) {
-    // Prix de base = prix pour 1 clim (issu des tarifs persos ou de la saisie)
-    let base = parseFloat(line.dataset.basePrice) || 0;
-
-    // Sécurité : si base pas défini, on met un défaut logique
-    if (!base) {
-      base = (clientType === "syndic") ? 120 : 100;
-    }
-
-    // 💰 Nouvelle grille : 1 = 100 %, 2 = 85 %, 3+ = 70 %
-    if (clientType === "particulier") {
-      if (n === 1) {
-        price = base;          // 1 clim → 100 %
-      } else if (n === 2) {
-        price = base * 0.85;   // 2 clims → 85 %
-      } else {
-        price = base * 0.70;   // 3+ clims → 70 %
+      // Libellé au pluriel
+      if (descInput) {
+        const plural = n >= 2 ? "s" : "";
+        descInput.value = "Entretien climatisation" + plural;
       }
-    } else {
-      // Grille syndic
-      if (n === 1) {
-        price = base;
-      } else if (n === 2) {
-        price = base * 0.85;
+
+      const clientType = getCurrentClientType();
+
+      if (autoPrice) {
+        // Prix de base = prix pour 1 clim (issu des tarifs persos ou de la saisie)
+        let base = parseFloat(line.dataset.basePrice) || 0;
+
+        // Sécurité : si base pas défini, on met un défaut logique
+        if (!base) {
+          base = clientType === "syndic" ? 120 : 100;
+        }
+
+        // 💰 Nouvelle grille : 1 = 100 %, 2 = 85 %, 3+ = 70 %
+        if (clientType === "particulier") {
+          if (n === 1) {
+            price = base; // 1 clim → 100 %
+          } else if (n === 2) {
+            price = base * 0.85; // 2 clims → 85 %
+          } else {
+            price = base * 0.7; // 3+ clims → 70 %
+          }
+        } else {
+          // Grille syndic
+          if (n === 1) {
+            price = base;
+          } else if (n === 2) {
+            price = base * 0.85;
+          } else {
+            price = base * 0.75;
+          }
+        }
+
+        // 🔥 Arrondi au multiple de 5 € supérieur
+        price = Math.ceil(price / 5) * 5;
+
+        priceInput.value = price.toFixed(2);
       } else {
-        price = base * 0.75;
+        // Mode manuel
+        price = parseFloat(priceInput.value) || 0;
       }
     }
-
-    // 🔥 Arrondi au multiple de 5 € supérieur
-    price = Math.ceil(price / 5) * 5;
-
-    priceInput.value = price.toFixed(2);
-  } else {
-    // Mode manuel
-    price = parseFloat(priceInput.value) || 0;
-  }
-}
-
 
     const total = qty * price;
     const totField = line.querySelector(".prestation-total");
@@ -6353,9 +6515,7 @@ if (kind === "entretien_clim") {
     if (discountCb && discountRate > 0 && discountAmount > 0) {
       discountLine.style.display = "flex";
       discountLabel.textContent =
-        "Réduction (" +
-        discountRate.toFixed(2).replace(/\.00$/, "") +
-        " %) :";
+        "Réduction (" + discountRate.toFixed(2).replace(/\.00$/, "") + " %) :";
       discountAmountSpan.textContent = "- " + formatEuro(discountAmount);
     } else {
       discountLine.style.display = "none";
@@ -6382,7 +6542,6 @@ if (kind === "entretien_clim") {
     }
   }
 }
-
 
 // ================== TYPE CLIENT / CONDITIONS ==================
 
@@ -6431,7 +6590,8 @@ function onClientTypeChange() {
 
       if (template.kind) {
         const key =
-          template.kind + "_" +
+          template.kind +
+          "_" +
           (clientType === "syndic" ? "syndic" : "particulier");
 
         if (custom[key] != null) {
@@ -6457,7 +6617,6 @@ function onClientTypeChange() {
 
   calculateTotals();
 }
-
 
 function selectClientType(type) {
   const part = document.getElementById("clientParticulier");
@@ -6504,7 +6663,8 @@ function setConditions(type) {
         "Aucun escompte pour paiement anticipé.";
       // ✅ pas d'indemnité 40€ en B2C
     }
-  } else if (type === "agence") { // chez toi "agence" = syndic/pro
+  } else if (type === "agence") {
+    // chez toi "agence" = syndic/pro
     if (cbClientSyn) cbClientSyn.checked = true;
     if (cbClientPart) cbClientPart.checked = false;
 
@@ -6526,7 +6686,7 @@ function setConditions(type) {
 // ================== CRÉATION / CHARGEMENT DOCUMENT ==================
 
 function newDocument(type) {
-currentDocumentId = null;
+  currentDocumentId = null;
   document.getElementById("listView").classList.add("hidden");
   document.getElementById("formView").classList.remove("hidden");
 
@@ -6611,12 +6771,12 @@ function loadDocument(id) {
   document.getElementById("clientAddress").value = doc.client.address;
   document.getElementById("clientPhone").value = doc.client.phone;
   document.getElementById("clientEmail").value = doc.client.email;
-const civilitySelect = document.getElementById("clientCivility");
-if (civilitySelect) {
-  civilitySelect.value = doc.client.civility || "";
-}
-const siteCivilityEl = document.getElementById("siteCivility");
-if (siteCivilityEl) siteCivilityEl.value = doc.siteCivility || "";
+  const civilitySelect = document.getElementById("clientCivility");
+  if (civilitySelect) {
+    civilitySelect.value = doc.client.civility || "";
+  }
+  const siteCivilityEl = document.getElementById("siteCivility");
+  if (siteCivilityEl) siteCivilityEl.value = doc.siteCivility || "";
 
   document.getElementById("notes").value = doc.notes || "";
 
@@ -6625,17 +6785,17 @@ if (siteCivilityEl) siteCivilityEl.value = doc.siteCivility || "";
     subjectInput.value = doc.subject || "";
   }
 
-// 🚫 Ne pas afficher le nom du client dans l'objet (quel que soit le client)
-if (subjectInput && doc?.client?.name) {
-  const clientName = String(doc.client.name).trim();
-  if (clientName) {
-    // enlève " - Nom" ou " – Nom" en fin de texte
-    subjectInput.value = String(subjectInput.value || "")
-      .replace(new RegExp(`\\s*[–-]\\s*${clientName}\\s*$`, "i"), "")
-      .trim();
+  // 🚫 Ne pas afficher le nom du client dans l'objet (quel que soit le client)
+  if (subjectInput && doc?.client?.name) {
+    const clientName = String(doc.client.name).trim();
+    if (clientName) {
+      // enlève " - Nom" ou " – Nom" en fin de texte
+      subjectInput.value = String(subjectInput.value || "")
+        .replace(new RegExp(`\\s*[–-]\\s*${clientName}\\s*$`, "i"), "")
+        .trim();
+    }
   }
-}
-doc.subject = subjectInput.value;
+  doc.subject = subjectInput.value;
 
   const siteBlock = document.getElementById("siteBlock");
   const siteNameInp = document.getElementById("siteName");
@@ -6643,7 +6803,8 @@ doc.subject = subjectInput.value;
   if (siteNameInp) siteNameInp.value = doc.siteName || "";
   if (siteAddrInp) siteAddrInp.value = doc.siteAddress || "";
   if (siteBlock) {
-    siteBlock.style.display = doc.conditionsType === "agence" ? "block" : "none";
+    siteBlock.style.display =
+      doc.conditionsType === "agence" ? "block" : "none";
   }
 
   updateButtonColors();
@@ -6664,12 +6825,12 @@ doc.subject = subjectInput.value;
         doc.paymentMode === "especes"
           ? "payEspeces"
           : doc.paymentMode === "cb"
-          ? "payCB"
-          : doc.paymentMode === "virement"
-          ? "payVirement"
-          : doc.paymentMode === "cheque"
-          ? "payCheque"
-          : "payNone";
+            ? "payCB"
+            : doc.paymentMode === "virement"
+              ? "payVirement"
+              : doc.paymentMode === "cheque"
+                ? "payCheque"
+                : "payNone";
       const el = document.getElementById(modeId);
       if (el) el.checked = true;
     }
@@ -6707,119 +6868,116 @@ doc.subject = subjectInput.value;
   const prestationsContainer = document.getElementById("prestationsContainer");
   prestationsContainer.innerHTML = "";
 
-doc.prestations.forEach((p) => {
-  addPrestation();
-  const lines = document.querySelectorAll(".prestation-line");
-  const line = lines[lines.length - 1];
+  doc.prestations.forEach((p) => {
+    addPrestation();
+    const lines = document.querySelectorAll(".prestation-line");
+    const line = lines[lines.length - 1];
 
-  line.dataset.kind = p.kind || "";
-  line.dataset.detail = p.detail || "";
+    line.dataset.kind = p.kind || "";
+    line.dataset.detail = p.detail || "";
 
-if ((p.kind || "") === "indemnite_40") {
-  line.dataset.autoPrice = "0";
-}
-
-
-  // ⚠️ on NE met plus basePrice = p.price ici
-  updatePurchaseVisibility(line);
-  updatePriceLayout(line);
-
-  const descInput      = line.querySelector(".prestation-desc");
-  const qtyInput       = line.querySelector(".prestation-qty");
-  const priceInput     = line.querySelector(".prestation-price");
-  const unitInput      = line.querySelector(".prestation-unit");
-  const templateSelect = line.querySelector(".prestation-template");
-
-  if (descInput)  descInput.value  = p.desc;
-  if (qtyInput)   qtyInput.value   = p.qty;
-  if (priceInput) priceInput.value = p.price;
-  if (unitInput)  unitInput.value  = p.unit || "";
-
-  // ==============================
-  // 🎯 Choix du "modèle" (template)
-  // ==============================
-
-  // kind réel stocké dans la ligne (contrat_echeance, contrat_normal, etc.)
-  let effectiveKind = p.kind || "";
-
-  // Est-ce qu'on a déjà un modèle qui correspond à ce kind ?
-  let hasTemplateForKind = PRESTATION_TEMPLATES.some(
-    (t) => t.kind === effectiveKind
-  );
-
-  // Si ce n'est PAS un modèle connu, mais que la facture est liée à un contrat,
-  // on essaie de deviner le bon modèle (piscine chlore / sel / spa) à partir du contrat.
-  if (!hasTemplateForKind && doc.type === "facture" && doc.contractId) {
-    const linkedContract = getContract(doc.contractId);
-    const inferredKind   = getTemplateKindForContract(linkedContract);
-    if (inferredKind) {
-      effectiveKind      = inferredKind;
-      hasTemplateForKind = PRESTATION_TEMPLATES.some(
-        (t) => t.kind === effectiveKind
-      );
+    if ((p.kind || "") === "indemnite_40") {
+      line.dataset.autoPrice = "0";
     }
-  }
 
-  // 🔁 on remet le bon modèle dans le select
-  if (templateSelect) {
-    const idx = PRESTATION_TEMPLATES.findIndex(
-      (t) => t.kind === effectiveKind
+    // ⚠️ on NE met plus basePrice = p.price ici
+    updatePurchaseVisibility(line);
+    updatePriceLayout(line);
+
+    const descInput = line.querySelector(".prestation-desc");
+    const qtyInput = line.querySelector(".prestation-qty");
+    const priceInput = line.querySelector(".prestation-price");
+    const unitInput = line.querySelector(".prestation-unit");
+    const templateSelect = line.querySelector(".prestation-template");
+
+    if (descInput) descInput.value = p.desc;
+    if (qtyInput) qtyInput.value = p.qty;
+    if (priceInput) priceInput.value = p.price;
+    if (unitInput) unitInput.value = p.unit || "";
+
+    // ==============================
+    // 🎯 Choix du "modèle" (template)
+    // ==============================
+
+    // kind réel stocké dans la ligne (contrat_echeance, contrat_normal, etc.)
+    let effectiveKind = p.kind || "";
+
+    // Est-ce qu'on a déjà un modèle qui correspond à ce kind ?
+    let hasTemplateForKind = PRESTATION_TEMPLATES.some(
+      (t) => t.kind === effectiveKind,
     );
-    templateSelect.value = idx >= 0 ? String(idx) : "0";
-  }
 
-  // 🧠 On recalcule le "prix de base" à partir du modèle + type client
-  const template = PRESTATION_TEMPLATES.find(
-    (t) => t.kind === effectiveKind
-  );
-  if (template) {
-    const custom = getCustomPrices();
-    const clientType =
-      document.getElementById("clientSyndic")?.checked ? "syndic" : "particulier";
+    // Si ce n'est PAS un modèle connu, mais que la facture est liée à un contrat,
+    // on essaie de deviner le bon modèle (piscine chlore / sel / spa) à partir du contrat.
+    if (!hasTemplateForKind && doc.type === "facture" && doc.contractId) {
+      const linkedContract = getContract(doc.contractId);
+      const inferredKind = getTemplateKindForContract(linkedContract);
+      if (inferredKind) {
+        effectiveKind = inferredKind;
+        hasTemplateForKind = PRESTATION_TEMPLATES.some(
+          (t) => t.kind === effectiveKind,
+        );
+      }
+    }
 
-    const key = template.kind + "_" + clientType;
-    let base =
-      custom[key] != null
-        ? custom[key]
-        : clientType === "syndic"
-        ? (template.priceSyndic || 0)
-        : (template.priceParticulier || 0);
+    // 🔁 on remet le bon modèle dans le select
+    if (templateSelect) {
+      const idx = PRESTATION_TEMPLATES.findIndex(
+        (t) => t.kind === effectiveKind,
+      );
+      templateSelect.value = idx >= 0 ? String(idx) : "0";
+    }
 
-    line.dataset.basePrice = base.toFixed(2);
-  }
+    // 🧠 On recalcule le "prix de base" à partir du modèle + type client
+    const template = PRESTATION_TEMPLATES.find((t) => t.kind === effectiveKind);
+    if (template) {
+      const custom = getCustomPrices();
+      const clientType = document.getElementById("clientSyndic")?.checked
+        ? "syndic"
+        : "particulier";
 
-  // ⚙️ Dates…
-  const datesContainer = line.querySelector(".prestation-dates");
-  datesContainer.innerHTML = "";
-  const dates = (p.dates && p.dates.length) ? p.dates : [""];
-  dates.forEach((dv) => {
-    const row = document.createElement("div");
-    row.className = "prestation-date-row";
+      const key = template.kind + "_" + clientType;
+      let base =
+        custom[key] != null
+          ? custom[key]
+          : clientType === "syndic"
+            ? template.priceSyndic || 0
+            : template.priceParticulier || 0;
 
-    const inp = document.createElement("input");
-    inp.type = "date";
-    inp.className = "prestation-date";
-    inp.value = dv || "";
+      line.dataset.basePrice = base.toFixed(2);
+    }
 
-    row.appendChild(inp);
+    // ⚙️ Dates…
+    const datesContainer = line.querySelector(".prestation-dates");
+    datesContainer.innerHTML = "";
+    const dates = p.dates && p.dates.length ? p.dates : [""];
+    dates.forEach((dv) => {
+      const row = document.createElement("div");
+      row.className = "prestation-date-row";
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "prestation-date-remove";
-    btn.textContent = "✕";
-    btn.addEventListener("click", () => row.remove());
+      const inp = document.createElement("input");
+      inp.type = "date";
+      inp.className = "prestation-date";
+      inp.value = dv || "";
 
-    row.appendChild(btn);
-    datesContainer.appendChild(row);
+      row.appendChild(inp);
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "prestation-date-remove";
+      btn.textContent = "✕";
+      btn.addEventListener("click", () => removePassageDate(btn));
+
+
+      row.appendChild(btn);
+      datesContainer.appendChild(row);
+    });
   });
-});
 
-calculateTotals(); // et on laisse faire la logique dégressive normale
-
+  calculateTotals(); // et on laisse faire la logique dégressive normale
 
   document.getElementById("formTitle").textContent =
     (doc.type === "devis" ? "Devis " : "Facture ") + doc.number;
-
 
   try {
     renderHistory(doc);
@@ -6827,60 +6985,52 @@ calculateTotals(); // et on laisse faire la logique dégressive normale
     console.error("Erreur renderHistory:", e);
   }
 
-// ====================================================
-// 🔘 Empêcher le bouton "Bon pour accord" d'être coché 
-//      si aucune signature n'existe
-// ====================================================
-const sigRadio = document.getElementById("signatureRadio");
-if (sigRadio) {
+  // ====================================================
+  // 🔘 Empêcher le bouton "Bon pour accord" d'être coché
+  //      si aucune signature n'existe
+  // ====================================================
+  const sigRadio = document.getElementById("signatureRadio");
+  if (sigRadio) {
     sigRadio.checked = !!doc.signature; // cochée SEULEMENT si déjà signé
+  }
+
+  if (typeof refreshDocumentHealthUI === "function") {
+    refreshDocumentHealthUI(doc);
+  }
+
+  // 🔒 verrouille automatiquement la ligne indemnité si présente
+  if (typeof _lockIndemnite40Line === "function") {
+    document.querySelectorAll(".prestation-line").forEach(_lockIndemnite40Line);
+  }
 }
-
-
-if (typeof refreshDocumentHealthUI === "function") {
-  refreshDocumentHealthUI(doc);
-}
-
-// 🔒 verrouille automatiquement la ligne indemnité si présente
-if (typeof _lockIndemnite40Line === "function") {
-  document.querySelectorAll(".prestation-line").forEach(_lockIndemnite40Line);
-}
-
-}
-
-
-
 
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
 
 function saveDocument() {
+  // ==== BLOCAGE TVA MICRO ====
+ try {
+  const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
+  const selectedRate = Number(document.getElementById("tvaRate")?.value || 0);
 
-// ==== BLOCAGE TVA MICRO ====
-try {
-  const status = getMicroTvaStatus(); // ton statut actuel
-  const selectedRate = Number(document.getElementById("tvaRate").value || 0);
-
-  // Si encore en franchise (CA < 37 500 €) → TVA doit OBLIGATOIREMENT être 0%
+  // ✅ Si on est en franchise → interdire TVA 20
   if (status.mode === "franchise" && selectedRate > 0) {
-
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "TVA impossible",
-        message: 
+        message:
           "Tu es encore sous le seuil micro (moins de 37 500 €). " +
-          "Les devis et factures DOIVENT rester en TVA 0 %. Impossible de sauvegarder en 20 %. ",
+          "Les devis et factures DOIVENT rester en TVA 0 %. Impossible de sauvegarder en 20 %.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "warning",
-        icon: "⚠️"
+        icon: "⚠️",
       });
     }
     return; // ❌ STOP, on empêche la sauvegarde
   }
 
-  // Si TVA devenue obligatoire → interdire TVA 0% sur tout nouveau document
+  // ✅ Si TVA obligatoire → interdire TVA 0 sur nouveaux docs
   if (status.mode === "obligatoire" && selectedRate === 0) {
-
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "TVA obligatoire",
@@ -6890,7 +7040,7 @@ try {
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "warning",
-        icon: "⚠️"
+        icon: "⚠️",
       });
     }
     return; // ❌ STOP, on empêche la sauvegarde
@@ -6900,16 +7050,24 @@ try {
 }
   const clientName = document.getElementById("clientName").value.trim();
   const clientAddress = document.getElementById("clientAddress").value.trim();
-  const clientCivility = (document.getElementById("clientCivility")?.value || "").trim();
+  const clientCivility = (
+    document.getElementById("clientCivility")?.value || ""
+  ).trim();
 
   const clientPhone = document.getElementById("clientPhone").value.trim();
   const clientEmail = document.getElementById("clientEmail").value.trim();
-  const docSubject = (document.getElementById("docSubject")?.value || "").trim();
+  const docSubject = (
+    document.getElementById("docSubject")?.value || ""
+  ).trim();
 
   // 🔥 Civilité du lieu d’intervention
-  const siteCivility = (document.getElementById("siteCivility")?.value || "").trim();
+  const siteCivility = (
+    document.getElementById("siteCivility")?.value || ""
+  ).trim();
   const siteName = (document.getElementById("siteName")?.value || "").trim();
-  const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
+  const siteAddress = (
+    document.getElementById("siteAddress")?.value || ""
+  ).trim();
 
   if (!clientName || !clientAddress) {
     showConfirmDialog({
@@ -6918,7 +7076,7 @@ try {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -6930,7 +7088,7 @@ try {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -6951,7 +7109,9 @@ try {
 
     const desc = (line.querySelector(".prestation-desc")?.value || "").trim();
     const qty = parseFloat(line.querySelector(".prestation-qty")?.value || "0");
-    const price = parseFloat(line.querySelector(".prestation-price")?.value || "0");
+    const price = parseFloat(
+      line.querySelector(".prestation-price")?.value || "0",
+    );
     const unit = (line.querySelector(".prestation-unit")?.value || "").trim();
     const detail = line.dataset.detail || "";
 
@@ -6971,7 +7131,7 @@ try {
         total: (qty || 0) * (price || 0),
         unit,
         dates,
-        kind
+        kind,
       });
     }
   });
@@ -6984,7 +7144,7 @@ try {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -6992,11 +7152,12 @@ try {
   if (prestations.length === 0) {
     showConfirmDialog({
       title: "Aucune prestation",
-      message: "Ajoute au moins une prestation avant d'enregistrer le document.",
+      message:
+        "Ajoute au moins une prestation avant d'enregistrer le document.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -7008,10 +7169,9 @@ try {
   const tvaRate = parseFloat(document.getElementById("tvaRate").value) || 0;
   const notes = document.getElementById("notes").value;
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
-  const wasPaid = existing ? !!existing.paid : false;   // 🧠 état avant sauvegarde
+  const wasPaid = existing ? !!existing.paid : false; // 🧠 état avant sauvegarde
   // ancien statut (pour détecter le passage en "cloture")
-  const oldStatus = existing ? (existing.status || "") : "";
-
+  const oldStatus = existing ? existing.status || "" : "";
 
   let conditionsType = existing ? existing.conditionsType || "" : "";
   const cbClientPart = document.getElementById("clientParticulier");
@@ -7032,10 +7192,10 @@ try {
     status = existing && existing.status ? existing.status : "";
   }
 
-// ==== DÉTECTION PASSAGE EN "CLOTURÉ" ====
-// On mémorise si l'ancien doc était un devis NON clôturé
-let wasCloture = existing?.status === "cloture";
-let willBeCloture = status === "cloture";
+  // ==== DÉTECTION PASSAGE EN "CLOTURÉ" ====
+  // On mémorise si l'ancien doc était un devis NON clôturé
+  let wasCloture = existing?.status === "cloture";
+  let willBeCloture = status === "cloture";
 
   let paymentMode = "";
   let paymentDate = "";
@@ -7089,7 +7249,7 @@ let willBeCloture = status === "cloture";
       name: clientName,
       address: clientAddress,
       phone: clientPhone,
-      email: clientEmail
+      email: clientEmail,
     },
 
     // 🔥 on stocke aussi la civilité du lieu
@@ -7110,30 +7270,25 @@ let willBeCloture = status === "cloture";
     paymentDate,
     status,
     conditionsType,
-    createdAt: existing ? existing.createdAt : new Date().toISOString()
+    createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
   // 📌 Un devis qui vient de passer en "cloture" ?
   const justClotured =
-    doc.type === "devis" &&
-    oldStatus !== "cloture" &&
-    doc.status === "cloture";
+    doc.type === "devis" && oldStatus !== "cloture" && doc.status === "cloture";
 
   // on gardera ici la référence vers le rapport auto
   let autoRapportRecord = null;
 
+  // =======================
+  // 📌 Création auto rapport intelligent
+  // =======================
+  let shouldCreateRapport = false;
 
-// =======================
-// 📌 Création auto rapport intelligent
-// =======================
-let shouldCreateRapport = false;
-
-// Un devis passe en clôturé → création rapport
-if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
-  shouldCreateRapport = true;
-}
-
-
+  // Un devis passe en clôturé → création rapport
+  if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
+    shouldCreateRapport = true;
+  }
 
   // 1) S'il existait déjà un document → on calcule le diff
   if (existing) {
@@ -7141,17 +7296,16 @@ if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
     diffEntries.forEach((entry) => {
       addHistoryEntry(doc, {
         type: entry.type,
-        detail: entry.detail
+        detail: entry.detail,
       });
     });
   } else {
     // 2) Nouveau document → entrée "create"
     addHistoryEntry(doc, {
       type: "create",
-      detail: `Document créé (${doc.type === "facture" ? "Facture" : "Devis"} ${doc.number || ""})`
+      detail: `Document créé (${doc.type === "facture" ? "Facture" : "Devis"} ${doc.number || ""})`,
     });
   }
-
 
   const docs = getAllDocuments();
   const idx = docs.findIndex((d) => d.id === doc.id);
@@ -7161,25 +7315,23 @@ if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
   saveDocuments(docs);
   saveSingleDocumentToFirestore(doc);
 
-// =======================================
-// 📄 Création automatique du rapport depuis devis clôturé
-// =======================================
-if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
+  // =======================================
+  // 📄 Création automatique du rapport depuis devis clôturé
+  // =======================================
+  if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
+    createRapportFromDevis(doc); // ⚡ Génère le rapport intelligent !!!
 
-  createRapportFromDevis(doc); // ⚡ Génère le rapport intelligent !!!
-
-  // Option : popup confirmation
-  showConfirmDialog({
-    title: "Rapport généré",
-    message: 
-      "Le devis a été clôturé et un rapport d’intervention intelligent a été créé automatiquement.",
-    confirmLabel: "OK",
-    cancelLabel: "",
-    variant: "success",
-    icon: "📝"
-  });
-}
-
+    // Option : popup confirmation
+    showConfirmDialog({
+      title: "Rapport généré",
+      message:
+        "Le devis a été clôturé et un rapport d’intervention intelligent a été créé automatiquement.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "success",
+      icon: "📝",
+    });
+  }
 
   // 💥 Si on vient de passer une facture de NON PAYÉE à PAYÉE depuis le formulaire
   if (
@@ -7220,14 +7372,13 @@ if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
               openPiscineRapportGenerator(autoRapportRecord.id);
             }
           },
-          onCancel: () => {}
+          onCancel: () => {},
         });
       }
     } catch (e) {
       console.error("Erreur création rapport auto depuis devis cloturé :", e);
     }
   }
-
 
   // Mise à jour client SI la fonction existe (évite une erreur JS)
   if (typeof updateClientsFromDocument === "function") {
@@ -7244,7 +7395,7 @@ if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 
   currentDocumentId = doc.id;
@@ -7264,77 +7415,13 @@ if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
   } catch (e) {
     console.error("Erreur renderHistory après sauvegarde:", e);
   }
-if (typeof refreshDocumentHealthUI === "function") {
-  refreshDocumentHealthUI(doc);
-}
-
-
-}
-
-function deleteCurrent() {
-  const typeSelect = document.getElementById("docType");
-  const type = typeSelect ? typeSelect.value : "devis";
-  const docNumber = document.getElementById("docNumber")?.value || "";
-  const subject = (document.getElementById("docSubject")?.value || "").trim() || "Sans objet";
-
-  // 1) Document pas encore enregistré
-  if (!currentDocumentId) {
-    const typeLabel = type === "devis" ? "DEVIS" : "FACTURE";
-
-    const title = `Effacer le ${typeLabel} en cours`;
-    const message =
-      `Ce ${typeLabel} (${docNumber || "non numéroté"}) n'a pas encore été enregistré.\n\n` +
-      `Voulez-vous effacer tout le contenu et repartir sur un nouveau ${typeLabel.toLowerCase()} vierge ?`;
-
-    showConfirmDialog({
-      title,
-      message,
-      confirmLabel: "Réinitialiser",
-      cancelLabel: "Annuler",
-      variant: "danger",   // 👈 aussi en rouge + ⚠️ si tu veux
-      onConfirm: function () {
-        newDocument(type);
-      }
-    });
-
-    return;
+  if (typeof refreshDocumentHealthUI === "function") {
+    refreshDocumentHealthUI(doc);
   }
-
-  // 2) Document déjà enregistré -> vraie suppression
-  const typeLabel = type === "devis" ? "DEVIS" : "FACTURE";
-  const title = `Supprimer le ${typeLabel}`;
-  const message =
-    `Êtes-vous sûr de vouloir supprimer le ${typeLabel} ${docNumber} :\n` +
-    `« ${subject} » ?\n\nCette action est définitive.`;
-
-showConfirmDialog({
-  title,
-  message,
-  confirmLabel: "Supprimer",
-  cancelLabel: "Annuler",
-  variant: "danger",
-  icon: "⚠️",
-  onConfirm: function () {
-    const idToDelete = currentDocumentId;
-    const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
-    saveDocuments(docs);
-
-    if (db) {
-      db.collection("documents")
-        .doc(idToDelete)
-        .delete()
-        .catch((err) =>
-          console.error("Erreur Firestore delete :", err)
-        );
-    }
-
-    backToList();
-  }
-});
-computeCA();
-
 }
+
 // Supprimer depuis la LISTE (bouton "Supprimer" dans le tableau)
+
 function deleteDocument(id) {
   const docs = getAllDocuments();
   const doc = docs.find((d) => d.id === id);
@@ -7342,7 +7429,7 @@ function deleteDocument(id) {
 
   const typeLabel = doc.type === "devis" ? "DEVIS" : "FACTURE";
   const subject =
-    (doc.subject && doc.subject.trim()) ? doc.subject.trim() : "Sans objet";
+    doc.subject && doc.subject.trim() ? doc.subject.trim() : "Sans objet";
 
   const title = `Supprimer le ${typeLabel}`;
   const message =
@@ -7355,8 +7442,8 @@ function deleteDocument(id) {
     message,
     confirmLabel: "Supprimer",
     cancelLabel: "Annuler",
-  variant: "danger",
-  icon: "⚠️",
+    variant: "danger",
+    icon: "⚠️",
     onConfirm: function () {
       const newDocs = docs.filter((d) => d.id !== id);
       saveDocuments(newDocs);
@@ -7365,20 +7452,17 @@ function deleteDocument(id) {
         db.collection("documents")
           .doc(id)
           .delete()
-          .catch((err) =>
-            console.error("Erreur Firestore delete :", err)
-          );
+          .catch((err) => console.error("Erreur Firestore delete :", err));
       }
 
       // On rafraîchit juste la liste
       loadDocumentsList();
-    }
+    },
   });
 
-if (typeof refreshHomeStats === "function") {
+  if (typeof refreshHomeStats === "function") {
     refreshHomeStats();
-}
-
+  }
 }
 
 // Supprimer depuis le FORMULAIRE (bouton rouge en haut du devis/facture)
@@ -7405,7 +7489,7 @@ function deleteCurrent() {
       cancelLabel: "Annuler",
       onConfirm: function () {
         newDocument(type);
-      }
+      },
     });
 
     return;
@@ -7423,8 +7507,8 @@ function deleteCurrent() {
     message,
     confirmLabel: "Supprimer",
     cancelLabel: "Annuler",
-  variant: "danger",
-  icon: "⚠️",
+    variant: "danger",
+    icon: "⚠️",
     onConfirm: function () {
       const idToDelete = currentDocumentId;
       const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
@@ -7434,19 +7518,13 @@ function deleteCurrent() {
         db.collection("documents")
           .doc(idToDelete)
           .delete()
-          .catch((err) =>
-            console.error("Erreur Firestore delete :", err)
-          );
+          .catch((err) => console.error("Erreur Firestore delete :", err));
       }
 
       backToList();
-    }
+    },
   });
 }
-
-
-
-
 
 function duplicateDocument(id) {
   const original = getDocument(id);
@@ -7488,15 +7566,13 @@ function duplicateCurrent() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
-      icon: "ℹ️"
+      icon: "ℹ️",
     });
     return;
   }
 
   duplicateDocument(currentDocumentId);
 }
-
-
 
 function backToList() {
   document.getElementById("formView").classList.add("hidden");
@@ -7507,31 +7583,54 @@ function backToList() {
   loadDocumentsList();
   updateTransformButtonVisibility();
 }
-function backToContracts() {
-  // Pour l’instant : retour à la liste Devis/Factures
-  switchListType("devis");
+
+function syncMicroTVAStatusWithCurrentCA() {
+  const { year, caTTC } = computeCurrentYearCAForMicro();
+  const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
+
+  // Si on est en "obligatoire" mais que le CA actuel est repassé sous le seuil
+  // (ex: suppression d'une facture test), on repasse en franchise
+  if (status?.mode === "obligatoire" && caTTC < MICRO_TVA_THRESHOLD_BASE) {
+    saveMicroTVAStatus({ mode: "franchise", activatedYear: null, activatedCA: 0 });
+
+    // remet l'UI TVA sur 0% si tu as setTVA()
+    if (typeof setTVA === "function") setTVA(0);
+    const tva0 = document.getElementById("tva0");
+    const tva20 = document.getElementById("tva20");
+    if (tva0 && tva20) {
+      tva0.checked = true;
+      tva20.checked = false;
+    }
+  }
+
+  // Si on est en franchise mais CA dépasse → passe obligatoire (sécurité)
+  if (status?.mode !== "obligatoire" && caTTC >= MICRO_TVA_THRESHOLD_BASE) {
+    saveMicroTVAStatus({ mode: "obligatoire", activatedYear: year, activatedCA: caTTC });
+    if (typeof setTVA === "function") setTVA(20);
+  }
 }
 
 // =====================================
 // 📊 CALCUL CA ANNUEL / MENSUEL
 // =====================================
-function computeCA() {
-  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
 
-  const now   = new Date();
-  const year  = now.getFullYear();
+function computeCA() {
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
+
+  const now = new Date();
+  const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
 
-  let totalYear      = 0;   // CA annuel (affiché)
-  let totalPaidYear  = 0;   // CA réellement encaissé → micro-entreprise
-  let totalUnpaid    = 0;
-  let monthTotal     = 0;
+  let totalYear = 0; // CA annuel (affiché)
+  let totalPaidYear = 0; // CA réellement encaissé → micro-entreprise
+  let totalUnpaid = 0;
+  let monthTotal = 0;
 
-  docs.forEach(f => {
+  docs.forEach((f) => {
     const amount = Number(f.totalTTC || 0);
     if (!amount) return;
 
-    const isPaid  = !!f.paid;
+    const isPaid = !!f.paid;
     const payDate = f.paymentDate || f.date;
 
     // --------------------------
@@ -7541,7 +7640,7 @@ function computeCA() {
       totalYear += amount;
 
       if (isPaid) totalPaidYear += amount;
-      else        totalUnpaid   += amount;
+      else totalUnpaid += amount;
 
       // mois courant
       if (f.date.startsWith(`${year}-${month}`)) {
@@ -7549,7 +7648,6 @@ function computeCA() {
       }
     }
   });
-
 
   // Surveiller le seuil TVA micro
   if (typeof checkMicroTVAThreshold === "function") {
@@ -7566,10 +7664,9 @@ function computeCA() {
 
 // Seuils légaux prestations de services (micro, franchise en base TVA)
 // Source officielle : 37 500 € (seuil de base) / 41 250 € (seuil majoré)
-const MICRO_TVA_THRESHOLD_BASE = 37500;     // déclenche l'obligation de TVA
+const MICRO_TVA_THRESHOLD_BASE = 37500; // déclenche l'obligation de TVA
 const MICRO_TVA_THRESHOLD_TOLERANCE = 41250; // pour info, non utilisé ici
 const MICRO_TVA_THRESHOLD_TTC = MICRO_TVA_THRESHOLD_BASE;
-
 
 const MICRO_TVA_STATUS_KEY = "micro_tva_status";
 
@@ -7581,9 +7678,9 @@ function getMicroTVAStatus() {
     }
     const parsed = JSON.parse(raw);
     return {
-      mode: parsed.mode || "franchise",           // "franchise" ou "obligatoire"
+      mode: parsed.mode || "franchise", // "franchise" ou "obligatoire"
       activatedYear: parsed.activatedYear || null,
-      activatedCA: parsed.activatedCA || 0
+      activatedCA: parsed.activatedCA || 0,
     };
   } catch (e) {
     console.error("Erreur lecture statut TVA micro :", e);
@@ -7597,7 +7694,6 @@ function getMicroTvaStatus() {
   return st && st.mode ? st.mode : "franchise";
 }
 
-
 function saveMicroTVAStatus(status) {
   try {
     localStorage.setItem(MICRO_TVA_STATUS_KEY, JSON.stringify(status));
@@ -7609,13 +7705,13 @@ function saveMicroTVAStatus(status) {
 // CA TTC de l'année civile en cours (simple, à partir des factures)
 
 function computeCurrentYearCAForMicro() {
-  const docs = getAllDocuments().filter(d => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
   const now = new Date();
   const currentYear = now.getFullYear();
 
   let totalTTC = 0;
 
-  docs.forEach(f => {
+  docs.forEach((f) => {
     // 🔎 Micro-entreprise = on compte le CA ENCAISSÉ seulement !
     if (!f.paid) return;
 
@@ -7631,12 +7727,12 @@ function computeCurrentYearCAForMicro() {
   return { year: currentYear, caTTC: totalTTC };
 }
 
-
-
 function formatEuroFallback(v) {
   if (typeof formatEuro === "function") return formatEuro(v);
-  return (Number(v || 0).toFixed(2) + " €");
+  return Number(v || 0).toFixed(2) + " €";
 }
+
+
 
 /**
  * Surveille le seuil micro :
@@ -7644,11 +7740,33 @@ function formatEuroFallback(v) {
  * - pas de retour automatique en arrière
  * @param {boolean} showAlert - true = popup d'alerte
  */
+
 function checkMicroTVAThreshold(showAlert = false) {
-  const status = getMicroTVAStatus();
+  let status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
   const { year, caTTC } = computeCurrentYearCAForMicro();
 
-  // Petit badge sur le dashboard (optionnel, si tu ajoutes l'élément dans le HTML)
+  /* ======================================================
+     1️⃣ RESET AUTOMATIQUE AU 01/01 (SI SOUS LE SEUIL)
+  ====================================================== */
+  if (
+    status.mode === "obligatoire" &&
+    status.activatedYear &&
+    status.activatedYear !== year &&
+    caTTC < MICRO_TVA_THRESHOLD_BASE
+  ) {
+    saveMicroTVAStatus({
+      mode: "franchise",
+      activatedYear: null,
+      activatedCA: 0,
+    });
+
+    // 🔁 IMPORTANT : on relit le statut mis à jour
+    status = getMicroTVAStatus();
+  }
+
+  /* ======================================================
+     2️⃣ BADGE DASHBOARD
+  ====================================================== */
   const badge = document.getElementById("dashTVAMicroBadge");
   if (badge) {
     if (status.mode === "obligatoire") {
@@ -7659,21 +7777,25 @@ function checkMicroTVAThreshold(showAlert = false) {
     }
   }
 
-  // Si TVA déjà activée une fois → on ne revient jamais en "franchise" tout seul
+  /* ======================================================
+     3️⃣ SI TVA DÉJÀ OBLIGATOIRE CETTE ANNÉE → STOP
+  ====================================================== */
   if (status.mode === "obligatoire") {
     return;
   }
 
-  // Dépassement du seuil légal micro – prestations de services
+  /* ======================================================
+     4️⃣ DÉPASSEMENT DU SEUIL MICRO (ANNÉE COURANTE)
+  ====================================================== */
   if (caTTC >= MICRO_TVA_THRESHOLD_BASE) {
     const newStatus = {
       mode: "obligatoire",
       activatedYear: year,
-      activatedCA: caTTC
+      activatedCA: caTTC,
     };
     saveMicroTVAStatus(newStatus);
 
-    // Notification uniquement quand on demande (ex : à l’enregistrement d’une facture)
+    // 🔔 Alerte utilisateur (optionnelle)
     if (showAlert) {
       if (typeof showConfirmDialog === "function") {
         showConfirmDialog({
@@ -7686,31 +7808,34 @@ function checkMicroTVAThreshold(showAlert = false) {
           confirmLabel: "OK",
           cancelLabel: "",
           variant: "warning",
-          icon: "⚠️"
+          icon: "⚠️",
         });
       } else {
         alert(
           "⚠️ Seuil TVA micro dépassé : " +
-          formatEuroFallback(caTTC) +
-          " (seuil " +
-          formatEuroFallback(MICRO_TVA_THRESHOLD_BASE) +
-          "). TVA 20 % obligatoire sur les prochaines factures."
+            formatEuroFallback(caTTC) +
+            " (seuil " +
+            formatEuroFallback(MICRO_TVA_THRESHOLD_BASE) +
+            "). TVA 20 % obligatoire sur les prochaines factures.",
         );
       }
     }
 
-    // Force la TVA à 20 % sur le formulaire courant
+    /* ======================================================
+       5️⃣ FORCE TVA 20 % SUR LE FORMULAIRE COURANT
+    ====================================================== */
     if (typeof setTVA === "function") {
       setTVA(20);
     }
-    const tva0  = document.getElementById("tva0");
+
+    const tva0 = document.getElementById("tva0");
     const tva20 = document.getElementById("tva20");
     if (tva0 && tva20) {
       tva0.checked = false;
       tva20.checked = true;
     }
 
-    // Mise à jour éventuelle du badge (si présent)
+    // Mise à jour badge immédiate
     const badge2 = document.getElementById("dashTVAMicroBadge");
     if (badge2) {
       badge2.textContent = "TVA activée (20 %)";
@@ -7734,7 +7859,10 @@ function formatHistoryTimestamp(ts) {
     const d = new Date(ts);
     if (isNaN(d.getTime())) return "";
     const date = d.toLocaleDateString("fr-FR");
-    const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const time = d.toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
     return `${date} ${time}`;
   } catch (e) {
     return "";
@@ -7743,15 +7871,24 @@ function formatHistoryTimestamp(ts) {
 
 function mapHistoryTypeLabel(type) {
   switch (type) {
-    case "create": return "Création";
-    case "delete": return "Suppression";
-    case "status": return "Statut";
-    case "payment": return "Paiement";
-    case "prest_add": return "Prestation ajoutée";
-    case "prest_delete": return "Prestation supprimée";
-    case "prest_update": return "Prestation modifiée";
-    case "field_update": return "Modification";
-    default: return "Mise à jour";
+    case "create":
+      return "Création";
+    case "delete":
+      return "Suppression";
+    case "status":
+      return "Statut";
+    case "payment":
+      return "Paiement";
+    case "prest_add":
+      return "Prestation ajoutée";
+    case "prest_delete":
+      return "Prestation supprimée";
+    case "prest_update":
+      return "Prestation modifiée";
+    case "field_update":
+      return "Modification";
+    default:
+      return "Mise à jour";
   }
 }
 
@@ -7778,7 +7915,7 @@ function addHistoryEntry(docOrId, payload, options) {
       ts,
       type,
       detail,
-      docId: doc.id
+      docId: doc.id,
     });
     // Pas de save ici → le caller sauvegarde le doc complet
     return;
@@ -7787,7 +7924,7 @@ function addHistoryEntry(docOrId, payload, options) {
   // 2) Cas : on donne un id → on va chercher le document et on persiste nous-mêmes
   if (typeof docOrId === "string") {
     const docs = getAllDocuments();
-    const idx = docs.findIndex(d => d.id === docOrId);
+    const idx = docs.findIndex((d) => d.id === docOrId);
     if (idx === -1) return;
 
     doc = docs[idx];
@@ -7796,7 +7933,7 @@ function addHistoryEntry(docOrId, payload, options) {
       ts,
       type,
       detail,
-      docId: doc.id
+      docId: doc.id,
     });
 
     if (!opts.skipSave) {
@@ -7814,7 +7951,11 @@ function renderHistory(currentDocument) {
 
   container.innerHTML = "";
 
-  if (!currentDocument || !Array.isArray(currentDocument.history) || currentDocument.history.length === 0) {
+  if (
+    !currentDocument ||
+    !Array.isArray(currentDocument.history) ||
+    currentDocument.history.length === 0
+  ) {
     const empty = document.createElement("div");
     empty.className = "history-empty";
     empty.textContent = "Aucune modification pour le moment.";
@@ -7823,7 +7964,9 @@ function renderHistory(currentDocument) {
   }
 
   // ✅ Correction ici : le spread [...]
-  const entries = [...currentDocument.history].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const entries = [...currentDocument.history].sort(
+    (a, b) => (b.ts || 0) - (a.ts || 0),
+  );
 
   entries.forEach((entry) => {
     const wrapper = document.createElement("div");
@@ -7845,9 +7988,7 @@ function renderHistory(currentDocument) {
   });
 }
 
-
 // ================== DIFF DOCUMENT ==================
-
 
 function computeDocumentDiff(before, after) {
   if (!before || !after) return [];
@@ -7861,7 +8002,7 @@ function computeDocumentDiff(before, after) {
 
     diffs.push({
       type: "field_update",
-      detail: `${label} : ${oldVal || "—"} → ${newVal || "—"}`
+      detail: `${label} : ${oldVal || "—"} → ${newVal || "—"}`,
     });
   }
 
@@ -7874,7 +8015,7 @@ function computeDocumentDiff(before, after) {
     const nLabel = formatEuroFallback(n);
     diffs.push({
       type: "field_update",
-      detail: `${label} : ${oLabel} → ${nLabel}`
+      detail: `${label} : ${oLabel} → ${nLabel}`,
     });
   }
 
@@ -7891,30 +8032,36 @@ function computeDocumentDiff(before, after) {
   if ((before.tvaRate || 0) !== (after.tvaRate || 0)) {
     diffs.push({
       type: "field_update",
-      detail: `TVA : ${(before.tvaRate || 0)} % → ${(after.tvaRate || 0)} %`
+      detail: `TVA : ${before.tvaRate || 0} % → ${after.tvaRate || 0} %`,
     });
   }
 
   // Réduction : activation / désactivation / changement de %
   const bDiscountRate = Number(before.discountRate || 0);
   const aDiscountRate = Number(after.discountRate || 0);
-  const bDiscountActive = bDiscountRate > 0 && Number(before.discountAmount || 0) > 0;
-  const aDiscountActive = aDiscountRate > 0 && Number(after.discountAmount || 0) > 0;
+  const bDiscountActive =
+    bDiscountRate > 0 && Number(before.discountAmount || 0) > 0;
+  const aDiscountActive =
+    aDiscountRate > 0 && Number(after.discountAmount || 0) > 0;
 
   if (!bDiscountActive && aDiscountActive) {
     diffs.push({
       type: "field_update",
-      detail: `Réduction activée : ${aDiscountRate}%`
+      detail: `Réduction activée : ${aDiscountRate}%`,
     });
   } else if (bDiscountActive && !aDiscountActive) {
     diffs.push({
       type: "field_update",
-      detail: "Réduction désactivée"
+      detail: "Réduction désactivée",
     });
-  } else if (bDiscountActive && aDiscountActive && bDiscountRate !== aDiscountRate) {
+  } else if (
+    bDiscountActive &&
+    aDiscountActive &&
+    bDiscountRate !== aDiscountRate
+  ) {
     diffs.push({
       type: "field_update",
-      detail: `Réduction modifiée : ${bDiscountRate}% → ${aDiscountRate}%`
+      detail: `Réduction modifiée : ${bDiscountRate}% → ${aDiscountRate}%`,
     });
   }
 
@@ -7930,11 +8077,13 @@ function computeDocumentDiff(before, after) {
 
   // Type de client via conditionsType (particulier / agence)
   if ((before.conditionsType || "") !== (after.conditionsType || "")) {
-    const oldType = before.conditionsType === "agence" ? "Agence / Syndic" : "Particulier";
-    const newType = after.conditionsType === "agence" ? "Agence / Syndic" : "Particulier";
+    const oldType =
+      before.conditionsType === "agence" ? "Agence / Syndic" : "Particulier";
+    const newType =
+      after.conditionsType === "agence" ? "Agence / Syndic" : "Particulier";
     diffs.push({
       type: "field_update",
-      detail: `Type de client : ${oldType} → ${newType}`
+      detail: `Type de client : ${oldType} → ${newType}`,
     });
   }
 
@@ -7950,8 +8099,10 @@ function computeDocumentDiff(before, after) {
     return desc || unit ? `${desc}|${unit}` : `#idx_${idx}`;
   }
 
-  const beforePrest = Array.isArray(before.prestations) ? before.prestations : [];
-  const afterPrest  = Array.isArray(after.prestations)  ? after.prestations  : [];
+  const beforePrest = Array.isArray(before.prestations)
+    ? before.prestations
+    : [];
+  const afterPrest = Array.isArray(after.prestations) ? after.prestations : [];
 
   const beforeMap = new Map();
   beforePrest.forEach((p, idx) => {
@@ -7969,7 +8120,7 @@ function computeDocumentDiff(before, after) {
       const p = val.p || {};
       diffs.push({
         type: "prest_delete",
-        detail: `Prestation supprimée : ${p.desc || "(sans intitulé)"}`
+        detail: `Prestation supprimée : ${p.desc || "(sans intitulé)"}`,
       });
     }
   });
@@ -7981,13 +8132,14 @@ function computeDocumentDiff(before, after) {
       const total = Number(p.total || (p.qty || 0) * (p.price || 0));
       const lines = [];
       lines.push(`Prestation ajoutée : ${p.desc || "(sans intitulé)"}`);
-      if (p.qty != null)   lines.push(`Quantité : ${p.qty}`);
-      if (p.price != null) lines.push(`Prix unitaire : ${formatEuroFallback(p.price || 0)}`);
+      if (p.qty != null) lines.push(`Quantité : ${p.qty}`);
+      if (p.price != null)
+        lines.push(`Prix unitaire : ${formatEuroFallback(p.price || 0)}`);
       lines.push(`Total : ${formatEuroFallback(total)}`);
 
       diffs.push({
         type: "prest_add",
-        detail: lines.join("\n")
+        detail: lines.join("\n"),
       });
     }
   });
@@ -7997,8 +8149,8 @@ function computeDocumentDiff(before, after) {
     if (!beforeMap.has(key)) return;
 
     const pBefore = beforeMap.get(key).p || {};
-    const pAfter  = val.p || {};
-    const lines   = [];
+    const pAfter = val.p || {};
+    const lines = [];
 
     function prestField(label, prop, formatMode) {
       const ov = pBefore[prop];
@@ -8008,10 +8160,10 @@ function computeDocumentDiff(before, after) {
 
       if (formatMode === "euro") {
         lines.push(
-          `${label} : ${formatEuroFallback(ov || 0)} → ${formatEuroFallback(nv || 0)}`
+          `${label} : ${formatEuroFallback(ov || 0)} → ${formatEuroFallback(nv || 0)}`,
         );
       } else {
-        lines.push(`${label} : ${(ov ?? "—")} → ${(nv ?? "—")}`);
+        lines.push(`${label} : ${ov ?? "—"} → ${nv ?? "—"}`);
       }
     }
 
@@ -8027,7 +8179,7 @@ function computeDocumentDiff(before, after) {
         detail:
           `Prestation modifiée : ${
             pAfter.desc || pBefore.desc || "(sans intitulé)"
-          }\n` + lines.join("\n")
+          }\n` + lines.join("\n"),
       });
     }
   });
@@ -8049,7 +8201,7 @@ function computeDocumentDiff(before, after) {
   if ((before.status || "") !== (after.status || "")) {
     diffs.push({
       type: "status",
-      detail: `Statut modifié : ${(before.status || "—")} → ${(after.status || "—")}`
+      detail: `Statut modifié : ${before.status || "—"} → ${after.status || "—"}`,
     });
   }
 
@@ -8057,7 +8209,10 @@ function computeDocumentDiff(before, after) {
   const bPaid = !!before.paid;
   const aPaid = !!after.paid;
 
-  if (bPaid !== aPaid || (before.paymentMode || "") !== (after.paymentMode || "")) {
+  if (
+    bPaid !== aPaid ||
+    (before.paymentMode || "") !== (after.paymentMode || "")
+  ) {
     let detail;
     if (!bPaid && aPaid) {
       const mode = after.paymentMode || "inconnu";
@@ -8066,20 +8221,16 @@ function computeDocumentDiff(before, after) {
     } else if (bPaid && !aPaid) {
       detail = "Retour à impayé";
     } else {
-      detail =
-        `Mode de paiement modifié : ${(before.paymentMode || "—")} → ${(after.paymentMode || "—")}`;
+      detail = `Mode de paiement modifié : ${before.paymentMode || "—"} → ${after.paymentMode || "—"}`;
     }
     diffs.push({
       type: "payment",
-      detail
+      detail,
     });
   }
 
   return diffs;
 }
-
-
-
 
 // =====================================
 // MICRO TVA – GARDE-FOU 0 % / 20 %
@@ -8087,7 +8238,7 @@ function computeDocumentDiff(before, after) {
 
 function onMainTvaRadioChange(rate) {
   const status = getMicroTvaStatus();
-  const tva0  = document.getElementById("tva0");
+  const tva0 = document.getElementById("tva0");
   const tva20 = document.getElementById("tva20");
 
   // 🟦 Cas 1 : tu es encore en franchise (CA ≤ 37 500) -> TVA 0% obligatoire
@@ -8102,13 +8253,13 @@ function onMainTvaRadioChange(rate) {
         title: "TVA non applicable",
         message:
           "Tu es encore sous le seuil micro (" +
-          MICRO_TVA_THRESHOLD_BASE.toLocaleString('fr-FR') +
+          MICRO_TVA_THRESHOLD_BASE.toLocaleString("fr-FR") +
           " € encaissés TTC).\n\n" +
           "On reste automatiquement en TVA 0 %.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "info",
-        icon: "ℹ️"
+        icon: "ℹ️",
       });
     }
     setTVA(0);
@@ -8127,14 +8278,14 @@ function onMainTvaRadioChange(rate) {
         title: "TVA obligatoire",
         message:
           "Le seuil micro de " +
-          MICRO_TVA_THRESHOLD_TTC.toLocaleString('fr-FR') +
+          MICRO_TVA_THRESHOLD_TTC.toLocaleString("fr-FR") +
           " € encaissés TTC a été dépassé.\n\n" +
           "Les nouvelles factures doivent être émises avec une TVA de 20 %. " +
           "Les contrats déjà en place, eux, ne sont pas modifiés automatiquement.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "warning",
-        icon: "⚠️"
+        icon: "⚠️",
       });
     }
     setTVA(20);
@@ -8148,52 +8299,85 @@ function onMainTvaRadioChange(rate) {
 // =====================================
 // 🚫 CONTRAT – Interdire TVA 20% si micro
 // =====================================
-function enforceContractMicroTVA() {
+function enforceContractMicroTVA(showAlert = false) {
   const status = getMicroTvaStatus(); // "franchise" ou "obligatoire"
 
-  // Champ TVA utilisé aussi par les contrats
   const tvaInput = document.getElementById("tvaRate");
-  if (!tvaInput) return;
+  if (!tvaInput) return true;
 
-  const rate = Number(tvaInput.value || 0);
+  const ct0 = document.getElementById("ctTva0");
+  const ct20 = document.getElementById("ctTva20");
 
-  // 🟥 Encore en franchise → TVA 20% INTERDITE
-  if (status === "franchise" && rate === 20) {
+  // taux actuel
+  const currentRate = Number(tvaInput.value || 0);
 
-    if (typeof showConfirmDialog === "function") {
-      showConfirmDialog({
-        title: "TVA non applicable",
-        message:
-          "Votre chiffre d'affaires est encore inférieur au seuil micro (" +
-          MICRO_TVA_THRESHOLD_BASE.toLocaleString("fr-FR") +
-          " €).\n\n" +
-          "Il est impossible d'appliquer une TVA de 20 % sur un contrat.\n\n" +
-          "➡️ La TVA est automatiquement remise à 0 %.",
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "warning",
-        icon: "⚠️"
-      });
+  // Règle micro : franchise => 0, obligatoire => 20
+  const forcedRate = status === "obligatoire" ? 20 : 0;
+
+  // Si on doit forcer et que ce n'est pas déjà le bon taux
+  if (currentRate !== forcedRate) {
+    if (showAlert) {
+      const msg =
+        forcedRate === 0
+          ? "Tu es en franchise micro : TVA 20% interdite.\n➡️ TVA remise à 0%."
+          : "Seuil micro dépassé : TVA 20% obligatoire.\n➡️ TVA forcée à 20%.";
+
+      if (typeof showConfirmDialog === "function") {
+        showConfirmDialog({
+          title: forcedRate === 0 ? "TVA non applicable" : "TVA obligatoire",
+          message: msg,
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: forcedRate === 0 ? "info" : "warning",
+          icon: forcedRate === 0 ? "ℹ️" : "⚠️",
+        });
+      } else {
+        alert(msg);
+      }
     }
 
-    // Forcer TVA 0 %
-    tvaInput.value = "0";
-
-    // Radios si présentes
-    document.getElementById("tva20")?.checked && (document.getElementById("tva20").checked = false);
-    document.getElementById("tva0")?.checked  && (document.getElementById("tva0").checked  = true);
-
-    // Recalcul contrat si la fonction existe
-    if (typeof recomputeContract === "function") {
-      recomputeContract();
+    // ✅ Force via setTVA pour garder toute ta logique (note, labels, totaux)
+    if (typeof setTVA === "function") {
+      setTVA(forcedRate);
+    } else {
+      tvaInput.value = String(forcedRate);
     }
 
-    return false; // ❌ TVA refusée
+    // 🔘 radios contrat
+    if (ct0 && ct20) {
+      ct0.checked = forcedRate === 0;
+      ct20.checked = forcedRate === 20;
+
+      // verrouillage (impossible de choisir l'autre)
+      ct0.disabled = forcedRate === 20;
+      ct20.disabled = forcedRate === 0;
+    }
+
+    // (optionnel) sync radios devis/facture si présents
+    const tva0 = document.getElementById("tva0");
+    const tva20 = document.getElementById("tva20");
+    if (tva0 && tva20) {
+      tva0.checked = forcedRate === 0;
+      tva20.checked = forcedRate === 20;
+      tva0.disabled = forcedRate === 20;
+      tva20.disabled = forcedRate === 0;
+    }
+
+    // recalculs
+    if (typeof calculateTotals === "function") calculateTotals();
+    if (typeof recomputeContract === "function") recomputeContract();
+
+    return false;
   }
 
-  return true; // ✅ OK
-}
+  // Même si pas de changement, on met les locks cohérents
+  if (ct0 && ct20) {
+    ct0.disabled = forcedRate === 20;
+    ct20.disabled = forcedRate === 0;
+  }
 
+  return true;
+}
 
 /* =======================================================
    MODULE 3 — AUDIT INTELLIGENT
@@ -8220,7 +8404,11 @@ function auditDocument(doc) {
 
   // ================== TVA ==================
   if (doc.microBIC === true && tvaRate > 0) {
-    add("TVA", "warn", "TVA activée alors que vous êtes en micro-BIC (devrait être 0%).");
+    add(
+      "TVA",
+      "warn",
+      "TVA activée alors que vous êtes en micro-BIC (devrait être 0%).",
+    );
   } else {
     add("TVA", "ok", `TVA : ${tvaRate}%`);
   }
@@ -8228,7 +8416,11 @@ function auditDocument(doc) {
   // ================== Dates ==================
   if (doc.type === "devis") {
     if (doc.validityDate && doc.validityDate < doc.date) {
-      add("Dates", "crit", "La date de validité est antérieure à la date du devis.");
+      add(
+        "Dates",
+        "crit",
+        "La date de validité est antérieure à la date du devis.",
+      );
     } else {
       add("Dates", "ok", "Dates cohérentes.");
     }
@@ -8268,7 +8460,11 @@ function auditDocument(doc) {
     if (doc.status === "signé") {
       const daysSince = daysBetween(doc.date, today);
       if (daysSince >= 7) {
-        add("Comportement", "warn", `Devis signé depuis ${daysSince} jours : aucune facture créée.`);
+        add(
+          "Comportement",
+          "warn",
+          `Devis signé depuis ${daysSince} jours : aucune facture créée.`,
+        );
       }
     }
     if (doc.status === "en_attente") {
@@ -8328,8 +8524,8 @@ function refreshDocumentHealthUI(doc) {
   // On déduit le contexte une bonne fois pour toutes
   const docType = doc.type || "";
   const isContract = tbody.id === "contractHealthBody";
-  const isInvoice  = !isContract && docType === "facture";
-  const isQuote    = !isContract && docType === "devis";
+  const isInvoice = !isContract && docType === "facture";
+  const isQuote = !isContract && docType === "devis";
 
   /* -------- 1. STATUT FACTURE (factures seulement) -------- */
   if (isInvoice) {
@@ -8349,20 +8545,22 @@ function refreshDocumentHealthUI(doc) {
         rows.push({
           cat: "Facture impayée",
           status: "🔴 Critique",
-          detail: `En retard de ${daysLate} jours`
+          detail: `En retard de ${daysLate} jours`,
         });
       } else {
         rows.push({
           cat: "Facture impayée",
           status: "🟠 À surveiller",
-          detail: daysLate ? `${daysLate} jours depuis émission` : "—"
+          detail: daysLate ? `${daysLate} jours depuis émission` : "—",
         });
       }
     } else {
       rows.push({
         cat: "Paiement",
         status: "🟢 Payée",
-        detail: paymentDate ? `Réglée le ${paymentDate}` : "Date non renseignée"
+        detail: paymentDate
+          ? `Réglée le ${paymentDate}`
+          : "Date non renseignée",
       });
     }
   }
@@ -8377,28 +8575,27 @@ function refreshDocumentHealthUI(doc) {
         rows.push({
           cat: "Validité devis",
           status: "🔴 Expiré",
-          detail: `Devis expiré le ${doc.validityDate}`
+          detail: `Devis expiré le ${doc.validityDate}`,
         });
       } else {
         const diff = Math.floor((validity - today) / (1000 * 60 * 60 * 24));
         rows.push({
           cat: "Validité devis",
           status: "🟢 Valide",
-          detail: `Expire dans ${diff} jours`
+          detail: `Expire dans ${diff} jours`,
         });
       }
     } else {
       rows.push({
         cat: "Validité devis",
         status: "⚠️ Manquante",
-        detail: "Aucune date de validité définie"
+        detail: "Aucune date de validité définie",
       });
     }
   }
 
   /* -------- 3. INFORMATIONS CLIENT (tous les types) -------- */
-  const clientName =
-    (doc.client && doc.client.name) || doc.clientName || "";
+  const clientName = (doc.client && doc.client.name) || doc.clientName || "";
   const clientAddress =
     (doc.client && doc.client.address) || doc.clientAddress || "";
 
@@ -8406,13 +8603,13 @@ function refreshDocumentHealthUI(doc) {
     rows.push({
       cat: "Client",
       status: "⚠️ Incomplet",
-      detail: "Nom ou adresse manquants"
+      detail: "Nom ou adresse manquants",
     });
   } else {
     rows.push({
       cat: "Client",
       status: "🟢 OK",
-      detail: clientName
+      detail: clientName,
     });
   }
 
@@ -8423,13 +8620,13 @@ function refreshDocumentHealthUI(doc) {
       rows.push({
         cat: "Prestations",
         status: "⚠️ Vide",
-        detail: "Aucune prestation ajoutée"
+        detail: "Aucune prestation ajoutée",
       });
     } else {
       rows.push({
         cat: "Prestations",
         status: "🟢 OK",
-        detail: `${doc.prestations.length} prestation(s)`
+        detail: `${doc.prestations.length} prestation(s)`,
       });
     }
 
@@ -8439,19 +8636,19 @@ function refreshDocumentHealthUI(doc) {
       rows.push({
         cat: "TVA",
         status: "🟢 0 %",
-        detail: "TVA non applicable"
+        detail: "TVA non applicable",
       });
     } else if (rate === 20) {
       rows.push({
         cat: "TVA",
         status: "🟢 20 %",
-        detail: "Taux standard"
+        detail: "Taux standard",
       });
     } else {
       rows.push({
         cat: "TVA",
         status: "⚠️ Atypique",
-        detail: `${rate} %`
+        detail: `${rate} %`,
       });
     }
   }
@@ -8480,7 +8677,7 @@ function refreshDocumentHealthUI(doc) {
       rows.push({
         cat: "Contrat",
         status: `${icon} ${label}`,
-        detail: pr.periodLabel || ""
+        detail: pr.periodLabel || "",
       });
     }
 
@@ -8503,13 +8700,13 @@ function refreshDocumentHealthUI(doc) {
       rows.push({
         cat: "Période",
         status: "🟢 OK",
-        detail
+        detail,
       });
     } else {
       rows.push({
         cat: "Période",
         status: "⚠️ Incomplète",
-        detail: "Dates de début / fin manquantes"
+        detail: "Dates de début / fin manquantes",
       });
     }
 
@@ -8522,13 +8719,13 @@ function refreshDocumentHealthUI(doc) {
       rows.push({
         cat: "Visites",
         status: "🟢 OK",
-        detail: `${pr.totalPassages} visites à ${unit} €`
+        detail: `${pr.totalPassages} visites à ${unit} €`,
       });
     } else {
       rows.push({
         cat: "Visites",
         status: "⚠️ Manquantes",
-        detail: "Total de visites non défini"
+        detail: "Total de visites non défini",
       });
     }
 
@@ -8540,7 +8737,7 @@ function refreshDocumentHealthUI(doc) {
         annuel_50_50: "Annuel en deux fois",
         trimestriel: "Trimestriel",
         semestriel: "Semestriel",
-        annuel: "Annuel"
+        annuel: "Annuel",
       };
       const bLabel = mapBilling[billingMode] || billingMode;
       let detail = bLabel;
@@ -8552,13 +8749,13 @@ function refreshDocumentHealthUI(doc) {
       rows.push({
         cat: "Facturation",
         status: "🟢 OK",
-        detail
+        detail,
       });
     } else {
       rows.push({
         cat: "Facturation",
         status: "⚠️ Non définie",
-        detail: "Aucun mode de facturation choisi"
+        detail: "Aucun mode de facturation choisi",
       });
     }
 
@@ -8566,39 +8763,43 @@ function refreshDocumentHealthUI(doc) {
     const opts = pr.options || {};
     const optList = [];
     if (opts.airbnb || pr.airbnbOption) optList.push("Usage Airbnb +20 %");
-    if (opts.openingIncluded || pr.includeOpening) optList.push("Mise en service incluse");
-    if (opts.winterIncluded || pr.includeWinter) optList.push("Hivernage inclus");
+    if (opts.openingIncluded || pr.includeOpening)
+      optList.push("Mise en service incluse");
+    if (opts.winterIncluded || pr.includeWinter)
+      optList.push("Hivernage inclus");
 
     rows.push({
       cat: "Options",
       status: optList.length ? "🟢 OK" : "—",
       detail: optList.length
         ? optList.join(" · ")
-        : "Aucune option particulière"
+        : "Aucune option particulière",
     });
 
     // 5.6 TVA contrat (si tu veux la remonter ici aussi)
     const rateC =
       typeof pr.tvaRate === "number"
         ? pr.tvaRate
-        : (typeof doc.tvaRate === "number" ? doc.tvaRate : 0);
+        : typeof doc.tvaRate === "number"
+          ? doc.tvaRate
+          : 0;
     if (rateC === 0) {
       rows.push({
         cat: "TVA",
         status: "🟢 0 %",
-        detail: "TVA non applicable"
+        detail: "TVA non applicable",
       });
     } else if (rateC === 20) {
       rows.push({
         cat: "TVA",
         status: "🟢 20 %",
-        detail: "Taux standard"
+        detail: "Taux standard",
       });
     } else {
       rows.push({
         cat: "TVA",
         status: "⚠️ Atypique",
-        detail: `${rateC} %`
+        detail: `${rateC} %`,
       });
     }
   }
@@ -8615,50 +8816,47 @@ function refreshDocumentHealthUI(doc) {
   });
 }
 
-
 // ================== LISTE DOCUMENTS & STATUTS ==================
 
 function loadDocumentsList() {
-
   // Cas spécial : onglet Contrats
   if (currentListType === "contrat") {
-      loadContractsList();
-      return;
+    loadContractsList();
+    return;
   }
 
   // 🔎 Récupération des documents AVANT les filtres
   const docs = getAllDocuments();
 
   // On garde seulement le type courant (devis / facture)
-  let filtered = docs.filter(d => d.type === currentListType);
+  let filtered = docs.filter((d) => d.type === currentListType);
 
   // 🔎 FILTRE ANNÉE (AUTO)
   const selectedYear = document.getElementById("yearMenu")?.value || "all";
 
   if (selectedYear !== "all") {
-      filtered = filtered.filter(d => {
-          if (!d.date) return false;
-          return String(d.date).startsWith(selectedYear);
-      });
+    filtered = filtered.filter((d) => {
+      if (!d.date) return false;
+      return String(d.date).startsWith(selectedYear);
+    });
   }
 
   // 🔵 Filtres spécifiques aux FACTURES
   if (currentListType === "facture") {
+    // Filtre année
+    const yearSel = document.getElementById("yearFilter");
+    if (yearSel && yearSel.value !== "all") {
+      const y = parseInt(yearSel.value, 10);
+      filtered = filtered.filter(
+        (d) => d.date && new Date(d.date).getFullYear() === y,
+      );
+    }
 
-      // Filtre année
-      const yearSel = document.getElementById("yearFilter");
-      if (yearSel && yearSel.value !== "all") {
-        const y = parseInt(yearSel.value, 10);
-        filtered = filtered.filter(
-          (d) => d.date && new Date(d.date).getFullYear() === y
-        );
-      }
-
-      // Filtre "seulement les factures impayées"
-      const unpaidToggle = document.getElementById("filterUnpaid");
-      if (unpaidToggle && unpaidToggle.checked) {
-        filtered = filtered.filter((d) => !d.paid);
-      }
+    // Filtre "seulement les factures impayées"
+    const unpaidToggle = document.getElementById("filterUnpaid");
+    if (unpaidToggle && unpaidToggle.checked) {
+      filtered = filtered.filter((d) => !d.paid);
+    }
   }
 
   // 🔍 Filtre recherche (numéro, client, objet, statut, montant)
@@ -8671,9 +8869,7 @@ function loadDocumentsList() {
       const subject = (d.subject || "").toLowerCase();
       const status = (d.status || "").toLowerCase();
       const totalStr =
-        d.totalTTC != null
-          ? d.totalTTC.toFixed(2).replace(".", ",")
-          : "";
+        d.totalTTC != null ? d.totalTTC.toFixed(2).replace(".", ",") : "";
 
       return (
         number.includes(q) ||
@@ -8685,8 +8881,8 @@ function loadDocumentsList() {
     });
   }
 
-    // 🔽 Tri : date ou numéro selon le select
-  const sortSel  = document.getElementById("sortDocumentsBy");
+  // 🔽 Tri : date ou numéro selon le select
+  const sortSel = document.getElementById("sortDocumentsBy");
   const sortMode = sortSel ? sortSel.value : "date_desc";
 
   filtered.sort((a, b) => {
@@ -8731,18 +8927,18 @@ function loadDocumentsList() {
 
     // --- FACTURE ---
 
-        if (doc.type === "facture") {
+    if (doc.type === "facture") {
       const mode = doc.paymentMode || "";
       const modeLabel =
         mode === "especes"
           ? "Espèces"
           : mode === "cb"
-          ? "CB"
-          : mode === "virement"
-          ? "Virement"
-          : mode === "cheque"
-          ? "Chèque"
-          : "";
+            ? "CB"
+            : mode === "virement"
+              ? "Virement"
+              : mode === "cheque"
+                ? "Chèque"
+                : "";
 
       const DELAI_REGLEMENT_JOURS = 30;
 
@@ -8752,8 +8948,7 @@ function loadDocumentsList() {
       if (doc.paid) {
         // ✅ Facture payée
         badgeStatus = "badge-paid";
-        statusText =
-          "🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : "");
+        statusText = "🟢 Payée" + (modeLabel ? " (" + modeLabel + ")" : "");
       } else {
         // ❌ Facture non payée -> on regarde si elle est en retard ou non
         badgeStatus = "badge-unpaid";
@@ -8767,7 +8962,7 @@ function loadDocumentsList() {
           today.setHours(0, 0, 0, 0);
 
           const diffDays = Math.floor(
-            (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24)
+            (today.getTime() - d.getTime()) / (1000 * 60 * 60 * 24),
           );
 
           if (!isNaN(diffDays) && diffDays > DELAI_REGLEMENT_JOURS) {
@@ -8775,24 +8970,22 @@ function loadDocumentsList() {
           }
         }
 
-    if (isLate) {
-  badgeStatus = "badge-unpaid";   // rouge (déjà existant)
-  statusText = "🔴 En retard";
-} else {
-  badgeStatus = "badge-pending";  // 👉 notre nouvelle classe orange
-  statusText = "🟡 En attente";
-}
-
+        if (isLate) {
+          badgeStatus = "badge-unpaid"; // rouge (déjà existant)
+          statusText = "🔴 En retard";
+        } else {
+          badgeStatus = "badge-pending"; // 👉 notre nouvelle classe orange
+          statusText = "🟡 En attente";
+        }
       }
 
       statutHTML =
         `<span class="badge ${badgeStatus}">${statusText}</span>` +
         (doc.paymentDate && doc.paid
-          ? `<div class="status-sub">le ${
-              new Date(doc.paymentDate).toLocaleDateString("fr-FR")
-            }</div>`
+          ? `<div class="status-sub">le ${new Date(
+              doc.paymentDate,
+            ).toLocaleDateString("fr-FR")}</div>`
           : "");
-
 
       // + radios en dessous (Non réglée / Espèces / CB / Virement / Chèque)
       const modeRadio =
@@ -8818,59 +9011,58 @@ function loadDocumentsList() {
     }
 
     // --- DEVIS ---
-if (doc.type === "devis") {
-  let storedStatus = doc.status || "en_attente";
-  let displayStatus = storedStatus;
+    if (doc.type === "devis") {
+      let storedStatus = doc.status || "en_attente";
+      let displayStatus = storedStatus;
 
-  if (
-    isDevisExpired("devis", doc.validityDate) &&
-    storedStatus === "en_attente"
-  ) {
-    displayStatus = "expire";
-  }
+      if (
+        isDevisExpired("devis", doc.validityDate) &&
+        storedStatus === "en_attente"
+      ) {
+        displayStatus = "expire";
+      }
 
-  let badgeDevisClass = "badge-devis-en-attente";
-  let text = "En attente";
+      let badgeDevisClass = "badge-devis-en-attente";
+      let text = "En attente";
 
-  if (displayStatus === "accepte") {
-    badgeDevisClass = "badge-devis-accepte";
-    text = "Accepté";
-  } else if (displayStatus === "cloture") {
-    badgeDevisClass = "badge-devis-cloture";
-    text = "Clôturé";
-  } else if (displayStatus === "refuse") {
-    badgeDevisClass = "badge-devis-refuse";
-    text = "Refusé";
-  } else if (displayStatus === "expire") {
-    badgeDevisClass = "badge-devis-expire";
-    text = "Expiré";
-  }
+      if (displayStatus === "accepte") {
+        badgeDevisClass = "badge-devis-accepte";
+        text = "Accepté";
+      } else if (displayStatus === "cloture") {
+        badgeDevisClass = "badge-devis-cloture";
+        text = "Clôturé";
+      } else if (displayStatus === "refuse") {
+        badgeDevisClass = "badge-devis-refuse";
+        text = "Refusé";
+      } else if (displayStatus === "expire") {
+        badgeDevisClass = "badge-devis-expire";
+        text = "Expiré";
+      }
 
-  const selectHtml =
-    `<select style="font-size:11px;margin-top:4px;" ` +
-    `onchange="setDevisStatus('${doc.id}', this.value)">` +
-    `<option value="en_attente" ${
-      storedStatus === "en_attente" ? "selected" : ""
-    }>En attente</option>` +
-    `<option value="accepte" ${
-      storedStatus === "accepte" ? "selected" : ""
-    }>Accepté</option>` +
-    `<option value="cloture" ${
-      storedStatus === "cloture" ? "selected" : ""
-    }>Clôturé</option>` +
-    `<option value="refuse" ${
-      storedStatus === "refuse" ? "selected" : ""
-    }>Refusé</option>` +
-    `<option value="expire" ${
-      storedStatus === "expire" ? "selected" : ""
-    }>Expiré</option>` +
-    `</select>`;
+      const selectHtml =
+        `<select style="font-size:11px;margin-top:4px;" ` +
+        `onchange="setDevisStatus('${doc.id}', this.value)">` +
+        `<option value="en_attente" ${
+          storedStatus === "en_attente" ? "selected" : ""
+        }>En attente</option>` +
+        `<option value="accepte" ${
+          storedStatus === "accepte" ? "selected" : ""
+        }>Accepté</option>` +
+        `<option value="cloture" ${
+          storedStatus === "cloture" ? "selected" : ""
+        }>Clôturé</option>` +
+        `<option value="refuse" ${
+          storedStatus === "refuse" ? "selected" : ""
+        }>Refusé</option>` +
+        `<option value="expire" ${
+          storedStatus === "expire" ? "selected" : ""
+        }>Expiré</option>` +
+        `</select>`;
 
-  statutHTML =
-    `<span class="badge ${badgeDevisClass}">${text}</span><br>` +
-    selectHtml;
-}
-
+      statutHTML =
+        `<span class="badge ${badgeDevisClass}">${text}</span><br>` +
+        selectHtml;
+    }
 
     // ====== BOUTONS (Modifier / Imprimer / Aperçu / Supprimer) ======
     let openBtnClass = "btn btn-primary btn-small";
@@ -8891,13 +9083,13 @@ if (doc.type === "devis") {
 
     const actionsHtml =
       `<div class="actions-btns">` +
-        `<div class="actions-btns-row">
+      `<div class="actions-btns-row">
            <button class="${openBtnClass}" type="button"
                    onclick="loadDocument('${doc.id}')">Modifier</button>
            <button class="${printBtnClass}" type="button"
                    onclick="openPrintable('${doc.id}')">Imprimer</button>
          </div>` +
-        `<div class="actions-btns-row">
+      `<div class="actions-btns-row">
            <button class="${previewBtnClass}" type="button"
                    onclick="openPrintable('${doc.id}', true)">Aperçu</button>
            <button class="${deleteBtnClass}" type="button"
@@ -8918,9 +9110,9 @@ if (doc.type === "devis") {
       `<td><span class="badge ${badgeClass}">${typeLabel}</span></td>` +
       `<td class="number-cell">
          <div class="doc-number">${escapeHtml(doc.number || "")}</div>` +
-         (subject
-           ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
-           : "") +
+      (subject
+        ? `<div class="client-subject" title="${safeSubject}">${safeSubject}</div>`
+        : "") +
       `</td>` +
       `<td class="client-cell">
          <div class="client-main" title="${safeClient}">${safeClient || "-"}</div>
@@ -8930,8 +9122,6 @@ if (doc.type === "devis") {
       `<td class="status-cell">${statutHTML}</td>` +
       `<td>${actionsHtml}</td>`;
 
-
-
     tbody.appendChild(tr);
   });
 }
@@ -8940,11 +9130,13 @@ function loadAttestationsList() {
   const tbody = document.getElementById("attestationsTableBody");
   if (!tbody) return;
 
-  const list = getAllAttestations().slice().sort((a, b) => {
-    const ad = a.date || "";
-    const bd = b.date || "";
-    return ad.localeCompare(bd);
-  });
+  const list = getAllAttestations()
+    .slice()
+    .sort((a, b) => {
+      const ad = a.date || "";
+      const bd = b.date || "";
+      return ad.localeCompare(bd);
+    });
 
   tbody.innerHTML = "";
 
@@ -8959,10 +9151,10 @@ function loadAttestationsList() {
     return;
   }
 
-  list.forEach(att => {
+  list.forEach((att) => {
     const frDate = att.date ? att.date.split("-").reverse().join("/") : "";
     const source = att.sourceDocNumber ? `Facture ${att.sourceDocNumber}` : "";
-    const units  = att.units != null ? att.units : "";
+    const units = att.units != null ? att.units : "";
 
     tbody.innerHTML += `
       <tr>
@@ -9007,13 +9199,12 @@ function deleteAttestation(attId) {
     variant: "danger",
     icon: "🗑️",
     onConfirm: () => {
-      const list = getAllAttestations().filter(a => a.id !== attId);
+      const list = getAllAttestations().filter((a) => a.id !== attId);
       saveAttestations(list);
       loadAttestationsList();
-    }
+    },
   });
 }
-
 
 function openAttestationForInvoice(doc) {
   if (!doc) return;
@@ -9025,27 +9216,26 @@ function openAttestationForInvoice(doc) {
 
   currentAttestationSource = {
     id: doc.id || null,
-    number: doc.number || null
+    number: doc.number || null,
   };
 
   // Pré-remplissage des champs de la popup
-  const attName  = document.getElementById("attClientName");
-  const attAddr  = document.getElementById("attClientAddress");
-  const attDate  = document.getElementById("attDate");
+  const attName = document.getElementById("attClientName");
+  const attAddr = document.getElementById("attClientAddress");
+  const attDate = document.getElementById("attDate");
   const attUnits = document.getElementById("attUnits");
   const attNotes = document.getElementById("attNotes");
 
-  if (attName)  attName.value  = (doc.client && doc.client.name)    || "";
-  if (attAddr)  attAddr.value  = (doc.client && doc.client.address) || "";
-  if (attDate)  attDate.value  = doc.date || new Date().toISOString().slice(0, 10);
+  if (attName) attName.value = (doc.client && doc.client.name) || "";
+  if (attAddr) attAddr.value = (doc.client && doc.client.address) || "";
+  if (attDate)
+    attDate.value = doc.date || new Date().toISOString().slice(0, 10);
   if (attUnits && !attUnits.value) attUnits.value = 1;
   if (attNotes) attNotes.value = "";
 
   // On ouvre la popup (elle garde ce qu’on vient de mettre)
   openClimAttestationGenerator();
 }
-
-
 
 // Utilisé par Aperçu / Imprimer
 function generatePDFAttestationFromRecord(record, mode = "print") {
@@ -9056,7 +9246,7 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
 
   const doc = new window.jspdf.jsPDF("p", "mm", "a4");
 
-  const blue = { r: 26, g: 116, b: 217 };   // #1a74d9
+  const blue = { r: 26, g: 116, b: 217 }; // #1a74d9
   const light = { r: 248, g: 250, b: 252 }; // fond cartes
   const margin = 15;
 
@@ -9076,31 +9266,30 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   doc.setFontSize(10);
   doc.text("Entretien & Dépannage – Climatisation & Piscine", margin, 24);
 
-// Petit badge "ATTESTATION D'ENTRETIEN / CLIMATISATION" en haut à droite
+  // Petit badge "ATTESTATION D'ENTRETIEN / CLIMATISATION" en haut à droite
 
-const pageWidth = doc.internal.pageSize.getWidth();
+  const pageWidth = doc.internal.pageSize.getWidth();
 
-const pillW = 90;      // <<< beaucoup plus petit
-const pillH = 16;
-const pillRight = 10;  // marge à droite
-const pillY = 16;
+  const pillW = 90; // <<< beaucoup plus petit
+  const pillH = 16;
+  const pillRight = 10; // marge à droite
+  const pillY = 16;
 
-const pillX = pageWidth - pillRight - pillW;
+  const pillX = pageWidth - pillRight - pillW;
 
-doc.setFillColor(255, 255, 255);
-doc.setDrawColor(255, 255, 255);
-doc.roundedRect(pillX, pillY, pillW, pillH, 6, 6, "FD");
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(255, 255, 255);
+  doc.roundedRect(pillX, pillY, pillW, pillH, 6, 6, "FD");
 
-doc.setFont("helvetica", "bold");
-doc.setFontSize(7);    // plus petit pour tenir dans un petit badge
-doc.setTextColor(blue.r, blue.g, blue.b);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7); // plus petit pour tenir dans un petit badge
+  doc.setTextColor(blue.r, blue.g, blue.b);
 
-// texte sur 2 lignes, centré dans le petit badge
-doc.text("ATTESTATION D'ENTRETIEN", pillX + pillW / 2, pillY + 6, { align: "center" });
-doc.text("CLIMATISATION",          pillX + pillW / 2, pillY + 12, { align: "center" });
-
-
-
+  // texte sur 2 lignes, centré dans le petit badge
+  doc.text("ATTESTATION D'ENTRETIEN", pillX + pillW / 2, pillY + 6, {
+    align: "center",
+  });
+  doc.text("CLIMATISATION", pillX + pillW / 2, pillY + 12, { align: "center" });
 
   /* ================= COORDONNÉES ================= */
 
@@ -9108,9 +9297,11 @@ doc.text("CLIMATISATION",          pillX + pillW / 2, pillY + 12, { align: "cent
   doc.setFontSize(10);
   let y = 38;
 
-const company = getCompanySettings();
-  doc.text(`${company.legalName} – ${company.address}`, margin, y); y += 5;
-  doc.text(`Tél : ${company.phone} – Email : ${company.email}`, margin, y); y += 8;
+  const company = getCompanySettings();
+  doc.text(`${company.legalName} – ${company.address}`, margin, y);
+  y += 5;
+  doc.text(`Tél : ${company.phone} – Email : ${company.email}`, margin, y);
+  y += 8;
   /* ================= TITRE DOCUMENT ================= */
 
   doc.setFont("helvetica", "bold");
@@ -9174,8 +9365,7 @@ const company = getCompanySettings();
   }
 
   const unitsText =
-    "Unités entretenues : " +
-    (record.units != null ? record.units : 1);
+    "Unités entretenues : " + (record.units != null ? record.units : 1);
   doc.text(unitsText, card2X + 5, interY);
 
   y = cardY + cardH + 12;
@@ -9199,11 +9389,14 @@ const company = getCompanySettings();
     "Nettoyage des turbines",
     "Vérification des écoulements et du bac à condensats",
     "Contrôle des connexions électriques",
-    "Contrôle du soufflage et test de fonctionnement"
+    "Contrôle du soufflage et test de fonctionnement",
   ];
 
-  ops.forEach(line => {
-    if (y > 270) { doc.addPage(); y = 20; }
+  ops.forEach((line) => {
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
     const txt = "• " + line;
     doc.text(txt, margin, y);
     y += 5;
@@ -9213,7 +9406,10 @@ const company = getCompanySettings();
 
   if (record.notes) {
     y += 8;
-    if (y > 260) { doc.addPage(); y = 20; }
+    if (y > 260) {
+      doc.addPage();
+      y = 20;
+    }
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
@@ -9254,22 +9450,19 @@ const company = getCompanySettings();
   }
 }
 
-
 function openAttestationPreview(attId) {
   const list = getAllAttestations();
-  const rec = list.find(a => a.id === attId);
+  const rec = list.find((a) => a.id === attId);
   if (!rec) return;
   generatePDFAttestationFromRecord(rec, "preview");
 }
 
 function printAttestation(attId) {
   const list = getAllAttestations();
-  const rec = list.find(a => a.id === attId);
+  const rec = list.find((a) => a.id === attId);
   if (!rec) return;
   generatePDFAttestationFromRecord(rec, "print");
 }
-
-
 
 // ================= STATUTS + RÉSILIATION + RENOUVELLEMENT =================
 
@@ -9317,12 +9510,12 @@ function refreshContractsStatuses() {
 
 function updateContractsAlert() {
   const alertBox = document.getElementById("contractsAlert");
-  const tabBtn   = document.getElementById("tabContrats");
+  const tabBtn = document.getElementById("tabContrats");
   if (!alertBox || !tabBtn) return;
 
   const all = getAllContracts();
   const toRenewCount = all.filter(
-    (c) => computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER
+    (c) => computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER,
   ).length;
 
   if (toRenewCount > 0) {
@@ -9338,7 +9531,6 @@ function updateContractsAlert() {
     tabBtn.textContent = "📘 Contrats";
   }
 }
-
 
 function renderContractStatusBadge(contract) {
   const meta = contract.meta || {};
@@ -9358,7 +9550,6 @@ function renderContractStatusBadge(contract) {
 
   // 🎯 CAS CONTRAT LIÉ À UN DEVIS (tant qu'il n'est ni terminé ni résilié)
   if (meta.sourceDevisNumber) {
-
     if (devisStatus === "accepte" || devisStatus === "accepted") {
       return `<span class="status-badge status-accepted">En cours</span>`;
     }
@@ -9373,8 +9564,10 @@ function renderContractStatusBadge(contract) {
     }
 
     if (
-      devisStatus === "refuse"  || devisStatus === "refused" ||
-      devisStatus === "expire" || devisStatus === "expired"
+      devisStatus === "refuse" ||
+      devisStatus === "refused" ||
+      devisStatus === "expire" ||
+      devisStatus === "expired"
     ) {
       return `<span class="status-badge status-refused">Non validé</span>`;
     }
@@ -9393,7 +9586,6 @@ function renderContractStatusBadge(contract) {
   return `<span class="status-badge status-pending">En attente</span>`;
 }
 
-
 // ---- Popup résiliation ----
 
 let resiliationContractId = null;
@@ -9401,24 +9593,24 @@ let resiliationContractId = null;
 function openResiliationPopup(id) {
   resiliationContractId = id;
 
-  const popup   = document.getElementById("resiliationPopup");
+  const popup = document.getElementById("resiliationPopup");
   if (!popup) return;
 
-  const whoEl   = document.getElementById("resiliationWho");
+  const whoEl = document.getElementById("resiliationWho");
   const motifEl = document.getElementById("resiliationMotif");
-  const dateEl  = document.getElementById("resiliationDate");
+  const dateEl = document.getElementById("resiliationDate");
 
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const contract = getContract(id);
   if (contract && contract.meta) {
-    if (whoEl)   whoEl.value   = contract.meta.resiliationWho   || "client";
+    if (whoEl) whoEl.value = contract.meta.resiliationWho || "client";
     if (motifEl) motifEl.value = contract.meta.resiliationMotif || "";
-    if (dateEl)  dateEl.value  = contract.meta.resiliationDate  || "";
+    if (dateEl) dateEl.value = contract.meta.resiliationDate || "";
   } else {
-    if (whoEl)   whoEl.value   = "client";
+    if (whoEl) whoEl.value = "client";
     if (motifEl) motifEl.value = "";
-    if (dateEl)  dateEl.value  = ""; // vide => utilisera todayISO si rien saisi
+    if (dateEl) dateEl.value = ""; // vide => utilisera todayISO si rien saisi
   }
 
   // 🔥 affichage propre : on enlève hidden, puis on ajoute show
@@ -9458,11 +9650,11 @@ function confirmResiliationPopup() {
     return;
   }
 
-  const whoSelect  = document.getElementById("resiliationWho");
+  const whoSelect = document.getElementById("resiliationWho");
   const motifInput = document.getElementById("resiliationMotif");
-  const dateInput  = document.getElementById("resiliationDate");
+  const dateInput = document.getElementById("resiliationDate");
 
-  const who   = whoSelect ? (whoSelect.value || "client") : "client";
+  const who = whoSelect ? whoSelect.value || "client" : "client";
   const motif = motifInput ? motifInput.value.trim() : "";
 
   // 🔹 Date de réception du recommandé
@@ -9494,13 +9686,13 @@ function confirmResiliationPopup() {
   // 🔹 Mise à jour du contrat
   contract.status = CONTRACT_STATUS.RESILIE;
   if (!contract.meta) contract.meta = {};
-  contract.meta.resiliationWho   = who;
+  contract.meta.resiliationWho = who;
   contract.meta.resiliationMotif = motif;
-  contract.meta.resiliationDate  = resDateISO;
+  contract.meta.resiliationDate = resDateISO;
 
   // 🔹 Sauvegarde
   const list = getAllContracts();
-  const idx  = list.findIndex((c) => c.id === contract.id);
+  const idx = list.findIndex((c) => c.id === contract.id);
   if (idx >= 0) list[idx] = contract;
   else list.push(contract);
 
@@ -9533,7 +9725,7 @@ function confirmResiliationPopup() {
         }
 
         const contractView = document.getElementById("contractView");
-        const formView     = document.getElementById("formView");
+        const formView = document.getElementById("formView");
         if (contractView) contractView.classList.add("hidden");
         if (formView) formView.classList.remove("hidden");
 
@@ -9543,7 +9735,7 @@ function confirmResiliationPopup() {
         if (typeof loadDocumentsList === "function") {
           loadDocumentsList();
         }
-      }
+      },
     });
   } else {
     // Rien à facturer
@@ -9555,11 +9747,10 @@ function confirmResiliationPopup() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "success",
-      icon: "✅"
+      icon: "✅",
     });
   }
 }
-
 
 // Bouton utilisé dans la liste + dans le formulaire
 
@@ -9568,177 +9759,11 @@ function resiliateContractFromList(id) {
   openResiliationPopup(id);
 }
 
-function resiliateCurrentContract() {
-  // On s'assure que le contrat est bien à jour
-  recomputeContract();
-  let contract = buildContractFromForm(true);
-  if (!contract) return;
-
-  const clientName =
-    (contract.client && contract.client.name) ||
-    (contract.client && contract.client.reference) ||
-    contract.id;
-
-  const today = new Date();
-  const todayISO = today.toISOString().slice(0, 10);
-  const todayFR = today.toLocaleDateString("fr-FR");
-
-  // 🔹 Contenu HTML de la popup
-  const popupHtml = `
-    <div class="resiliation-dialog">
-      <div class="resiliation-field">
-        <label for="resWhoSelect"><strong>Qui résilie ?</strong></label>
-        <select id="resWhoSelect" class="resiliation-input">
-          <option value="client">Le client</option>
-          <option value="prestataire">AquaClim Prestige</option>
-        </select>
-      </div>
-
-      <div class="resiliation-field">
-        <label for="resDateInput">
-          <strong>Date de réception du courrier recommandé</strong>
-        </label>
-        <input
-          type="date"
-          id="resDateInput"
-          class="resiliation-input"
-          value="${todayISO}"
-        />
-        <small>
-          Tu peux ajuster cette date si le recommandé a été reçu plus tôt.
-          Par défaut : ${todayFR}.
-        </small>
-      </div>
-
-      <div class="resiliation-field">
-        <label for="resMotifInput"><strong>Motif de résiliation</strong></label>
-        <textarea
-          id="resMotifInput"
-          class="resiliation-input"
-          rows="3"
-          placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
-        ></textarea>
-      </div>
-
-      <p class="resiliation-note">
-        La résiliation prendra effet après validation écrite du client
-        (courrier recommandé avec accusé de réception) et sera calculée
-        avec un préavis de 30&nbsp;jours à compter de la date saisie ci-dessus.
-      </p>
-    </div>
-  `;
-
-  showConfirmDialog({
-    title: "Résiliation du contrat",
-    message:
-      `Contrat pour « ${escapeHtml(clientName)} »<br><br>` +
-      popupHtml,
-    confirmLabel: "Confirmer la résiliation",
-    cancelLabel: "Annuler",
-    variant: "danger",
-    icon: "⚠️",
-    onConfirm: function () {
-      const whoEl   = document.getElementById("resWhoSelect");
-      const dateEl  = document.getElementById("resDateInput");
-      const motifEl = document.getElementById("resMotifInput");
-
-      const who = whoEl ? whoEl.value : "client";
-
-      let dateStr = dateEl ? (dateEl.value || "").trim() : "";
-      let resISO;
-
-      if (!dateStr) {
-        // sécurité : si l'utilisateur vide le champ -> aujourd'hui
-        resISO = todayISO;
-      } else if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
-        // AAAA-MM-JJ
-        resISO = dateStr;
-      } else if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
-        // JJ/MM/AAAA -> on réutilise ta fonction
-        const parsed = parseFrenchDate(dateStr);
-        resISO = parsed || todayISO;
-      } else {
-        // format bizarre -> fallback
-        resISO = todayISO;
-      }
-
-      const motif = motifEl ? motifEl.value.trim() : "";
-
-      // 1) Met à jour le statut + meta résiliation
-      contract.status = CONTRACT_STATUS.RESILIE;
-      if (!contract.meta) contract.meta = {};
-      contract.meta.resiliationDate  = resISO;
-      contract.meta.resiliationWho   = who;
-      contract.meta.resiliationMotif = motif;
-
-      // 2) Sauvegarde du contrat modifié
-      const list = getAllContracts();
-      const idx  = list.findIndex((c) => c.id === contract.id);
-      if (idx >= 0) {
-        list[idx] = contract;
-      } else {
-        list.push(contract);
-      }
-      saveContracts(list);
-      saveSingleContractToFirestore(contract);
-
-      // 3) Création de la facture de résiliation (prorata + préavis)
-      const facture = createTerminationInvoiceForContract(contract);
-
-      // Recharge la liste des contrats (statut RÉSILIÉ visible)
-      if (typeof loadContractsList === "function") {
-        loadContractsList();
-      }
-
-      if (facture) {
-        // Propose d’ouvrir la facture
-        showConfirmDialog({
-          title: "Contrat résilié",
-          message:
-            `Le contrat a été résilié et une facture de clôture ${facture.number} a été créée.\n\n` +
-            `Souhaites-tu ouvrir cette facture maintenant ?`,
-          confirmLabel: "Ouvrir la facture",
-          cancelLabel: "Plus tard",
-          variant: "success",
-          icon: "✅",
-          onConfirm: function () {
-            if (typeof switchListType === "function") {
-              switchListType("facture");
-            }
-
-            const contractView = document.getElementById("contractView");
-            const formView     = document.getElementById("formView");
-            if (contractView) contractView.classList.add("hidden");
-            if (formView)     formView.classList.remove("hidden");
-
-            if (typeof loadDocument === "function") {
-              loadDocument(facture.id);
-            }
-            if (typeof loadDocumentsList === "function") {
-              loadDocumentsList();
-            }
-          }
-        });
-      } else {
-        // Rien à facturer
-        showConfirmDialog({
-          title: "Contrat résilié",
-          message:
-            "Le contrat a été résilié.\nAucun montant restant dû n’a été détecté, aucune facture de clôture n’a été générée automatiquement.",
-          confirmLabel: "OK",
-          cancelLabel: "",
-          variant: "success",
-          icon: "✅"
-        });
-      }
-    }
-  });
-}
-
 // === Helpers contrats ===
+
 function getContractListTitle(c) {
-  const pr   = c.pricing || {};
-  const pool = c.pool    || {};
+  const pr = c.pricing || {};
+  const pool = c.pool || {};
   const mainService = pr.mainService || pool.type || "";
 
   let label = "Contrat d’entretien";
@@ -9760,8 +9785,6 @@ function getContractListTitle(c) {
   return label;
 }
 
-
-
 // ---- Liste des contrats (onglet "Contrats") ----
 
 function loadContractsList() {
@@ -9781,9 +9804,10 @@ function loadContractsList() {
   // Filtre "À renouveler"
   const renewalToggle = document.getElementById("filterRenewal");
   if (renewalToggle && renewalToggle.checked) {
-    filtered = filtered.filter(c =>
-      computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER ||
-      computeContractStatus(c) === CONTRACT_STATUS.TERMINE
+    filtered = filtered.filter(
+      (c) =>
+        computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER ||
+        computeContractStatus(c) === CONTRACT_STATUS.TERMINE,
     );
   }
 
@@ -9804,7 +9828,7 @@ function loadContractsList() {
   }
 
   // Tri
-  const sortSel  = document.getElementById("sortDocumentsBy");
+  const sortSel = document.getElementById("sortDocumentsBy");
   const sortMode = sortSel ? sortSel.value : "date_desc";
 
   filtered.sort((a, b) => {
@@ -9833,14 +9857,14 @@ function loadContractsList() {
   filtered.forEach((c) => {
     const tr = document.createElement("tr");
 
-    const ref        = c.client?.reference || "";
-    const clientName = c.client?.name      || "";
+    const ref = c.client?.reference || "";
+    const clientName = c.client?.name || "";
 
     // 🔵 conversion ISO → DD/MM/YYYY
     const startDateISO = c.pricing?.startDate || "";
-    const startDateFR  = startDateISO ? formatDateFr(startDateISO) : "";
+    const startDateFR = startDateISO ? formatDateFr(startDateISO) : "";
 
-    const totalHT    = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
+    const totalHT = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
 
     const statutHTML = renderContractStatusBadge(c);
 
@@ -9858,7 +9882,8 @@ function loadContractsList() {
     const status = computeContractStatus(c);
 
     const renewBtn =
-      (status === CONTRACT_STATUS.A_RENOUVELER || status === CONTRACT_STATUS.TERMINE)
+      status === CONTRACT_STATUS.A_RENOUVELER ||
+      status === CONTRACT_STATUS.TERMINE
         ? `
         <button class="btn btn-primary btn-small" onclick="openRenewPopup('${c.id}')">
           Renouveler
@@ -9867,7 +9892,8 @@ function loadContractsList() {
         : "";
 
     const resiliationRow =
-      (status === CONTRACT_STATUS.EN_COURS || status === CONTRACT_STATUS.A_RENOUVELER)
+      status === CONTRACT_STATUS.EN_COURS ||
+      status === CONTRACT_STATUS.A_RENOUVELER
         ? `
           <div class="actions-btns-row actions-btns-row--single">
             <button class="btn btn-danger btn-small"
@@ -9896,9 +9922,10 @@ function loadContractsList() {
                   onclick="transformContractFromList('${c.id}')">Facturer</button>
         </div>
 
-        ${renewBtn
-          ? `<div class="actions-btns-row actions-btns-row--single">${renewBtn}</div>`
-          : ""
+        ${
+          renewBtn
+            ? `<div class="actions-btns-row actions-btns-row--single">${renewBtn}</div>`
+            : ""
         }
 
         ${resiliationRow}
@@ -9911,17 +9938,17 @@ function loadContractsList() {
       </div>
     `;
 
-        const title     = getContractListTitle(c);
+    const title = getContractListTitle(c);
     const safeTitle = escapeHtml(title);
 
     tr.innerHTML =
       `<td>Contrat</td>` +
       `<td class="number-cell">
          <div class="doc-number">${escapeHtml(ref || c.id)}</div>` +
-         (title
-           ? `<div class="client-subject" title="${safeTitle}">${safeTitle}</div>`
-           : "") +
-       `</td>` +
+      (title
+        ? `<div class="client-subject" title="${safeTitle}">${safeTitle}</div>`
+        : "") +
+      `</td>` +
       `<td>${escapeHtml(clientName)}</td>` +
       `<td>${escapeHtml(startDateFR || "")}</td>` +
       `<td><strong>${formatEuro(totalHT)}</strong></td>` +
@@ -9946,9 +9973,10 @@ function handleAfterInvoicePaid(doc) {
     if (!doc || doc.type !== "facture") return;
 
     // 1) On regarde les prestations
-    const hasClimKind = Array.isArray(doc.prestations) &&
-      doc.prestations.some(p =>
-        p && ["entretien_clim", "depannage_clim"].includes(p.kind)
+    const hasClimKind =
+      Array.isArray(doc.prestations) &&
+      doc.prestations.some(
+        (p) => p && ["entretien_clim", "depannage_clim"].includes(p.kind),
       );
 
     // 2) On regarde aussi l'objet, au cas où tu écris "Entretien clim"
@@ -9990,26 +10018,26 @@ function createInvoiceFromDevis(devis) {
   }
 
   // Id interne
-  const id = (typeof generateId === "function")
-    ? generateId("FAC")
-    : Date.now().toString();
+  const id =
+    typeof generateId === "function"
+      ? generateId("FAC")
+      : Date.now().toString();
 
   // Sujet : on reprend celui du devis ou on en fabrique un
   const subject =
-    devis.subject ||
-    `Facture suite au devis ${devis.number || ""}`;
+    devis.subject || `Facture suite au devis ${devis.number || ""}`;
 
   // Copie profonde des prestations pour ne pas modifier le devis par erreur
   const prestations = Array.isArray(devis.prestations)
-    ? devis.prestations.map(p => ({ ...p }))
+    ? devis.prestations.map((p) => ({ ...p }))
     : [];
 
-  const tvaRate        = Number(devis.tvaRate) || 0;
-  const subtotal       = Number(devis.subtotal) || 0;
-  const discountRate   = Number(devis.discountRate) || 0;
+  const tvaRate = Number(devis.tvaRate) || 0;
+  const subtotal = Number(devis.subtotal) || 0;
+  const discountRate = Number(devis.discountRate) || 0;
   const discountAmount = Number(devis.discountAmount) || 0;
-  const tvaAmount      = Number(devis.tvaAmount) || 0;
-  const totalTTC       = Number(devis.totalTTC) || 0;
+  const tvaAmount = Number(devis.tvaAmount) || 0;
+  const totalTTC = Number(devis.totalTTC) || 0;
 
   const notesBase = devis.notes || "";
   const notesSuffix = devis.number
@@ -10028,16 +10056,16 @@ function createInvoiceFromDevis(devis) {
     // Client (même structure que dans saveDocument)
     client: {
       civility: devis.client?.civility || "",
-      name:     devis.client?.name     || "",
-      address:  devis.client?.address  || "",
-      phone:    devis.client?.phone    || "",
-      email:    devis.client?.email    || ""
+      name: devis.client?.name || "",
+      address: devis.client?.address || "",
+      phone: devis.client?.phone || "",
+      email: devis.client?.email || "",
     },
 
     // Lieu
     siteCivility: devis.siteCivility || "",
-    siteName:     devis.siteName     || "",
-    siteAddress:  devis.siteAddress  || "",
+    siteName: devis.siteName || "",
+    siteAddress: devis.siteAddress || "",
 
     prestations,
     tvaRate,
@@ -10061,7 +10089,7 @@ function createInvoiceFromDevis(devis) {
     sourceDevisNumber: devis.number || null,
 
     createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
   };
 
   // Sauvegarde locale
@@ -10091,28 +10119,28 @@ function setPaymentMode(id, mode) {
   const doc = docs.find((d) => d.id === id);
   if (!doc) return;
 
-  const wasPaid = !!doc.paid; // état avant modification
+ const wasPaid = !!doc.paid; // état avant modification
 
-  if (!mode) {
-    // 🔴 Non réglée
-    doc.paymentMode = "";
-    doc.paid = false;
-    doc.paymentDate = "";
-  } else {
-    // 🟢 Réglée
-    doc.paymentMode = mode;
-    doc.paid = true;
+if (!mode) {
+  // 🔴 Non réglée
+  doc.paymentMode = "";
+  doc.paid = false;
+  doc.paymentDate = "";
+} else {
+  // 🟢 Réglée
+  doc.paymentMode = mode;
+  doc.paid = true;
 
-    // Date de paiement
-    if (mode === "virement" || mode === "cheque") {
-      doc.paymentDate = doc.paymentDate || doc.date;
-    } else {
-      doc.paymentDate = doc.date;
-    }
-  }
+  // Date de paiement
+  const todayISO = new Date().toISOString().slice(0, 10);
 
-  // 💾 On sauvegarde d'abord la facture modifiée
-  saveDocuments(docs);
+  // ✅ Date de paiement = AUJOURD’HUI (sauf si déjà renseignée à la main)
+  doc.paymentDate = doc.paymentDate || todayISO;
+}
+
+// 💾 On sauvegarde d'abord la facture modifiée
+saveDocuments(docs);
+
 
   // ⚠️ Sécurité : on sauvegarde aussi dans Firestore si dispo
   if (typeof saveSingleDocumentToFirestore === "function") {
@@ -10122,8 +10150,11 @@ function setPaymentMode(id, mode) {
   // -------------------------------------------------------------------
   // 🔗 MISE À JOUR AUTOMATIQUE DU DEVIS LIÉ
   // -------------------------------------------------------------------
-  if (doc.type === "facture" && doc.sourceDevisId && typeof setDevisStatus === "function") {
-
+  if (
+    doc.type === "facture" &&
+    doc.sourceDevisId &&
+    typeof setDevisStatus === "function"
+  ) {
     // Passage NON PAYÉ → PAYÉ
     if (!wasPaid && doc.paid) {
       setDevisStatus(doc.sourceDevisId, "cloture");
@@ -10138,7 +10169,12 @@ function setPaymentMode(id, mode) {
   // -------------------------------------------------------------------
   // 🚀 SI FACTURE DE CLIM RÉGLÉE → génération automatique attestation
   // -------------------------------------------------------------------
-  if (doc.type === "facture" && !wasPaid && doc.paid && typeof handleAfterInvoicePaid === "function") {
+  if (
+    doc.type === "facture" &&
+    !wasPaid &&
+    doc.paid &&
+    typeof handleAfterInvoicePaid === "function"
+  ) {
     handleAfterInvoicePaid(doc);
   }
 
@@ -10155,7 +10191,7 @@ function setPaymentMode(id, mode) {
 
 function setDevisStatus(id, status, skipRapport = false) {
   const docs = getAllDocuments();
-  const idx = docs.findIndex(d => d.id === id);
+  const idx = docs.findIndex((d) => d.id === id);
   if (idx === -1) return;
 
   const doc = docs[idx];
@@ -10164,7 +10200,7 @@ function setDevisStatus(id, status, skipRapport = false) {
   const oldStatus = doc.status || "";
 
   // 1) Mise à jour du devis
-  doc.status    = status;
+  doc.status = status;
   doc.updatedAt = new Date().toISOString();
 
   saveDocuments(docs);
@@ -10186,13 +10222,12 @@ function setDevisStatus(id, status, skipRapport = false) {
     typeof createRapportFromDevis === "function"
   ) {
     try {
-      const rapports = (typeof getAllRapports === "function" ? getAllRapports() : []) || [];
+      const rapports =
+        (typeof getAllRapports === "function" ? getAllRapports() : []) || [];
 
       // évite de générer plusieurs rapports pour le même devis
-      const already = rapports.find(r =>
-        r.source &&
-        r.source.type === "devis" &&
-        r.source.id === doc.id
+      const already = rapports.find(
+        (r) => r.source && r.source.type === "devis" && r.source.id === doc.id,
       );
 
       if (!already) {
@@ -10209,30 +10244,35 @@ function setDevisStatus(id, status, skipRapport = false) {
             confirmLabel: "OK",
             cancelLabel: "",
             variant: "success",
-            icon: "📝"
+            icon: "📝",
           });
         } else {
-          console.log("[Devis] Rapport technique créé pour le devis", numero, rapport && rapport.id);
+          console.log(
+            "[Devis] Rapport technique créé pour le devis",
+            numero,
+            rapport && rapport.id,
+          );
         }
       }
     } catch (e) {
-      console.error("Erreur lors de la création automatique du rapport depuis un devis clôturé :", e);
+      console.error(
+        "Erreur lors de la création automatique du rapport depuis un devis clôturé :",
+        e,
+      );
     }
   }
 
   // 3) Si on vient de passer à "accepte" → logique contrats + facture auto (comme avant)
   if (status === "accepte" && oldStatus !== "accepte") {
+    const contracts =
+      (typeof getAllContracts === "function" ? getAllContracts() : []) || [];
 
-    const contracts = (typeof getAllContracts === "function"
-      ? getAllContracts()
-      : []) || [];
-
-    const linkedContracts = contracts.filter(c =>
-      c.meta && c.meta.sourceDevisId === doc.id
+    const linkedContracts = contracts.filter(
+      (c) => c.meta && c.meta.sourceDevisId === doc.id,
     );
 
     // 🟦 CAS 1 : il y a un contrat lié → on laisse la logique actuelle (échéances, etc.)
-    linkedContracts.forEach(contract => {
+    linkedContracts.forEach((contract) => {
       contract.meta = contract.meta || {};
       contract.meta.sourceDevisStatus = "accepte";
 
@@ -10255,8 +10295,8 @@ function setDevisStatus(id, status, skipRapport = false) {
         contract.pricing.nextInvoiceDate =
           computeNextInvoiceDate(contract) || "";
 
-        const all = getAllContracts().map(c =>
-          c.id === contract.id ? contract : c
+        const all = getAllContracts().map((c) =>
+          c.id === contract.id ? contract : c,
         );
 
         saveContracts(all);
@@ -10265,8 +10305,8 @@ function setDevisStatus(id, status, skipRapport = false) {
         }
       }
 
-      const updated = getAllContracts().map(c =>
-        c.id === contract.id ? contract : c
+      const updated = getAllContracts().map((c) =>
+        c.id === contract.id ? contract : c,
       );
       saveContracts(updated);
       if (typeof saveSingleContractToFirestore === "function") {
@@ -10275,10 +10315,16 @@ function setDevisStatus(id, status, skipRapport = false) {
     });
 
     // 🟥 CAS 2 : aucun contrat lié → on génère une facture "classique" automatiquement
-    if (linkedContracts.length === 0 && typeof createInvoiceFromDevis === "function") {
+    if (
+      linkedContracts.length === 0 &&
+      typeof createInvoiceFromDevis === "function"
+    ) {
       const factureAuto = createInvoiceFromDevis(doc);
       if (factureAuto) {
-        console.log("[Devis] Facture auto créée à l'acceptation :", factureAuto.number);
+        console.log(
+          "[Devis] Facture auto créée à l'acceptation :",
+          factureAuto.number,
+        );
       }
     }
   }
@@ -10287,13 +10333,12 @@ function setDevisStatus(id, status, skipRapport = false) {
   try {
     addHistoryEntry(id, {
       type: "status",
-      detail: `Statut modifié : ${oldStatus || "—"} → ${status || "—"}`
+      detail: `Statut modifié : ${oldStatus || "—"} → ${status || "—"}`,
     });
   } catch (e) {
     console.error("Erreur historique statut devis:", e);
   }
 }
-
 
 // ================== EXPORT CSV FACTURES ==================
 
@@ -10306,7 +10351,7 @@ function exportFacturesCSV() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
-      icon: "ℹ️"
+      icon: "ℹ️",
     });
     return;
   }
@@ -10319,8 +10364,8 @@ function exportFacturesCSV() {
     const dateReg = d.paymentDate
       ? new Date(d.paymentDate).toLocaleDateString("fr-FR")
       : d.paid && d.date
-      ? new Date(d.date).toLocaleDateString("fr-FR")
-      : "";
+        ? new Date(d.date).toLocaleDateString("fr-FR")
+        : "";
     const mode = d.paymentMode || "";
     csv +=
       [
@@ -10332,7 +10377,7 @@ function exportFacturesCSV() {
         d.totalTTC.toFixed(2),
         statut,
         dateReg,
-        mode
+        mode,
       ].join(";") + "\n";
   });
 
@@ -10346,7 +10391,6 @@ function exportFacturesCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
-
 
 // ================== TARIFS PERSONNALISÉS ==================
 
@@ -10428,7 +10472,7 @@ function loadCustomTemplates() {
       priceParticulier: tpl.priceParticulier || 0,
       priceSyndic: tpl.priceSyndic || 0,
       descParticulier: tpl.descParticulier || "",
-      descSyndic: tpl.descSyndic || ""
+      descSyndic: tpl.descSyndic || "",
     });
   });
 }
@@ -10490,7 +10534,12 @@ function syncTarifRow(input) {
 }
 
 function _isSyndicInvoice(f) {
-  const t = (f?.client?.type || f?.client?.clientType || f?.conditionsType || "")
+  const t = (
+    f?.client?.type ||
+    f?.client?.clientType ||
+    f?.conditionsType ||
+    ""
+  )
     .toString()
     .toLowerCase();
   return t.includes("syndic") || t.includes("agence");
@@ -10521,7 +10570,6 @@ function _dueDateFromInvoice(f, delaiJours = 30) {
   return due;
 }
 
-
 function openTarifsPanelAny() {
   const listView = document.getElementById("listView");
   const homeView = document.getElementById("homeView");
@@ -10548,8 +10596,6 @@ function openTarifsPanelAny() {
   const panel = document.getElementById("tarifsPanel");
   if (panel) panel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
-
 
 function openTarifsPanel() {
   const panel = document.getElementById("tarifsPanel");
@@ -10582,14 +10628,14 @@ function openTarifsPanel() {
       const keySyn = t.kind + "_syndic";
 
       const valPart =
-        custom[keyPart] != null ? custom[keyPart] : t.priceParticulier ?? "";
+        custom[keyPart] != null ? custom[keyPart] : (t.priceParticulier ?? "");
       const valSyn =
-        custom[keySyn] != null ? custom[keySyn] : t.priceSyndic ?? "";
+        custom[keySyn] != null ? custom[keySyn] : (t.priceSyndic ?? "");
 
       const isCustom = t.kind.indexOf("custom_") === 0;
 
-     const deleteCellHtml = isCustom
-  ? `<td class="tarif-delete-cell">
+      const deleteCellHtml = isCustom
+        ? `<td class="tarif-delete-cell">
        <button
          type="button"
          class="btn btn-danger btn-small date-remove-btn no-print"
@@ -10599,20 +10645,19 @@ function openTarifsPanel() {
          ✖
        </button>
      </td>`
-  : `<td></td>`;
+        : `<td></td>`;
 
-
-const tr = document.createElement("tr");
-tr.innerHTML =
-  `<td class="tarif-label-cell" onclick="toggleDescEditor('${t.kind}')">` +
-    `<span class="tarif-label-text">${t.label}</span>` +
-    `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
-  `</td>` +
-  `<td><input type="number" step="0.01" class="tarif-part" ` +
-  `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
-  `<td><input type="number" step="0.01" class="tarif-syn" ` +
-  `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>` +
-  deleteCellHtml;
+      const tr = document.createElement("tr");
+      tr.innerHTML =
+        `<td class="tarif-label-cell" onclick="toggleDescEditor('${t.kind}')">` +
+        `<span class="tarif-label-text">${t.label}</span>` +
+        `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
+        `</td>` +
+        `<td><input type="number" step="0.01" class="tarif-part" ` +
+        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
+        `<td><input type="number" step="0.01" class="tarif-syn" ` +
+        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>` +
+        deleteCellHtml;
 
       tbody.appendChild(tr);
     });
@@ -10627,7 +10672,6 @@ tr.innerHTML =
     }
   }
 }
-
 
 function resetTarifsPanel() {
   const panel = document.getElementById("tarifsPanel");
@@ -10665,18 +10709,18 @@ function saveTarifsFromUI() {
     }
   });
 
-    saveCustomPrices(custom);
+  saveCustomPrices(custom);
 
   showConfirmDialog({
     title: "Tarifs enregistrés",
-    message: "Les tarifs ont été sauvegardés et seront utilisés pour les prochaines prestations ajoutées.",
+    message:
+      "Les tarifs ont été sauvegardés et seront utilisés pour les prochaines prestations ajoutées.",
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 }
-
 
 function resetTarifs() {
   showConfirmDialog({
@@ -10691,14 +10735,15 @@ function resetTarifs() {
       saveCustomPrices({});
       showConfirmDialog({
         title: "Tarifs réinitialisés",
-        message: "Les tarifs ont été remis à zéro. Les valeurs par défaut seront utilisées.",
+        message:
+          "Les tarifs ont été remis à zéro. Les valeurs par défaut seront utilisées.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "success",
-        icon: "✅"
+        icon: "✅",
       });
       openTarifsPanel();
-    }
+    },
   });
 }
 // ================== POPUP AJOUT DE PRESTATION (TARIFS) ==================
@@ -10768,7 +10813,7 @@ function confirmPrestationPopup() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -10780,7 +10825,7 @@ function confirmPrestationPopup() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -10802,7 +10847,7 @@ function confirmPrestationPopup() {
     priceParticulier: pricePart,
     priceSyndic: finalSyn,
     descParticulier: "",
-    descSyndic: ""
+    descSyndic: "",
   };
   PRESTATION_TEMPLATES.push(newTemplate);
 
@@ -10814,16 +10859,16 @@ function confirmPrestationPopup() {
   const tbody = document.getElementById("tarifsTableBody");
   if (tbody) {
     const tr = document.createElement("tr");
-tr.innerHTML =
-  `<td class="tarif-label-cell" onclick="toggleDescEditor('${kind}')">` +
-    `<span class="tarif-label-text">${label}</span>` +
-    `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
-  `</td>` +
-  `<td><input type="number" step="0.01" class="tarif-part" ` +
-  `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="particulier" value="${pricePart.toFixed(2)}"></td>` +
-  `<td><input type="number" step="0.01" class="tarif-syn" ` +
-  `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="syndic" value="${finalSyn.toFixed(2)}"></td>` +
-`<td class="tarif-delete-cell">
+    tr.innerHTML =
+      `<td class="tarif-label-cell" onclick="toggleDescEditor('${kind}')">` +
+      `<span class="tarif-label-text">${label}</span>` +
+      `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
+      `</td>` +
+      `<td><input type="number" step="0.01" class="tarif-part" ` +
+      `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="particulier" value="${pricePart.toFixed(2)}"></td>` +
+      `<td><input type="number" step="0.01" class="tarif-syn" ` +
+      `oninput="syncTarifRow(this)" data-kind="${kind}" data-type="syndic" value="${finalSyn.toFixed(2)}"></td>` +
+      `<td class="tarif-delete-cell">
    <button
      type="button"
      class="btn btn-danger btn-small date-remove-btn no-print"
@@ -10833,7 +10878,6 @@ tr.innerHTML =
      ✖
    </button>
  </td>`;
-
 
     tbody.appendChild(tr);
   }
@@ -10919,7 +10963,7 @@ function saveDescEditor() {
   const map = getCustomTexts();
   map[currentDescKind] = {
     descParticulier: partText,
-    descSyndic: synText
+    descSyndic: synText,
   };
   saveCustomTexts(map);
 
@@ -10929,7 +10973,7 @@ function saveDescEditor() {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 
   closeDescEditor();
@@ -10983,7 +11027,7 @@ function deleteCustomPrestation(kind) {
           }
         });
       });
-    }
+    },
   });
 }
 
@@ -10996,9 +11040,9 @@ function showConfirmDialog({
   cancelLabel = "Annuler",
   onConfirm,
   onCancel,
-  variant = "info",   // "default" | "info" | "warning" | "danger" | "success"
-  icon,               // ex: "⚠️", "ℹ️", "✅", "🧾"
-  showCloseButton = false
+  variant = "info", // "default" | "info" | "warning" | "danger" | "success"
+  icon, // ex: "⚠️", "ℹ️", "✅", "🧾"
+  showCloseButton = false,
 }) {
   const overlay = document.getElementById("confirmOverlay");
   const box = overlay ? overlay.querySelector(".confirm-box") : null;
@@ -11122,11 +11166,8 @@ function showConfirmDialog({
   overlay.classList.remove("hidden");
 }
 
-
-
 const signatureClientTitle = "Bon pour accord";
-const signatureClientText  = "Bon pour accord, lu et approuvé.";
-
+const signatureClientText = "Bon pour accord, lu et approuvé.";
 
 // =========================================================
 // PLAN DE FACTURATION (affichage PRO dans Contrat + Devis)
@@ -11144,7 +11185,7 @@ function buildBillingPlanLine(pr) {
   // ---- Helpers dates
   const toFR = (iso) => (typeof fromISO === "function" ? fromISO(iso) : iso);
   const startISO = pr.startDate || "";
-  const nextISO  = pr.nextInvoiceDate || "";
+  const nextISO = pr.nextInvoiceDate || "";
 
   // ---- Libellés PRO
   const wording = {
@@ -11152,14 +11193,14 @@ function buildBillingPlanLine(pr) {
     trimestriel: "Facturation trimestrielle",
     semestriel: "Facturation semestrielle",
     annuel: "Facturation annuelle",
-    annuel_50_50: "Facturation annuelle en deux échéances"
+    annuel_50_50: "Facturation annuelle en deux échéances",
   };
 
   const echeanceWord = {
     mensuel: "mensuelle",
     trimestriel: "trimestrielle",
     semestriel: "semestrielle",
-    annuel: "annuelle"
+    annuel: "annuelle",
   };
 
   // =========================================================
@@ -11203,7 +11244,7 @@ function buildBillingPlanLine(pr) {
   // Date affichée = startDate (sinon nextInvoiceDate)
   // =========================================================
   const refISO = startISO || nextISO || "";
-  const refFR  = refISO ? toFR(refISO) : "—";
+  const refFR = refISO ? toFR(refISO) : "—";
 
   if (mode === "annuel_50_50") {
     return "Facturation annuelle en deux échéances : 50 % à la souscription, puis 50 % à mi-contrat.";
@@ -11215,23 +11256,31 @@ function buildBillingPlanLine(pr) {
 
 // ================== IMPRESSION / PDF ==================
 
-
 function openPrintable(id, previewOnly) {
   const targetId = id || currentDocumentId;
   if (!targetId) {
     showConfirmDialog({
       title: "Enregistrement requis",
-      message: "Veuillez d'abord enregistrer le devis ou la facture avant d'imprimer ou d'afficher l'aperçu.",
+      message:
+        "Veuillez d'abord enregistrer le devis ou la facture avant d'imprimer ou d'afficher l'aperçu.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
-      icon: "ℹ️"
+      icon: "ℹ️",
     });
     return;
   }
 
   const doc = getDocument(targetId);
   if (!doc) return;
+
+  // ✅ Facture initiale d'un contrat : on ne veut PAS afficher les dates de passage
+  const isFirstContractInvoice =
+    doc.type === "facture" &&
+    !!doc.contractId &&
+    Array.isArray(doc.prestations) &&
+    doc.prestations.some((p) => p && p.kind === "contrat_echeance_initiale");
+
 
   const hasPiscine = doc.prestations.some((p) =>
     [
@@ -11244,39 +11293,36 @@ function openPrintable(id, previewOnly) {
       "remplacement_roulement",
       "remplacement_pompe_mo",
       "remplacement_cellule_mo",
-      "depannage_piscine"
-    ].includes(p.kind)
+      "depannage_piscine",
+    ].includes(p.kind),
   );
 
   const hasClim = doc.prestations.some((p) =>
-    ["entretien_clim", "depannage_clim"].includes(p.kind)
+    ["entretien_clim", "depannage_clim"].includes(p.kind),
   );
 
   const hasProduitsOuFournitures = doc.prestations.some(
-    (p) => p.kind === "produits" || p.kind === "fournitures"
+    (p) => p.kind === "produits" || p.kind === "fournitures",
   );
 
   const isDevis = doc.type === "devis";
   const isPaidInvoice = !isDevis && doc.paid;
   const isUnpaidInvoice = !isDevis && !doc.paid;
 
-  const titleColor = isDevis
-    ? "#1a74d9"
-    : doc.paid
-    ? "#1b5e20"
-    : "#1a74d9";
+  const titleColor = isDevis ? "#1a74d9" : doc.paid ? "#1b5e20" : "#1a74d9";
 
   const formatEuroFR = (value) =>
     (Number(value) || 0).toLocaleString("fr-FR", {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: 2,
     }) + " €";
 
   // Lignes prestations
   let prestationsHTML = "";
   doc.prestations.forEach((p) => {
     let extraHtml = "";
-    if (p.dates && p.dates.length) {
+        if (!isFirstContractInvoice && p.dates && p.dates.length) {
+
       extraHtml += `<div class="sub-info">`;
       extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
       p.dates.forEach((dv) => {
@@ -11330,34 +11376,34 @@ function openPrintable(id, previewOnly) {
 
     if (hasPiscine && !hasProduitsOuFournitures) {
       items.push(
-        "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant."
+        "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant.",
       );
     }
 
     if (hasPiscine && hasClim) {
       items.push(
-        "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord.",
       );
     } else if (hasPiscine) {
       items.push(
-        "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord.",
       );
     } else if (hasClim) {
       items.push(
-        "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord."
+        "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord.",
       );
     }
 
     items.push(
-      "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis."
+      "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis.",
     );
 
     items.push(
-      "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation."
+      "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation.",
     );
 
     items.push(
-      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
+      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle.",
     );
 
     importantHtml = `
@@ -11435,10 +11481,9 @@ function openPrintable(id, previewOnly) {
   const signSrc =
     "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/signature.png";
   const stampSrc =
-  "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/tampon.png";
-  const paidStampSrc = 
-  "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/facture_payée.png";
-
+    "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/tampon.png";
+  const paidStampSrc =
+    "https://raw.githubusercontent.com/Tzaneesh/Aquaclim-Prestige/main/facture_payée.png";
 
   let reglementHtml = "";
   if (!isDevis && doc.paid && doc.paymentMode) {
@@ -11468,8 +11513,7 @@ function openPrintable(id, previewOnly) {
     `;
   }
 
-
-   let ribHtml = "";
+  let ribHtml = "";
   if (!isDevis && !doc.paid) {
     ribHtml = `
       <div class="rib-block">
@@ -11482,74 +11526,74 @@ function openPrintable(id, previewOnly) {
     `;
   }
 
+  let notesHtml = "";
+  if (isDevis) {
+    let billingLine = "";
 
-let notesHtml = "";
-if (isDevis) {
-let billingLine = "";
+    try {
+      // 1) Si le devis contient déjà les infos
+      if (doc.billingMode) {
+        billingLine =
+          typeof buildBillingPlanLine === "function"
+            ? buildBillingPlanLine({
+                billingMode: doc.billingMode || "",
+                nextInvoiceDate: doc.nextInvoiceDate || "",
+                startDate: doc.contractStartDate || "",
+                clientType:
+                  doc.conditionsType === "agence" ? "syndic" : "particulier",
+              })
+            : "";
+      }
 
-try {
-  // 1) Si le devis contient déjà les infos
-  if (doc.billingMode) {
-    billingLine = (typeof buildBillingPlanLine === "function")
-      ? buildBillingPlanLine({
-          billingMode: doc.billingMode || "",
-          nextInvoiceDate: doc.nextInvoiceDate || "",
-          startDate: doc.contractStartDate || "",
-          clientType: doc.conditionsType === "agence" ? "syndic" : "particulier"
-        })
-      : "";
-  }
-
-  // 2) Sinon, si le devis est lié à un contrat, on récupère la pricing du contrat
-  if (!billingLine && doc.contractId && typeof getContract === "function") {
-    const ct = getContract(doc.contractId);
-    if (ct && ct.pricing && typeof buildBillingPlanLine === "function") {
-      billingLine = buildBillingPlanLine(ct.pricing);
+      // 2) Sinon, si le devis est lié à un contrat, on récupère la pricing du contrat
+      if (!billingLine && doc.contractId && typeof getContract === "function") {
+        const ct = getContract(doc.contractId);
+        if (ct && ct.pricing && typeof buildBillingPlanLine === "function") {
+          billingLine = buildBillingPlanLine(ct.pricing);
+        }
+      }
+    } catch (e) {
+      console.error("Erreur billingLine:", e);
+      billingLine = "";
     }
-  }
-} catch (e) {
-  console.error("Erreur billingLine:", e);
-  billingLine = "";
-}
 
-// ✅ Conditions devis = mêmes règles que factures (cohérence totale)
-const isSyndic = (doc.conditionsType === "agence"); // chez toi "agence" = syndic/pro
+    // ✅ Conditions devis = mêmes règles que factures (cohérence totale)
+    const isSyndic = doc.conditionsType === "agence"; // chez toi "agence" = syndic/pro
 
-const TERMS_DEVIS_PARTICULIER =
-  "Règlement à réception de facture.\n" +
-  "Aucun acompte demandé sauf mention contraire.\n" +
-  "Aucun escompte pour paiement anticipé.";
+    const TERMS_DEVIS_PARTICULIER =
+      "Règlement à réception de facture.\n" +
+      "Aucun acompte demandé sauf mention contraire.\n" +
+      "Aucun escompte pour paiement anticipé.";
 
-const TERMS_DEVIS_SYNDIC =
-  "Paiement à 30 jours fin de mois.\n" +
-  "Aucun acompte demandé sauf mention contraire.\n" +
-  "Aucun escompte pour paiement anticipé.\n" +
-  "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
+    const TERMS_DEVIS_SYNDIC =
+      "Paiement à 30 jours fin de mois.\n" +
+      "Aucun acompte demandé sauf mention contraire.\n" +
+      "Aucun escompte pour paiement anticipé.\n" +
+      "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
 
-const devisConditions =
-  (billingLine ? ("Mode de facturation : " + billingLine + "\n\n") : "") +
-  (isSyndic ? TERMS_DEVIS_SYNDIC : TERMS_DEVIS_PARTICULIER);
+    const devisConditions =
+      (billingLine ? "Mode de facturation : " + billingLine + "\n\n" : "") +
+      (isSyndic ? TERMS_DEVIS_SYNDIC : TERMS_DEVIS_PARTICULIER);
 
-notesHtml = `
+    notesHtml = `
   <div class="conditions-block">
     <div class="conditions-title">Conditions de règlement</div>
     <p>${devisConditions.replace(/\n/g, "<br>")}</p>
   </div>
 `;
-
-} else {
+  } else {
     let notesText = doc.notes || "";
     if (doc.paid && notesText) {
-const removeLines = [
-  "Paiement à 30 jours date de facture.",
-  "Paiement à 30 jours fin de mois.",
-  "Règlement à réception de facture.",
-  "Aucun acompte demandé sauf mention contraire.",
-  "Aucun escompte pour paiement anticipé.",
-  "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-  "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-  "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce)."
-];
+      const removeLines = [
+        "Paiement à 30 jours date de facture.",
+        "Paiement à 30 jours fin de mois.",
+        "Règlement à réception de facture.",
+        "Aucun acompte demandé sauf mention contraire.",
+        "Aucun escompte pour paiement anticipé.",
+        "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+        "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+        "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+      ];
 
       removeLines.forEach((line) => {
         notesText = notesText.replace(line + "\n", "");
@@ -11558,11 +11602,11 @@ const removeLines = [
       notesText = notesText.trim();
     }
 
-// ❌ Si facture payée → on supprime totalement le bloc conditions
-if (!isDevis && doc.paid) {
-    notesHtml = "";
-    notesText = "";
-}
+    // ❌ Si facture payée → on supprime totalement le bloc conditions
+    if (!isDevis && doc.paid) {
+      notesHtml = "";
+      notesText = "";
+    }
 
     notesHtml = notesText
       ? `
@@ -11601,27 +11645,28 @@ if (!isDevis && doc.paid) {
     </div>
   `;
 
-// ✅ Sécurité : si ces variables n'existent pas, on met des valeurs par défaut
-const signatureClientTitle =
-  (typeof window.signatureClientTitle !== "undefined" && window.signatureClientTitle) ||
-  "Bon pour accord";
+  // ✅ Sécurité : si ces variables n'existent pas, on met des valeurs par défaut
+  const signatureClientTitle =
+    (typeof window.signatureClientTitle !== "undefined" &&
+      window.signatureClientTitle) ||
+    "Bon pour accord";
 
-const signatureClientText =
-  (typeof window.signatureClientText !== "undefined" && window.signatureClientText) ||
-  "Bon pour accord, lu et approuvé.";
+  const signatureClientText =
+    (typeof window.signatureClientText !== "undefined" &&
+      window.signatureClientText) ||
+    "Bon pour accord, lu et approuvé.";
 
+  // Date à afficher sous la signature client
+  const signatureDisplayDate = doc.signatureDate
+    ? doc.signatureDate
+    : new Date().toLocaleDateString("fr-FR");
 
- // Date à afficher sous la signature client
-const signatureDisplayDate = doc.signatureDate
-  ? doc.signatureDate
-  : new Date().toLocaleDateString("fr-FR");
+  // Bloc signatures (différent si devis signé ou non)
+  let signatureClientHTML = "";
 
-// Bloc signatures (différent si devis signé ou non)
-let signatureClientHTML = "";
-
-if (isDevis && doc.signature) {
-  // ✅ Devis signé : on affiche tout ce que tu veux en bas à gauche
-  signatureClientHTML = `
+  if (isDevis && doc.signature) {
+    // ✅ Devis signé : on affiche tout ce que tu veux en bas à gauche
+    signatureClientHTML = `
     ${notesHtml}
     ${importantHtml}
     <div class="signatures">
@@ -11642,9 +11687,9 @@ if (isDevis && doc.signature) {
 
     </div>
   `;
-} else if (isDevis) {
-  // 📝 Devis non signé : texte classique, sans image
-  signatureClientHTML = `
+  } else if (isDevis) {
+    // 📝 Devis non signé : texte classique, sans image
+    signatureClientHTML = `
     ${notesHtml}
     ${importantHtml}
     <div class="signatures">
@@ -11663,8 +11708,7 @@ if (isDevis && doc.signature) {
 
     </div>
   `;
-}
-
+  }
 
   const printWindow = window.open("", "_blank");
 
@@ -12172,11 +12216,7 @@ img.sig-client {
   </h2>
 
   ${topDatesHtml}
-  ${
-    doc.subject
-      ? `<div class="doc-subject">Objet : ${doc.subject}</div>`
-      : ``
-  }
+  ${doc.subject ? `<div class="doc-subject">Objet : ${doc.subject}</div>` : ``}
 </div>
 
 
@@ -12185,9 +12225,11 @@ img.sig-client {
         <!-- COLONNE GAUCHE -->
         <div class="client-col">
           <div class="client-title">Client</div>
-         ${(doc.client?.name || doc.client?.civility)
-  ? `<p class="client-line">${[doc.client?.civility, doc.client?.name].filter(Boolean).join(" ")}</p>`
-  : ""}
+         ${
+           doc.client?.name || doc.client?.civility
+             ? `<p class="client-line">${[doc.client?.civility, doc.client?.name].filter(Boolean).join(" ")}</p>`
+             : ""
+         }
 
           ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
           ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
@@ -12200,9 +12242,11 @@ img.sig-client {
             ? `
         <div class="client-col right">
           <div class="client-title">Lieu d’intervention</div>
-         ${(doc.siteCivility || doc.siteName)
-  ? `<p class="client-line">${[doc.siteCivility, doc.siteName].filter(Boolean).join(" ")}</p>`
-  : ""}
+         ${
+           doc.siteCivility || doc.siteName
+             ? `<p class="client-line">${[doc.siteCivility, doc.siteName].filter(Boolean).join(" ")}</p>`
+             : ""
+         }
 
           ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
         </div>`
@@ -12242,14 +12286,12 @@ img.sig-client {
     ${
       isDevis
         ? signatureClientHTML
-        : (
-          isUnpaidInvoice
-            ? `
+        : isUnpaidInvoice
+          ? `
               ${ribHtml}
               ${notesHtml}
             `
-            : ``
-        )
+          : ``
     }
   </div>
 </div>
@@ -12267,7 +12309,6 @@ img.sig-client {
   };
 }
 
-
 // ================== CONTRATS PISCINE / SPA ==================
 
 // --- Statuts de contrat ---
@@ -12275,10 +12316,13 @@ const CONTRACT_STATUS = {
   EN_COURS: "en_cours",
   A_RENOUVELER: "a_renouveler",
   TERMINE: "termine",
-  RESILIE: "resilie"
+  RESILIE: "resilie",
 };
+
 // Fonction d'échappement HTML
+
 function escapeHtml(str) {
+  if (!str) return "";
   return String(str)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -12346,20 +12390,23 @@ function normalizeContractBeforeSave(contract) {
   const forced = contract.meta.forceStatus;
 
   // ✅ 0) ForceStatus = priorité absolue
-  if (forced === "termine_renouvele" || forced === "termine_sans_renouvellement") {
+  if (
+    forced === "termine_renouvele" ||
+    forced === "termine_sans_renouvellement"
+  ) {
     contract.status = CONTRACT_STATUS.TERMINE;
 
-  // ✅ 1) Résilié = on n'écrase jamais
+    // ✅ 1) Résilié = on n'écrase jamais
   } else if (contract.status === CONTRACT_STATUS.RESILIE) {
     contract.status = CONTRACT_STATUS.RESILIE;
 
-  // ✅ 2) Sinon statut calculé depuis les dates
+    // ✅ 2) Sinon statut calculé depuis les dates
   } else {
     contract.status = computeContractStatus(contract);
   }
 
   const pr = contract.pricing || {};
-  const cl = contract.client  || {};
+  const cl = contract.client || {};
 
   // 2️⃣ Rétrocompat : recopie du type client si ancien schéma
   if (!pr.clientType && cl.type) {
@@ -12375,12 +12422,10 @@ function normalizeContractBeforeSave(contract) {
   return contract;
 }
 
-
-
 function computeNextInvoiceDate(contract) {
   const pr = contract.pricing || {};
   const clientType = pr.clientType || "particulier";
-  const mode       = pr.billingMode || "annuel";
+  const mode = pr.billingMode || "annuel";
 
   const startISO = pr.startDate;
   const duration = Number(pr.durationMonths || 0);
@@ -12404,47 +12449,47 @@ function computeNextInvoiceDate(contract) {
   contractEnd.setDate(contractEnd.getDate() - 1);
   contractEnd.setHours(0, 0, 0, 0);
 
-// =======================================================
-// 🔵 SYNDIC = POST-PAYÉ, À LA DATE D’ANNIVERSAIRE
-// =======================================================
-if (clientType === "syndic") {
-  // Pour mensuel / trimestriel / semestriel → 1, 3, 6
-  // Pour ANNUEL → on retombe sur la durée totale du contrat
-  let stepMonths = getBillingStepMonths(mode);
-  if (!stepMonths) {
-    stepMonths = duration; // ex : 12 mois pour un annuel
+  // =======================================================
+  // 🔵 SYNDIC = POST-PAYÉ, À LA DATE D’ANNIVERSAIRE
+  // =======================================================
+  if (clientType === "syndic") {
+    // Pour mensuel / trimestriel / semestriel → 1, 3, 6
+    // Pour ANNUEL → on retombe sur la durée totale du contrat
+    let stepMonths = getBillingStepMonths(mode);
+    if (!stepMonths) {
+      stepMonths = duration; // ex : 12 mois pour un annuel
+    }
+    if (!stepMonths) return "";
+
+    const totalInstallments = getNumberOfInstallments(pr);
+    const already = countContractInstallmentInvoices(contract.id);
+
+    // Si on a déjà toutes les factures prévues → rien à faire
+    if (already >= totalInstallments) {
+      return "";
+    }
+
+    // index = numéro d’échéance à générer (1ère, 2ème, ...)
+    const index = already + 1;
+
+    const d = new Date(start);
+    d.setMonth(d.getMonth() + stepMonths * index);
+
+    // Patch anti-déplacement de jour (28/29/30/31)
+    const startDay = start.getDate();
+    const daysInMonth = new Date(
+      d.getFullYear(),
+      d.getMonth() + 1,
+      0,
+    ).getDate();
+    d.setDate(Math.min(startDay, daysInMonth));
+
+    // On laisse la limite “fin de contrat” gérée par:
+    // - totalInstallments
+    // - checkScheduledInvoices (qui ne crée que ≤ today)
+
+    return d.toISOString().slice(0, 10);
   }
-  if (!stepMonths) return "";
-
-  const totalInstallments = getNumberOfInstallments(pr);
-  const already = countContractInstallmentInvoices(contract.id);
-
-  // Si on a déjà toutes les factures prévues → rien à faire
-  if (already >= totalInstallments) {
-    return "";
-  }
-
-  // index = numéro d’échéance à générer (1ère, 2ème, ...)
-  const index = already + 1;
-
-  const d = new Date(start);
-  d.setMonth(d.getMonth() + stepMonths * index);
-
-  // Patch anti-déplacement de jour (28/29/30/31)
-  const startDay = start.getDate();
-  const daysInMonth = new Date(
-    d.getFullYear(),
-    d.getMonth() + 1,
-    0
-  ).getDate();
-  d.setDate(Math.min(startDay, daysInMonth));
-
-  // On laisse la limite “fin de contrat” gérée par:
-  // - totalInstallments
-  // - checkScheduledInvoices (qui ne crée que ≤ today)
-
-  return d.toISOString().slice(0, 10);
-}
 
   // =======================================================
   // 🔴 PARTICULIER = FACTURATION ANTICIPÉE
@@ -12456,23 +12501,23 @@ if (clientType === "syndic") {
   }
 
   // 🟣 PARTICULIER ANNÉE 50/50
- if (mode === "annuel_50_50") {
-  // 1ʳᵉ facture = immédiate (acompte)
-  // Ici on ne calcule que la 2e facture (solde 50 %)
-  if (!pr.nextInvoiceDate) {
-    const half = duration > 0 ? Math.round(duration / 2) : 6; // 6 mois si 12 mois
-    const second = new Date(start);
-    second.setMonth(second.getMonth() + half); // ex : 12/06/2024 → 12/12/2024
+  if (mode === "annuel_50_50") {
+    // 1ʳᵉ facture = immédiate (acompte)
+    // Ici on ne calcule que la 2e facture (solde 50 %)
+    if (!pr.nextInvoiceDate) {
+      const half = duration > 0 ? Math.round(duration / 2) : 6; // 6 mois si 12 mois
+      const second = new Date(start);
+      second.setMonth(second.getMonth() + half); // ex : 12/06/2024 → 12/12/2024
 
-    if (second > contractEnd) {
-      return contractEnd.toISOString().slice(0, 10);
+      if (second > contractEnd) {
+        return contractEnd.toISOString().slice(0, 10);
+      }
+      return second.toISOString().slice(0, 10);
     }
-    return second.toISOString().slice(0, 10);
-  }
 
-  // 2e facture déjà émise
-  return "";
-}
+    // 2e facture déjà émise
+    return "";
+  }
 
   // =============================
   // 🟢 PARTICULIER MENSUEL
@@ -12481,7 +12526,7 @@ if (clientType === "syndic") {
   // =============================
   if (clientType === "particulier" && mode === "mensuel") {
     const totalInstallments = getNumberOfInstallments(pr);
-    const already = countContractInstallmentInvoices(contract.id); 
+    const already = countContractInstallmentInvoices(contract.id);
     // (inclut l’échéance initiale)
 
     // Toutes les échéances prévues sont déjà facturées
@@ -12544,7 +12589,7 @@ let currentContractId = null;
 
 function getTemplateKindForContract(contract) {
   if (!contract) return "";
-  const p  = contract.pool    || {};
+  const p = contract.pool || {};
   const pr = contract.pricing || {};
 
   const poolType = pr.mainService || p.type || "";
@@ -12573,97 +12618,95 @@ function hideAllSections() {
     "factureView",
     "contratView",
     "attestationView",
- "settingsView"  
+    "settingsView",
   ];
 
-  views.forEach(id => {
+  views.forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.classList.add("hidden");
   });
 }
-
 
 /* ============================
    ACCUEIL / MENU PRINCIPAL
 ============================ */
 
 function showHome() {
-  const tabHome     = document.getElementById("tabHome");
-  const tabDevis    = document.getElementById("tabDevis");
+  const tabHome = document.getElementById("tabHome");
+  const tabDevis = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
   const tabFactures = document.getElementById("tabFactures");
-  const tabAttest   = document.getElementById("tabAttest");
-  const tabCA       = document.getElementById("tabCA");
+  const tabAttest = document.getElementById("tabAttest");
+  const tabCA = document.getElementById("tabCA");
 
-  const homeView        = document.getElementById("homeView");
-  const listView        = document.getElementById("listView");
-  const formView        = document.getElementById("formView");
-  const contractView    = document.getElementById("contractView");
+  const homeView = document.getElementById("homeView");
+  const listView = document.getElementById("listView");
+  const formView = document.getElementById("formView");
+  const contractView = document.getElementById("contractView");
   const attestationView = document.getElementById("attestationView");
-const settingsView    = document.getElementById("settingsView");
-settingsView    && settingsView.classList.add("hidden");
+  const settingsView = document.getElementById("settingsView");
+  settingsView && settingsView.classList.add("hidden");
 
   // Onglets
-  tabHome     && tabHome.classList.add("active");
-  tabDevis    && tabDevis.classList.remove("active");
+  tabHome && tabHome.classList.add("active");
+  tabDevis && tabDevis.classList.remove("active");
   tabContrats && tabContrats.classList.remove("active");
   tabFactures && tabFactures.classList.remove("active");
-  tabAttest   && tabAttest.classList.remove("active");
-  tabCA       && tabCA.classList.remove("active");
+  tabAttest && tabAttest.classList.remove("active");
+  tabCA && tabCA.classList.remove("active");
 
   // Vues
-  homeView        && homeView.classList.remove("hidden");
-  listView        && listView.classList.add("hidden");
-  formView        && formView.classList.add("hidden");
-  contractView    && contractView.classList.add("hidden");
+  homeView && homeView.classList.remove("hidden");
+  listView && listView.classList.add("hidden");
+  formView && formView.classList.add("hidden");
+  contractView && contractView.classList.add("hidden");
   attestationView && attestationView.classList.add("hidden");
 
   refreshHomeStats();
 }
 
-
 function openFromHome(type) {
   // Onglets
-  const tabHome     = document.getElementById("tabHome");
-  const tabDevis    = document.getElementById("tabDevis");
+  const tabHome = document.getElementById("tabHome");
+  const tabDevis = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
   const tabFactures = document.getElementById("tabFactures");
-  const tabAttest   = document.getElementById("tabAttest");
-  const tabCA       = document.getElementById("tabCA");
+  const tabAttest = document.getElementById("tabAttest");
+  const tabCA = document.getElementById("tabCA");
 
   // On quitte l’accueil et les attestations
-  tabHome   && tabHome.classList.remove("active");
+  tabHome && tabHome.classList.remove("active");
   tabAttest && tabAttest.classList.remove("active");
-  tabCA     && tabCA.classList.remove("active");
+  tabCA && tabCA.classList.remove("active");
 
   if (type === "devis") {
-    tabDevis    && tabDevis.classList.add("active");
+    tabDevis && tabDevis.classList.add("active");
     tabContrats && tabContrats.classList.remove("active");
     tabFactures && tabFactures.classList.remove("active");
   } else if (type === "contrat") {
     tabContrats && tabContrats.classList.add("active");
-    tabDevis    && tabDevis.classList.remove("active");
+    tabDevis && tabDevis.classList.remove("active");
     tabFactures && tabFactures.classList.remove("active");
   } else if (type === "facture") {
     tabFactures && tabFactures.classList.add("active");
-    tabDevis    && tabDevis.classList.remove("active");
+    tabDevis && tabDevis.classList.remove("active");
     tabContrats && tabContrats.classList.remove("active");
   }
 
-  const homeView        = document.getElementById("homeView");
-  const listView        = document.getElementById("listView");
-  const formView        = document.getElementById("formView");
-  const contractView    = document.getElementById("contractView");
+  const homeView = document.getElementById("homeView");
+  const listView = document.getElementById("listView");
+  const formView = document.getElementById("formView");
+  const contractView = document.getElementById("contractView");
   const attestationView = document.getElementById("attestationView");
-const settingsView = document.getElementById("settingsView");
+  const settingsView = document.getElementById("settingsView");
 
   // On affiche la liste (devis/factures/contrats)
-  homeView        && homeView.classList.add("hidden");
+  homeView && homeView.classList.add("hidden");
   attestationView && attestationView.classList.add("hidden");
-  listView        && listView.classList.remove("hidden");
-  formView        && formView.classList.add("hidden");
-  contractView    && contractView.classList.add("hidden");
-settingsView && settingsView.classList.add("hidden");
+  listView && listView.classList.remove("hidden");
+  formView && formView.classList.add("hidden");
+  contractView && contractView.classList.add("hidden");
+  settingsView && settingsView.classList.add("hidden");
 
   // logique existante
   if (typeof switchListType === "function") {
@@ -12671,36 +12714,38 @@ settingsView && settingsView.classList.add("hidden");
   }
 }
 
-
-
 function refreshHomeStats() {
   // Sécu : si pas de dashboard sur la page, on ne fait rien
   if (!document.getElementById("homeView")) return;
 
-  const docs      = (typeof getAllDocuments === "function") ? getAllDocuments() : [];
-  const contracts = (typeof getAllContracts === "function") ? getAllContracts() : [];
+  const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
+  const contracts =
+    typeof getAllContracts === "function" ? getAllContracts() : [];
 
   // ========= DEVIS =========
-  const devis = docs.filter(d => d.type === "devis");
+  const devis = docs.filter((d) => d.type === "devis");
 
-  const devisCount     = devis.length;
-  const devisPending   = devis.filter(d => !d.status || d.status === "en_attente").length;
-  const devisAccepted  = devis.filter(d => d.status === "accepte").length;
-  const devisClosed    = devis.filter(d => d.status === "cloture").length;
-  const devisRefused   = devis.filter(d => d.status === "refuse").length;
-  const devisExpired   = devis.filter(d => d.status === "expire").length;
+  const devisCount = devis.length;
+  const devisPending = devis.filter(
+    (d) => !d.status || d.status === "en_attente",
+  ).length;
+  const devisAccepted = devis.filter((d) => d.status === "accepte").length;
+  const devisClosed = devis.filter((d) => d.status === "cloture").length;
+  const devisRefused = devis.filter((d) => d.status === "refuse").length;
+  const devisExpired = devis.filter((d) => d.status === "expire").length;
 
   const lastDevis = devis
     .slice()
     .sort((a, b) => (b.date || "").localeCompare(a.date || ""))[0];
 
-  const elDevisCount  = document.getElementById("dashDevisCount");
+  const elDevisCount = document.getElementById("dashDevisCount");
   const elDevisStatus = document.getElementById("dashDevisStatus");
-  const elDevisLast   = document.getElementById("dashDevisLast");
+  const elDevisLast = document.getElementById("dashDevisLast");
 
   if (elDevisCount) {
     elDevisCount.textContent =
-      devisCount + (devisCount > 1 ? " devis enregistrés" : " devis enregistré");
+      devisCount +
+      (devisCount > 1 ? " devis enregistrés" : " devis enregistré");
   }
 
   if (elDevisStatus) {
@@ -12714,7 +12759,7 @@ function refreshHomeStats() {
 
   if (elDevisLast) {
     if (lastDevis) {
-      const num  = lastDevis.number || lastDevis.id || "";
+      const num = lastDevis.number || lastDevis.id || "";
       const date = lastDevis.date || "";
       elDevisLast.textContent = `Dernier devis : ${num} (${date})`;
     } else {
@@ -12724,17 +12769,19 @@ function refreshHomeStats() {
 
   // ========= CONTRATS (ROBUSTE) =========
   // ⚠️ On ne se base JAMAIS sur c.status ici : tout vient de computeContractStatus()
-  const activeContracts = contracts.filter(c => {
+  const activeContracts = contracts.filter((c) => {
     const st = computeContractStatus(c);
-    return st === CONTRACT_STATUS.EN_COURS || st === CONTRACT_STATUS.A_RENOUVELER;
+    return (
+      st === CONTRACT_STATUS.EN_COURS || st === CONTRACT_STATUS.A_RENOUVELER
+    );
   });
 
-  const toRenew = contracts.filter(c =>
-    computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER
+  const toRenew = contracts.filter(
+    (c) => computeContractStatus(c) === CONTRACT_STATUS.A_RENOUVELER,
   );
 
-  const elCtCount  = document.getElementById("dashContractCount");
-  const elCtRenew  = document.getElementById("dashContractRenew");
+  const elCtCount = document.getElementById("dashContractCount");
+  const elCtRenew = document.getElementById("dashContractRenew");
 
   if (elCtCount) {
     elCtCount.textContent =
@@ -12747,18 +12794,18 @@ function refreshHomeStats() {
   }
 
   // ========= FACTURES =========
-  const factures = docs.filter(d => d.type === "facture");
-  const unpaid   = factures.filter(f => !f.paid);
+  const factures = docs.filter((d) => d.type === "facture");
+  const unpaid = factures.filter((f) => !f.paid);
 
   const unpaidAmount = unpaid.reduce((sum, f) => {
     const val = Number(f.totalTTC || 0);
     return sum + (isNaN(val) ? 0 : val);
   }, 0);
 
-  const elInvCount   = document.getElementById("dashInvoiceCount");
-  const elInvUnpaid  = document.getElementById("dashInvoiceUnpaid");
-  const elInvAmt     = document.getElementById("dashInvoiceAmount");
-  const elInvHealth  = document.getElementById("dashInvoiceHealth");
+  const elInvCount = document.getElementById("dashInvoiceCount");
+  const elInvUnpaid = document.getElementById("dashInvoiceUnpaid");
+  const elInvAmt = document.getElementById("dashInvoiceAmount");
+  const elInvHealth = document.getElementById("dashInvoiceHealth");
 
   if (elInvCount) {
     elInvCount.textContent =
@@ -12771,143 +12818,141 @@ function refreshHomeStats() {
   }
 
   if (elInvAmt) {
-    const fmtUnpaid = (typeof formatEuro === "function")
-      ? formatEuro(unpaidAmount)
-      : (unpaidAmount.toFixed(2) + " €");
+    const fmtUnpaid =
+      typeof formatEuro === "function"
+        ? formatEuro(unpaidAmount)
+        : unpaidAmount.toFixed(2) + " €";
     elInvAmt.textContent = `Montant impayé : ${fmtUnpaid}`;
   }
 
   // 🧠 Analyse "santé" facturation
   if (elInvHealth) {
-const DELAI_REGLEMENT_JOURS = 30;
-const today = new Date();
-today.setHours(0, 0, 0, 0);
-
-unpaid.forEach((f) => {
-  const val = Number(f.totalTTC || 0) || 0;
-
-  const due = _dueDateFromInvoice(f, DELAI_REGLEMENT_JOURS);
-
-  // pas de date => on considère "en attente"
-  if (!due) {
-    pendingCount++;
-    pendingAmount += val;
-    return;
-  }
-
-  if (today.getTime() > due.getTime()) {
-    lateCount++;
-    lateAmount += val;
-  } else {
-    pendingCount++;
-    pendingAmount += val;
-  }
-});
-
-
-
-    const fmtLocal = (v) =>
-      (typeof formatEuro === "function")
-        ? formatEuro(v)
-        : (Number(v || 0).toFixed(2) + " €");
-
-    if (unpaid.length === 0) {
-      elInvHealth.textContent = "Santé facturation : ✅ RAS, tout est payé";
-    } else if (lateCount > 0) {
-      elInvHealth.textContent =
-        `Santé facturation : ⚠️ ${lateCount} en retard (${fmtLocal(lateAmount)})`;
-    } else {
-      elInvHealth.textContent =
-        `Santé facturation : 🟡 ${pendingCount} en attente (${fmtLocal(pendingAmount)})`;
-    }
-  }
-
-  // ========= CHIFFRE D'AFFAIRES (CARTE DASHBOARD) =========
-  const now = new Date();
-  const currentYear = now.getFullYear();
-  const currentMonth = now.getMonth(); // 0-11
-
-  let caTotal = 0;
-  let caPaid = 0;
-  let caUnpaid = 0;
-  let caThisMonth = 0;
-
-  factures.forEach((f) => {
-    const val = Number(f.totalTTC || 0);
-    if (isNaN(val)) return;
-
-    caTotal += val;
-    if (f.paid) caPaid += val;
-    else caUnpaid += val;
-
-    if (f.date) {
-      const d = new Date(f.date + "T00:00:00");
-      if (!isNaN(d.getTime()) &&
-          d.getFullYear() === currentYear &&
-          d.getMonth() === currentMonth) {
-        caThisMonth += val;
-      }
-    }
-  });
-
-  const elCaTotal  = document.getElementById("dashCATotal");
-  const elCaPaid   = document.getElementById("dashCAPaid");
-  const elCaUnpaid = document.getElementById("dashCAUnpaid");
-  const elCaMonth  = document.getElementById("dashCAMonth");
-
-  const fmt = (v) =>
-    (typeof formatEuro === "function")
-      ? formatEuro(v)
-      : (Number(v || 0).toFixed(2) + " €");
-
-  if (elCaTotal)  elCaTotal.textContent  = "CA total : " + fmt(caTotal);
-  if (elCaPaid)   elCaPaid.textContent   = "Payé : " + fmt(caPaid);
-  if (elCaUnpaid) elCaUnpaid.textContent = "Impayé : " + fmt(caUnpaid);
-  if (elCaMonth)  elCaMonth.textContent  = "Mois en cours : " + fmt(caThisMonth);
-
-  // ========= TABLEAU SANTÉ GLOBAL =========
-  const rowFacturesLate    = document.getElementById("healthRowFacturesLate");
-  const rowFacturesPending = document.getElementById("healthRowFacturesPending");
-  const rowDevis           = document.getElementById("healthRowDevis");
-  const rowContrats        = document.getElementById("healthRowContrats");
-
-  function setHealthRow(row, status, text) {
-    if (!row) return;
-
-    const statusCell = row.querySelector(".health-status");
-    const detailCell = row.querySelector(".health-detail");
-
-    if (statusCell) {
-      statusCell.classList.remove("health-ok", "health-warn", "health-bad");
-
-      let cls = "";
-      if (status === "ok")   cls = "health-ok";
-      if (status === "warn") cls = "health-warn";
-      if (status === "bad")  cls = "health-bad";
-
-      if (cls) statusCell.classList.add(cls);
-
-      if (status === "ok")        statusCell.textContent = "✅ OK";
-      else if (status === "warn") statusCell.textContent = "⚠️ Attention";
-      else if (status === "bad")  statusCell.textContent = "⛔ Urgent";
-      else                        statusCell.textContent = "–";
-    }
-
-    if (detailCell && typeof text === "string") {
-      detailCell.textContent = text;
-    }
-  }
-
-  // ---- Factures (séparées : critiques / en attente)
-  if (rowFacturesLate || rowFacturesPending) {
     const DELAI_REGLEMENT_JOURS = 30;
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let lateCount     = 0;
-    let lateAmount    = 0;
-    let pendingCount  = 0;
-    let pendingAmount = 0;
+    unpaid.forEach((f) => {
+      const val = Number(f.totalTTC || 0) || 0;
+
+      const due = _dueDateFromInvoice(f, DELAI_REGLEMENT_JOURS);
+
+      // pas de date => on considère "en attente"
+      if (!due) {
+        pendingCount++;
+        pendingAmount += val;
+        return;
+      }
+
+      if (today.getTime() > due.getTime()) {
+        lateCount++;
+        lateAmount += val;
+      } else {
+        pendingCount++;
+        pendingAmount += val;
+      }
+    });
+
+      const fmtMoney = (v) =>
+    typeof formatEuro === "function"
+      ? formatEuro(v)
+      : Number(v || 0).toFixed(2) + " €";
+
+  if (unpaid.length === 0) {
+    elInvHealth.textContent = "Santé facturation : ✅ RAS, tout est payé";
+  } else if (lateCount > 0) {
+    elInvHealth.textContent = `Santé facturation : ⚠️ ${lateCount} en retard (${fmtMoney(
+      lateAmount,
+    )})`;
+  } else {
+    elInvHealth.textContent = `Santé facturation : 🟡 ${pendingCount} en attente (${fmtMoney(
+      pendingAmount,
+    )})`;
+  }
+}
+
+// ========= CHIFFRE D'AFFAIRES (CARTE DASHBOARD) =========
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth(); // 0-11
+
+let caTotal = 0;
+let caPaid = 0;
+let caUnpaid = 0;
+let caThisMonth = 0;
+
+factures.forEach((f) => {
+  const val = Number(f.totalTTC || 0);
+  if (isNaN(val)) return;
+
+  caTotal += val;
+  if (f.paid) caPaid += val;
+  else caUnpaid += val;
+
+  if (f.date) {
+    const d = new Date(f.date + "T00:00:00");
+    if (
+      !isNaN(d.getTime()) &&
+      d.getFullYear() === currentYear &&
+      d.getMonth() === currentMonth
+    ) {
+      caThisMonth += val;
+    }
+  }
+});
+
+const elCaTotal = document.getElementById("dashCATotal");
+const elCaPaid = document.getElementById("dashCAPaid");
+const elCaUnpaid = document.getElementById("dashCAUnpaid");
+const elCaMonth = document.getElementById("dashCAMonth");
+
+if (elCaTotal) elCaTotal.textContent = "CA total : " + fmtMoney(caTotal);
+if (elCaPaid) elCaPaid.textContent = "Payé : " + fmtMoney(caPaid);
+if (elCaUnpaid) elCaUnpaid.textContent = "Impayé : " + fmtMoney(caUnpaid);
+if (elCaMonth) elCaMonth.textContent = "Mois en cours : " + fmtMoney(caThisMonth);
+
+// ========= TABLEAU SANTÉ GLOBAL =========
+const rowFacturesLate = document.getElementById("healthRowFacturesLate");
+const rowFacturesPending = document.getElementById("healthRowFacturesPending");
+const rowDevis = document.getElementById("healthRowDevis");
+const rowContrats = document.getElementById("healthRowContrats");
+
+function setHealthRow(row, status, text) {
+  if (!row) return;
+
+  const statusCell = row.querySelector(".health-status");
+  const detailCell = row.querySelector(".health-detail");
+
+  if (statusCell) {
+    statusCell.classList.remove("health-ok", "health-warn", "health-bad");
+
+    let cls = "";
+    if (status === "ok") cls = "health-ok";
+    if (status === "warn") cls = "health-warn";
+    if (status === "bad") cls = "health-bad";
+
+    if (cls) statusCell.classList.add(cls);
+
+    if (status === "ok") statusCell.textContent = "✅ OK";
+    else if (status === "warn") statusCell.textContent = "⚠️ Attention";
+    else if (status === "bad") statusCell.textContent = "⛔ Urgent";
+    else statusCell.textContent = "–";
+  }
+
+  if (detailCell && typeof text === "string") {
+    detailCell.textContent = text;
+  }
+}
+
+// ---- Factures (séparées : critiques / en attente)
+if (rowFacturesLate || rowFacturesPending) {
+  const DELAI_REGLEMENT_JOURS = 30;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  let lateCount = 0;
+  let lateAmount = 0;
+  let pendingCount = 0;
+  let pendingAmount = 0;
 
   unpaid.forEach((f) => {
     const val = Number(f.totalTTC || 0) || 0;
@@ -12931,61 +12976,58 @@ unpaid.forEach((f) => {
     }
   });
 
-
-    const fmtLocal = (v) =>
-      (typeof formatEuro === "function")
-        ? formatEuro(v)
-        : (Number(v || 0).toFixed(2) + " €");
-
-    if (rowFacturesLate) {
-      if (lateCount > 0) {
-        setHealthRow(rowFacturesLate, "bad",
-          `${lateCount} facture(s) en retard (${fmtLocal(lateAmount)})`
-        );
-      } else {
-        setHealthRow(rowFacturesLate, "ok", "Aucune facture critique");
-      }
-    }
-
-    if (rowFacturesPending) {
-      if (pendingCount > 0) {
-        setHealthRow(rowFacturesPending, "warn",
-          `${pendingCount} facture(s) non payée(s) (${fmtLocal(pendingAmount)})`
-        );
-      } else {
-        setHealthRow(rowFacturesPending, "ok", "Aucune facture en attente");
-      }
-    }
-  }
-
-  // ---- Devis
-  if (rowDevis) {
-    if (devisExpired > 0) {
-      setHealthRow(rowDevis, "bad", `${devisExpired} devis expiré(s) à traiter`);
-    } else if (devisPending > 0) {
-      setHealthRow(rowDevis, "warn", `${devisPending} devis en attente de réponse`);
+  if (rowFacturesLate) {
+    if (lateCount > 0) {
+      setHealthRow(
+        rowFacturesLate,
+        "bad",
+        `${lateCount} facture(s) en retard (${fmtMoney(lateAmount)})`,
+      );
     } else {
-      setHealthRow(rowDevis, "ok", "Aucun devis en attente critique");
+      setHealthRow(rowFacturesLate, "ok", "Aucune facture critique");
     }
   }
 
-  // ---- Contrats (FIX FINAL)
-  // Seul toRenew déclenche l'urgence.
-  if (rowContrats) {
-    if (toRenew.length > 0) {
-      setHealthRow(rowContrats, "bad", `${toRenew.length} contrat(s) à renouveler`);
-    } else if (contracts.length === 0) {
-      setHealthRow(rowContrats, "ok", "Aucun contrat enregistré");
+  if (rowFacturesPending) {
+    if (pendingCount > 0) {
+      setHealthRow(
+        rowFacturesPending,
+        "warn",
+        `${pendingCount} facture(s) non payée(s) (${fmtMoney(pendingAmount)})`,
+      );
     } else {
-      setHealthRow(rowContrats, "ok", "Tous les contrats sont à jour");
+      setHealthRow(rowFacturesPending, "ok", "Aucune facture en attente");
     }
-  }
-
-  if (typeof renderPlanningWeek === "function") {
-    renderPlanningWeek();
   }
 }
 
+// ---- Devis
+if (rowDevis) {
+  if (devisExpired > 0) {
+    setHealthRow(rowDevis, "bad", `${devisExpired} devis expiré(s) à traiter`);
+  } else if (devisPending > 0) {
+    setHealthRow(rowDevis, "warn", `${devisPending} devis en attente de réponse`);
+  } else {
+    setHealthRow(rowDevis, "ok", "Aucun devis en attente critique");
+  }
+}
+
+// ---- Contrats (FIX FINAL)
+// Seul toRenew déclenche l'urgence.
+if (rowContrats) {
+  if (toRenew.length > 0) {
+    setHealthRow(rowContrats, "bad", `${toRenew.length} contrat(s) à renouveler`);
+  } else if (contracts.length === 0) {
+    setHealthRow(rowContrats, "ok", "Aucun contrat enregistré");
+  } else {
+    setHealthRow(rowContrats, "ok", "Tous les contrats sont à jour");
+  }
+}
+
+if (typeof renderPlanningWeek === "function") {
+  renderPlanningWeek();
+}
+}
 
 // ====== PLANNING HEBDO ======
 
@@ -13000,7 +13042,9 @@ let planningSortables = [];
 
 function loadContractPlanningOverrides() {
   try {
-    return JSON.parse(localStorage.getItem("contractPlanningOverrides") || "[]") || [];
+    return (
+      JSON.parse(localStorage.getItem("contractPlanningOverrides") || "[]") || []
+    );
   } catch (e) {
     return [];
   }
@@ -13008,10 +13052,12 @@ function loadContractPlanningOverrides() {
 
 function saveContractPlanningOverrides() {
   try {
-    localStorage.setItem("contractPlanningOverrides", JSON.stringify(contractPlanningOverrides));
+    localStorage.setItem(
+      "contractPlanningOverrides",
+      JSON.stringify(contractPlanningOverrides),
+    );
   } catch (e) {}
 }
-
 
 function loadManualPlanningItems() {
   try {
@@ -13025,28 +13071,30 @@ function loadManualPlanningItems() {
 
 function saveManualPlanningItems() {
   try {
-    localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems));
+    localStorage.setItem(
+      "manualPlanningItems",
+      JSON.stringify(manualPlanningItems),
+    );
   } catch (e) {}
 }
 
 function getOverriddenContractDate(contractId, originalDateISO) {
-  const ov = contractPlanningOverrides.find(o =>
-    o.contractId === contractId &&
-    o.originalDate === originalDateISO
+  const ov = contractPlanningOverrides.find(
+    (o) => o.contractId === contractId && o.originalDate === originalDateISO,
   );
   return ov ? ov.newDate : originalDateISO;
 }
 
 function applyContractPlanningOverride(contractId, originalDate, newDate) {
-  contractPlanningOverrides = contractPlanningOverrides.filter(o =>
-    !(o.contractId === contractId && o.originalDate === originalDate)
+  contractPlanningOverrides = contractPlanningOverrides.filter(
+    (o) => !(o.contractId === contractId && o.originalDate === originalDate),
   );
 
   contractPlanningOverrides.push({
     id: generateId("OVR"),
     contractId,
     originalDate,
-    newDate
+    newDate,
   });
 
   saveContractPlanningOverrides();
@@ -13054,7 +13102,7 @@ function applyContractPlanningOverride(contractId, originalDate, newDate) {
 }
 
 function moveManualPlanningItemToDate(manualId, newDateISO) {
-  const idx = manualPlanningItems.findIndex(it => it.id === manualId);
+  const idx = manualPlanningItems.findIndex((it) => it.id === manualId);
   if (idx === -1) return;
 
   manualPlanningItems[idx].date = newDateISO;
@@ -13062,16 +13110,21 @@ function moveManualPlanningItemToDate(manualId, newDateISO) {
   renderPlanningWeek();
 }
 
+
 function initPlanningDnD() {
   // ✅ Sortable pas chargé => pas de drag
   if (typeof Sortable === "undefined") {
-    console.warn("❌ SortableJS manquant. Ajoute le <script Sortable.min.js> dans index.html.");
+    console.warn(
+      "❌ SortableJS manquant. Ajoute le <script Sortable.min.js> dans index.html.",
+    );
     return;
   }
 
   // ✅ reset anciennes instances
   planningSortables.forEach((s) => {
-    try { s.destroy(); } catch (e) {}
+    try {
+      s.destroy();
+    } catch (e) {}
   });
   planningSortables = [];
 
@@ -13080,9 +13133,19 @@ function initPlanningDnD() {
       group: "planning",
       animation: 150,
       draggable: ".visit-entry",
-          filter: ".visit-empty", 
-      forceFallback: true,
-      fallbackOnBody: true,
+      filter: ".visit-empty",
+
+  // ✅ Rend le drag + facile (surtout sur touchpad / mobile)
+  forceFallback: true,
+  fallbackOnBody: true,
+  fallbackTolerance: 8,         // 👈 clé: évite "micro drag" qui sélectionne
+  touchStartThreshold: 8,       // 👈 clé: il faut bouger un peu avant que ça drag
+  delay: 80,                    // 👈 petit délai pour éviter les clics / sélections
+  delayOnTouchOnly: true,       // 👈 uniquement sur mobile / tactile
+
+  onStart() {
+    document.body.classList.add("is-dragging");
+  },
 
       onEnd(evt) {
         const itemEl = evt.item;
@@ -13107,18 +13170,20 @@ function initPlanningDnD() {
 
           applyContractPlanningOverride(contractId, originalDate, newDateISO);
         }
-      }
+      },
     });
 
     planningSortables.push(sortable);
   });
 }
 
-
-
 function getServiceLabelForContract(contract) {
   const pr = contract.pricing || {};
-  const mainService = (pr.mainService || contract.pool?.type || "").toLowerCase();
+  const mainService = (
+    pr.mainService ||
+    contract.pool?.type ||
+    ""
+  ).toLowerCase();
 
   if (!mainService) return "Intervention";
 
@@ -13140,9 +13205,6 @@ function getServiceLabelForContract(contract) {
 
   return "Intervention (contrat)";
 }
-
-
-
 
 // ================== PLANNING HEBDOMADAIRE ==================
 
@@ -13212,7 +13274,7 @@ function getVisitsPerWeekForDate(contract, refDate) {
   if (!perMonth) return 0;
 
   let visits = Math.round(perMonth / 4); // approx 4 semaines / mois
-  if (visits < 1) visits = 1;            // s’il y a des passages, au moins 1
+  if (visits < 1) visits = 1; // s’il y a des passages, au moins 1
 
   return visits;
 }
@@ -13265,11 +13327,13 @@ function renderPlanningWeek() {
 
     const header = document.createElement("div");
     header.className = "day-column-header";
-    header.innerHTML =
-      `<span>${dayShort[i]} ${date.toLocaleDateString("fr-FR", {
+    header.innerHTML = `<span>${dayShort[i]} ${date.toLocaleDateString(
+      "fr-FR",
+      {
         day: "2-digit",
-        month: "2-digit"
-      })}</span>
+        month: "2-digit",
+      },
+    )}</span>
       <button type="button"
               class="planning-add-btn"
               data-date="${dateStr}">+</button>`;
@@ -13331,17 +13395,20 @@ function renderPlanningWeek() {
 
     for (let i = 0; i < visits; i++) {
       // date originale "prévue" pour cette visite (répartition dans la semaine)
-      const dayIndexOriginal = Math.min(6, Math.floor((i + 0.5) * 7 / visits));
+      const dayIndexOriginal = Math.min(
+        6,
+        Math.floor(((i + 0.5) * 7) / visits),
+      );
       const originalDateISO = dayColumns[dayIndexOriginal].dateStr;
 
       // ✅ override éventuel (si déplacée)
       const finalDateISO = getOverriddenContractDate(
         contract.id,
-        originalDateISO
+        originalDateISO,
       );
 
       const dayIndexFinal = currentPlanningData.findIndex(
-        (d) => d.date === finalDateISO
+        (d) => d.date === finalDateISO,
       );
       if (dayIndexFinal === -1) continue;
 
@@ -13371,7 +13438,7 @@ function renderPlanningWeek() {
         address,
         contractId: contract.id,
         originalDate: originalDateISO,
-        date: finalDateISO
+        date: finalDateISO,
       });
     }
   });
@@ -13398,9 +13465,7 @@ function renderPlanningWeek() {
       escapeHtml(service) +
       "</strong>" +
       (clientName
-        ? "<br><span class='visit-pool'>" +
-          escapeHtml(clientName) +
-          "</span>"
+        ? "<br><span class='visit-pool'>" + escapeHtml(clientName) + "</span>"
         : "");
 
     column.list.appendChild(div);
@@ -13412,7 +13477,7 @@ function renderPlanningWeek() {
       clientName,
       address: item.address || "",
       phone: item.phone || "",
-      notes: item.notes || ""
+      notes: item.notes || "",
     });
   });
 
@@ -13432,7 +13497,6 @@ function renderPlanningWeek() {
   initPlanningDnD();
 }
 
-
 function openPlanningDayDetails(dateStr) {
   const detailsEl = document.getElementById("planningDetails");
   if (!detailsEl) return;
@@ -13441,7 +13505,9 @@ function openPlanningDayDetails(dateStr) {
   document.querySelectorAll(".day-column").forEach((col) => {
     col.classList.remove("is-selected");
   });
-  const selectedCol = document.querySelector(`.day-column[data-date="${dateStr}"]`);
+  const selectedCol = document.querySelector(
+    `.day-column[data-date="${dateStr}"]`,
+  );
   if (selectedCol) selectedCol.classList.add("is-selected");
 
   const day = currentPlanningData.find((d) => d.date === dateStr);
@@ -13461,15 +13527,15 @@ function openPlanningDayDetails(dateStr) {
         html += `<div class="planning-details-entry">
           <strong>${escapeHtml(item.clientName)}</strong><br>
        ${
-  item.address
-    ? `<a
+         item.address
+           ? `<a
          href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}"
          target="_blank"
          style="text-decoration:none;color:#1f6fe5;font-weight:700;"
          title="Ouvrir l’itinéraire Google Maps"
        >📍 ${escapeHtml(item.address)}</a><br>`
-    : ""
-}
+           : ""
+       }
 ${
   item.phone
     ? `<a
@@ -13486,9 +13552,9 @@ ${
               : ""
           }
         </div>`;
-} else if (item.type === "manual") {
-  const service = item.service || item.label || "Intervention";
-  html += `<div class="planning-details-entry">
+      } else if (item.type === "manual") {
+        const service = item.service || item.label || "Intervention";
+        html += `<div class="planning-details-entry">
     <strong>${escapeHtml(service)}</strong><br>
     ${item.clientName ? escapeHtml(item.clientName) + "<br>" : ""}
 ${
@@ -13517,8 +13583,7 @@ ${
       🗑️ Supprimer
     </button>
   </div>`;
-}
-
+      }
     });
   }
 
@@ -13549,10 +13614,10 @@ function openManualPlanningPopup(dateStr, ev) {
   const select = document.getElementById("planningPopupPrestation");
   if (select) select.value = "";
 
-  const clientInput  = document.getElementById("planningPopupClient");
-  const addrInput    = document.getElementById("planningPopupAddress");
-  const phoneInput   = document.getElementById("planningPopupPhone");
-  const notesInput   = document.getElementById("planningPopupNotes");
+  const clientInput = document.getElementById("planningPopupClient");
+  const addrInput = document.getElementById("planningPopupAddress");
+  const phoneInput = document.getElementById("planningPopupPhone");
+  const notesInput = document.getElementById("planningPopupNotes");
 
   if (clientInput) clientInput.value = "";
   if (addrInput) addrInput.value = "";
@@ -13587,11 +13652,16 @@ function confirmManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay || !manualPopupDate) return;
 
-  const prestation = document.getElementById("planningPopupPrestation")?.value || "";
-  const client     = document.getElementById("planningPopupClient")?.value.trim() || "";
-  const address    = document.getElementById("planningPopupAddress")?.value.trim() || "";
-  const phone      = document.getElementById("planningPopupPhone")?.value.trim() || "";
-  const notes      = document.getElementById("planningPopupNotes")?.value.trim() || "";
+  const prestation =
+    document.getElementById("planningPopupPrestation")?.value || "";
+  const client =
+    document.getElementById("planningPopupClient")?.value.trim() || "";
+  const address =
+    document.getElementById("planningPopupAddress")?.value.trim() || "";
+  const phone =
+    document.getElementById("planningPopupPhone")?.value.trim() || "";
+  const notes =
+    document.getElementById("planningPopupNotes")?.value.trim() || "";
 
   // On doit avoir au moins une presta ou un client
   if (!prestation && !client) {
@@ -13610,7 +13680,7 @@ function confirmManualPlanningPopup() {
     clientName: client,
     address,
     phone,
-    notes
+    notes,
   });
 
   saveManualPlanningItems();
@@ -13631,9 +13701,9 @@ function loadPlanningPrestations() {
   // On part des PRESTATION_TEMPLATES
   const list = (PRESTATION_TEMPLATES || [])
     // on ignore le premier modèle "— Choisir un modèle —"
-    .filter(t => t && t.label && t.label !== "— Choisir un modèle —")
+    .filter((t) => t && t.label && t.label !== "— Choisir un modèle —")
     // on exclut Produits / Fournitures / Déplacement
-    .filter(t => !excluded.includes(t.label.toLowerCase()));
+    .filter((t) => !excluded.includes(t.label.toLowerCase()));
 
   // Option vide par défaut
   const defaultOpt = document.createElement("option");
@@ -13642,7 +13712,7 @@ function loadPlanningPrestations() {
   select.appendChild(defaultOpt);
 
   // On remplit avec les modèles
-  list.forEach(t => {
+  list.forEach((t) => {
     const opt = document.createElement("option");
     opt.value = t.label;
     opt.textContent = t.label;
@@ -13652,7 +13722,7 @@ function loadPlanningPrestations() {
 
 function deleteManualPlanningItem(id, dateStr) {
   // On filtre pour retirer l’intervention
-  manualPlanningItems = manualPlanningItems.filter(item => item.id !== id);
+  manualPlanningItems = manualPlanningItems.filter((item) => item.id !== id);
 
   // On sauvegarde l'état
   saveManualPlanningItems();
@@ -13661,7 +13731,6 @@ function deleteManualPlanningItem(id, dateStr) {
   renderPlanningWeek();
   openPlanningDayDetails(dateStr); // Ré-ouvre la colonne mise à jour
 }
-
 
 // ----- LocalStorage contrats -----
 
@@ -13691,11 +13760,12 @@ function createContractFromDevis() {
   if (!currentDocumentId) {
     showConfirmDialog({
       title: "Aucun devis ouvert",
-      message: "Ouvre et enregistre d'abord un devis avant de créer un contrat.",
+      message:
+        "Ouvre et enregistre d'abord un devis avant de créer un contrat.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
-      icon: "ℹ️"
+      icon: "ℹ️",
     });
     return;
   }
@@ -13708,34 +13778,34 @@ function createContractFromDevis() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
 
   // 2) Mapping Devis → Client / Site pour le contrat
   const client = {
-    civility:  devis.client?.civility || "",
-    name:      devis.client?.name || "",
-    address:   devis.client?.address || "",
-    phone:     devis.client?.phone || "",
-    email:     devis.client?.email || "",
+    civility: devis.client?.civility || "",
+    name: devis.client?.name || "",
+    address: devis.client?.address || "",
+    phone: devis.client?.phone || "",
+    email: devis.client?.email || "",
     // On récupère le numéro de devis en référence de contrat (modifiable ensuite)
-    reference: devis.number || ""
+    reference: devis.number || "",
   };
 
   const site = {
     civility: devis.siteCivility || "",
-    name:     devis.siteName || "",
-    address:  devis.siteAddress || ""
+    name: devis.siteName || "",
+    address: devis.siteAddress || "",
   };
 
   // 3) Pool par défaut (à ajuster dans le contrat)
   const pool = {
-    type: "piscine_chlore",   // par défaut, tu pourras changer en sel / spa
+    type: "piscine_chlore", // par défaut, tu pourras changer en sel / spa
     equipment: "",
     volume: "",
-    notes: ""
+    notes: "",
   };
 
   // 4) Type de client en fonction des conditions du devis
@@ -13748,7 +13818,7 @@ function createContractFromDevis() {
   // 5) Pricing de base : on récupère totals du devis, le reste sera ajusté par le contrat
   const pricing = {
     clientType,
-    mainService: "piscine_chlore",   // tu pourras changer ensuite
+    mainService: "piscine_chlore", // tu pourras changer ensuite
     mode: "standard",
     passHiver: 1,
     passEte: 2,
@@ -13767,9 +13837,11 @@ function createContractFromDevis() {
     totalTTC:
       typeof devis.totalTTC === "number"
         ? devis.totalTTC
-        : (typeof devis.subtotal === "number" ? devis.subtotal : 0),
+        : typeof devis.subtotal === "number"
+          ? devis.subtotal
+          : 0,
 
-    airbnbOption: false
+    airbnbOption: false,
   };
 
   // 6) Objet contrat complet
@@ -13782,9 +13854,9 @@ function createContractFromDevis() {
     status: CONTRACT_STATUS.EN_COURS,
     meta: {
       sourceDevisId: devis.id,
-      sourceDevisNumber: devis.number || ""
+      sourceDevisNumber: devis.number || "",
     },
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
   // 7) Bascule UI : onglet Contrats + ouverture du formulaire pré-rempli
@@ -13804,27 +13876,26 @@ function createContractFromDevis() {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 }
 
 function generateDevisFromContract(contract) {
   if (!contract) return null;
 
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
-  const p  = contract.pool    || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+  const p = contract.pool || {};
   const pr = contract.pricing || {};
 
   const todayISO = new Date().toISOString().slice(0, 10);
-  const number   = getNextNumber("devis");
+  const number = getNextNumber("devis");
 
   const poolType = pr.mainService || p.type || "";
-  const label    = getContractLabel(poolType);
+  const label = getContractLabel(poolType);
 
   const globalPeriod = formatContractGlobalPeriod(pr);
-const suffixClient = "";
-
+  const suffixClient = "";
 
   const subjectBase = globalPeriod
     ? `${label} – saison ${globalPeriod}`
@@ -13837,10 +13908,10 @@ const suffixClient = "";
     : label;
 
   // ----- Données prix venant du contrat -----
-  const totalHTContract = Number(pr.totalHT)  || 0;
-  const tvaRate         = Number(pr.tvaRate)  || 0;
+  const totalHTContract = Number(pr.totalHT) || 0;
+  const tvaRate = Number(pr.tvaRate) || 0;
 
-  const clientType     = pr.clientType || "particulier";
+  const clientType = pr.clientType || "particulier";
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
   const baseNotesLines =
@@ -13848,20 +13919,22 @@ const suffixClient = "";
       ? [
           "Règlement à 30 jours fin de mois.",
           "Aucun escompte pour paiement anticipé.",
-          "En cas de retard de paiement : pénalités + indemnité forfaitaire de 40 € (art. L441-10 du Code de commerce)."
+          "En cas de retard de paiement : pénalités + indemnité forfaitaire de 40 € (art. L441-10 du Code de commerce).",
         ]
       : [
           "Paiement à réception de facture.",
           "Aucun acompte demandé sauf mention contraire.",
-          "Aucun escompte pour paiement anticipé."
+          "Aucun escompte pour paiement anticipé.",
         ];
 
-  const notesBase = baseNotesLines.concat([
-    "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire.",
-    "Les tarifs des pièces détachées et produits sont susceptibles d’évoluer selon les fournisseurs.",
-    "Toute prestation non mentionnée fera l’objet d’un devis complémentaire.",
-    "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle."
-  ]).join("\n");
+  const notesBase = baseNotesLines
+    .concat([
+      "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus sauf mention contraire.",
+      "Les tarifs des pièces détachées et produits sont susceptibles d’évoluer selon les fournisseurs.",
+      "Toute prestation non mentionnée fera l’objet d’un devis complémentaire.",
+      "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle.",
+    ])
+    .join("\n");
 
   // ===== 1. Prestation principale (entretiens réguliers) =====
   const totalPassages = Number(pr.totalPassages || 0) || 1;
@@ -13874,11 +13947,11 @@ const suffixClient = "";
     unitPrice = totalHTContract;
   }
 
-  let lineQty   = totalPassages;
+  let lineQty = totalPassages;
   let lineTotal = unitPrice * lineQty;
 
   if (!lineTotal && totalHTContract > 0) {
-    lineQty   = 1;
+    lineQty = 1;
     lineTotal = totalHTContract;
     unitPrice = totalHTContract;
   }
@@ -13899,98 +13972,100 @@ const suffixClient = "";
 
   const prestations = [
     {
-      desc:  lineDesc,
+      desc: lineDesc,
       detail: "",
-      qty:    lineQty,
-      price:  unitPrice,
-      total:  lineTotal,
-      unit:   "forfait",
-      dates:  [],
-      kind:   prestationKind
-    }
+      qty: lineQty,
+      price: unitPrice,
+      total: lineTotal,
+      unit: "forfait",
+      dates: [],
+      kind: prestationKind,
+    },
   ];
 
   // ===== 2. Options forfaitaires (remise en service / hivernage) =====
   let optionsExtraTotal = 0;
 
   const includeOpening = !!pr.includeOpening;
-  const includeWinter  = !!pr.includeWinter;
-  const airbnbOption   = !!pr.airbnbOption;
+  const includeWinter = !!pr.includeWinter;
+  const airbnbOption = !!pr.airbnbOption;
 
-// Remise en service
-if (includeOpening) {
-  const kindOpening =
-    mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
-      ? "vidange_jacuzzi"
-      : "remise_service_piscine";
+  // Remise en service
+  if (includeOpening) {
+    const kindOpening =
+      mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
+        ? "vidange_jacuzzi"
+        : "remise_service_piscine";
 
-  const openingPrice = getTarifFromTemplates(kindOpening, clientType) || 0;
+    const openingPrice = getTarifFromTemplates(kindOpening, clientType) || 0;
 
-  if (openingPrice > 0) {
-    prestations.push({
-      desc: "Remise en service de la piscine en début de saison",
-      detail:
-        "Remise en eau, redémarrage de la filtration, équilibrage, traitement choc et contrôle complet du bassin.",
-      qty: 1,
-      price: openingPrice,
-      total: openingPrice,
-      unit: "forfait",
-      dates: [],
-      // 🔴 ICI : on met le *vrai* kind du modèle
-      kind: kindOpening
-    });
-    optionsExtraTotal += openingPrice;
+    if (openingPrice > 0) {
+      prestations.push({
+        desc: "Remise en service de la piscine en début de saison",
+        detail:
+          "Remise en eau, redémarrage de la filtration, équilibrage, traitement choc et contrôle complet du bassin.",
+        qty: 1,
+        price: openingPrice,
+        total: openingPrice,
+        unit: "forfait",
+        dates: [],
+        // 🔴 ICI : on met le *vrai* kind du modèle
+        kind: kindOpening,
+      });
+      optionsExtraTotal += openingPrice;
+    }
   }
-}
 
+  // Hivernage
+  if (includeWinter) {
+    const winterKind = "hivernage_piscine";
+    const winterPrice = getTarifFromTemplates(winterKind, clientType) || 0;
 
-// Hivernage
-if (includeWinter) {
-  const winterKind  = "hivernage_piscine";
-  const winterPrice = getTarifFromTemplates(winterKind, clientType) || 0;
-
-  if (winterPrice > 0) {
-    prestations.push({
-      desc: "Hivernage complet de la piscine",
-      detail:
-        "Nettoyage, traitement choc, abaissement du niveau d’eau, purge des équipements et sécurisation du bassin.",
-      qty: 1,
-      price: winterPrice,
-      total: winterPrice,
-      unit: "forfait",
-      dates: [],
-      // 🔴 idem, on utilise le kind du modèle
-      kind: winterKind
-    });
-    optionsExtraTotal += winterPrice;
+    if (winterPrice > 0) {
+      prestations.push({
+        desc: "Hivernage complet de la piscine",
+        detail:
+          "Nettoyage, traitement choc, abaissement du niveau d’eau, purge des équipements et sécurisation du bassin.",
+        qty: 1,
+        price: winterPrice,
+        total: winterPrice,
+        unit: "forfait",
+        dates: [],
+        // 🔴 idem, on utilise le kind du modèle
+        kind: winterKind,
+      });
+      optionsExtraTotal += winterPrice;
+    }
   }
-}
-
 
   // ===== 3. Majoration Airbnb +20 % =====
   let airbnbExtra = 0;
   if (airbnbOption) {
     const baseForAirbnb = lineTotal + optionsExtraTotal;
-    airbnbExtra = baseForAirbnb * 0.20;
+    airbnbExtra = baseForAirbnb * 0.2;
 
     if (airbnbExtra > 0.01) {
       prestations.push({
         desc: "Majoration usage location saisonnière / Airbnb (+20%)",
-        detail: "Fréquence accrue, niveau d’exigence renforcé et nettoyage approfondi après chaque rotation de locataires.",
+        detail:
+          "Fréquence accrue, niveau d’exigence renforcé et nettoyage approfondi après chaque rotation de locataires.",
         qty: 1,
         price: airbnbExtra,
         total: airbnbExtra,
         unit: "forfait",
         dates: [],
-        kind: "airbnb_extra"
+        kind: "airbnb_extra",
       });
     }
   }
 
   // ===== 4. Totaux =====
-  const subtotal  = prestations.reduce((sum, p) => sum + (Number(p.total) || 0), 0);
+  const subtotal = prestations.reduce(
+    (sum, p) => sum + (Number(p.total) || 0),
+    0,
+  );
   const tvaAmount = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
-  const totalTTC  = subtotal + tvaAmount;
+  const totalTTC = subtotal + tvaAmount;
 
   const notes =
     notesBase +
@@ -14006,31 +14081,31 @@ if (includeWinter) {
     date: todayISO,
     validityDate: "",
 
-subject,
+    subject,
 
-// ✅ Facturation (copiée depuis le contrat) — pour affichage PRO dans le devis PDF
-contractId: contract.id || null,
-billingMode: pr.billingMode || "",
-nextInvoiceDate: pr.nextInvoiceDate || "",
-contractStartDate: pr.startDate || "",
+    // ✅ Facturation (copiée depuis le contrat) — pour affichage PRO dans le devis PDF
+    contractId: contract.id || null,
+    billingMode: pr.billingMode || "",
+    nextInvoiceDate: pr.nextInvoiceDate || "",
+    contractStartDate: pr.startDate || "",
 
     client: {
       civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
+      name: c.name || "",
+      address: c.address || "",
+      phone: c.phone || "",
+      email: c.email || "",
     },
 
     siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
+    siteName: s.name || "",
+    siteAddress: s.address || "",
 
     prestations,
 
     tvaRate,
     subtotal,
-    discountRate:   0,
+    discountRate: 0,
     discountAmount: 0,
     tvaAmount,
     totalTTC,
@@ -14043,10 +14118,9 @@ contractStartDate: pr.startDate || "",
     conditionsType,
 
     createdAt: todayISO,
-    updatedAt: todayISO
+    updatedAt: todayISO,
   };
 }
-
 
 function maybeProposeDevisForContract(contract) {
   if (!contract || !contract.pricing) {
@@ -14054,7 +14128,7 @@ function maybeProposeDevisForContract(contract) {
     return false;
   }
 
-  const pr         = contract.pricing;
+  const pr = contract.pricing;
   const clientType = pr.clientType || "particulier";
 
   let totalTTCraw = pr.totalTTC != null ? pr.totalTTC : pr.totalHT;
@@ -14063,7 +14137,12 @@ function maybeProposeDevisForContract(contract) {
   }
   const totalTTC = Number(totalTTCraw) || 0;
 
-  console.log("[Devis] maybeProposeDevisForContract → clientType=", clientType, " totalTTC=", totalTTC);
+  console.log(
+    "[Devis] maybeProposeDevisForContract → clientType=",
+    clientType,
+    " totalTTC=",
+    totalTTC,
+  );
 
   if (clientType !== "particulier") {
     console.log("[Devis] Client pas particulier → pas de popup.");
@@ -14076,7 +14155,11 @@ function maybeProposeDevisForContract(contract) {
 
   const meta = contract.meta || {};
   if (meta.sourceDevisId) {
-    console.log("[Devis] Contrat déjà lié au devis", meta.sourceDevisNumber, "→ pas de popup.");
+    console.log(
+      "[Devis] Contrat déjà lié au devis",
+      meta.sourceDevisNumber,
+      "→ pas de popup.",
+    );
     return false;
   }
 
@@ -14096,7 +14179,12 @@ function maybeProposeDevisForContract(contract) {
       const devis = generateDevisFromContract(contract);
       if (!devis) return;
 
-      console.log("[Devis] Création du devis depuis contrat", contract.id, "→", devis.number);
+      console.log(
+        "[Devis] Création du devis depuis contrat",
+        contract.id,
+        "→",
+        devis.number,
+      );
 
       const docs = getAllDocuments();
       docs.push(devis);
@@ -14111,7 +14199,7 @@ function maybeProposeDevisForContract(contract) {
       if (idx >= 0) {
         const updated = allContracts[idx];
         if (!updated.meta) updated.meta = {};
-        updated.meta.sourceDevisId     = devis.id;
+        updated.meta.sourceDevisId = devis.id;
         updated.meta.sourceDevisNumber = devis.number;
 
         allContracts[idx] = updated;
@@ -14125,13 +14213,13 @@ function maybeProposeDevisForContract(contract) {
       if (typeof switchListType === "function") switchListType("devis");
 
       const contractView = document.getElementById("contractView");
-      const formView     = document.getElementById("formView");
+      const formView = document.getElementById("formView");
       if (contractView) contractView.classList.add("hidden");
       if (formView) formView.classList.remove("hidden");
 
       if (typeof loadDocumentsList === "function") loadDocumentsList();
-      if (typeof loadDocument === "function")      loadDocument(devis.id);
-    }
+      if (typeof loadDocument === "function") loadDocument(devis.id);
+    },
   });
 
   console.log("[Devis] Popup 'Créer un devis ?' affichée.");
@@ -14144,15 +14232,15 @@ function getLinkedDevisForContract(contract) {
   if (!meta.sourceDevisId) return null;
 
   const docs = getAllDocuments();
-  return docs.find(
-    d => d.type === "devis" && d.id === meta.sourceDevisId
-  ) || null;
+  return (
+    docs.find((d) => d.type === "devis" && d.id === meta.sourceDevisId) || null
+  );
 }
 
 function isDevisObligatoireForContract(contract) {
   if (!contract || !contract.pricing) return false;
 
-  const pr         = contract.pricing;
+  const pr = contract.pricing;
   const clientType = pr.clientType || "particulier";
 
   let totalTTCraw = pr.totalTTC != null ? pr.totalTTC : pr.totalHT;
@@ -14161,7 +14249,7 @@ function isDevisObligatoireForContract(contract) {
   }
   const totalTTC = Number(totalTTCraw) || 0;
 
-  return (clientType === "particulier" && totalTTC >= 150);
+  return clientType === "particulier" && totalTTC >= 150;
 }
 
 function isDevisAcceptedForContract(contract) {
@@ -14171,7 +14259,6 @@ function isDevisAcceptedForContract(contract) {
   const status = devis.status || "en_attente";
   return status === "accepte" || status === "cloture";
 }
-
 
 function newContract() {
   currentContractId = null;
@@ -14207,9 +14294,9 @@ function newContract() {
 
   // 👉 forcer aussi les radios en cohérence
   const ctPartRadio = document.getElementById("ctClientParticulier");
-  const ctSynRadio  = document.getElementById("ctClientSyndic");
+  const ctSynRadio = document.getElementById("ctClientSyndic");
   if (ctPartRadio) ctPartRadio.checked = true;
-  if (ctSynRadio)  ctSynRadio.checked  = false;
+  if (ctSynRadio) ctSynRadio.checked = false;
 
   // 👉 et appliquer toute la logique UI (billing modes, section site, etc.)
   updateContractClientType("particulier");
@@ -14239,82 +14326,33 @@ function newContract() {
   if (winterEl) winterEl.checked = false;
 
   const ctRef = document.getElementById("ctReference");
-  if (ctRef && typeof getNextContractReference === "function") {
-    ctRef.value = getNextContractReference();
-  }
+if (ctRef && typeof getNextContractReference === "function") {
+  ctRef.value = getNextContractReference();
+}
 
-  const tvaRateInput = document.getElementById("tvaRate");
-  if (tvaRateInput) tvaRateInput.value = "0";
+// --- TVA CONTRAT (micro) ---
+const status = getMicroTvaStatus(); // "franchise" ou "obligatoire"
+const forcedRate = status === "obligatoire" ? 20 : 0;
 
-  const ctTva0  = document.getElementById("ctTva0");
-  const ctTva20 = document.getElementById("ctTva20");
-  if (ctTva0 && ctTva20) {
-    ctTva0.checked = true;
-    ctTva20.checked = false;
-  }
+// 1️⃣ Applique la TVA (UI + calculs)
+if (typeof setTVA === "function") {
+  setTVA(forcedRate);
+}
 
-  if (typeof setTVA === "function") {
-    setTVA(0);
-  }
+// 2️⃣ Force / verrouille selon statut micro
+enforceContractMicroTVA(false);
 
-  // 🔁 datalist clients
-  if (typeof refreshClientDatalist === "function") {
-    refreshClientDatalist();
-  }
+// 🔁 datalist clients
+if (typeof refreshClientDatalist === "function") {
+  refreshClientDatalist();
+}
+
 
   // 🔢 recalcul du contrat
   if (typeof recomputeContract === "function") {
     recomputeContract();
   }
 }
-
-function openSendPopupContract() {
-  if (!currentContractId) {
-    alert("Aucun contrat ouvert.");
-    return;
-  }
-
-  const contract = getContract(currentContractId);
-  if (!contract) {
-    alert("Contrat introuvable.");
-    return;
-  }
-
-  // 🔑 Important : on force le type pour le template
-  contract._kind = "contrat";
-
-  currentSendDoc = contract;
-
-  const { body } = buildSendMessage(contract);
-
-  // Remplit le popup
-  const info = document.getElementById("sendDocInfo");
-  const textarea = document.getElementById("sendMessagePreview");
-  const popup = document.getElementById("sendPopup");
-
-  const clientName =
-    contract.client?.name ||
-    contract.pricing?.clientName ||
-    "";
-
-  if (info) {
-    info.textContent = `Contrat – ${clientName}`;
-  }
-
-  if (textarea) {
-    textarea.value = body;
-  }
-
-  if (popup) {
-    popup.classList.remove("hidden");
-    const box = popup.querySelector(".popup");
-    if (box) {
-      void box.offsetWidth;
-      box.classList.add("show");
-    }
-  }
-}
-
 
 
 function openContractFromList(id) {
@@ -14328,10 +14366,9 @@ function openContractFromList(id) {
 
   fillContractForm(contract);
 
-if (typeof refreshDocumentHealthUI === "function") {
-  refreshDocumentHealthUI(contract);
-}
-
+  if (typeof refreshDocumentHealthUI === "function") {
+    refreshDocumentHealthUI(contract);
+  }
 }
 
 function deleteContractFromList(id) {
@@ -14360,7 +14397,9 @@ function deleteContractFromList(id) {
         db.collection("contracts")
           .doc(id)
           .delete()
-          .catch((err) => console.error("Erreur Firestore delete contrat :", err));
+          .catch((err) =>
+            console.error("Erreur Firestore delete contrat :", err),
+          );
       }
 
       loadContractsList();
@@ -14377,7 +14416,7 @@ function deleteContractFromList(id) {
       if (typeof refreshHomeStats === "function") {
         refreshHomeStats();
       }
-    }
+    },
   });
 }
 
@@ -14437,13 +14476,16 @@ async function saveSingleContractToFirestore(contract) {
       collection: "contracts",
       action: "set",
       docId: contract.id,
-      data: contract
+      data: contract,
     });
     return;
   }
 
   try {
-    await db.collection("contracts").doc(contract.id).set(contract, { merge: true });
+    await db
+      .collection("contracts")
+      .doc(contract.id)
+      .set(contract, { merge: true });
     processSyncQueue();
   } catch (e) {
     console.error("Erreur Firestore (save contract)", e);
@@ -14457,7 +14499,7 @@ async function deleteContractFromFirestore(id) {
     enqueueSync({
       collection: "contracts",
       action: "delete",
-      docId: id
+      docId: id,
     });
     return;
   }
@@ -14487,7 +14529,7 @@ async function syncContractsWithFirestore() {
       console.log(
         "[Contracts] Chargement depuis Firestore :",
         cloudContracts.length,
-        "contrats"
+        "contrats",
       );
       saveContracts(cloudContracts);
     } else {
@@ -14501,15 +14543,16 @@ async function syncContractsWithFirestore() {
     }
 
     // 🔄 Si on est déjà sur l'onglet contrats, on recharge la liste
-    if (typeof loadContractsList === "function" && currentListType === "contrat") {
+    if (
+      typeof loadContractsList === "function" &&
+      currentListType === "contrat"
+    ) {
       loadContractsList();
     }
-
   } catch (e) {
     console.error("Erreur sync contrats Firestore :", e);
   }
 }
-
 
 // ----- Firestore clients -----
 
@@ -14524,7 +14567,7 @@ async function saveSingleClientToFirestore(client) {
       collection: "clients",
       action: "set",
       docId: id,
-      data: client
+      data: client,
     });
     return;
   }
@@ -14537,7 +14580,6 @@ async function saveSingleClientToFirestore(client) {
   }
 }
 
-
 async function deleteClientFromFirestore(client) {
   if (!client) return;
   const id = client.id || getClientDocId(client);
@@ -14546,7 +14588,7 @@ async function deleteClientFromFirestore(client) {
     enqueueSync({
       collection: "clients",
       action: "delete",
-      docId: id
+      docId: id,
     });
     return;
   }
@@ -14559,14 +14601,13 @@ async function deleteClientFromFirestore(client) {
   }
 }
 
-
 async function syncClientsWithFirestore() {
   if (!db) return;
 
   try {
     const snap = await db.collection("clients").get();
     const cloudClients = [];
-    snap.forEach(docSnap => {
+    snap.forEach((docSnap) => {
       const data = docSnap.data();
       if (data && data.name) {
         cloudClients.push(data);
@@ -14574,7 +14615,11 @@ async function syncClientsWithFirestore() {
     });
 
     if (cloudClients.length > 0) {
-      console.log("[Clients] Chargement depuis Firestore :", cloudClients.length, "clients");
+      console.log(
+        "[Clients] Chargement depuis Firestore :",
+        cloudClients.length,
+        "clients",
+      );
       saveClients(cloudClients);
       refreshClientDatalist();
     } else {
@@ -14589,7 +14634,6 @@ async function syncClientsWithFirestore() {
       }
       refreshClientDatalist();
     }
-
   } catch (e) {
     console.error("Erreur sync clients Firestore :", e);
   }
@@ -14603,10 +14647,8 @@ function getTarifFromTemplates(kind, clientType) {
   const tpl = PRESTATION_TEMPLATES.find((t) => t.kind === kind);
   if (!tpl) return 0;
 
-  const custom =
-    typeof getCustomPrices === "function" ? getCustomPrices() : {};
-  const key =
-    kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
+  const custom = typeof getCustomPrices === "function" ? getCustomPrices() : {};
+  const key = kind + "_" + (clientType === "syndic" ? "syndic" : "particulier");
 
   if (custom && custom[key] != null) {
     return Number(custom[key]) || 0;
@@ -14628,10 +14670,7 @@ function getContractUnitPrice() {
   return getTarifFromTemplates(mainService, clientType);
 }
 
-
-
 // ----- Distribution des mois été / hiver -----
-
 
 function computeContractMonths(startDateStr, durationMonths) {
   if (!startDateStr || !durationMonths) {
@@ -14652,12 +14691,15 @@ function computeContractMonths(startDateStr, durationMonths) {
   const ONE_DAY = 24 * 60 * 60 * 1000;
   const MIN_DAYS = 15; // au moins 15 jours pour compter le mois
 
-  while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
+  while (
+    y < end.getFullYear() ||
+    (y === end.getFullYear() && m <= end.getMonth())
+  ) {
     const monthStart = new Date(y, m, 1);
-    const monthEnd   = new Date(y, m + 1, 0);
+    const monthEnd = new Date(y, m + 1, 0);
 
     const effStart = monthStart < start ? start : monthStart;
-    const effEnd   = monthEnd > end ? end : monthEnd;
+    const effEnd = monthEnd > end ? end : monthEnd;
 
     const days = Math.floor((effEnd - effStart) / ONE_DAY) + 1;
 
@@ -14677,10 +14719,9 @@ function computeContractMonths(startDateStr, durationMonths) {
   return {
     monthsEte,
     monthsHiver,
-    endDateISO: end.toISOString().slice(0, 10)
+    endDateISO: end.toISOString().slice(0, 10),
   };
 }
-
 
 function computeMonthsEteHiverBetween(startISO, endISO) {
   if (!startISO || !endISO) {
@@ -14688,7 +14729,7 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
   }
 
   const start = new Date(startISO + "T00:00:00");
-  const end   = new Date(endISO  + "T00:00:00");
+  const end = new Date(endISO + "T00:00:00");
 
   if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
     return { monthsEte: 0, monthsHiver: 0 };
@@ -14703,13 +14744,16 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
   const ONE_DAY = 24 * 60 * 60 * 1000;
   const MIN_DAYS = 15; // au moins 15 jours dans le mois
 
-  while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
+  while (
+    y < end.getFullYear() ||
+    (y === end.getFullYear() && m <= end.getMonth())
+  ) {
     const monthStart = new Date(y, m, 1);
-    const monthEnd   = new Date(y, m + 1, 0);
+    const monthEnd = new Date(y, m + 1, 0);
 
     // chevauchement réel entre le contrat et ce mois
     const effStart = monthStart < start ? start : monthStart;
-    const effEnd   = monthEnd > end   ? end   : monthEnd;
+    const effEnd = monthEnd > end ? end : monthEnd;
 
     const days = Math.floor((effEnd - effStart) / ONE_DAY) + 1;
 
@@ -14729,41 +14773,47 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
   return { monthsEte, monthsHiver };
 }
 
-
 // ----- Recalcul global du contrat -----
 
 function recomputeContract() {
   // 1) Récup des champs
-  const modeEl        = document.getElementById("ctMode");
-  const passHiverEl   = document.getElementById("ctPassHiver");
-  const passEteEl     = document.getElementById("ctPassEte");
-  const startDateEl   = document.getElementById("ctStartDate");
-  const durationEl    = document.getElementById("ctDuration");
-  const endDateEl     = document.getElementById("ctEndDate");
-  const periodEl      = document.getElementById("ctPeriod");
-  const totalPassEl   = document.getElementById("ctTotalPassages");
-  const recapSummary  = document.getElementById("ctRecapSummary");
-  const warnBox       = document.getElementById("ctWarning");
+  const modeEl = document.getElementById("ctMode");
+  const passHiverEl = document.getElementById("ctPassHiver");
+  const passEteEl = document.getElementById("ctPassEte");
+  const startDateEl = document.getElementById("ctStartDate");
+  const durationEl = document.getElementById("ctDuration");
+  const endDateEl = document.getElementById("ctEndDate");
+  const periodEl = document.getElementById("ctPeriod");
+  const totalPassEl = document.getElementById("ctTotalPassages");
+  const recapSummary = document.getElementById("ctRecapSummary");
+  const warnBox = document.getElementById("ctWarning");
 
-  if (!modeEl || !passHiverEl || !passEteEl || !startDateEl || !durationEl || !totalPassEl) {
+  if (
+    !modeEl ||
+    !passHiverEl ||
+    !passEteEl ||
+    !startDateEl ||
+    !durationEl ||
+    !totalPassEl
+  ) {
     return;
   }
 
   // 2) Mode entretien
-  let mode      = modeEl.value || "standard";
+  let mode = modeEl.value || "standard";
   let passHiver = parseInt(passHiverEl.value || "0", 10) || 0;
-  let passEte   = parseInt(passEteEl.value   || "0", 10) || 0;
+  let passEte = parseInt(passEteEl.value || "0", 10) || 0;
 
   if (mode === "standard") {
     passHiver = 1;
-    passEte   = 2;
+    passEte = 2;
     passHiverEl.value = "1";
-    passEteEl.value   = "2";
+    passEteEl.value = "2";
   } else if (mode === "intensif") {
     passHiver = 2;
-    passEte   = 4;
+    passEte = 4;
     passHiverEl.value = "2";
-    passEteEl.value   = "4";
+    passEteEl.value = "4";
   }
 
   const startISO = startDateEl.value || "";
@@ -14776,20 +14826,22 @@ function recomputeContract() {
   let endISO = "";
   if (startISO && duration > 0) {
     const info = computeContractMonths(startISO, duration);
-    monthsEte   = info.monthsEte;
+    monthsEte = info.monthsEte;
     monthsHiver = info.monthsHiver;
-    endISO      = info.endDateISO;
+    endISO = info.endDateISO;
 
     if (endDateEl) endDateEl.value = endISO;
 
     if (periodEl) {
-      const debutFr = new Date(startISO + "T00:00:00").toLocaleDateString("fr-FR");
-      const finFr   = new Date(endISO   + "T00:00:00").toLocaleDateString("fr-FR");
+      const debutFr = new Date(startISO + "T00:00:00").toLocaleDateString(
+        "fr-FR",
+      );
+      const finFr = new Date(endISO + "T00:00:00").toLocaleDateString("fr-FR");
       periodEl.value = `${debutFr} → ${finFr}`;
     }
   } else {
     if (endDateEl) endDateEl.value = "";
-    if (periodEl)  periodEl.value  = "";
+    if (periodEl) periodEl.value = "";
   }
 
   // 4) Total passages
@@ -14815,21 +14867,29 @@ function recomputeContract() {
   if (warnBox) {
     const warnings = [];
     if (!startISO || !duration) {
-      warnings.push("Merci de renseigner une date de début et une durée de contrat.");
+      warnings.push(
+        "Merci de renseigner une date de début et une durée de contrat.",
+      );
     } else {
       if (monthsEte === 0 && passEte > 0) {
-        warnings.push("La période ne contient aucun mois d’été alors que des passages d’été sont définis.");
+        warnings.push(
+          "La période ne contient aucun mois d’été alors que des passages d’été sont définis.",
+        );
       }
       if (monthsHiver === 0 && passHiver > 0) {
-        warnings.push("La période ne contient aucun mois d’hiver alors que des passages d’hiver sont définis.");
+        warnings.push(
+          "La période ne contient aucun mois d’hiver alors que des passages d’hiver sont définis.",
+        );
       }
       if (totalPassages === 0 && (passHiver > 0 || passEte > 0)) {
-        warnings.push("Avec ces paramètres, le total de passages calculé est de 0. Vérifie la date de début, la durée et la fréquence.");
+        warnings.push(
+          "Avec ces paramètres, le total de passages calculé est de 0. Vérifie la date de début, la durée et la fréquence.",
+        );
       }
     }
 
     if (warnings.length > 0) {
-      warnBox.innerHTML = 
+      warnBox.innerHTML =
         `<span style="font-size:18px;line-height:1;">⚠️</span>` +
         `<div><strong>Attention à la configuration du contrat :</strong><br>${warnings.join("<br>")}</div>`;
       warnBox.classList.remove("hidden");
@@ -14840,10 +14900,14 @@ function recomputeContract() {
   }
 
   // 6) Calcul prix (inchangé)
-  const clientType   = document.getElementById("ctClientType")?.value || "particulier";
-  const mainService  = document.getElementById("ctMainService")?.value || "piscine_chlore";
-  const includeOpen  = document.getElementById("ctIncludeOpening")?.checked || false;
-  const includeWinter= document.getElementById("ctIncludeWinter")?.checked || false;
+  const clientType =
+    document.getElementById("ctClientType")?.value || "particulier";
+  const mainService =
+    document.getElementById("ctMainService")?.value || "piscine_chlore";
+  const includeOpen =
+    document.getElementById("ctIncludeOpening")?.checked || false;
+  const includeWinter =
+    document.getElementById("ctIncludeWinter")?.checked || false;
   const airbnbOption = document.getElementById("ctAirbnb")?.checked || false;
 
   const unitPrice = getTarifFromTemplates(mainService, clientType) || 0;
@@ -14863,33 +14927,34 @@ function recomputeContract() {
   let totalHT = totalPassages * unitPrice + extra;
   let airbnbExtra = 0;
   if (airbnbOption && totalHT > 0) {
-    airbnbExtra = totalHT * 0.20;
+    airbnbExtra = totalHT * 0.2;
     totalHT += airbnbExtra;
   }
 
   const tvaRateInput = document.getElementById("tvaRate");
   const tvaRate = tvaRateInput
-    ? (parseFloat(String(tvaRateInput.value).replace(",", ".")) || 0)
+    ? parseFloat(String(tvaRateInput.value).replace(",", ".")) || 0
     : 0;
 
   const tvaAmount = totalHT * (tvaRate / 100);
-  const totalTTC  = totalHT + tvaAmount;
+  const totalTTC = totalHT + tvaAmount;
 
-  const unitInput   = document.getElementById("ctUnitPrice");
-  const totalHTInput= document.getElementById("ctTotalHT");
-  const recapPass   = document.getElementById("ctRecapPassages");
-  const recapPrice  = document.getElementById("ctRecapPrice");
-  const recapTotal  = document.getElementById("ctRecapTotal");
+  const unitInput = document.getElementById("ctUnitPrice");
+  const totalHTInput = document.getElementById("ctTotalHT");
+  const recapPass = document.getElementById("ctRecapPassages");
+  const recapPrice = document.getElementById("ctRecapPrice");
+  const recapTotal = document.getElementById("ctRecapTotal");
 
   const format =
     typeof formatEuro === "function"
       ? formatEuro
       : (v) => (v.toFixed ? v.toFixed(2) + " €" : v + " €");
 
-  if (unitInput)   unitInput.value   = unitPrice ? format(unitPrice) : "0,00 €";
+  if (unitInput) unitInput.value = unitPrice ? format(unitPrice) : "0,00 €";
   if (totalHTInput) totalHTInput.value = format(totalHT);
-  if (recapPass)   recapPass.textContent  = totalPassages.toString();
-  if (recapPrice)  recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
+  if (recapPass) recapPass.textContent = totalPassages.toString();
+  if (recapPrice)
+    recapPrice.textContent = unitPrice ? format(unitPrice) : "0,00 €";
 
   let labelAmount = "";
   let displayAmount = 0;
@@ -14913,8 +14978,12 @@ function recomputeContract() {
 // ----- Construction d'un objet contrat depuis le formulaire -----
 
 function buildContractFromForm(showErrors) {
-  const clientName = (document.getElementById("ctClientName")?.value || "").trim();
-  const clientAddress = (document.getElementById("ctClientAddress")?.value || "").trim();
+  const clientName = (
+    document.getElementById("ctClientName")?.value || ""
+  ).trim();
+  const clientAddress = (
+    document.getElementById("ctClientAddress")?.value || ""
+  ).trim();
 
   if (showErrors && (!clientName || !clientAddress)) {
     showConfirmDialog({
@@ -14923,7 +14992,7 @@ function buildContractFromForm(showErrors) {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return null;
   }
@@ -14934,11 +15003,12 @@ function buildContractFromForm(showErrors) {
   if (showErrors && !clientTypeValue) {
     showConfirmDialog({
       title: "Type de client manquant",
-      message: "Merci de sélectionner un type de client (Particulier ou Syndic / Agence).",
+      message:
+        "Merci de sélectionner un type de client (Particulier ou Syndic / Agence).",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return null;
   }
@@ -14949,26 +15019,31 @@ function buildContractFromForm(showErrors) {
     address: clientAddress,
     phone: (document.getElementById("ctClientPhone")?.value || "").trim(),
     email: (document.getElementById("ctClientEmail")?.value || "").trim(),
-    reference: (document.getElementById("ctReference")?.value || "").trim()
+    reference: (document.getElementById("ctReference")?.value || "").trim(),
   };
 
   const site = {
     civility: (document.getElementById("ctSiteCivility")?.value || "").trim(),
     name: (document.getElementById("ctSiteName")?.value || "").trim(),
-    address: (document.getElementById("ctSiteAddress")?.value || "").trim()
+    address: (document.getElementById("ctSiteAddress")?.value || "").trim(),
   };
 
   const pool = {
     type: (document.getElementById("ctPoolType")?.value || "").trim(),
     equipment: (document.getElementById("ctEquipment")?.value || "").trim(),
     volume: (document.getElementById("ctVolume")?.value || "").trim(),
-    notes: (document.getElementById("ctNotes")?.value || "").trim()
+    notes: (document.getElementById("ctNotes")?.value || "").trim(),
   };
 
-  const startDate = (document.getElementById("ctStartDate")?.value || "").trim();
-  const duration = parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
+  const startDate = (
+    document.getElementById("ctStartDate")?.value || ""
+  ).trim();
+  const duration =
+    parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
 
-  const totalPassagesStr = (document.getElementById("ctTotalPassages")?.value || "0").trim();
+  const totalPassagesStr = (
+    document.getElementById("ctTotalPassages")?.value || "0"
+  ).trim();
   const totalPassages = parseInt(totalPassagesStr || "0", 10) || 0;
 
   // Reprendre les valeurs numériques des champs formatés
@@ -14979,12 +15054,11 @@ function buildContractFromForm(showErrors) {
     .replace(/\s|€|€/g, "")
     .replace(",", ".");
 
-// 🚫 Blocage TVA micro pour CONTRAT
-if (!enforceContractMicroTVA()) {
-  return; // ❌ on empêche la sauvegarde du contrat
-}
+  // 🚫 Blocage TVA micro pour CONTRAT
+  if (!enforceContractMicroTVA()) {
+    return; // ❌ on empêche la sauvegarde du contrat
+  }
 
-    
   // TVA pour le contrat (on lit le même champ que devis/factures)
   const tvaRateInput = document.getElementById("tvaRate");
   const tvaRate = tvaRateInput ? parseFloat(tvaRateInput.value) || 0 : 0;
@@ -14992,40 +15066,43 @@ if (!enforceContractMicroTVA()) {
   const tvaAmount = totalHTNum * (tvaRate / 100);
   const totalTTC = totalHTNum + tvaAmount;
 
-const pricing = {
-  clientType: clientTypeValue || "particulier",
+  const pricing = {
+    clientType: clientTypeValue || "particulier",
 
-  mainService: (document.getElementById("ctMainService")?.value || "piscine_chlore").trim(),
-  mode: (document.getElementById("ctMode")?.value || "standard").trim(),
-  passHiver: parseInt(document.getElementById("ctPassHiver")?.value || "0", 10) || 0,
-  passEte: parseInt(document.getElementById("ctPassEte")?.value || "0", 10) || 0,
-  startDate,
-  durationMonths: duration,
-  endDateLabel: (document.getElementById("ctEndDate")?.value || "").trim(),
-  periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
-  totalPassages,
-  unitPrice: parseFloat(unitPriceStr) || 0,
-  totalHT: totalHTNum,
-  tvaRate,
-  tvaAmount,
-  totalTTC,
+    mainService: (
+      document.getElementById("ctMainService")?.value || "piscine_chlore"
+    ).trim(),
+    mode: (document.getElementById("ctMode")?.value || "standard").trim(),
+    passHiver:
+      parseInt(document.getElementById("ctPassHiver")?.value || "0", 10) || 0,
+    passEte:
+      parseInt(document.getElementById("ctPassEte")?.value || "0", 10) || 0,
+    startDate,
+    durationMonths: duration,
+    endDateLabel: (document.getElementById("ctEndDate")?.value || "").trim(),
+    periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
+    totalPassages,
+    unitPrice: parseFloat(unitPriceStr) || 0,
+    totalHT: totalHTNum,
+    tvaRate,
+    tvaAmount,
+    totalTTC,
 
-  // 🔹 NOUVEAUX CHAMPS FACTURATION
+    // 🔹 NOUVEAUX CHAMPS FACTURATION
 
-  billingMode: document.getElementById("ctBillingMode")?.value || "annuel",
-  nextInvoiceDate: "",
+    billingMode: document.getElementById("ctBillingMode")?.value || "annuel",
+    nextInvoiceDate: "",
 
-  // ---------- Options forfaitaires ----------
+    // ---------- Options forfaitaires ----------
 
-  includeOpening: document.getElementById("ctIncludeOpening")?.checked || false,
-  includeWinter:  document.getElementById("ctIncludeWinter")?.checked  || false,
+    includeOpening:
+      document.getElementById("ctIncludeOpening")?.checked || false,
+    includeWinter: document.getElementById("ctIncludeWinter")?.checked || false,
 
-  // ---------- Usage Airbnb ----------
+    // ---------- Usage Airbnb ----------
 
-  airbnbOption: document.getElementById("ctAirbnb")?.checked || false
-};
-
-
+    airbnbOption: document.getElementById("ctAirbnb")?.checked || false,
+  };
 
   // On récupère l'existant si on édite un contrat déjà sauvegardé
 
@@ -15043,7 +15120,7 @@ const pricing = {
     // on garde status/meta si ça existe déjà
     status: existing?.status || null,
     meta: existing?.meta || {},
-    createdAt: existing?.createdAt || new Date().toISOString()
+    createdAt: existing?.createdAt || new Date().toISOString(),
   };
 
   return contract;
@@ -15056,11 +15133,11 @@ function fillContractForm(contract) {
 
   currentContractId = contract.id;
 
-  const c    = contract.client  || {};
-  const s    = contract.site    || {};
-  const p    = contract.pool    || {};
-  const pr   = contract.pricing || {};
-  const meta = contract.meta    || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+  const p = contract.pool || {};
+  const pr = contract.pricing || {};
+  const meta = contract.meta || {};
 
   // ---------- 1. CLIENT ----------
   const ctClientCiv = document.getElementById("ctClientCivility");
@@ -15106,8 +15183,8 @@ function fillContractForm(contract) {
 
   // ---------- 4. TYPE CLIENT ----------
   const ctHiddenType = document.getElementById("ctClientType");
-  const ctPartRadio  = document.getElementById("ctClientParticulier");
-  const ctSynRadio   = document.getElementById("ctClientSyndic");
+  const ctPartRadio = document.getElementById("ctClientParticulier");
+  const ctSynRadio = document.getElementById("ctClientSyndic");
 
   const type = pr.clientType === "syndic" ? "syndic" : "particulier";
 
@@ -15173,35 +15250,48 @@ function fillContractForm(contract) {
 
   const airbnbEl = document.getElementById("ctAirbnb");
   if (airbnbEl) airbnbEl.checked = !!pr.airbnbOption;
+  
+// ---------- 7. TVA ----------
 
-  // ---------- 7. TVA ----------
-  if (typeof pr.tvaRate === "number") {
-    const tvaRateInput = document.getElementById("tvaRate");
-    if (tvaRateInput) tvaRateInput.value = pr.tvaRate;
+  const status = getMicroTvaStatus(); // "franchise" ou "obligatoire"
 
-    const tva0  = document.getElementById("tva0");
-    const tva20 = document.getElementById("tva20");
-    if (tva0 && tva20) {
-      if (pr.tvaRate === 0) {
-        tva0.checked = true;
-        tva20.checked = false;
-      } else {
-        tva20.checked = true;
-        tva0.checked = false;
-      }
-    }
+  // TVA sauvegardée dans le contrat (si présente)
+  const savedRate =
+    typeof pr.tvaRate === "number" ? Number(pr.tvaRate) : 0;
+
+  // 🔒 Règle micro : franchise => 0 ; obligatoire => 20
+  const forcedRate = status === "obligatoire" ? 20 : 0;
+
+  // Si micro oblige, on force 20. Sinon on garde la TVA du contrat (normalement 0).
+  const finalRate = status === "obligatoire" ? forcedRate : savedRate;
+
+  // ✅ toujours passer par setTVA (met à jour UI + notes + totaux)
+  if (typeof setTVA === "function") {
+    setTVA(finalRate);
   }
 
-  // ---------- 8. BANDEAU DEVIS LIÉ (COULEUR) ----------
+  // ✅ synchroniser les radios du contrat
+  const ct0 = document.getElementById("ctTva0");
+  const ct20 = document.getElementById("ctTva20");
+  if (ct0 && ct20) {
+    ct0.checked = finalRate === 0;
+    ct20.checked = finalRate === 20;
+  }
+
+  // 🔒 garde-fou (empêche 20 si franchise)
+  enforceContractMicroTVA(false);
+
+
+// ---------- 8. BANDEAU DEVIS LIÉ (COULEUR) ----------
   let linkedDevis = null;
   if (typeof getAllDocuments === "function" && meta.sourceDevisId) {
     const docs = getAllDocuments();
-    linkedDevis = docs.find(d => d.id === meta.sourceDevisId) || null;
+    linkedDevis = docs.find((d) => d.id === meta.sourceDevisId) || null;
   }
   updateCtDevisBanner(linkedDevis, meta);
 
   // ---------- 9. PRIX ----------
-  const unitInput  = document.getElementById("ctUnitPrice");
+  const unitInput = document.getElementById("ctUnitPrice");
   const totalHTInp = document.getElementById("ctTotalHT");
 
   if (unitInput) {
@@ -15213,7 +15303,7 @@ function fillContractForm(contract) {
 
   // ---------- 10. Type de bassin -> prestation ----------
   const ctMainService = document.getElementById("ctMainService");
-  const ctPoolTypeEl  = document.getElementById("ctPoolType");
+  const ctPoolTypeEl = document.getElementById("ctPoolType");
   if (ctPoolTypeEl && ctMainService) {
     ctPoolTypeEl.dispatchEvent(new Event("change"));
   }
@@ -15233,11 +15323,12 @@ function fillContractForm(contract) {
   if (ctStatus) {
     // On récupère le statut du devis lié si présent
     const meta = contract.meta || {};
-    let statusCode =
-      (meta.sourceDevisStatus ||
-       meta.devisStatus ||
-       contract.status ||
-       "").toLowerCase();
+    let statusCode = (
+      meta.sourceDevisStatus ||
+      meta.devisStatus ||
+      contract.status ||
+      ""
+    ).toLowerCase();
 
     let displayStatus = "En attente"; // valeur par défaut
 
@@ -15248,8 +15339,10 @@ function fillContractForm(contract) {
     if (statusCode === "accepte" || statusCode === "accepted") {
       displayStatus = "En cours";
     } else if (
-      statusCode === "refuse"  || statusCode === "refused" ||
-      statusCode === "expire" || statusCode === "expired"
+      statusCode === "refuse" ||
+      statusCode === "refused" ||
+      statusCode === "expire" ||
+      statusCode === "expired"
     ) {
       displayStatus = "Non validé";
     } else {
@@ -15260,7 +15353,6 @@ function fillContractForm(contract) {
     ctStatus.textContent = displayStatus;
   }
 }
-
 
 /* ============================================================
    BANDEAU COULEUR POUR CONTRAT LIÉ AU DEVIS
@@ -15277,11 +15369,12 @@ function updateCtDevisBanner(devis, metaFallback) {
   let statusCode = "";
 
   if (devis) {
-    number     = devis.number || "";
+    number = devis.number || "";
     statusCode = devis.status || "";
   } else {
-    number     = metaFallback.sourceDevisNumber || "";
-    statusCode = metaFallback.sourceDevisStatus || metaFallback.devisStatus || "";
+    number = metaFallback.sourceDevisNumber || "";
+    statusCode =
+      metaFallback.sourceDevisStatus || metaFallback.devisStatus || "";
   }
 
   // Pas de devis → rien à afficher
@@ -15296,37 +15389,37 @@ function updateCtDevisBanner(devis, metaFallback) {
   let bg, color, border, label;
 
   if (norm === "accepted" || norm === "accepte") {
-    bg     = "#E8F7E8";
-    color  = "#1E7C1E";
+    bg = "#E8F7E8";
+    color = "#1E7C1E";
     border = "#3CB43C";
-    label  = "Accepté";
+    label = "Accepté";
   } else if (norm === "closed" || norm === "cloture") {
-    bg     = "#E0E0E0";
-    color  = "#424242";
+    bg = "#E0E0E0";
+    color = "#424242";
     border = "#BDBDBD";
-    label  = "Clôturé";
+    label = "Clôturé";
   } else if (norm === "refused" || norm === "refuse") {
-    bg     = "#FFE5E5";
-    color  = "#C62828";
+    bg = "#FFE5E5";
+    color = "#C62828";
     border = "#E57373";
-    label  = "Refusé";
+    label = "Refusé";
   } else if (norm === "expired" || norm === "expire") {
-    bg     = "#FFECD9";
-    color  = "#E67E22";
+    bg = "#FFECD9";
+    color = "#E67E22";
     border = "#FFB56A";
-    label  = "Expiré";
+    label = "Expiré";
   } else {
     // En attente / inconnu
-    bg     = "#FFF6D8";
-    color  = "#8E6C00";
+    bg = "#FFF6D8";
+    color = "#8E6C00";
     border = "#EBCB66";
-    label  = "En attente";
+    label = "En attente";
   }
 
-  banner.style.display    = "block";
+  banner.style.display = "block";
   banner.style.background = bg;
   banner.style.borderLeft = `4px solid ${border}`;
-  banner.style.color      = color;
+  banner.style.color = color;
 
   banner.textContent = `Contrat lié au devis ${number} (${label})`;
 }
@@ -15346,7 +15439,7 @@ function rebuildContractInvoices(contract) {
   const totalInstallments = getNumberOfInstallments(pr);
 
   // 1️⃣ Supprimer toutes les factures liées à ce contrat
-  docs = docs.filter(doc => doc.contractId !== contract.id);
+  docs = docs.filter((doc) => doc.contractId !== contract.id);
 
   // 2️⃣ Réinitialiser la prochaine échéance
   pr.nextInvoiceDate = "";
@@ -15371,10 +15464,8 @@ function rebuildContractInvoices(contract) {
 
   // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui,
   //    SANS dépasser le nombre d'échéances prévues
-  while (pr.nextInvoiceDate &&
-         installmentsCount < totalInstallments) {
-
-    const nextISO  = pr.nextInvoiceDate;
+  while (pr.nextInvoiceDate && installmentsCount < totalInstallments) {
+    const nextISO = pr.nextInvoiceDate;
     const nextDate = new Date(nextISO + "T00:00:00");
     if (isNaN(nextDate.getTime()) || nextDate > todayObj) {
       break;
@@ -15392,7 +15483,7 @@ function rebuildContractInvoices(contract) {
     if (typeof saveSingleDocumentToFirestore === "function") {
       saveSingleDocumentToFirestore(inv);
     }
-    saveDocuments(docs);  // pour que getNextNumber voie ce numéro
+    saveDocuments(docs); // pour que getNextNumber voie ce numéro
 
     installmentsCount++;
 
@@ -15405,8 +15496,8 @@ function rebuildContractInvoices(contract) {
 
   contract.pricing = pr;
 
-  const allContracts = getAllContracts().map(c =>
-    c.id === contract.id ? contract : c
+  const allContracts = getAllContracts().map((c) =>
+    c.id === contract.id ? contract : c,
   );
   saveContracts(allContracts);
 
@@ -15418,13 +15509,10 @@ function rebuildContractInvoices(contract) {
   return true;
 }
 
-
-
-
 function updateContractTransformButtonVisibility() {
-  const btnTop    = document.getElementById("contractTransformButtonTop");
+  const btnTop = document.getElementById("contractTransformButtonTop");
   const btnBottom = document.getElementById("contractTransformButtonBottom");
-  const visible   = !!currentContractId;
+  const visible = !!currentContractId;
 
   if (btnTop) {
     btnTop.style.display = visible ? "inline-block" : "none";
@@ -15434,13 +15522,11 @@ function updateContractTransformButtonVisibility() {
   }
 }
 
-
-
 // ----- Sauvegarde -----
 
 function saveContract() {
   // 🔒 Vérification des champs obligatoires
-  const startDateEl   = document.getElementById("ctStartDate");
+  const startDateEl = document.getElementById("ctStartDate");
   const billingModeEl = document.getElementById("ctBillingMode");
 
   if (!startDateEl.value) {
@@ -15449,7 +15535,7 @@ function saveContract() {
       message: "Veuillez renseigner la date de début du contrat.",
       confirmLabel: "OK",
       variant: "error",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -15460,7 +15546,7 @@ function saveContract() {
       message: "Merci de sélectionner un mode de facturation.",
       confirmLabel: "OK",
       variant: "error",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -15480,22 +15566,30 @@ function saveContract() {
     }
   }
   if (pr.clientType === "syndic") {
-    if (!["mensuel", "trimestriel", "semestriel", "annuel"].includes(pr.billingMode)) {
+    if (
+      !["mensuel", "trimestriel", "semestriel", "annuel"].includes(
+        pr.billingMode,
+      )
+    ) {
       pr.billingMode = "annuel";
     }
   }
 
-if (pr.clientType === "syndic") {
-    if (!["mensuel", "trimestriel", "semestriel", "annuel"].includes(pr.billingMode)) {
-        pr.billingMode = "annuel";
+  if (pr.clientType === "syndic") {
+    if (
+      !["mensuel", "trimestriel", "semestriel", "annuel"].includes(
+        pr.billingMode,
+      )
+    ) {
+      pr.billingMode = "annuel";
     }
-}
+  }
 
   // 3️⃣ Normalisation du contrat (statut, meta, etc.)
   contract = normalizeContractBeforeSave(contract);
 
   const list = getAllContracts();
-  const idx = list.findIndex(c => c.id === contract.id);
+  const idx = list.findIndex((c) => c.id === contract.id);
 
   const isNew = idx === -1;
 
@@ -15521,15 +15615,14 @@ if (pr.clientType === "syndic") {
 
   // ⚠️ pr est DÉJÀ défini plus haut dans saveContract()
   // on ne le redéclare pas ici, on se contente de lire clientType
-  const clientType  =
+  const clientType =
     (contract.pricing && contract.pricing.clientType) || "particulier";
   const devisNeeded = isDevisObligatoireForContract(contract);
-  const devisOK     = isDevisAcceptedForContract(contract);
+  const devisOK = isDevisAcceptedForContract(contract);
   const linkedDevis = getLinkedDevisForContract(contract);
 
   // ️⛔ Cas 1 : devis OBLIGATOIRE mais PAS encore accepté
   if (devisNeeded && !devisOK) {
-
     const devisNum = linkedDevis ? linkedDevis.number : null;
 
     let msg;
@@ -15560,9 +15653,9 @@ if (pr.clientType === "syndic") {
           }
 
           const contractView = document.getElementById("contractView");
-          const formView     = document.getElementById("formView");
+          const formView = document.getElementById("formView");
           if (contractView) contractView.classList.add("hidden");
-          if (formView)     formView.classList.remove("hidden");
+          if (formView) formView.classList.remove("hidden");
 
           if (typeof loadDocumentsList === "function") {
             loadDocumentsList();
@@ -15579,7 +15672,7 @@ if (pr.clientType === "syndic") {
             maybeProposeDevisForContract(contract);
           }
         }
-      }
+      },
     });
 
     // ❗Important : pas de facturation tant que devis pas accepté
@@ -15607,7 +15700,7 @@ if (pr.clientType === "syndic") {
         message: "La facture initiale a été générée automatiquement 💶",
         confirmLabel: "OK",
         variant: "success",
-        icon: "💶"
+        icon: "💶",
       });
     }
 
@@ -15624,7 +15717,6 @@ if (pr.clientType === "syndic") {
     if (typeof checkScheduledInvoices === "function") {
       checkScheduledInvoices();
     }
-
   } else {
     // ======= CONTRAT EXISTANT =======
     rebuildContractInvoices(contract);
@@ -15634,7 +15726,7 @@ if (pr.clientType === "syndic") {
       message: "Le contrat et toute la facturation ont été recalculés ✔️",
       confirmLabel: "OK",
       variant: "success",
-      icon: "🔁"
+      icon: "🔁",
     });
 
     return;
@@ -15647,18 +15739,16 @@ if (pr.clientType === "syndic") {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 
-if (typeof refreshHomeStats === "function") {
+  if (typeof refreshHomeStats === "function") {
     refreshHomeStats();
-}
+  }
 
-if (typeof refreshDocumentHealthUI === "function") {
-  refreshDocumentHealthUI(contract);
-}
-
-
+  if (typeof refreshDocumentHealthUI === "function") {
+    refreshDocumentHealthUI(contract);
+  }
 }
 
 function resetContractFormToDefaults() {
@@ -15691,9 +15781,9 @@ function resetContractFormToDefaults() {
   const ctMainService = document.getElementById("ctMainService");
   if (ctMainService) ctMainService.value = "piscine_chlore";
   const ctPartRadio = document.getElementById("ctClientParticulier");
-  const ctSynRadio  = document.getElementById("ctClientSyndic");
+  const ctSynRadio = document.getElementById("ctClientSyndic");
   if (ctPartRadio) ctPartRadio.checked = true;
-  if (ctSynRadio)  ctSynRadio.checked  = false;
+  if (ctSynRadio) ctSynRadio.checked = false;
 
   updateContractClientType("particulier");
   const ctMode = document.getElementById("ctMode");
@@ -15743,7 +15833,6 @@ function firstDayOfMonthISO(isoDate) {
   return d.toISOString().slice(0, 10);
 }
 
-
 function monthYearFr(isoDate) {
   if (!isoDate) return "";
   // On force en ISO + heure neutre pour éviter les décalages
@@ -15753,16 +15842,17 @@ function monthYearFr(isoDate) {
   // Exemple : "mai 2026"
   return d.toLocaleDateString("fr-FR", {
     month: "long",
-    year: "numeric"
+    year: "numeric",
   });
 }
-
 
 // ----- Suppression -----
 
 function deleteCurrentContract() {
   const ref = (document.getElementById("ctReference")?.value || "").trim();
-  const clientName = (document.getElementById("ctClientName")?.value || "").trim();
+  const clientName = (
+    document.getElementById("ctClientName")?.value || ""
+  ).trim();
   const label = clientName || ref || "Contrat";
 
   // 1) Aucun contrat enregistré (pas encore sauvegardé)
@@ -15778,7 +15868,7 @@ function deleteCurrentContract() {
       icon: "⚠️",
       onConfirm: function () {
         resetContractFormToDefaults();
-      }
+      },
     });
     return;
   }
@@ -15801,13 +15891,11 @@ function deleteCurrentContract() {
       currentContractId = null;
 
       resetContractFormToDefaults();
-    }
+    },
   });
-if (typeof refreshHomeStats === "function") {
+  if (typeof refreshHomeStats === "function") {
     refreshHomeStats();
-}
-
-
+  }
 }
 
 function formatNicePeriod(startISO, endRaw) {
@@ -15841,17 +15929,17 @@ function formatNicePeriod(startISO, endRaw) {
 const RESILIATION_PREAVIS_DAYS = 30; // adapte si besoin (45, 60...)
 
 function createTerminationInvoiceForContract(contract) {
-  const c    = contract.client  || {};
-  const s    = contract.site    || {};
-  const pr   = contract.pricing || {};
-  const meta = contract.meta    || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+  const pr = contract.pricing || {};
+  const meta = contract.meta || {};
 
   const totalContractHT = Number(pr.totalHT) || 0;
-  const tvaRate         = Number(pr.tvaRate) || 0;
+  const tvaRate = Number(pr.tvaRate) || 0;
 
   // Si on n'a pas de date de début ou de fréquence, on retombe sur l'ancienne logique "reste du contrat"
   const hasPassHiver = pr.passHiver !== undefined && pr.passHiver !== null;
-  const hasPassEte   = pr.passEte   !== undefined && pr.passEte   !== null;
+  const hasPassEte = pr.passEte !== undefined && pr.passEte !== null;
 
   if (!pr.startDate || !pr.durationMonths || (!hasPassHiver && !hasPassEte)) {
     return createTerminationInvoiceSimple(contract);
@@ -15884,12 +15972,12 @@ function createTerminationInvoiceForContract(contract) {
   }
 
   // 2) Date de résiliation + préavis
-  let resISO  = meta.resiliationDate || new Date().toISOString().slice(0, 10);
+  let resISO = meta.resiliationDate || new Date().toISOString().slice(0, 10);
   let resDate = new Date(resISO + "T00:00:00");
   if (isNaN(resDate.getTime())) {
     resDate = new Date();
     resDate.setHours(0, 0, 0, 0);
-    resISO  = resDate.toISOString().slice(0, 10);
+    resISO = resDate.toISOString().slice(0, 10);
   }
 
   const who = meta.resiliationWho || "client";
@@ -15906,15 +15994,18 @@ function createTerminationInvoiceForContract(contract) {
     effectiveEnd = contractEnd;
   }
 
-  const startISO        = pr.startDate;
+  const startISO = pr.startDate;
   const effectiveEndISO = effectiveEnd.toISOString().slice(0, 10);
 
   // 3) Calcul du nombre de mois été / hiver sur la période début -> résiliation+préavis
-  const { monthsEte, monthsHiver } = computeMonthsEteHiverBetween(startISO, effectiveEndISO);
+  const { monthsEte, monthsHiver } = computeMonthsEteHiverBetween(
+    startISO,
+    effectiveEndISO,
+  );
 
   // 4) Passages théoriques sur cette période
   const passHiver = Number(pr.passHiver) || 0;
-  const passEte   = Number(pr.passEte)   || 0;
+  const passEte = Number(pr.passEte) || 0;
   const unitPrice =
     Number(pr.unitPrice) ||
     (pr.totalPassages ? (Number(pr.totalHT) || 0) / pr.totalPassages : 0);
@@ -15934,7 +16025,7 @@ function createTerminationInvoiceForContract(contract) {
   // 5) Montant déjà facturé pour ce contrat
   const docs = getAllDocuments();
   const alreadyBilledHT = docs
-    .filter(d => d.type === "facture" && d.contractId === contract.id)
+    .filter((d) => d.type === "facture" && d.contractId === contract.id)
     .reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
 
   // 6) Solde à facturer
@@ -15944,18 +16035,18 @@ function createTerminationInvoiceForContract(contract) {
   }
 
   const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
-  const totalTTC  = remainingHT + tvaAmount;
+  const totalTTC = remainingHT + tvaAmount;
 
-  const number   = getNextNumber("facture");
+  const number = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   // 💡 Date de facture = fin effective du contrat (sans aller dans le futur)
   const invoiceDateISO =
     effectiveEndISO <= todayISO ? effectiveEndISO : todayISO;
 
-  const baseLabel       = "Facture de clôture – Contrat d’entretien";
+  const baseLabel = "Facture de clôture – Contrat d’entretien";
   const formattedPeriod = formatNicePeriod(startISO, effectiveEndISO);
-  const subject         = formattedPeriod
+  const subject = formattedPeriod
     ? `${baseLabel} ${formattedPeriod}`
     : baseLabel;
 
@@ -15968,63 +16059,64 @@ function createTerminationInvoiceForContract(contract) {
         ? `, en incluant un préavis de ${RESILIATION_PREAVIS_DAYS} jours.`
         : `. `),
     `Le montant tient compte des factures déjà émises pour ce contrat.`,
-    `Les conditions générales restent applicables.`
+    `Les conditions générales restent applicables.`,
   ].join("\n");
 
   const prestations = [
     {
-      desc:   lineDesc,
-      detail: "Solde restant dû au titre du contrat d’entretien (prorata + préavis).",
-      qty:    1,
-      price:  remainingHT,
-      total:  remainingHT,
-      unit:   "forfait",
-      dates:  [],
-      kind:   "contrat_resiliation"
-    }
+      desc: lineDesc,
+      detail:
+        "Solde restant dû au titre du contrat d’entretien (prorata + préavis).",
+      qty: 1,
+      price: remainingHT,
+      total: remainingHT,
+      unit: "forfait",
+      dates: [],
+      kind: "contrat_resiliation",
+    },
   ];
 
   const facture = {
     id: generateId("FAC"),
     type: "facture",
     number,
-    date: invoiceDateISO,       // 🔥 ICI : fin de contrat, plus todayISO
+    date: invoiceDateISO, // 🔥 ICI : fin de contrat, plus todayISO
     validityDate: "",
     subject,
 
-    contractId:        contract.id || null,
+    contractId: contract.id || null,
     contractReference: c.reference || "",
 
     client: {
       civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
+      name: c.name || "",
+      address: c.address || "",
+      phone: c.phone || "",
+      email: c.email || "",
     },
 
     siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
+    siteName: s.name || "",
+    siteAddress: s.address || "",
 
     prestations,
     tvaRate,
-    subtotal:       remainingHT,
-    discountRate:   0,
+    subtotal: remainingHT,
+    discountRate: 0,
     discountAmount: 0,
     tvaAmount,
     totalTTC,
 
     notes,
 
-    paid:        false,
+    paid: false,
     paymentMode: "",
     paymentDate: "",
 
     status: "",
     conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
 
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
   docs.push(facture);
@@ -16037,26 +16129,26 @@ function createTerminationInvoiceForContract(contract) {
 }
 
 function createTerminationInvoiceSimple(contract) {
-  const c   = contract.client  || {};
-  const s   = contract.site    || {};
-  const pr  = contract.pricing || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+  const pr = contract.pricing || {};
 
   const totalContractHT = Number(pr.totalHT) || 0;
-  const tvaRate         = Number(pr.tvaRate) || 0;
+  const tvaRate = Number(pr.tvaRate) || 0;
 
   // Montant déjà facturé pour ce contrat
   const docs = getAllDocuments();
   const alreadyBilledHT = docs
-    .filter(d => d.type === "facture" && d.contractId === contract.id)
+    .filter((d) => d.type === "facture" && d.contractId === contract.id)
     .reduce((sum, d) => sum + (Number(d.subtotal) || 0), 0);
 
   const remainingHT = Math.max(0, totalContractHT - alreadyBilledHT);
   if (remainingHT <= 0) return null;
 
   const tvaAmount = tvaRate > 0 ? remainingHT * (tvaRate / 100) : 0;
-  const totalTTC  = remainingHT + tvaAmount;
+  const totalTTC = remainingHT + tvaAmount;
 
- const number = getNextNumber("facture");
+  const number = getNextNumber("facture");
 
   const todayISO = new Date().toISOString().slice(0, 10);
 
@@ -16071,17 +16163,17 @@ function createTerminationInvoiceSimple(contract) {
       total: remainingHT,
       unit: "forfait",
       dates: [],
-      kind: "contrat_resiliation"
-    }
+      kind: "contrat_resiliation",
+    },
   ];
 
   const notes = [
     "Facture de clôture émise suite à la résiliation du contrat d’entretien.",
-    "Le montant facturé correspond au solde restant dû conformément aux conditions contractuelles."
+    "Le montant facturé correspond au solde restant dû conformément aux conditions contractuelles.",
   ].join("\n");
 
   const facture = {
-   id: generateId("FAC"),
+    id: generateId("FAC"),
     type: "facture",
     number,
     date: todayISO,
@@ -16093,15 +16185,15 @@ function createTerminationInvoiceSimple(contract) {
 
     client: {
       civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
+      name: c.name || "",
+      address: c.address || "",
+      phone: c.phone || "",
+      email: c.email || "",
     },
 
     siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
+    siteName: s.name || "",
+    siteAddress: s.address || "",
 
     prestations,
     tvaRate,
@@ -16119,7 +16211,7 @@ function createTerminationInvoiceSimple(contract) {
     status: "",
     conditionsType: pr.clientType === "syndic" ? "agence" : "particulier",
 
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 
   docs.push(facture);
@@ -16129,7 +16221,6 @@ function createTerminationInvoiceSimple(contract) {
   }
   return facture;
 }
-
 
 function resiliateCurrentContract() {
   // On s'assure que le contrat est bien à jour
@@ -16151,8 +16242,9 @@ function resiliateCurrentContract() {
   //  - JJ/MM/AAAA (12/03/2025)
   let inputDate = window.prompt(
     "Date de réception du courrier recommandé (format AAAA-MM-JJ ou JJ/MM/AAAA).\n" +
-      "Laisse vide pour utiliser la date d'aujourd'hui : " + todayISO,
-    todayISO
+      "Laisse vide pour utiliser la date d'aujourd'hui : " +
+      todayISO,
+    todayISO,
   );
 
   if (inputDate === null) {
@@ -16204,9 +16296,9 @@ function resiliateCurrentContract() {
       contract.status = CONTRACT_STATUS.RESILIE;
       if (!contract.meta) contract.meta = {};
       contract.meta.resiliationDate = resISO;
-      contract.meta.resiliationWho  = "prestataire"; // ou "client" 
+      contract.meta.resiliationWho = "prestataire"; // ou "client"
 
-     // 🧹 On arrête l'échéancier : plus de prochaine facture
+      // 🧹 On arrête l'échéancier : plus de prochaine facture
       if (contract.pricing) {
         contract.pricing.nextInvoiceDate = "";
       }
@@ -16248,7 +16340,7 @@ function resiliateCurrentContract() {
             }
 
             const contractView = document.getElementById("contractView");
-            const formView     = document.getElementById("formView");
+            const formView = document.getElementById("formView");
             if (contractView) contractView.classList.add("hidden");
             if (formView) formView.classList.remove("hidden");
 
@@ -16258,7 +16350,7 @@ function resiliateCurrentContract() {
             if (typeof loadDocumentsList === "function") {
               loadDocumentsList();
             }
-          }
+          },
         });
       } else {
         // Rien à facturer
@@ -16269,14 +16361,12 @@ function resiliateCurrentContract() {
           confirmLabel: "OK",
           cancelLabel: "",
           variant: "success",
-          icon: "✅"
+          icon: "✅",
         });
       }
-    }
+    },
   });
 }
-
-
 
 function transformContractToInvoice() {
   // On recalcule d'abord le contrat depuis le formulaire
@@ -16286,11 +16376,11 @@ function transformContractToInvoice() {
 
   // 🔒 Blocage si devis obligatoire mais non accepté
   const devisNeeded = isDevisObligatoireForContract(contract);
-  const devisOK     = isDevisAcceptedForContract(contract);
+  const devisOK = isDevisAcceptedForContract(contract);
 
   if (devisNeeded && !devisOK) {
     const linkedDevis = getLinkedDevisForContract(contract);
-    const devisNum    = linkedDevis ? linkedDevis.number : null;
+    const devisNum = linkedDevis ? linkedDevis.number : null;
 
     let msg;
     if (linkedDevis && devisNum) {
@@ -16309,16 +16399,16 @@ function transformContractToInvoice() {
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "🧾"
+      icon: "🧾",
     });
     return;
   }
 
   // --- 🧾 Partie d'origine : on garde tout comme avant ---
 
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
-  const p  = contract.pool    || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+  const p = contract.pool || {};
   const pr = contract.pricing || {};
 
   // Détermination du libellé service
@@ -16345,7 +16435,7 @@ function transformContractToInvoice() {
 
   // Montants normaux du contrat
   const subtotal = Number(pr.totalHT) || 0;
-  const tvaRate  = Number(pr.tvaRate) || 0;
+  const tvaRate = Number(pr.tvaRate) || 0;
   const tvaAmount = tvaRate > 0 ? subtotal * (tvaRate / 100) : 0;
   const totalTTC = subtotal + tvaAmount;
 
@@ -16362,19 +16452,19 @@ function transformContractToInvoice() {
       total: subtotal,
       unit: "forfait",
       dates: [],
-      kind: "contrat_normal"
-    }
+      kind: "contrat_normal",
+    },
   ];
 
   const baseNotesLines =
     pr.clientType === "syndic"
       ? [
           "Règlement à 30 jours fin de mois.",
-          "Aucun escompte pour paiement anticipé. En cas de retard de paiement, des pénalités pourront être appliquées conformément aux conditions générales."
+          "Aucun escompte pour paiement anticipé. En cas de retard de paiement, des pénalités pourront être appliquées conformément aux conditions générales.",
         ]
       : [
           "Règlement comptant à réception de la facture.",
-          "Aucun escompte pour paiement anticipé. En cas de retard de paiement, des pénalités pourront être appliquées conformément aux conditions générales."
+          "Aucun escompte pour paiement anticipé. En cas de retard de paiement, des pénalités pourront être appliquées conformément aux conditions générales.",
         ];
 
   const notes = baseNotesLines.join("\n");
@@ -16389,11 +16479,11 @@ function transformContractToInvoice() {
       address: c.address || "",
       email: c.email || "",
       phone: c.phone || "",
-      reference: c.reference || ""
+      reference: c.reference || "",
     },
     site: {
       name: s.name || "",
-      address: s.address || ""
+      address: s.address || "",
     },
     subject,
     prestations,
@@ -16407,7 +16497,7 @@ function transformContractToInvoice() {
     paymentDate: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    contractId: contract.id || currentContractId || null
+    contractId: contract.id || currentContractId || null,
   };
 
   const docs = getAllDocuments();
@@ -16423,7 +16513,7 @@ function transformContractToInvoice() {
   }
 
   const contractView = document.getElementById("contractView");
-  const formView     = document.getElementById("formView");
+  const formView = document.getElementById("formView");
   if (contractView) contractView.classList.add("hidden");
   if (formView) formView.classList.remove("hidden");
 
@@ -16459,23 +16549,20 @@ function openContractPDF(previewOnly = false) {
     }
   }
 
-
-  const c   = contract.client  || {};
-  const s   = contract.site    || {};
-  const p   = contract.pool    || {};
-  const pr  = contract.pricing || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+  const p = contract.pool || {};
+  const pr = contract.pricing || {};
   const meta = contract.meta || {};
 
   const poolType = pr.mainService || p.type || "";
 
-  const isPiscine =
-    poolType === "piscine_sel" || poolType === "piscine_chlore";
+  const isPiscine = poolType === "piscine_sel" || poolType === "piscine_chlore";
 
   const isSpa =
     poolType === "entretien_jacuzzi" ||
     poolType === "spa" ||
     poolType === "spa_jacuzzi";
-   
 
   // Helper date FR
   const formatDateFR = (str) => {
@@ -16495,48 +16582,47 @@ function openContractPDF(previewOnly = false) {
       : (v) => (v && v.toFixed ? v.toFixed(2) + " €" : (v || 0) + " €");
 
   const logoSrc = "logo.png";
-const today   = new Date();
-const pdfDateStr = today.toLocaleDateString("fr-FR");
+  const today = new Date();
+  const pdfDateStr = today.toLocaleDateString("fr-FR");
 
-const startDateFR = formatDateFr(pr.startDate);
-const endDateFR   = formatDateFr(pr.endDateLabel);
+  const startDateFR = formatDateFr(pr.startDate);
+  const endDateFR = formatDateFr(pr.endDateLabel);
 
-// Libellé du bassin
-
+  // Libellé du bassin
 
   // Libellé du bassin
   const poolLabel =
     p.type === "piscine_sel"
       ? "Piscine au sel"
       : p.type === "piscine_chlore"
-      ? "Piscine au chlore"
-      : "Spa / Jacuzzi";
+        ? "Piscine au chlore"
+        : "Spa / Jacuzzi";
 
   // Titre et sous-titre d’en-tête
   const headerTitle = `CONTRAT D’ENTRETIEN – ${poolLabel.toUpperCase()}`;
   const headerPeriod =
-    startDateFR && endDateFR
-      ? `Période : ${startDateFR} → ${endDateFR}`
-      : "";
+    startDateFR && endDateFR ? `Période : ${startDateFR} → ${endDateFR}` : "";
 
   // ---------- 💰 Montants sécurisés ----------
-  const rawTotalHT   = Number(pr.totalHT) || 0;
-  const computedHT   = (pr.totalPassages || 0) * (pr.unitPrice || 0);
-  const totalHTSafe  = rawTotalHT > 0 ? rawTotalHT : computedHT;
+  const rawTotalHT = Number(pr.totalHT) || 0;
+  const computedHT = (pr.totalPassages || 0) * (pr.unitPrice || 0);
+  const totalHTSafe = rawTotalHT > 0 ? rawTotalHT : computedHT;
 
-  let baseHTForInfo       = totalHTSafe;
-  let airbnbExtraForInfo  = 0;
+  let baseHTForInfo = totalHTSafe;
+  let airbnbExtraForInfo = 0;
 
   if (pr.airbnbOption && totalHTSafe > 0) {
-    baseHTForInfo      = totalHTSafe / 1.2;         // base HT
+    baseHTForInfo = totalHTSafe / 1.2; // base HT
     airbnbExtraForInfo = totalHTSafe - baseHTForInfo;
   }
 
-  const tvaRate      = pr.tvaRate || 0;
+  const tvaRate = pr.tvaRate || 0;
   const rawTvaAmount = Number(pr.tvaAmount) || 0;
   const tvaAmountSafe =
     tvaRate > 0
-      ? (rawTvaAmount > 0 ? rawTvaAmount : totalHTSafe * (tvaRate / 100))
+      ? rawTvaAmount > 0
+        ? rawTvaAmount
+        : totalHTSafe * (tvaRate / 100)
       : 0;
 
   const totalTTCSafe = tvaRate > 0 ? totalHTSafe + tvaAmountSafe : totalHTSafe;
@@ -16592,20 +16678,26 @@ const endDateFR   = formatDateFr(pr.endDateLabel);
       `.</em>
       </p>`;
   }
-// ---------- 🔵 Bloc facturation de clôture (renouvelé ou résilié) ----------
-let terminationBillingBlockTop = "";
+  // ---------- 🔵 Bloc facturation de clôture (renouvelé ou résilié) ----------
+  let terminationBillingBlockTop = "";
 
-const docsForThis = getAllDocuments().filter(
-  d => d.type === "facture" && d.contractId === contract.id && d.prestations?.some(p => p.kind === "contrat_resiliation")
-);
+  const docsForThis = getAllDocuments().filter(
+    (d) =>
+      d.type === "facture" &&
+      d.contractId === contract.id &&
+      d.prestations?.some((p) => p.kind === "contrat_resiliation"),
+  );
 
-if (docsForThis.length > 0) {
-  const invoice = docsForThis[docsForThis.length - 1]; // dernière facture de clôture
-  const alreadyBilled = docsForThis.reduce((sum, f) => sum + (Number(f.subtotal) || 0), 0);
-  const totalHT = Number(pr.totalHT) || 0;
-  const remain = Math.max(0, totalHT - alreadyBilled);
+  if (docsForThis.length > 0) {
+    const invoice = docsForThis[docsForThis.length - 1]; // dernière facture de clôture
+    const alreadyBilled = docsForThis.reduce(
+      (sum, f) => sum + (Number(f.subtotal) || 0),
+      0,
+    );
+    const totalHT = Number(pr.totalHT) || 0;
+    const remain = Math.max(0, totalHT - alreadyBilled);
 
-  terminationBillingBlockTop = `
+    terminationBillingBlockTop = `
     <div style="
       margin: 8px 0 6px;
       padding: 8px 10px;
@@ -16624,37 +16716,45 @@ if (docsForThis.length > 0) {
       <div>Facture n° ${invoice.number || ""} du ${invoice.date || ""}</div>
     </div>
   `;
-}
+  }
 
-  const isSyndic        = pr.clientType === "syndic";
+  const isSyndic = pr.clientType === "syndic";
   const clientBlockTitle = isSyndic ? "Syndic / Agence" : "Client";
-  const nameLabel        = isSyndic ? "Société" : "Nom";
+  const nameLabel = isSyndic ? "Société" : "Nom";
 
   // ================= SIGNATURE CLIENT =================
 
   // 1) d'abord : signature stockée dans le CONTRAT (cas syndic)
   let clientSignatureDataUrl = contract.signature || "";
-  let clientSignatureDate    = contract.signatureDate || "";
+  let clientSignatureDate = contract.signatureDate || "";
 
   // 2) si PAS de signature dans le contrat ET que ce n'est PAS un syndic,
   //    on essaie de récupérer la signature du DEVIS lié (cas particulier)
-  if (!clientSignatureDataUrl && !isSyndic && typeof getAllDocuments === "function") {
+  if (
+    !clientSignatureDataUrl &&
+    !isSyndic &&
+    typeof getAllDocuments === "function"
+  ) {
     const meta = contract.meta || {};
     const docs = getAllDocuments();
 
     let linkedDevis = null;
 
     if (meta.sourceDevisId) {
-      linkedDevis = docs.find(d => d.id === meta.sourceDevisId);
+      linkedDevis = docs.find((d) => d.id === meta.sourceDevisId);
     } else if (meta.sourceDevisNumber) {
       linkedDevis = docs.find(
-        d => d.type === "devis" && d.number === meta.sourceDevisNumber
+        (d) => d.type === "devis" && d.number === meta.sourceDevisNumber,
       );
     }
 
-    if (linkedDevis && linkedDevis.status === "accepte" && linkedDevis.signature) {
+    if (
+      linkedDevis &&
+      linkedDevis.status === "accepte" &&
+      linkedDevis.signature
+    ) {
       clientSignatureDataUrl = linkedDevis.signature;
-      clientSignatureDate    = linkedDevis.signatureDate || linkedDevis.date || "";
+      clientSignatureDate = linkedDevis.signatureDate || linkedDevis.date || "";
     }
   }
 
@@ -16675,7 +16775,6 @@ if (docsForThis.length > 0) {
       <p>(Aucune signature disponible)</p>
     `;
   }
-
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -16899,9 +16998,9 @@ ${terminationBillingBlockTop}
 
       ${
         c.name || c.civility
-          ? `<p>${nameLabel} : ${
-              [c.civility, c.name].filter(Boolean).join(" ")
-            }</p>`
+          ? `<p>${nameLabel} : ${[c.civility, c.name]
+              .filter(Boolean)
+              .join(" ")}</p>`
           : ""
       }
 
@@ -16909,9 +17008,9 @@ ${terminationBillingBlockTop}
 
       ${
         c.phone || c.email
-          ? `<p>Téléphone / Email : ${
-              [c.phone, c.email].filter(Boolean).join(" / ")
-            }</p>`
+          ? `<p>Téléphone / Email : ${[c.phone, c.email]
+              .filter(Boolean)
+              .join(" / ")}</p>`
           : ""
       }
 
@@ -16937,10 +17036,10 @@ ${terminationBillingBlockTop}
           p.type === "piscine_sel"
             ? "Piscine au sel"
             : p.type === "piscine_chlore"
-            ? "Piscine au chlore"
-            : p.type === "spa"
-            ? "Spa / Jacuzzi"
-            : ""
+              ? "Piscine au chlore"
+              : p.type === "spa"
+                ? "Spa / Jacuzzi"
+                : ""
         }
       </p>
       ${p.volume ? `<p>Volume approximatif : ${p.volume} m³</p>` : ""}
@@ -16966,12 +17065,12 @@ ${terminationBillingBlockTop}
         <div>
           <p><span class="label">Prestation principale :</span>
            ${
-  poolType === "piscine_sel"
-    ? "Piscine au sel"
-    : poolType === "piscine_chlore"
-    ? "Piscine au chlore"
-    : "Spa / Jacuzzi"
-}
+             poolType === "piscine_sel"
+               ? "Piscine au sel"
+               : poolType === "piscine_chlore"
+                 ? "Piscine au chlore"
+                 : "Spa / Jacuzzi"
+           }
 
           </p>
           <p><span class="label">Mode de passages :</span>
@@ -16979,8 +17078,8 @@ ${terminationBillingBlockTop}
               pr.mode === "standard"
                 ? "Standard : 1/mois hiver – 2/mois été"
                 : pr.mode === "intensif"
-                ? "Intensif : 2/mois hiver – 4/mois été"
-                : "Personnalisé"
+                  ? "Intensif : 2/mois hiver – 4/mois été"
+                  : "Personnalisé"
             }
           </p>
           <p><span class="label">Passages hiver (nov → avr) :</span> ${pr.passHiver} / mois</p>
@@ -17010,7 +17109,9 @@ ${terminationBillingBlockTop}
     <div class="section-title">4. Prestations incluses</div>
     <div class="block">
 
-      ${isPiscine ? `
+      ${
+        isPiscine
+          ? `
       <p class="label">4.1 Prestations standards (piscine chlore / sel)</p>
       <ul>
         <li>Contrôle et nettoyage : paniers skimmer, préfiltre pompe, ligne d’eau, fond et parois (si robot absent ou HS).</li>
@@ -17022,9 +17123,13 @@ ${terminationBillingBlockTop}
         <li>Contrôle volet / bâche / barrière si présents.</li>
         <li>Conseils d’usage et ajustements nécessaires.</li>
       </ul>
-      ` : ""}
+      `
+          : ""
+      }
 
-      ${isSpa ? `
+      ${
+        isSpa
+          ? `
       <p class="label" style="margin-top:4px;">4.1 Prestations Spa / Jacuzzi</p>
       <ul>
         <li>Vidange complète selon la fréquence définie.</li>
@@ -17033,7 +17138,9 @@ ${terminationBillingBlockTop}
         <li>Contrôle de la soufflerie et du chauffage.</li>
         <li>Analyse de l’eau et dosage adapté.</li>
       </ul>
-      ` : ""}
+      `
+          : ""
+      }
 
       <p class="label" style="margin-top:4px;">4.2 Remise en service / hivernage</p>
       <p>
@@ -17196,7 +17303,7 @@ ${terminationBillingBlockTop}
             <p class="tarif-main-amount"><strong>Montant TTC du contrat :</strong> ${format(totalTTCSafe)}</p>
           `
           : pr.clientType === "syndic"
-          ? `
+            ? `
             <p class="tarif-main-amount"><strong>Montant HT du contrat :</strong> ${format(totalHTSafe)}</p>
             ${
               pr.airbnbOption && airbnbExtraForInfo > 0
@@ -17205,7 +17312,7 @@ ${terminationBillingBlockTop}
             }
             <p>TVA non applicable, article 293 B du CGI (régime de franchise en base).</p>
           `
-          : `
+            : `
             <p class="tarif-main-amount"><strong>Montant total du contrat :</strong> ${format(totalHTSafe)}</p>
             ${
               pr.airbnbOption && airbnbExtraForInfo > 0
@@ -17264,7 +17371,7 @@ ${terminationBillingBlockTop}
           }
 
           ${
-            (!contract._inheritedSignature && !contract.signature)
+            !contract._inheritedSignature && !contract.signature
               ? `<p>(Aucune signature disponible)</p>`
               : ""
           }
@@ -17346,9 +17453,9 @@ function updateContractClientType(type) {
       const current = billingSelect.selectedOptions[0];
       if (current.disabled) {
         if (type === "particulier") {
-          billingSelect.value = "mensuel";       // défaut particulier
+          billingSelect.value = "mensuel"; // défaut particulier
         } else {
-          billingSelect.value = "annuel";        // défaut syndic (pour la suite)
+          billingSelect.value = "annuel"; // défaut syndic (pour la suite)
         }
       }
     }
@@ -17358,13 +17465,12 @@ function updateContractClientType(type) {
   if (typeof recomputeContract === "function") {
     recomputeContract();
   }
-// 🎯 Affichage du bouton signature syndic
-const sigWrapper = document.getElementById("ctSignatureWrapper");
-if (sigWrapper) {
-  sigWrapper.style.display = (type === "syndic") ? "block" : "none";
+  // 🎯 Affichage du bouton signature syndic
+  const sigWrapper = document.getElementById("ctSignatureWrapper");
+  if (sigWrapper) {
+    sigWrapper.style.display = type === "syndic" ? "block" : "none";
+  }
 }
-}
-
 
 function markContractNoRenew(id) {
   const c = getContract(id);
@@ -17386,7 +17492,7 @@ function markContractNoRenew(id) {
       // Optionnel : on force aussi le status stocké (pas obligatoire car computeContractStatus gère)
       c.status = CONTRACT_STATUS.TERMINE;
 
-      const all = getAllContracts().map(x => (x.id === c.id ? c : x));
+      const all = getAllContracts().map((x) => (x.id === c.id ? c : x));
       saveContracts(all);
 
       if (typeof saveSingleContractToFirestore === "function") {
@@ -17399,10 +17505,9 @@ function markContractNoRenew(id) {
       if (typeof fillContractForm === "function") fillContractForm(c);
 
       showToast("Contrat marqué : terminé (non renouvelé).");
-    }
+    },
   });
 }
-
 
 function renewContract(id) {
   const oldContract = getContract(id);
@@ -17445,7 +17550,7 @@ function renewContract(id) {
   const list = getAllContracts();
 
   // Remplacer l'ancien contrat
-  const idx = list.findIndex(c => c.id === oldContract.id);
+  const idx = list.findIndex((c) => c.id === oldContract.id);
   if (idx !== -1) list[idx] = oldContract;
 
   // Ajouter le nouveau
@@ -17466,7 +17571,6 @@ function renewContract(id) {
     showToast("Contrat renouvelé !");
   }
 }
-
 
 function renewContractFromList(id) {
   renewContract(id);
@@ -17493,9 +17597,8 @@ function formatDateFr(iso) {
   if (!year || !month || !day) return iso;
 
   // Affichage demandé : DD-MM-YYYY
-return `${day}/${month}/${year}`;
+  return `${day}/${month}/${year}`;
 }
-
 
 function openContractSchedulePopup() {
   let contract = null;
@@ -17533,9 +17636,9 @@ function openContractSchedulePopup() {
     endISO = d.toISOString().slice(0, 10);
   }
 
-const startLabel = formatDateFr(pr.startDate);
+  const startLabel = formatDateFr(pr.startDate);
 
-  const endLabel   = formatDateFr(endISO);
+  const endLabel = formatDateFr(endISO);
 
   let periodText = "";
   if (startLabel && endLabel) {
@@ -17606,17 +17709,16 @@ function formatDateYMD(d) {
   return `${y}-${m}-${day}`;
 }
 
-
 function buildContractSchedule(contract) {
-  const pr         = contract.pricing || {};
-  const mode       = pr.billingMode || "annuel";
+  const pr = contract.pricing || {};
+  const mode = pr.billingMode || "annuel";
   const clientType = pr.clientType || "particulier";
 
   const startISO = pr.startDate;
   if (!startISO) return [];
 
-  const totalHT  = Number(pr.totalHT || 0);
-  const tvaRate  = Number(pr.tvaRate || 0);
+  const totalHT = Number(pr.totalHT || 0);
+  const tvaRate = Number(pr.tvaRate || 0);
   const duration = Number(pr.durationMonths || 0);
 
   // Sécurité : si rien de cohérent, on sort
@@ -17640,7 +17742,7 @@ function buildContractSchedule(contract) {
   if (clientType === "particulier" && mode === "mensuel") {
     const n = getNumberOfInstallments(pr) || duration; // nb d'échéances
 
-    const amountHT  = totalHT / n;
+    const amountHT = totalHT / n;
     const amountTVA = amountHT * (tvaRate / 100);
     const amountTTC = amountHT + amountTVA;
 
@@ -17654,18 +17756,17 @@ function buildContractSchedule(contract) {
       if (d > contractEnd) break;
 
       rows.push({
-        index:        i + 1,
-        date:         formatDateYMD(d),
+        index: i + 1,
+        date: formatDateYMD(d),
         amountHT,
         amountTVA,
         amountTTC,
-        status:       "Prévisionnel",
-        statusType:   "forecast",
-        invoiceId:    null,
-        invoiceNumber:""
+        status: "Prévisionnel",
+        statusType: "forecast",
+        invoiceId: null,
+        invoiceNumber: "",
       });
     }
-
   } else {
     // ===============================
     // 🧰 CAS GÉNÉRIQUES
@@ -17675,7 +17776,7 @@ function buildContractSchedule(contract) {
     let stepMonths = 0;
 
     if (mode === "annuel_50_50") {
-      n          = 2;
+      n = 2;
       stepMonths = duration > 0 ? Math.round(duration / 2) : 0;
     } else {
       // nombre d’échéances (1 pour annuel, 4 pour trimestriel sur 12 mois, etc.)
@@ -17688,11 +17789,11 @@ function buildContractSchedule(contract) {
 
     let amountHT;
     if (mode === "annuel") {
-      amountHT = totalHT;          // 1 seule facture
+      amountHT = totalHT; // 1 seule facture
     } else if (mode === "annuel_50_50") {
-      amountHT = totalHT / 2;      // deux fois 50 %
+      amountHT = totalHT / 2; // deux fois 50 %
     } else {
-      amountHT = totalHT / n;      // fractionnement classique
+      amountHT = totalHT / n; // fractionnement classique
     }
 
     const amountTVA = amountHT * (tvaRate / 100);
@@ -17710,15 +17811,15 @@ function buildContractSchedule(contract) {
       const iso = formatDateYMD(current);
 
       rows.push({
-        index:        i + 1,
-        date:         iso,
+        index: i + 1,
+        date: iso,
         amountHT,
         amountTVA,
         amountTTC,
-        status:       "Prévisionnel",
-        statusType:   "forecast",
-        invoiceId:    null,
-        invoiceNumber:""
+        status: "Prévisionnel",
+        statusType: "forecast",
+        invoiceId: null,
+        invoiceNumber: "",
       });
 
       if (stepMonths > 0) {
@@ -17731,25 +17832,26 @@ function buildContractSchedule(contract) {
   const docs = getAllDocuments();
 
   // 1) On prend TOUTES les factures du contrat
-  let invoices = docs.filter(d =>
-    d.type === "facture" &&
-    d.contractId === contract.id
+  let invoices = docs.filter(
+    (d) => d.type === "facture" && d.contractId === contract.id,
   );
 
   // 2) Pour les PARTICULIERS, on ne garde que les factures d’échéance
   if (clientType === "particulier") {
-    invoices = invoices.filter(d =>
-      d.prestations &&
-      d.prestations.some(p =>
-        p.kind === "contrat_echeance" ||
-        p.kind === "contrat_echeance_initiale"
-      )
+    invoices = invoices.filter(
+      (d) =>
+        d.prestations &&
+        d.prestations.some(
+          (p) =>
+            p.kind === "contrat_echeance" ||
+            p.kind === "contrat_echeance_initiale",
+        ),
     );
   }
   // Pour les SYNDICS, on garde toutes les factures liées au contrat
 
   rows.forEach((r) => {
-    const inv = invoices.find(d => {
+    const inv = invoices.find((d) => {
       if (!d.date) return false;
 
       const invDate = new Date(d.date);
@@ -17757,62 +17859,65 @@ function buildContractSchedule(contract) {
 
       return (
         invDate.getFullYear() === rowDate.getFullYear() &&
-        invDate.getMonth()    === rowDate.getMonth()
+        invDate.getMonth() === rowDate.getMonth()
         // 👆 on matche au MOIS, pas au jour
       );
     });
 
     if (inv) {
-      const invHT  = Number(inv.subtotal || inv.total || 0);
+      const invHT = Number(inv.subtotal || inv.total || 0);
       const invTVA = Number(inv.tvaAmount || 0);
       const invTTC = Number(inv.totalTTC || inv.total || invHT + invTVA);
 
-      r.amountHT  = invHT || r.amountHT;
+      r.amountHT = invHT || r.amountHT;
       r.amountTVA = invTVA;
       r.amountTTC = invTTC;
 
-      r.invoiceId     = inv.id || null;
+      r.invoiceId = inv.id || null;
       r.invoiceNumber = inv.number || "";
 
       if (inv.paid) {
-        r.status     = "Payée";
+        r.status = "Payée";
         r.statusType = "paid";
       } else {
-        r.status     = "À payer";
+        r.status = "À payer";
         r.statusType = "due";
       }
     }
   });
 
   // 🔵 Facture de résiliation éventuelle
-  const closureInvoice = docs.find(d =>
-    d.type === "facture" &&
-    d.contractId === contract.id &&
-    d.prestations &&
-    d.prestations.some(p => p.kind === "contrat_resiliation")
+  const closureInvoice = docs.find(
+    (d) =>
+      d.type === "facture" &&
+      d.contractId === contract.id &&
+      d.prestations &&
+      d.prestations.some((p) => p.kind === "contrat_resiliation"),
   );
 
   if (closureInvoice) {
-    const invHT  = Number(closureInvoice.subtotal || closureInvoice.total || 0);
+    const invHT = Number(closureInvoice.subtotal || closureInvoice.total || 0);
     const invTVA = Number(closureInvoice.tvaAmount || 0);
-    const invTTC = Number(closureInvoice.totalTTC || closureInvoice.total || invHT + invTVA);
+    const invTTC = Number(
+      closureInvoice.totalTTC || closureInvoice.total || invHT + invTVA,
+    );
 
     rows.push({
-      index:         rows.length + 1,
-      date:          closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
-      amountHT:      invHT,
-      amountTVA:     invTVA,
-      amountTTC:     invTTC,
-      status:        "Résiliation",
-      statusType:    "closure",
-      invoiceId:     closureInvoice.id || null,
-      invoiceNumber: closureInvoice.number || ""
+      index: rows.length + 1,
+      date: closureInvoice.date ? closureInvoice.date.slice(0, 10) : "",
+      amountHT: invHT,
+      amountTVA: invTVA,
+      amountTTC: invTTC,
+      status: "Résiliation",
+      statusType: "closure",
+      invoiceId: closureInvoice.id || null,
+      invoiceNumber: closureInvoice.number || "",
     });
   }
 
   // 🎨 Ajustement des couleurs uniquement pour les contrats SYNDIC
   const todayISO = new Date().toISOString().slice(0, 10);
-  const today    = new Date(todayISO + "T00:00:00");
+  const today = new Date(todayISO + "T00:00:00");
 
   if (clientType === "syndic") {
     rows.forEach((r) => {
@@ -17827,7 +17932,7 @@ function buildContractSchedule(contract) {
       // Pas de facture liée → prévisionnel
       if (!r.invoiceId) {
         r.statusType = "forecast";
-        r.status     = "Prévisionnel";
+        r.status = "Prévisionnel";
         return;
       }
 
@@ -17838,11 +17943,11 @@ function buildContractSchedule(contract) {
 
       // Facture non payée
       if (d <= today) {
-        r.statusType = "due";          // rouge
-        r.status     = "À payer";
+        r.statusType = "due"; // rouge
+        r.status = "À payer";
       } else {
-        r.statusType = "forecast";     // gris
-        r.status     = "Prévisionnel";
+        r.statusType = "forecast"; // gris
+        r.status = "Prévisionnel";
       }
     });
   }
@@ -17850,13 +17955,14 @@ function buildContractSchedule(contract) {
   return rows;
 }
 
-
 function renderContractScheduleHTML(rows) {
   if (!rows || !rows.length) {
     return "<p>Aucune échéance calculée pour ce contrat.</p>";
   }
 
-  const hasTVA = rows.some(r => typeof r.amountTVA === "number" && !isNaN(r.amountTVA));
+  const hasTVA = rows.some(
+    (r) => typeof r.amountTVA === "number" && !isNaN(r.amountTVA),
+  );
 
   let html = `
     <table class="schedule-table">
@@ -17879,13 +17985,13 @@ function renderContractScheduleHTML(rows) {
     // Classe de couleur selon le type
     let rowClass = "";
     if (r.statusType === "paid") {
-      rowClass = "schedule-row-paid";      // vert
+      rowClass = "schedule-row-paid"; // vert
     } else if (r.statusType === "due") {
-      rowClass = "schedule-row-due";       // rouge
+      rowClass = "schedule-row-due"; // rouge
     } else if (r.statusType === "closure") {
-      rowClass = "schedule-row-closure";   // autre couleur
+      rowClass = "schedule-row-closure"; // autre couleur
     } else {
-      rowClass = "schedule-row-forecast";  // gris léger
+      rowClass = "schedule-row-forecast"; // gris léger
     }
 
     // Texte statut (une seule ligne)
@@ -17926,9 +18032,13 @@ function renderContractScheduleHTML(rows) {
         <td>${r.index}</td>
         <td>${dateFr}</td>
         <td class="amount-cell">${r.amountHT.toFixed(2)} €</td>
-        ${hasTVA ? `
+        ${
+          hasTVA
+            ? `
         <td class="amount-cell">${r.amountTVA.toFixed(2)} €</td>
-        <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>` : ""}
+        <td class="amount-cell">${r.amountTTC.toFixed(2)} €</td>`
+            : ""
+        }
         <td class="schedule-status-cell">${statusHtml}</td>
       </tr>
     `;
@@ -17941,9 +18051,6 @@ function renderContractScheduleHTML(rows) {
 
   return html;
 }
-
-
-
 
 function initContractsUI() {
   const root = document.getElementById("contractView");
@@ -17963,7 +18070,7 @@ function initContractsUI() {
     "#ctPoolType",
     "#ctMainService",
     "#ctClientParticulier",
-    "#ctClientSyndic"
+    "#ctClientSyndic",
   ];
 
   recalcSelectors.forEach((sel) => {
@@ -17972,7 +18079,11 @@ function initContractsUI() {
 
     const isInput = el.tagName === "INPUT";
     const evtName =
-      isInput && (el.type === "number" || el.type === "date" || el.type === "checkbox" || el.type === "radio")
+      isInput &&
+      (el.type === "number" ||
+        el.type === "date" ||
+        el.type === "checkbox" ||
+        el.type === "radio")
         ? "input"
         : "change";
 
@@ -17999,8 +18110,8 @@ function initContractsUI() {
 
   // radios type client
   const ctPartRadio = document.getElementById("ctClientParticulier");
-  const ctSynRadio  = document.getElementById("ctClientSyndic");
-  const hiddenType  = document.getElementById("ctClientType");
+  const ctSynRadio = document.getElementById("ctClientSyndic");
+  const hiddenType = document.getElementById("ctClientType");
 
   if (ctPartRadio) {
     ctPartRadio.addEventListener("change", () => {
@@ -18034,23 +18145,22 @@ function initContractsUI() {
 
 // Nombre de mois entre deux factures selon le mode
 function getBillingStepMonths(mode) {
-  if (mode === "mensuel")      return 1;
-  if (mode === "trimestriel")  return 3;
-  if (mode === "semestriel")   return 6;
+  if (mode === "mensuel") return 1;
+  if (mode === "trimestriel") return 3;
+  if (mode === "semestriel") return 6;
   // "annuel_50_50" et "annuel" auront un traitement spécifique ailleurs
   return 0;
 }
-
 
 // Combien d'échéances pour ce contrat ?
 
 function getNumberOfInstallments(pricing) {
   const mode = pricing.billingMode || "annuel";
 
-  if (mode === "annuel")       return 1;
+  if (mode === "annuel") return 1;
   if (mode === "annuel_50_50") return 2;
 
-  const dur  = Number(pricing.durationMonths || 0);
+  const dur = Number(pricing.durationMonths || 0);
   const step = getBillingStepMonths(mode);
 
   if (!dur || !step) return 1;
@@ -18059,9 +18169,8 @@ function getNumberOfInstallments(pricing) {
   return Math.max(1, Math.ceil(dur / step));
 }
 
-
 function computeEcheanceNumber(pricing) {
-  const total = getNumberOfInstallments(pricing); 
+  const total = getNumberOfInstallments(pricing);
 
   const start = new Date(pricing.startDate + "T00:00:00");
   let step;
@@ -18073,7 +18182,7 @@ function computeEcheanceNumber(pricing) {
     step = getBillingStepMonths(pricing.billingMode);
   }
 
-  const next  = new Date(pricing.nextInvoiceDate + "T00:00:00");
+  const next = new Date(pricing.nextInvoiceDate + "T00:00:00");
 
   const diffMonths =
     (next.getFullYear() - start.getFullYear()) * 12 +
@@ -18098,7 +18207,7 @@ function formatContractGlobalPeriod(pr) {
 
   const opts = { month: "long", year: "numeric" };
   const startLabel = start.toLocaleDateString("fr-FR", opts);
-  const endLabel   = end.toLocaleDateString("fr-FR", opts);
+  const endLabel = end.toLocaleDateString("fr-FR", opts);
 
   if (startLabel === endLabel) return startLabel;
   return `${startLabel} à ${endLabel}`;
@@ -18115,15 +18224,13 @@ function buildOriginDevisNote(contract) {
   return `Facture générée automatiquement à partir du devis ${devisNum}.`;
 }
 
-
-
 function generateImmediateBilling(contract) {
   const pr = contract.pricing || {};
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
 
   const clientType = pr.clientType || "particulier";
-  const mode       = pr.billingMode || "annuel";
+  const mode = pr.billingMode || "annuel";
 
   const totalHT = Number(pr.totalHT) || 0;
   if (totalHT <= 0) return null;
@@ -18149,7 +18256,7 @@ function generateImmediateBilling(contract) {
   // 📌 Nombre d’échéances prévues
   let n = 1;
   if (mode === "mensuel") {
-    n = getNumberOfInstallments(pr);      // ex : 12 mois -> 12
+    n = getNumberOfInstallments(pr); // ex : 12 mois -> 12
   } else if (mode === "annuel_50_50") {
     n = 2;
   }
@@ -18165,14 +18272,14 @@ function generateImmediateBilling(contract) {
     amountHT = totalHT;
   }
 
-  const tvaRate   = Number(pr.tvaRate) || 0;
+  const tvaRate = Number(pr.tvaRate) || 0;
   const tvaAmount = amountHT * (tvaRate / 100);
-  const totalTTC  = amountHT + tvaAmount;
+  const totalTTC = amountHT + tvaAmount;
 
   const number = getNextNumber("facture");
 
-  const moisLabel    = monthYearFr(invoiceDateISO); // "décembre 2025"
-const suffixClient = "";
+  const moisLabel = monthYearFr(invoiceDateISO); // "décembre 2025"
+  const suffixClient = "";
 
   // Type de service
   const poolType = pr.mainService || "";
@@ -18187,40 +18294,40 @@ const suffixClient = "";
   let lineDesc;
 
   if (mode === "annuel_50_50") {
-    subject  = `${serviceLabel} – 1er paiement 50 % (1/2) – saison ${globalPeriod}${suffixClient}`;
+    subject = `${serviceLabel} – 1er paiement 50 % (1/2) – saison ${globalPeriod}${suffixClient}`;
     lineDesc = `${serviceLabel} – 1er paiement (50 %) (1/2) pour la saison ${globalPeriod}`;
   } else if (mode === "mensuel") {
-    subject  = `${serviceLabel} – échéance 1/${n} – mois de ${moisLabel}${suffixClient}`;
+    subject = `${serviceLabel} – échéance 1/${n} – mois de ${moisLabel}${suffixClient}`;
     lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance 1/${n} sur la période ${globalPeriod}`;
   } else {
-    subject  = `${serviceLabel} – acompte contrat${suffixClient}`;
+    subject = `${serviceLabel} – acompte contrat${suffixClient}`;
     lineDesc = `${serviceLabel} – acompte sur contrat d’entretien (${globalPeriod})`;
   }
 
+  const originNote = buildOriginDevisNote(contract);
 
-const originNote = buildOriginDevisNote(contract);
-
-const notes = (clientType === "syndic"
-  ? [
-      "Règlement à 30 jours fin de mois.",
-      "Aucun escompte pour paiement anticipé.",
-      "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
-      "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
-      originNote, // ✅ devis d’origine
-      "Les Conditions Générales de Vente sont disponibles sur demande."
-    ]
-  : [
-      "Règlement à réception de facture.",
-      "Aucun escompte pour paiement anticipé.",
-      mode === "annuel_50_50"
-        ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
-        : "Cette facture correspond à une échéance du contrat d’entretien.",
-      originNote, // ✅ devis d’origine
-      "Les Conditions Générales de Vente sont disponibles sur demande."
-    ]
-).filter(Boolean).join("\n");
-
-
+  const notes = (
+    clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
+          "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
+          originNote, // ✅ devis d’origine
+          "Les Conditions Générales de Vente sont disponibles sur demande.",
+        ]
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          mode === "annuel_50_50"
+            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
+            : "Cette facture correspond à une échéance du contrat d’entretien.",
+          originNote, // ✅ devis d’origine
+          "Les Conditions Générales de Vente sont disponibles sur demande.",
+        ]
+  )
+    .filter(Boolean)
+    .join("\n");
 
   return {
     id: generateId("FAC"),
@@ -18235,32 +18342,32 @@ const notes = (clientType === "syndic"
 
     client: {
       civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
+      name: c.name || "",
+      address: c.address || "",
+      phone: c.phone || "",
+      email: c.email || "",
     },
 
     siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
+    siteName: s.name || "",
+    siteAddress: s.address || "",
 
     prestations: [
       {
-        desc:   lineDesc,
+        desc: lineDesc,
         detail: "",
-        qty:    1,
-        price:  amountHT,
-        total:  amountHT,
-        unit:   "forfait",
-        dates:  [invoiceDateISO],
-        kind:   "contrat_echeance_initiale"
-      }
+        qty: 1,
+        price: amountHT,
+        total: amountHT,
+        unit: "forfait",
+        dates: [invoiceDateISO],
+        kind: "contrat_echeance_initiale",
+      },
     ],
 
     tvaRate,
-    subtotal:       amountHT,
-    discountRate:   0,
+    subtotal: amountHT,
+    discountRate: 0,
     discountAmount: 0,
     tvaAmount,
     totalTTC,
@@ -18274,17 +18381,17 @@ const notes = (clientType === "syndic"
     status: "",
     conditionsType: clientType === "syndic" ? "agence" : "particulier",
 
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
 }
 
 function createAutomaticInvoice(contract) {
   const pr = contract.pricing || {};
-  const c  = contract.client  || {};
-  const s  = contract.site    || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
 
   const clientType = pr.clientType || "particulier";
-  const mode       = pr.billingMode || "annuel";
+  const mode = pr.billingMode || "annuel";
 
   const totalHT = Number(pr.totalHT) || 0;
   if (totalHT <= 0) return null;
@@ -18310,7 +18417,7 @@ function createAutomaticInvoice(contract) {
   const nextDate = new Date(nextISO + "T00:00:00");
   if (isNaN(nextDate.getTime())) return null;
 
-  const number   = getNextNumber("facture");
+  const number = getNextNumber("facture");
   const todayISO = new Date().toISOString().slice(0, 10);
 
   const tvaRate = Number(pr.tvaRate) || 0;
@@ -18327,8 +18434,7 @@ function createAutomaticInvoice(contract) {
   }
 
   const globalPeriod = formatContractGlobalPeriod(pr);
-  const moisLabel    = monthYearFr(nextISO);
-
+  const moisLabel = monthYearFr(nextISO);
 
   let amountHT;
   let subject = "";
@@ -18342,7 +18448,7 @@ function createAutomaticInvoice(contract) {
       // 2e paiement (solde)
       amountHT = totalHT / 2;
 
-     subject  = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}`;
+      subject = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}`;
 
       lineDesc = `${serviceLabel} – 2e paiement (50 %) (2/2) – solde du contrat d’entretien pour la saison ${globalPeriod}`;
     } else {
@@ -18354,18 +18460,17 @@ function createAutomaticInvoice(contract) {
 
       amountHT = totalHT / n;
 
-      subject  = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}`;
+      subject = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}`;
 
       lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
     }
   }
 
-
   // ============================
   // 🔵 SYNDIC (post-payé)
   // ============================
   else {
- // Montant fractionné
+    // Montant fractionné
     amountHT = totalHT / n;
 
     let stepMonths = getBillingStepMonths(mode);
@@ -18375,8 +18480,8 @@ function createAutomaticInvoice(contract) {
 
     // Reconstruire la période [startPeriod, endPeriod]
     let periodStart = new Date(start);
-    let periodEnd   = null;
-    let found       = false;
+    let periodEnd = null;
+    let found = false;
 
     for (let i = 1; i <= totalInstallments; i++) {
       const endCandidate = new Date(start);
@@ -18403,7 +18508,7 @@ function createAutomaticInvoice(contract) {
       prevEnd.setDate(0);
 
       periodStart = prevStart;
-      periodEnd   = prevEnd;
+      periodEnd = prevEnd;
     }
 
     if (periodEnd > contractEnd) {
@@ -18411,42 +18516,42 @@ function createAutomaticInvoice(contract) {
     }
 
     const startLabel = periodStart.toLocaleDateString("fr-FR");
-    const endLabel   = periodEnd.toLocaleDateString("fr-FR");
+    const endLabel = periodEnd.toLocaleDateString("fr-FR");
 
- 
     // 🔢 Numéro d’échéance pour le SYNDIC (comme pour le particulier)
     const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
 
-    subject  = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}`;
+    subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}`;
 
     lineDesc = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations réalisées du ${startLabel} au ${endLabel}`;
   }
 
   const tvaAmount = amountHT * (tvaRate / 100);
-  const totalTTC  = amountHT + tvaAmount;
+  const totalTTC = amountHT + tvaAmount;
 
-  const notes = (clientType === "syndic"
-    ? [
-        "Règlement à 30 jours fin de mois.",
-        "Aucun escompte pour paiement anticipé.",
-        "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
-        "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
-        "Les Conditions Générales de Vente sont disponibles sur demande."
-      ]
-    : [
-        "Règlement à réception de facture.",
-        "Aucun escompte pour paiement anticipé.",
-        mode === "annuel_50_50"
-          ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
-          : "Cette facture correspond à une échéance du contrat d’entretien.",
-        "Les Conditions Générales de Vente sont disponibles sur demande."
-      ]
+  const notes = (
+    clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
+          "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
+          "Les Conditions Générales de Vente sont disponibles sur demande.",
+        ]
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          mode === "annuel_50_50"
+            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
+            : "Cette facture correspond à une échéance du contrat d’entretien.",
+          "Les Conditions Générales de Vente sont disponibles sur demande.",
+        ]
   ).join("\n");
 
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
   return {
-      id: generateId("FAC"),
+    id: generateId("FAC"),
     type: "facture",
     number,
     date: nextISO,
@@ -18459,32 +18564,32 @@ function createAutomaticInvoice(contract) {
 
     client: {
       civility: c.civility || "",
-      name:     c.name     || "",
-      address:  c.address  || "",
-      phone:    c.phone    || "",
-      email:    c.email    || ""
+      name: c.name || "",
+      address: c.address || "",
+      phone: c.phone || "",
+      email: c.email || "",
     },
 
     siteCivility: s.civility || "",
-    siteName:     s.name     || "",
-    siteAddress:  s.address  || "",
+    siteName: s.name || "",
+    siteAddress: s.address || "",
 
     prestations: [
       {
-        desc:   lineDesc,
+        desc: lineDesc,
         detail: "",
-        qty:    1,
-        price:  amountHT,
-        total:  amountHT,
-        unit:   "forfait",
-        dates:  [],
-        kind:   "contrat_echeance"
-      }
+        qty: 1,
+        price: amountHT,
+        total: amountHT,
+        unit: "forfait",
+        dates: [],
+        kind: "contrat_echeance",
+      },
     ],
 
     tvaRate,
-    subtotal:       amountHT,
-    discountRate:   0,
+    subtotal: amountHT,
+    discountRate: 0,
     discountAmount: 0,
     tvaAmount,
     totalTTC,
@@ -18497,12 +18602,9 @@ function createAutomaticInvoice(contract) {
     conditionsType,
 
     createdAt: todayISO,
-    updatedAt: todayISO
+    updatedAt: todayISO,
   };
 }
-
-
-
 
 function createDevisFromCurrentContract() {
   if (!currentContractId) {
@@ -18511,7 +18613,7 @@ function createDevisFromCurrentContract() {
       message: "Enregistre d'abord le contrat avant de créer un devis.",
       confirmLabel: "OK",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
@@ -18534,11 +18636,13 @@ function createDevisFromCurrentContract() {
 
   // Lier devis → contrat
   if (!contract.meta) contract.meta = {};
-  contract.meta.sourceDevisId     = devis.id;
+  contract.meta.sourceDevisId = devis.id;
   contract.meta.sourceDevisNumber = devis.number;
 
   // Mise à jour contrat
-  const all = getAllContracts().map(c => c.id === contract.id ? contract : c);
+  const all = getAllContracts().map((c) =>
+    c.id === contract.id ? contract : c,
+  );
   saveContracts(all);
 
   if (typeof saveSingleContractToFirestore === "function") {
@@ -18551,40 +18655,41 @@ function createDevisFromCurrentContract() {
   if (typeof loadDocument === "function") loadDocument(devis.id);
 }
 
-
 // Combien de factures d'échéance existent déjà pour ce contrat ?
 function countContractInstallmentInvoices(contractId) {
   const docs = getAllDocuments();
-  return docs.filter(d =>
-    d.type === "facture" &&
-    d.contractId === contractId &&
-    d.prestations &&
-    d.prestations.some(p =>
-      p.kind === "contrat_echeance" ||
-      p.kind === "contrat_echeance_initiale"
-    )
+  return docs.filter(
+    (d) =>
+      d.type === "facture" &&
+      d.contractId === contractId &&
+      d.prestations &&
+      d.prestations.some(
+        (p) =>
+          p.kind === "contrat_echeance" ||
+          p.kind === "contrat_echeance_initiale",
+      ),
   ).length;
 }
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
 function checkScheduledInvoices() {
-  let docs        = getAllDocuments();
+  let docs = getAllDocuments();
   const contracts = getAllContracts();
-  const todayISO  = new Date().toISOString().slice(0, 10);
+  const todayISO = new Date().toISOString().slice(0, 10);
 
-  contracts.forEach(contract => {
+  contracts.forEach((contract) => {
     if (contract.status === CONTRACT_STATUS.RESILIE) {
       return;
     }
     const pr = contract.pricing || {};
     const clientType = pr.clientType || "particulier";
-    const mode       = pr.billingMode || "annuel";
+    const mode = pr.billingMode || "annuel";
 
     const status = computeContractStatus(contract);
     // ⛔ Si un devis est obligatoire mais pas encore accepté → aucune facture auto
     const devisNeeded = isDevisObligatoireForContract(contract);
-    const devisOK     = isDevisAcceptedForContract(contract);
+    const devisOK = isDevisAcceptedForContract(contract);
     if (devisNeeded && !devisOK) {
       return;
     }
@@ -18592,7 +18697,7 @@ function checkScheduledInvoices() {
     if (!pr.billingMode) return;
 
     const totalInstallments = getNumberOfInstallments(pr);
-    let installmentsCount   = countContractInstallmentInvoices(contract.id);
+    let installmentsCount = countContractInstallmentInvoices(contract.id);
 
     // 🧮 Calcul de la fin de contrat (optionnel, tu peux le garder si tu l'utilises ailleurs)
     let limitISO = todayISO;
@@ -18600,7 +18705,9 @@ function checkScheduledInvoices() {
       const start = new Date(pr.startDate + "T00:00:00");
       if (!isNaN(start.getTime())) {
         const contractEnd = new Date(start);
-        contractEnd.setMonth(contractEnd.getMonth() + Number(pr.durationMonths || 0));
+        contractEnd.setMonth(
+          contractEnd.getMonth() + Number(pr.durationMonths || 0),
+        );
         contractEnd.setDate(0); // fin du dernier mois
         const endISO = contractEnd.toISOString().slice(0, 10);
         if (endISO < limitISO) {
@@ -18610,10 +18717,11 @@ function checkScheduledInvoices() {
     }
 
     // 🔁 Rattrapage : uniquement pour les factures dont la date ≤ aujourd'hui
-    while (pr.nextInvoiceDate &&
-           pr.nextInvoiceDate <= todayISO &&
-           installmentsCount < totalInstallments) {
-
+    while (
+      pr.nextInvoiceDate &&
+      pr.nextInvoiceDate <= todayISO &&
+      installmentsCount < totalInstallments
+    ) {
       const fac = createAutomaticInvoice(contract);
       if (!fac) break;
 
@@ -18629,48 +18737,11 @@ function checkScheduledInvoices() {
       contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
       if (!contract.pricing.nextInvoiceDate) break;
     }
-
   });
 
   saveContracts(contracts);
-
 }
 
-// =====================================
-// PDF VIEWER – iPhone / PWA
-// =====================================
-let lastAppViewBeforePDF = null;
-
-function openPdfViewer(blobUrl) {
-  const overlay = document.getElementById("pdfViewerOverlay");
-  const frame = document.getElementById("pdfViewerFrame");
-
-  if (!overlay || !frame) {
-    console.error("PDF viewer non trouvé");
-    return;
-  }
-
-  lastAppViewBeforePDF = getCurrentAppView();
-
-  frame.src = blobUrl;
-  overlay.classList.remove("hidden");
-}
-
-function closePdfViewer() {
-  const overlay = document.getElementById("pdfViewerOverlay");
-  const frame = document.getElementById("pdfViewerFrame");
-
-  if (!overlay || !frame) return;
-
-  frame.src = "";
-  overlay.classList.add("hidden");
-
-  if (lastAppViewBeforePDF) {
-    showView(lastAppViewBeforePDF);
-  } else {
-    showHome();
-  }
-}
 
 function getCurrentAppView() {
   const views = [
@@ -18678,15 +18749,14 @@ function getCurrentAppView() {
     "listView",
     "formView",
     "contractView",
-    "attestationView"
+    "attestationView",
   ];
 
-  return views.find(id => {
+  return views.find((id) => {
     const el = document.getElementById(id);
     return el && !el.classList.contains("hidden");
   });
 }
-
 
 /* ======================
    SIGNATURE ELECTRONIQUE
@@ -18710,6 +18780,7 @@ function resizeSignatureCanvas() {
 }
 
 // Ouvrir la popup de signature (mode devis)
+
 function openSignaturePopup() {
   window.currentContractSignatureMode = false;
 
@@ -18725,7 +18796,7 @@ function openSignaturePopup() {
 
   signaturePad = new SignaturePad(canvas, {
     penColor: "black",
-    backgroundColor: "rgba(0,0,0,0)"
+    backgroundColor: "rgba(0,0,0,0)",
   });
 }
 
@@ -18734,25 +18805,27 @@ function saveSignatureToCurrentDocument(dataUrl) {
   if (!currentDocumentId) {
     showConfirmDialog({
       title: "Aucun devis ouvert",
-      message: "Impossible d'enregistrer la signature : aucun devis n'est en cours d'édition.",
+      message:
+        "Impossible d'enregistrer la signature : aucun devis n'est en cours d'édition.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
 
   const docs = getAllDocuments();
-  const idx = docs.findIndex(d => d.id === currentDocumentId);
+  const idx = docs.findIndex((d) => d.id === currentDocumentId);
   if (idx === -1) {
     showConfirmDialog({
       title: "Devis introuvable",
-      message: "Impossible d'enregistrer la signature : le devis n'a pas été retrouvé.",
+      message:
+        "Impossible d'enregistrer la signature : le devis n'a pas été retrouvé.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "danger",
-      icon: "❌"
+      icon: "❌",
     });
     return;
   }
@@ -18762,11 +18835,12 @@ function saveSignatureToCurrentDocument(dataUrl) {
   if (doc.type !== "devis") {
     showConfirmDialog({
       title: "Type de document invalide",
-      message: "La signature électronique ne peut être appliquée que sur un devis.",
+      message:
+        "La signature électronique ne peut être appliquée que sur un devis.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "ℹ️"
+      icon: "ℹ️",
     });
     return;
   }
@@ -18787,11 +18861,12 @@ function saveSignatureToCurrentDocument(dataUrl) {
 
   showConfirmDialog({
     title: "Devis signé",
-    message: "Signature enregistrée.\nLe devis est maintenant marqué comme accepté.",
+    message:
+      "Signature enregistrée.\nLe devis est maintenant marqué comme accepté.",
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✅"
+    icon: "✅",
   });
 
   if (typeof loadDocument === "function") loadDocument(doc.id);
@@ -18804,7 +18879,7 @@ function saveSignatureToCurrentDocument(dataUrl) {
 
 // Ouvre la popup de signature mais pour un CONTRAT
 function openContractSignature() {
-  const popup  = document.getElementById("signaturePopup");
+  const popup = document.getElementById("signaturePopup");
   const canvas = document.getElementById("signatureCanvas");
   if (!popup || !canvas) return;
 
@@ -18815,7 +18890,7 @@ function openContractSignature() {
 
   signaturePad = new SignaturePad(canvas, {
     penColor: "black",
-    backgroundColor: "rgba(0,0,0,0)"
+    backgroundColor: "rgba(0,0,0,0)",
   });
 }
 
@@ -18824,25 +18899,27 @@ function saveContractSignature(dataUrl) {
   if (!currentContractId) {
     showConfirmDialog({
       title: "Aucun contrat ouvert",
-      message: "Impossible d'enregistrer la signature : aucun contrat n'est en cours d'édition.",
+      message:
+        "Impossible d'enregistrer la signature : aucun contrat n'est en cours d'édition.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
-      icon: "⚠️"
+      icon: "⚠️",
     });
     return;
   }
 
   const list = getAllContracts();
-  const idx = list.findIndex(c => c.id === currentContractId);
+  const idx = list.findIndex((c) => c.id === currentContractId);
   if (idx === -1) {
     showConfirmDialog({
       title: "Contrat introuvable",
-      message: "Impossible d'enregistrer la signature : le contrat n'a pas été retrouvé.",
+      message:
+        "Impossible d'enregistrer la signature : le contrat n'a pas été retrouvé.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "danger",
-      icon: "❌"
+      icon: "❌",
     });
     return;
   }
@@ -18867,7 +18944,7 @@ function saveContractSignature(dataUrl) {
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
-    icon: "✍️"
+    icon: "✍️",
   });
 }
 
@@ -18877,7 +18954,7 @@ function syncContractsWithDevis(updatedDevis) {
   const allContracts = getAllContracts();
   let changed = false;
 
-  allContracts.forEach(c => {
+  allContracts.forEach((c) => {
     if (c.meta && c.meta.sourceDevisId === updatedDevis.id) {
       c.meta.sourceDevisStatus = updatedDevis.status;
       c.meta.sourceDevisNumber = updatedDevis.number;
@@ -18889,7 +18966,7 @@ function syncContractsWithDevis(updatedDevis) {
     saveContracts(allContracts);
 
     if (typeof saveSingleContractToFirestore === "function") {
-      allContracts.forEach(c => {
+      allContracts.forEach((c) => {
         if (c.meta && c.meta.sourceDevisId === updatedDevis.id) {
           saveSingleContractToFirestore(c);
         }
@@ -18911,8 +18988,8 @@ function renderClientsFollowup() {
   if (!tbody) return;
 
   const docs = getAllDocuments() || [];
-  const factures = docs.filter(d => d.type === "facture");
-  const unpaid = factures.filter(f => !f.paid);
+  const factures = docs.filter((d) => d.type === "facture");
+  const unpaid = factures.filter((f) => !f.paid);
 
   if (!unpaid.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="no-docs-cell">✅ Aucun impayé 🎉</td></tr>`;
@@ -18920,14 +18997,14 @@ function renderClientsFollowup() {
   }
 
   const map = new Map();
-  unpaid.forEach(f => {
+  unpaid.forEach((f) => {
     const name = (f?.client?.name || "").trim();
     if (!name) return;
 
     const amount = Number(f.totalTTC || 0);
     const lateMonths = _lateMonthsFromInvoiceDate(
       f,
-      (typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30)
+      typeof DELAI_REGLEMENT_JOURS !== "undefined" ? DELAI_REGLEMENT_JOURS : 30,
     );
 
     if (!map.has(name)) {
@@ -18936,7 +19013,7 @@ function renderClientsFollowup() {
         unpaidTotal: 0,
         maxLate: 0,
         lastInvoice: null,
-        lastInvoiceDate: null
+        lastInvoiceDate: null,
       });
     }
 
@@ -18954,19 +19031,21 @@ function renderClientsFollowup() {
   let rows = Array.from(map.values());
 
   const sort = document.getElementById("followupSort")?.value || "amount_desc";
-  if (sort === "amount_desc") rows.sort((a,b) => b.unpaidTotal - a.unpaidTotal);
-  if (sort === "late_desc") rows.sort((a,b) => b.maxLate - a.maxLate);
-  if (sort === "name_asc") rows.sort((a,b) => a.name.localeCompare(b.name));
+  if (sort === "amount_desc")
+    rows.sort((a, b) => b.unpaidTotal - a.unpaidTotal);
+  if (sort === "late_desc") rows.sort((a, b) => b.maxLate - a.maxLate);
+  if (sort === "name_asc") rows.sort((a, b) => a.name.localeCompare(b.name));
 
   rows = rows.slice(0, 10);
 
-  tbody.innerHTML = rows.map(r => {
-    const inv = r.lastInvoice;
-    const invNumber = inv?.number || "—";
-    const invDate = inv?.date ? _fmtDateFRSafe(inv.date) : "—";
-    const late = r.maxLate;
+  tbody.innerHTML = rows
+    .map((r) => {
+      const inv = r.lastInvoice;
+      const invNumber = inv?.number || "—";
+      const invDate = inv?.date ? _fmtDateFRSafe(inv.date) : "—";
+      const late = r.maxLate;
 
-    return `
+      return `
       <tr>
         <td><strong>${_escapeHtml(r.name)}</strong></td>
         <td><span class="badge-red">${_fmtEUR(r.unpaidTotal)}</span></td>
@@ -18979,7 +19058,8 @@ function renderClientsFollowup() {
         </td>
       </tr>
     `;
-  }).join("");
+    })
+    .join("");
 }
 
 function followupOpenInvoice(id) {
@@ -19001,23 +19081,31 @@ function fillYearMenu() {
 
   const years = new Set(["2025", "2026", "2027"]);
 
-  docs.forEach(d => {
+  docs.forEach((d) => {
     if (d.date) years.add(d.date.split("-")[0]);
   });
 
   const sorted = Array.from(years).sort();
   select.innerHTML = '<option value="all">Toutes</option>';
 
-  sorted.forEach(y => {
+  sorted.forEach((y) => {
     select.innerHTML += `<option value="${y}">${y}</option>`;
   });
 }
 
 function autoFillDates() {
-  document.querySelectorAll("input[type='date']").forEach(input => {
+  document.querySelectorAll("input[type='date']").forEach((input) => {
+    // ✅ Ne jamais auto-remplir les "dates de passage"
+    if (input.classList.contains("prestation-date")) return;
+
+    // (optionnel) si tu veux aussi éviter d’auto-remplir d’autres champs précis :
+    // if (input.id === "validityDate") return;
+    // if (input.id === "paymentDate") return;
+
     if (!input.value) input.value = todayISO();
   });
 }
+
 
 /* ======================
    INIT (tu gardes ton window.onload)
@@ -19037,8 +19125,10 @@ window.onload = function () {
   if (typeof updateButtonColors === "function") updateButtonColors();
   if (typeof showHome === "function") showHome();
 
-  if (typeof checkScheduledInvoices === "function"
-      && typeof countContractInstallmentInvoices === "function") {
+  if (
+    typeof checkScheduledInvoices === "function" &&
+    typeof countContractInstallmentInvoices === "function"
+  ) {
     checkScheduledInvoices();
   }
 
@@ -19065,9 +19155,11 @@ window.addEventListener("online", () => {
   console.log("[NET] Reconnexion détectée");
   updateOfflineBadge();
   if (!db) {
-    initFirebase().then(processSyncQueue).catch(() => {
-      updateOfflineBadge();
-    });
+    initFirebase()
+      .then(processSyncQueue)
+      .catch(() => {
+        updateOfflineBadge();
+      });
   } else {
     processSyncQueue();
   }
@@ -19104,118 +19196,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Double clic fiche client
   const docClientInput = document.getElementById("clientName");
-  const ctClientInput  = document.getElementById("ctClientName");
+  const ctClientInput = document.getElementById("ctClientName");
 
   if (docClientInput) {
-    docClientInput.addEventListener("dblclick", () => openClientSheet(docClientInput.value));
+    docClientInput.addEventListener("dblclick", () =>
+      openClientSheet(docClientInput.value),
+    );
   }
   if (ctClientInput) {
-    ctClientInput.addEventListener("dblclick", () => openClientSheet(ctClientInput.value));
+    ctClientInput.addEventListener("dblclick", () =>
+      openClientSheet(ctClientInput.value),
+    );
   }
 
-  // Signature popup buttons
-  const clearBtn     = document.getElementById("signatureClear");
-  const validateBtn  = document.getElementById("signatureValidate");
-  const approveRadio = document.getElementById("approveDevis");
-  const closeBtn     = document.getElementById("signatureClose");
+// =====================================
+// SIGNATURE POPUP – BIND UNIQUE (ROBUSTE)
+// =====================================
+if (!window.__signaturePopupBound) {
+  window.__signaturePopupBound = true;
 
-  if (approveRadio) {
-    approveRadio.addEventListener("click", () => openSignaturePopup());
-  }
+  // Ouvre la popup quand on clique "Bon pour accord"
+  document.addEventListener("click", (e) => {
+    const el = e.target;
+    if (!el) return;
 
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => signaturePad?.clear());
-  }
+    const approve =
+      el.id === "approveDevis" ||
+      el.closest?.("#approveDevis") ||
+      el.closest?.('label[for="approveDevis"]');
 
-  if (closeBtn) {
-    closeBtn.addEventListener("click", () => {
-      window.currentContractSignatureMode = false;
-      document.getElementById("signaturePopup")?.classList.add("hidden");
-    });
-  }
-
-  if (validateBtn) {
-    validateBtn.addEventListener("click", () => {
-      if (!signaturePad || signaturePad.isEmpty()) {
-        showConfirmDialog({
-          title: "Signature manquante",
-          message: "Merci de signer dans la zone prévue avant de valider.",
-          confirmLabel: "OK",
-          variant: "warning",
-          icon: "✍️"
-        });
-        return;
-      }
-
-      const dataUrl = signaturePad.toDataURL("image/png");
-
-      if (window.currentContractSignatureMode) {
-        saveContractSignature(dataUrl);
-        window.currentContractSignatureMode = false;
-      } else {
-        saveSignatureToCurrentDocument(dataUrl);
-      }
-
-      document.getElementById("signaturePopup")?.classList.add("hidden");
-    });
-  }
-
-  // Auto-fill dates after any click (ton comportement inchangé)
-  document.addEventListener("click", () => {
-    setTimeout(autoFillDates, 50);
+    if (approve) openSignaturePopup();
   });
 
-  // 🚫 CONTRAT – Blocage TVA 20% si micro (si tu gardes enforceContractMicroTVA)
-  const tvaInput = document.getElementById("tvaRate");
-  if (tvaInput) {
-    tvaInput.addEventListener("change", () => {
-      if (typeof enforceContractMicroTVA === "function") enforceContractMicroTVA();
-    });
+  // Clear
+  document.addEventListener("click", (e) => {
+    const el = e.target;
+    if (el && el.id === "signatureClear") {
+      signaturePad?.clear();
+    }
+  });
+
+  // Close
+  document.addEventListener("click", (e) => {
+    const el = e.target;
+    if (el && el.id === "signatureClose") {
+      window.currentContractSignatureMode = false;
+      document.getElementById("signaturePopup")?.classList.add("hidden");
+    }
+  });
+
+  // Validate
+  document.addEventListener("click", (e) => {
+    const el = e.target;
+    if (!el || el.id !== "signatureValidate") return;
+
+    if (!signaturePad || signaturePad.isEmpty()) {
+      showConfirmDialog?.({
+        title: "Signature manquante",
+        message: "Merci de signer dans la zone prévue avant de valider.",
+        confirmLabel: "OK",
+        variant: "warning",
+        icon: "✍️",
+      });
+      return;
+    }
+
+    const dataUrl = signaturePad.toDataURL("image/png");
+
+    if (window.currentContractSignatureMode) {
+      saveContractSignature(dataUrl);
+      window.currentContractSignatureMode = false;
+    } else {
+      saveSignatureToCurrentDocument(dataUrl);
+    }
+
+    document.getElementById("signaturePopup")?.classList.add("hidden");
+  });
+}
+
+// Auto-fill dates after any click (sans casser la popup signature)
+document.addEventListener("click", (e) => {
+  const popup = document.getElementById("signaturePopup");
+  if (popup && !popup.classList.contains("hidden") && popup.contains(e.target)) {
+    return; // ignore les clics dans la popup
   }
+  setTimeout(autoFillDates, 50);
 });
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// 🚫 CONTRAT – Blocage TVA 20% si micro (si tu gardes enforceContractMicroTVA)
+const tvaInput = document.getElementById("tvaRate");
+if (tvaInput) {
+  tvaInput.addEventListener("change", () => {
+    if (typeof enforceContractMicroTVA === "function") enforceContractMicroTVA();
+  });
+}
+});
 

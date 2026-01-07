@@ -1046,7 +1046,8 @@
 
 <div class="form-group no-print devis-signature-trigger">
   <label style="display:flex; align-items:center; gap:10px; margin:0;">
-    <input type="radio" id="approveDevis" name="approveDoc" onclick="openSignaturePopup()">
+    <input type="radio" id="approveDevis" name="approveDoc">
+
     Bon pour accord – signer électroniquement
   </label>
 </div>
@@ -1888,23 +1889,24 @@
 </div>
 
 
-  </div> <!-- .popup -->
+    </div> <!-- .popup -->
 </div> <!-- #clientsPopup -->
 
 </div> <!-- FIN container -->
 
-<!-- Librairie SignaturePad -->
-<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
-
-<!-- jsPDF pour génération des PDF -->
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
-<!-- SortableJS-->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
-
 <!-- POPUP SIGNATURE (UNIQUE) -->
-<div id="signaturePopup" class="signature-overlay hidden">
-  ...
+<div id="signaturePopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>✍️ Signature client</h3>
+
+    <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+
+    <div class="popup-buttons" style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+      <button type="button" class="btn btn-secondary" id="signatureClear">Effacer</button>
+      <button type="button" class="btn btn-danger" id="signatureClose">Fermer</button>
+      <button type="button" class="btn btn-primary" id="signatureValidate">Valider</button>
+    </div>
+  </div>
 </div>
 
 <!-- PDF VIEWER (iPhone fix) -->
@@ -1918,6 +1920,14 @@
   <iframe id="pdfViewerFrame" class="pdf-frame" title="Aperçu PDF"></iframe>
 </div>
 
+<!-- Librairie SignaturePad -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+
+<!-- jsPDF pour génération des PDF -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<!-- SortableJS-->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
 <!-- ✅ App JS EN DERNIER -->
 <script src="app.js"></script>
