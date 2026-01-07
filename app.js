@@ -1150,6 +1150,10 @@ async function initFirebase() {
   }
 
   computeCA();
+// ✅ Recalcule statut micro TVA + UI (après synchro Firestore)
+if (typeof refreshMicroTVAState === "function") {
+  refreshMicroTVAState(false);
+}
 
   // Mise à jour badge + tentative de vidage de la queue
   updateOfflineBadge();
@@ -7513,6 +7517,9 @@ function deleteCurrent() {
       const idToDelete = currentDocumentId;
       const docs = getAllDocuments().filter((d) => d.id !== idToDelete);
       saveDocuments(docs);
+  if (typeof refreshMicroTVAState === "function") {
+    refreshMicroTVAState(false);
+  }
 
       if (db) {
         db.collection("documents")
@@ -7585,30 +7592,9 @@ function backToList() {
 }
 
 function syncMicroTVAStatusWithCurrentCA() {
-  const { year, caTTC } = computeCurrentYearCAForMicro();
-  const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
-
-  // Si on est en "obligatoire" mais que le CA actuel est repassé sous le seuil
-  // (ex: suppression d'une facture test), on repasse en franchise
-  if (status?.mode === "obligatoire" && caTTC < MICRO_TVA_THRESHOLD_BASE) {
-    saveMicroTVAStatus({ mode: "franchise", activatedYear: null, activatedCA: 0 });
-
-    // remet l'UI TVA sur 0% si tu as setTVA()
-    if (typeof setTVA === "function") setTVA(0);
-    const tva0 = document.getElementById("tva0");
-    const tva20 = document.getElementById("tva20");
-    if (tva0 && tva20) {
-      tva0.checked = true;
-      tva20.checked = false;
-    }
-  }
-
-  // Si on est en franchise mais CA dépasse → passe obligatoire (sécurité)
-  if (status?.mode !== "obligatoire" && caTTC >= MICRO_TVA_THRESHOLD_BASE) {
-    saveMicroTVAStatus({ mode: "obligatoire", activatedYear: year, activatedCA: caTTC });
-    if (typeof setTVA === "function") setTVA(20);
-  }
+  return refreshMicroTVAState(false);
 }
+
 
 // =====================================
 // 📊 CALCUL CA ANNUEL / MENSUEL
@@ -7651,7 +7637,10 @@ function computeCA() {
 
   // Surveiller le seuil TVA micro
   if (typeof checkMicroTVAThreshold === "function") {
-    checkMicroTVAThreshold(false);
+    if (typeof refreshMicroTVAState === "function") {
+  refreshMicroTVAState(false);
+}
+
   }
 
   // TRÈS IMPORTANT : renvoyer le CA encaissé (micro)
@@ -7693,6 +7682,76 @@ function getMicroTvaStatus() {
   const st = getMicroTVAStatus();
   return st && st.mode ? st.mode : "franchise";
 }
+
+// ✅ SOURCE DE VÉRITÉ UNIQUE : statut micro TVA + UI + badge
+function refreshMicroTVAState(showAlert = false) {
+  const { year, caTTC } = computeCurrentYearCAForMicro();
+  const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
+
+  // 1) Mode désiré = basé UNIQUEMENT sur le CA encaissé année courante
+  const shouldBeObligatoire = caTTC >= MICRO_TVA_THRESHOLD_BASE;
+  const nextMode = shouldBeObligatoire ? "obligatoire" : "franchise";
+
+  // 2) Si changement de mode => on sauvegarde
+  if (!status || status.mode !== nextMode || status.activatedYear !== year) {
+    saveMicroTVAStatus({
+      mode: nextMode,
+      activatedYear: nextMode === "obligatoire" ? year : null,
+      activatedCA: nextMode === "obligatoire" ? caTTC : 0,
+    });
+
+    // Alerte seulement si on vient de passer en obligatoire
+    if (showAlert && nextMode === "obligatoire" && typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Seuil TVA micro-entreprise dépassé",
+        message:
+          `Ton chiffre d'affaires encaissé ${year} atteint ${formatEuroFallback(caTTC)}.\n\n` +
+          `Seuil de franchise : ${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}.\n\n` +
+          `➡️ TVA 20 % obligatoire sur les nouveaux devis et factures.`,
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "warning",
+        icon: "⚠️",
+      });
+    }
+  }
+
+  // 3) Badge dashboard (toujours synchro)
+  const badge = document.getElementById("dashTVAMicroBadge");
+  if (badge) {
+    if (nextMode === "obligatoire") {
+      badge.textContent = "TVA activée (20 %)";
+      badge.style.display = "inline-block";
+    } else {
+      badge.style.display = "none";
+    }
+  }
+
+  // 4) Forcer la TVA du formulaire devis/facture en cohérence (si champs présents)
+  const forcedRate = nextMode === "obligatoire" ? 20 : 0;
+
+  if (typeof setTVA === "function") {
+    setTVA(forcedRate); // setTVA a déjà ton garde-fou micro :contentReference[oaicite:4]{index=4}
+  }
+
+  const tva0 = document.getElementById("tva0");
+  const tva20 = document.getElementById("tva20");
+  if (tva0 && tva20) {
+    tva0.checked = forcedRate === 0;
+    tva20.checked = forcedRate === 20;
+  }
+
+  // 5) (Optionnel mais propre) synchroniser radios contrat si présentes
+  const ct0 = document.getElementById("ctTva0");
+  const ct20 = document.getElementById("ctTva20");
+  if (ct0 && ct20) {
+    ct0.checked = forcedRate === 0;
+    ct20.checked = forcedRate === 20;
+  }
+
+  return { year, caTTC, mode: nextMode };
+}
+
 
 function saveMicroTVAStatus(status) {
   try {
@@ -7742,107 +7801,9 @@ function formatEuroFallback(v) {
  */
 
 function checkMicroTVAThreshold(showAlert = false) {
-  let status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
-  const { year, caTTC } = computeCurrentYearCAForMicro();
-
-  /* ======================================================
-     1️⃣ RESET AUTOMATIQUE AU 01/01 (SI SOUS LE SEUIL)
-  ====================================================== */
-  if (
-    status.mode === "obligatoire" &&
-    status.activatedYear &&
-    status.activatedYear !== year &&
-    caTTC < MICRO_TVA_THRESHOLD_BASE
-  ) {
-    saveMicroTVAStatus({
-      mode: "franchise",
-      activatedYear: null,
-      activatedCA: 0,
-    });
-
-    // 🔁 IMPORTANT : on relit le statut mis à jour
-    status = getMicroTVAStatus();
-  }
-
-  /* ======================================================
-     2️⃣ BADGE DASHBOARD
-  ====================================================== */
-  const badge = document.getElementById("dashTVAMicroBadge");
-  if (badge) {
-    if (status.mode === "obligatoire") {
-      badge.textContent = "TVA activée (20 %)";
-      badge.style.display = "inline-block";
-    } else {
-      badge.style.display = "none";
-    }
-  }
-
-  /* ======================================================
-     3️⃣ SI TVA DÉJÀ OBLIGATOIRE CETTE ANNÉE → STOP
-  ====================================================== */
-  if (status.mode === "obligatoire") {
-    return;
-  }
-
-  /* ======================================================
-     4️⃣ DÉPASSEMENT DU SEUIL MICRO (ANNÉE COURANTE)
-  ====================================================== */
-  if (caTTC >= MICRO_TVA_THRESHOLD_BASE) {
-    const newStatus = {
-      mode: "obligatoire",
-      activatedYear: year,
-      activatedCA: caTTC,
-    };
-    saveMicroTVAStatus(newStatus);
-
-    // 🔔 Alerte utilisateur (optionnelle)
-    if (showAlert) {
-      if (typeof showConfirmDialog === "function") {
-        showConfirmDialog({
-          title: "Seuil TVA micro-entreprise dépassé",
-          message:
-            `Ton chiffre d'affaires ${year} atteint ${formatEuroFallback(caTTC)}.\n\n` +
-            `Le seuil légal de franchise en base de TVA (prestations de services) est de ` +
-            `${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}.\n\n` +
-            `À partir de maintenant, la TVA 20 % doit être appliquée sur les nouveaux devis et factures.`,
-          confirmLabel: "OK",
-          cancelLabel: "",
-          variant: "warning",
-          icon: "⚠️",
-        });
-      } else {
-        alert(
-          "⚠️ Seuil TVA micro dépassé : " +
-            formatEuroFallback(caTTC) +
-            " (seuil " +
-            formatEuroFallback(MICRO_TVA_THRESHOLD_BASE) +
-            "). TVA 20 % obligatoire sur les prochaines factures.",
-        );
-      }
-    }
-
-    /* ======================================================
-       5️⃣ FORCE TVA 20 % SUR LE FORMULAIRE COURANT
-    ====================================================== */
-    if (typeof setTVA === "function") {
-      setTVA(20);
-    }
-
-    const tva0 = document.getElementById("tva0");
-    const tva20 = document.getElementById("tva20");
-    if (tva0 && tva20) {
-      tva0.checked = false;
-      tva20.checked = true;
-    }
-
-    // Mise à jour badge immédiate
-    const badge2 = document.getElementById("dashTVAMicroBadge");
-    if (badge2) {
-      badge2.textContent = "TVA activée (20 %)";
-      badge2.style.display = "inline-block";
-    }
-  }
+  return refreshMicroTVAState(!!showAlert);
 }
+
 
 // ================== HISTORIQUE DOCUMENTS ==================
 
@@ -19140,9 +19101,11 @@ window.onload = function () {
     subjectInput.dataset.boundManualFlag = "1";
   }
 
-  initFirebase();
-
-  if (typeof refreshHomeStats === "function") refreshHomeStats();
+initFirebase().then(() => {
+  if (typeof refreshMicroTVAState === "function") {
+    refreshMicroTVAState(false);
+  }
+});
 
   if (typeof initContractsUI === "function") initContractsUI();
 };
