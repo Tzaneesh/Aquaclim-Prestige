@@ -1915,10 +1915,22 @@
     <button type="button" class="btn btn-secondary pdf-back-btn" onclick="closePdfViewer()">
       ← Retour
     </button>
+
+    <!-- ✅ BOUTON QUI SAUVE SUR IPHONE -->
+    <button
+      id="pdfViewerCloseBtn"
+      type="button"
+      class="btn btn-danger"
+      onclick="closePdfViewer()"
+      style="margin-left:auto;"
+    >
+      ✕ Fermer
+    </button>
   </div>
 
   <iframe id="pdfViewerFrame" class="pdf-frame" title="Aperçu PDF"></iframe>
 </div>
+
 
 <!-- Librairie SignaturePad -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>

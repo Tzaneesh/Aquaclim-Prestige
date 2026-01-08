@@ -1,9 +1,4 @@
-// ========= FORMAT MONNAIE GLOBAL =========
-function fmtMoney(v) {
-  return typeof formatEuro === "function"
-    ? formatEuro(v)
-    : Number(v || 0).toFixed(2) + " €";
-}
+
 
 
 /********************************************************************
@@ -54,9 +49,11 @@ function endOfMonthISO(iso) {
 }
 
 function compareISO(a, b) {
-  const diff = new Date(a) - new Date(b);
+  const diff =
+    new Date(a + "T00:00:00") - new Date(b + "T00:00:00");
   return diff < 0 ? -1 : diff > 0 ? 1 : 0;
 }
+
 
 // Date d’aujourd’hui au format ISO
 function todayISO() {
@@ -2849,14 +2846,13 @@ function rebuildClientsPopupList(searchText = "") {
   );
 
   if (searchText && searchText.trim() !== "") {
-    const q = searchText.toLowerCase();
-    clientsPopupList = sorted.filter(
-      (item) =>
-        (item.client.name || "").toLowerCase().includes(q) ||
-        (item.client.address &&
-          item.client.address.toLowerCase().includes(q)) ||
-        (item.client.phone && item.client.phone.toLowerCase().includes(q)),
-    );
+const q = _normName(searchText);
+clientsPopupList = sorted.filter((item) =>
+  _normName(item.client.name).includes(q) ||
+  _normName(item.client.address || "").includes(q) ||
+  _normName(item.client.phone || "").includes(q)
+);
+
   } else {
     // Pas de filtre : on garde toute la liste triée
     clientsPopupList = sorted;
@@ -3720,6 +3716,37 @@ function getDocument(id) {
 
 function saveDocuments(docs) {
   localStorage.setItem("documents", JSON.stringify(docs));
+
+  // ✅ Refresh global après toute modification de documents
+  if (typeof refreshAfterDocsChange === "function") {
+    refreshAfterDocsChange();
+    return;
+  }
+
+  // 🔁 Fallback (au cas où)
+  if (typeof computeCA === "function") computeCA();
+  if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+  if (typeof refreshHomeStats === "function") refreshHomeStats();
+
+  // Popup CA ouverte ? → on rerender
+  const overlay = document.getElementById("caReportOverlay");
+  const isOpen = overlay && !overlay.classList.contains("hidden");
+  if (isOpen && typeof renderCAReport === "function") {
+    renderCAReport();
+  }
+}
+
+function refreshAfterDocsChange() {
+  if (typeof computeCA === "function") computeCA();
+  if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+  if (typeof refreshHomeStats === "function") refreshHomeStats();
+
+  // Si le menu CA est ouvert, on le met à jour
+  const overlay = document.getElementById("caReportOverlay");
+  const isOpen = overlay && !overlay.classList.contains("hidden");
+  if (isOpen && typeof renderCAReport === "function") {
+    renderCAReport();
+  }
 }
 
 
@@ -3728,10 +3755,13 @@ function saveDocuments(docs) {
 let currentSendDoc = null;
 
 // ---------- Helpers format ----------
-function _fmtMoneyEUR(n) {
-  const x = Number(n);
-  if (!isFinite(x)) return "";
-  return x.toFixed(2).replace(".", ",") + " €";
+
+// ========= FORMAT MONNAIE GLOBAL =========
+
+function fmtMoney(v) {
+  return typeof formatEuro === "function"
+    ? formatEuro(v)
+    : Number(v || 0).toFixed(2) + " €";
 }
 
 function _fmtDateFR(iso) {
@@ -4971,12 +5001,35 @@ function openPdfViewer(url) {
 
   frame.src = url;
   overlay.classList.remove("hidden");
+overlay.scrollTop = 0;
+
 
   // bouton "retour" (PWA iPhone/Android)
   try {
     history.pushState({ pdfOpen: true }, "", location.href);
   } catch (e) {}
 }
+
+function bindPdfViewerCloseUX() {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  if (!overlay || window.__pdfViewerUXBound) return;
+  window.__pdfViewerUXBound = true;
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) closePdfViewer();
+  });
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const ov = document.getElementById("pdfViewerOverlay");
+      if (ov && !ov.classList.contains("hidden")) closePdfViewer();
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", bindPdfViewerCloseUX);
+
+
 
 function closePdfViewer() {
   const overlay = document.getElementById("pdfViewerOverlay");
@@ -7012,66 +7065,59 @@ function loadDocument(id) {
 
 function saveDocument() {
   // ==== BLOCAGE TVA MICRO ====
- try {
-  const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
-  const selectedRate = Number(document.getElementById("tvaRate")?.value || 0);
+  try {
+    const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
+    const selectedRate = Number(document.getElementById("tvaRate")?.value || 0);
 
-  // ✅ Si on est en franchise → interdire TVA 20
-  if (status.mode === "franchise" && selectedRate > 0) {
-    if (typeof showConfirmDialog === "function") {
-      showConfirmDialog({
-        title: "TVA impossible",
-        message:
-          "Tu es encore sous le seuil micro (moins de 37 500 €). " +
-          "Les devis et factures DOIVENT rester en TVA 0 %. Impossible de sauvegarder en 20 %.",
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "warning",
-        icon: "⚠️",
-      });
+    // ✅ Si on est en franchise → interdire TVA 20
+    if (status.mode === "franchise" && selectedRate > 0) {
+      if (typeof showConfirmDialog === "function") {
+        showConfirmDialog({
+          title: "TVA impossible",
+          message:
+            "Tu es encore sous le seuil micro (moins de 37 500 €). " +
+            "Les devis et factures DOIVENT rester en TVA 0 %. Impossible de sauvegarder en 20 %.",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "warning",
+          icon: "⚠️",
+        });
+      }
+      return; // ❌ STOP
     }
-    return; // ❌ STOP, on empêche la sauvegarde
+
+    // ✅ Si TVA obligatoire → interdire TVA 0 sur nouveaux docs
+    if (status.mode === "obligatoire" && selectedRate === 0) {
+      if (typeof showConfirmDialog === "function") {
+        showConfirmDialog({
+          title: "TVA obligatoire",
+          message:
+            "Le seuil micro de 37 500 € a été dépassé.\n" +
+            "La TVA de 20 % est désormais obligatoire sur les nouveaux documents.",
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "warning",
+          icon: "⚠️",
+        });
+      }
+      return; // ❌ STOP
+    }
+  } catch (e) {
+    console.error("Erreur contrôle TVA :", e);
   }
 
-  // ✅ Si TVA obligatoire → interdire TVA 0 sur nouveaux docs
-  if (status.mode === "obligatoire" && selectedRate === 0) {
-    if (typeof showConfirmDialog === "function") {
-      showConfirmDialog({
-        title: "TVA obligatoire",
-        message:
-          "Le seuil micro de 37 500 € a été dépassé.\n" +
-          "La TVA de 20 % est désormais obligatoire sur les nouveaux documents.",
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "warning",
-        icon: "⚠️",
-      });
-    }
-    return; // ❌ STOP, on empêche la sauvegarde
-  }
-} catch (e) {
-  console.error("Erreur contrôle TVA :", e);
-}
   const clientName = document.getElementById("clientName").value.trim();
   const clientAddress = document.getElementById("clientAddress").value.trim();
-  const clientCivility = (
-    document.getElementById("clientCivility")?.value || ""
-  ).trim();
+  const clientCivility = (document.getElementById("clientCivility")?.value || "").trim();
 
   const clientPhone = document.getElementById("clientPhone").value.trim();
   const clientEmail = document.getElementById("clientEmail").value.trim();
-  const docSubject = (
-    document.getElementById("docSubject")?.value || ""
-  ).trim();
+  const docSubject = (document.getElementById("docSubject")?.value || "").trim();
 
   // 🔥 Civilité du lieu d’intervention
-  const siteCivility = (
-    document.getElementById("siteCivility")?.value || ""
-  ).trim();
+  const siteCivility = (document.getElementById("siteCivility")?.value || "").trim();
   const siteName = (document.getElementById("siteName")?.value || "").trim();
-  const siteAddress = (
-    document.getElementById("siteAddress")?.value || ""
-  ).trim();
+  const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
 
   if (!clientName || !clientAddress) {
     showConfirmDialog({
@@ -7113,9 +7159,7 @@ function saveDocument() {
 
     const desc = (line.querySelector(".prestation-desc")?.value || "").trim();
     const qty = parseFloat(line.querySelector(".prestation-qty")?.value || "0");
-    const price = parseFloat(
-      line.querySelector(".prestation-price")?.value || "0",
-    );
+    const price = parseFloat(line.querySelector(".prestation-price")?.value || "0");
     const unit = (line.querySelector(".prestation-unit")?.value || "").trim();
     const detail = line.dataset.detail || "";
 
@@ -7156,8 +7200,7 @@ function saveDocument() {
   if (prestations.length === 0) {
     showConfirmDialog({
       title: "Aucune prestation",
-      message:
-        "Ajoute au moins une prestation avant d'enregistrer le document.",
+      message: "Ajoute au moins une prestation avant d'enregistrer le document.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "warning",
@@ -7172,9 +7215,9 @@ function saveDocument() {
   const validityDate = document.getElementById("validityDate").value;
   const tvaRate = parseFloat(document.getElementById("tvaRate").value) || 0;
   const notes = document.getElementById("notes").value;
+
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
-  const wasPaid = existing ? !!existing.paid : false; // 🧠 état avant sauvegarde
-  // ancien statut (pour détecter le passage en "cloture")
+  const wasPaid = existing ? !!existing.paid : false;
   const oldStatus = existing ? existing.status || "" : "";
 
   let conditionsType = existing ? existing.conditionsType || "" : "";
@@ -7196,11 +7239,7 @@ function saveDocument() {
     status = existing && existing.status ? existing.status : "";
   }
 
-  // ==== DÉTECTION PASSAGE EN "CLOTURÉ" ====
-  // On mémorise si l'ancien doc était un devis NON clôturé
   let wasCloture = existing?.status === "cloture";
-  let willBeCloture = status === "cloture";
-
   let paymentMode = "";
   let paymentDate = "";
   let paid = false;
@@ -7256,7 +7295,6 @@ function saveDocument() {
       email: clientEmail,
     },
 
-    // 🔥 on stocke aussi la civilité du lieu
     siteCivility,
     siteName,
     siteAddress,
@@ -7277,34 +7315,66 @@ function saveDocument() {
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
+  // ✅ BLOQUAGE AVANT SAUVEGARDE : facture particulier >= 150€ => créer devis, pas de facture
+  if (doc && doc.type === "facture") {
+    const clientType = String(doc.conditionsType || "particulier").trim().toLowerCase();
+    const total = Number(doc.totalTTC);
+
+    if (clientType === "particulier" && isFinite(total) && total >= 150) {
+      showConfirmDialog({
+        title: "Devis obligatoire",
+        message:
+          `Cette intervention dépasse 150 € (particulier).\n\n` +
+          `✅ Un devis doit être créé et accepté AVANT de facturer.\n\n` +
+          `Souhaites-tu créer un devis maintenant ?\n` +
+          `(La facture sera générée automatiquement quand le devis sera "Accepté".)`,
+        confirmLabel: "Créer le devis",
+        cancelLabel: "Annuler",
+        variant: "warning",
+        icon: "🧾",
+        onConfirm: () => {
+          const devis = generateDevisFromInvoice(doc);
+          if (!devis) return;
+
+          devis.type = "devis";
+          devis.date = new Date().toISOString().slice(0, 10);
+          devis.status = devis.status || "en_attente";
+
+          const all = getAllDocuments();
+          all.push(devis);
+          saveDocuments(all);
+
+          if (typeof saveSingleDocumentToFirestore === "function") {
+            saveSingleDocumentToFirestore(devis);
+          }
+
+          if (typeof switchListType === "function") switchListType("devis");
+          if (typeof loadDocumentsList === "function") loadDocumentsList();
+          if (typeof loadDocument === "function") loadDocument(devis.id);
+        },
+      });
+
+      return; // ✅ STOP => on n’enregistre PAS la facture
+    }
+  }
+
   // 📌 Un devis qui vient de passer en "cloture" ?
   const justClotured =
     doc.type === "devis" && oldStatus !== "cloture" && doc.status === "cloture";
 
-  // on gardera ici la référence vers le rapport auto
   let autoRapportRecord = null;
-
-  // =======================
-  // 📌 Création auto rapport intelligent
-  // =======================
   let shouldCreateRapport = false;
 
-  // Un devis passe en clôturé → création rapport
   if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
     shouldCreateRapport = true;
   }
 
-  // 1) S'il existait déjà un document → on calcule le diff
   if (existing) {
     const diffEntries = computeDocumentDiff(existing, doc) || [];
     diffEntries.forEach((entry) => {
-      addHistoryEntry(doc, {
-        type: entry.type,
-        detail: entry.detail,
-      });
+      addHistoryEntry(doc, { type: entry.type, detail: entry.detail });
     });
   } else {
-    // 2) Nouveau document → entrée "create"
     addHistoryEntry(doc, {
       type: "create",
       detail: `Document créé (${doc.type === "facture" ? "Facture" : "Devis"} ${doc.number || ""})`,
@@ -7323,9 +7393,8 @@ function saveDocument() {
   // 📄 Création automatique du rapport depuis devis clôturé
   // =======================================
   if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
-    createRapportFromDevis(doc); // ⚡ Génère le rapport intelligent !!!
+    createRapportFromDevis(doc);
 
-    // Option : popup confirmation
     showConfirmDialog({
       title: "Rapport généré",
       message:
@@ -7353,10 +7422,8 @@ function saveDocument() {
   // ===============================
   if (justClotured && typeof createRapportFromDevis === "function") {
     try {
-      // 1) on crée le rapport intelligent (lié au devis)
-      autoRapportRecord = createRapportFromDevis(doc); // doit retourner l'objet rapport
+      autoRapportRecord = createRapportFromDevis(doc);
 
-      // 2) on propose de l'ouvrir tout de suite
       if (autoRapportRecord && typeof showConfirmDialog === "function") {
         showConfirmDialog({
           title: "Rapport d’intervention créé",
@@ -7367,12 +7434,10 @@ function saveDocument() {
           cancelLabel: "Plus tard",
           variant: "info",
           icon: "📝",
-          // 👉 si ta showConfirmDialog gère des callbacks
           onConfirm: () => {
             if (typeof openRapportPopupForEdit === "function") {
               openRapportPopupForEdit(autoRapportRecord.id);
             } else if (typeof openPiscineRapportGenerator === "function") {
-              // fallback : si ton édition utilise cette fonction
               openPiscineRapportGenerator(autoRapportRecord.id);
             }
           },
@@ -7384,7 +7449,6 @@ function saveDocument() {
     }
   }
 
-  // Mise à jour client SI la fonction existe (évite une erreur JS)
   if (typeof updateClientsFromDocument === "function") {
     updateClientsFromDocument(doc);
   }
@@ -7409,7 +7473,6 @@ function saveDocument() {
     refreshHomeStats();
   }
 
-  // 🔄 MAJ dashboard + automate TVA micro
   if (typeof computeCA === "function") {
     computeCA();
   }
@@ -7419,10 +7482,12 @@ function saveDocument() {
   } catch (e) {
     console.error("Erreur renderHistory après sauvegarde:", e);
   }
+
   if (typeof refreshDocumentHealthUI === "function") {
     refreshDocumentHealthUI(doc);
   }
 }
+
 
 // Supprimer depuis la LISTE (bouton "Supprimer" dans le tableau)
 
@@ -7459,15 +7524,17 @@ function deleteDocument(id) {
           .catch((err) => console.error("Erreur Firestore delete :", err));
       }
 
-      // On rafraîchit juste la liste
-      loadDocumentsList();
+      // ✅ Refresh UI (liste + stats)
+      if (typeof loadDocumentsList === "function") loadDocumentsList();
+      if (typeof refreshHomeStats === "function") refreshHomeStats();
+
+      // ✅ Recalcule CA + resynchronise immédiatement le statut micro TVA + badge
+      if (typeof computeCA === "function") computeCA();
+      if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
     },
   });
-
-  if (typeof refreshHomeStats === "function") {
-    refreshHomeStats();
-  }
 }
+
 
 // Supprimer depuis le FORMULAIRE (bouton rouge en haut du devis/facture)
 function deleteCurrent() {
@@ -7693,14 +7760,16 @@ function refreshMicroTVAState(showAlert = false) {
   const nextMode = shouldBeObligatoire ? "obligatoire" : "franchise";
 
   // 2) Si changement de mode => on sauvegarde
-  if (!status || status.mode !== nextMode || status.activatedYear !== year) {
+  const modeChanged = !status || status.mode !== nextMode;
+  const yearMismatch = nextMode === "obligatoire" && (!status || status.activatedYear !== year);
+
+  if (modeChanged || yearMismatch) {
     saveMicroTVAStatus({
       mode: nextMode,
       activatedYear: nextMode === "obligatoire" ? year : null,
       activatedCA: nextMode === "obligatoire" ? caTTC : 0,
     });
 
-    // Alerte seulement si on vient de passer en obligatoire
     if (showAlert && nextMode === "obligatoire" && typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "Seuil TVA micro-entreprise dépassé",
@@ -7715,6 +7784,7 @@ function refreshMicroTVAState(showAlert = false) {
       });
     }
   }
+
 
   // 3) Badge dashboard (toujours synchro)
   const badge = document.getElementById("dashTVAMicroBadge");
@@ -7747,6 +7817,12 @@ function refreshMicroTVAState(showAlert = false) {
   if (ct0 && ct20) {
     ct0.checked = forcedRate === 0;
     ct20.checked = forcedRate === 20;
+  }
+  // 6) Si le popup CA est ouvert, on le rerender pour MAJ TVA/CA instantanément
+  const overlay = document.getElementById("caReportOverlay");
+  const isOpen = overlay && !overlay.classList.contains("hidden");
+  if (isOpen && typeof renderCAReport === "function") {
+    renderCAReport();
   }
 
   return { year, caTTC, mode: nextMode };
@@ -13841,6 +13917,165 @@ function createContractFromDevis() {
   });
 }
 
+function generateDevisFromInvoice(invoice) {
+  if (!invoice) return null;
+
+  const now = new Date();
+  const nowISO = now.toISOString();
+  const todayISO = nowISO.slice(0, 10);
+
+  const number = getNextNumber("devis");
+
+  // Deep copy prestations + normalisation
+  const prestations = (invoice.prestations || []).map((p) => {
+    const qty = Number(p.qty);
+    const price = Number(p.price);
+    const total = Number(p.total);
+
+    const safeQty = isFinite(qty) && qty > 0 ? qty : 1;
+    const safePrice = isFinite(price) ? price : 0;
+    const safeTotal = isFinite(total) ? total : safeQty * safePrice;
+
+    return {
+      desc: p.desc || "",
+      detail: p.detail || "",
+      qty: safeQty,
+      price: safePrice,
+      total: safeTotal,
+      unit: p.unit || "forfait",
+      dates: Array.isArray(p.dates) ? [...p.dates] : [],
+      kind: p.kind || "",
+    };
+  });
+
+  // Totaux (si pas présents, on retombe sur 0)
+  const tvaRate = Number(invoice.tvaRate);
+  const subtotal = Number(invoice.subtotal);
+  const discountRate = Number(invoice.discountRate);
+  const discountAmount = Number(invoice.discountAmount);
+  const tvaAmount = Number(invoice.tvaAmount);
+  const totalTTC = Number(invoice.totalTTC);
+
+  const safeTvaRate = isFinite(tvaRate) ? tvaRate : 0;
+  const safeSubtotal = isFinite(subtotal) ? subtotal : 0;
+  const safeDiscountRate = isFinite(discountRate) ? discountRate : 0;
+  const safeDiscountAmount = isFinite(discountAmount) ? discountAmount : 0;
+  const safeTvaAmount = isFinite(tvaAmount) ? tvaAmount : 0;
+  const safeTotalTTC = isFinite(totalTTC) ? totalTTC : 0;
+
+  const subjectBase = String(invoice.subject || "").trim();
+  const subject = subjectBase ? subjectBase : "Devis";
+
+  const devis = {
+    id: generateId("DEV"),
+    type: "devis",
+    number,
+    date: todayISO,
+    validityDate: invoice.validityDate || "",
+
+    subject,
+
+    client: {
+      civility: invoice.client?.civility || "",
+      name: invoice.client?.name || "",
+      address: invoice.client?.address || "",
+      phone: invoice.client?.phone || "",
+      email: invoice.client?.email || "",
+    },
+
+    siteCivility: invoice.siteCivility || "",
+    siteName: invoice.siteName || "",
+    siteAddress: invoice.siteAddress || "",
+
+    prestations,
+
+    tvaRate: safeTvaRate,
+    subtotal: safeSubtotal,
+    discountRate: safeDiscountRate,
+    discountAmount: safeDiscountAmount,
+    tvaAmount: safeTvaAmount,
+    totalTTC: safeTotalTTC,
+
+    notes: invoice.notes || "",
+
+    // Devis = jamais "paid"
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+
+    // Statut devis
+    status: invoice.status && invoice.type === "devis" ? invoice.status : "",
+
+    // Type client (utile pour règles devis/facture)
+    conditionsType: invoice.conditionsType || "particulier",
+
+    // ✅ IMPORTANT : on ne lie PAS à une facture (car on veut éviter le doublon)
+    sourceFactureId: null,
+    sourceFactureNumber: null,
+
+    // (Optionnel) origine pratique
+    source: "invoice_to_devis",
+
+    createdAt: nowISO,
+    updatedAt: nowISO,
+  };
+
+  return devis;
+}
+
+
+function maybeForceDevisInsteadOfSavingInvoice(invoiceDraft) {
+  if (!invoiceDraft) return false;
+  if (invoiceDraft.type !== "facture") return false;
+
+  const clientType = String(invoiceDraft.conditionsType || "particulier").trim().toLowerCase();
+  const totalTTC = Number(invoiceDraft.totalTTC);
+
+  if (clientType !== "particulier") return false;
+  if (!isFinite(totalTTC) || totalTTC < 150) return false;
+
+  showConfirmDialog({
+    title: "Devis obligatoire",
+    message:
+      `Cette intervention dépasse 150 € TTC (particulier).\n\n` +
+      `✅ Un devis doit être créé et accepté AVANT de facturer.\n\n` +
+      `Créer le devis maintenant ?\n` +
+      `(La facture sera générée automatiquement quand le devis sera "Accepté".)`,
+    confirmLabel: "Créer le devis",
+    cancelLabel: "Annuler",
+    variant: "warning",
+    icon: "🧾",
+    onConfirm: function () {
+      const devis = generateDevisFromInvoice(invoiceDraft);
+      if (!devis) return;
+
+      // ✅ Important : on NE lie PAS une facture (car elle n'existe pas et on veut éviter doublon)
+      devis.sourceFactureId = null;
+      devis.sourceFactureNumber = null;
+
+      const all = getAllDocuments();
+      all.push(devis);
+      saveDocuments(all);
+
+      if (typeof saveSingleDocumentToFirestore === "function") {
+        saveSingleDocumentToFirestore(devis);
+      }
+
+      // Ouvrir le devis
+      if (typeof switchListType === "function") switchListType("devis");
+      if (typeof loadDocumentsList === "function") loadDocumentsList();
+      if (typeof loadDocument === "function") loadDocument(devis.id);
+    },
+  });
+
+  // ✅ On bloque la sauvegarde de la facture
+  return true;
+}
+
+
+
+
+
 function generateDevisFromContract(contract) {
   if (!contract) return null;
 
@@ -15415,41 +15650,57 @@ function rebuildContractInvoices(contract) {
     if (typeof saveSingleDocumentToFirestore === "function") {
       saveSingleDocumentToFirestore(immediate);
     }
-    // première échéance déjà créée
     installmentsCount = 1;
-    saveDocuments(docs); // pour la numérotation
+    saveDocuments(docs);
   }
 
   // 4️⃣ Calculer la 1re prochaine échéance (particulier + syndic)
   pr.nextInvoiceDate = computeNextInvoiceDate(contract);
 
-  // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui,
-  //    SANS dépasser le nombre d'échéances prévues
+  // 5️⃣ Rattraper toutes les échéances manquantes jusqu'à aujourd'hui
   while (pr.nextInvoiceDate && installmentsCount < totalInstallments) {
     const nextISO = pr.nextInvoiceDate;
     const nextDate = new Date(nextISO + "T00:00:00");
+
+    // stop si date invalide ou dans le futur
     if (isNaN(nextDate.getTime()) || nextDate > todayObj) {
       break;
     }
 
     const inv = createAutomaticInvoice(contract);
+
+    // si createAutomaticInvoice refuse (anti-doublon), on évite boucle infinie
     if (!inv) {
-      break;
+      const newNext = computeNextInvoiceDate(contract) || "";
+      if (!newNext || newNext === pr.nextInvoiceDate) break;
+      pr.nextInvoiceDate = newNext;
+      continue;
     }
 
     // On force la date de la facture à la vraie échéance
     inv.date = nextISO;
 
     docs.push(inv);
+
     if (typeof saveSingleDocumentToFirestore === "function") {
       saveSingleDocumentToFirestore(inv);
     }
-    saveDocuments(docs); // pour que getNextNumber voie ce numéro
+
+    // Important : sauvegarde pour que numérotation + compteur voient la nouvelle facture
+    saveDocuments(docs);
 
     installmentsCount++;
 
     // Recalcul de la prochaine échéance après cette facture
-    pr.nextInvoiceDate = computeNextInvoiceDate(contract);
+    const newNext = computeNextInvoiceDate(contract) || "";
+
+    // Sécurité anti-boucle infinie : si la date ne bouge pas, on stop
+    if (!newNext || newNext === pr.nextInvoiceDate) {
+      pr.nextInvoiceDate = "";
+      break;
+    }
+
+    pr.nextInvoiceDate = newNext;
   }
 
   // 6️⃣ Sauvegarde finale des documents & du contrat
@@ -15458,7 +15709,7 @@ function rebuildContractInvoices(contract) {
   contract.pricing = pr;
 
   const allContracts = getAllContracts().map((c) =>
-    c.id === contract.id ? contract : c,
+    c.id === contract.id ? contract : c
   );
   saveContracts(allContracts);
 
@@ -15469,6 +15720,7 @@ function rebuildContractInvoices(contract) {
 
   return true;
 }
+
 
 function updateContractTransformButtonVisibility() {
   const btnTop = document.getElementById("contractTransformButtonTop");
@@ -15641,9 +15893,37 @@ function saveContract() {
   }
 
   // ✅ Cas 2 : Pas de devis obligatoire OU devis déjà accepté
-  if (isNew) {
-    // ======= NOUVEAU CONTRAT =======
 
+  // ✅ VERROU : pas de facturation tant que le contrat n'est pas signé
+  const isSigned = !!contract.signature;
+
+  if (!isSigned) {
+    // On neutralise l’échéancier tant que pas signé
+    contract.pricing.nextInvoiceDate = "";
+
+    // Re-sauvegarde (local + firestore) pour être sûr que nextInvoiceDate reste vide
+    saveContracts(list);
+    if (typeof saveSingleContractToFirestore === "function") {
+      saveSingleContractToFirestore(contract);
+    }
+
+    showConfirmDialog({
+      title: "Contrat enregistré",
+      message:
+        "Contrat enregistré ✅\n\n" +
+        "⛔ Aucune facture ne sera générée tant que le client n’a pas signé (Bon pour accord).",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "✍️",
+    });
+
+    // On sort : surtout ne pas générer / rebuild / rattraper
+    return;
+  }
+
+  // ✅ À partir d’ici : contrat signé → on peut facturer
+  if (isNew) {
     // 1️⃣ Facture initiale (PARTICULIER uniquement)
     const invoice = generateImmediateBilling(contract);
 
@@ -15655,14 +15935,6 @@ function saveContract() {
       if (typeof saveSingleDocumentToFirestore === "function") {
         saveSingleDocumentToFirestore(invoice);
       }
-
-      showConfirmDialog({
-        title: "Facture créée",
-        message: "La facture initiale a été générée automatiquement 💶",
-        confirmLabel: "OK",
-        variant: "success",
-        icon: "💶",
-      });
     }
 
     // 2️⃣ Définition de la première échéance (particulier + syndic)
@@ -15679,12 +15951,12 @@ function saveContract() {
       checkScheduledInvoices();
     }
   } else {
-    // ======= CONTRAT EXISTANT =======
+    // Contrat existant, déjà signé → recalcul facturation
     rebuildContractInvoices(contract);
 
     showConfirmDialog({
       title: "Contrat mis à jour",
-      message: "Le contrat et toute la facturation ont été recalculés ✔️",
+      message: "Le contrat signé et toute la facturation ont été recalculés ✔️",
       confirmLabel: "OK",
       variant: "success",
       icon: "🔁",
@@ -15692,6 +15964,7 @@ function saveContract() {
 
     return;
   }
+
 
   // 🔟 Popup de confirmation standard (si on n’est pas sorti avant)
   showConfirmDialog({
@@ -18375,6 +18648,18 @@ function createAutomaticInvoice(contract) {
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
 
+// 🔒 Anti-doublon : si une facture existe déjà pour ce contrat + cette date, on STOP
+const alreadyExists = getAllDocuments().some((d) =>
+  d.type === "facture" &&
+  d.contractId === contract.id &&
+  d.date === nextISO &&
+  Array.isArray(d.prestations) &&
+  d.prestations.some((p) => p.kind === "contrat_echeance")
+);
+
+if (alreadyExists) return null;
+
+
   const nextDate = new Date(nextISO + "T00:00:00");
   if (isNaN(nextDate.getTime())) return null;
 
@@ -18619,18 +18904,21 @@ function createDevisFromCurrentContract() {
 // Combien de factures d'échéance existent déjà pour ce contrat ?
 function countContractInstallmentInvoices(contractId) {
   const docs = getAllDocuments();
-  return docs.filter(
-    (d) =>
-      d.type === "facture" &&
-      d.contractId === contractId &&
-      d.prestations &&
-      d.prestations.some(
-        (p) =>
-          p.kind === "contrat_echeance" ||
-          p.kind === "contrat_echeance_initiale",
-      ),
-  ).length;
+
+  // 🔒 Sécurité : on ne compte QUE les factures déjà sauvegardées
+  return docs.filter((d) => {
+    if (d.type !== "facture") return false;
+    if (d.contractId !== contractId) return false;
+    if (!Array.isArray(d.prestations)) return false;
+
+    return d.prestations.some(
+      (p) =>
+        p.kind === "contrat_echeance" ||
+        p.kind === "contrat_echeance_initiale",
+    );
+  }).length;
 }
+
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
@@ -18644,6 +18932,11 @@ function checkScheduledInvoices() {
       return;
     }
     const pr = contract.pricing || {};
+    // ✅ NE RIEN FACTURER tant que le contrat n'est pas signé
+    if (!contract.signature) {
+      return;
+    }
+
     const clientType = pr.clientType || "particulier";
     const mode = pr.billingMode || "annuel";
 
@@ -18887,6 +19180,7 @@ function saveContractSignature(dataUrl) {
 
   const c = list[idx];
 
+  // ✅ Save signature
   c.signature = dataUrl;
   c.signatureDate = new Date().toLocaleDateString("fr-FR");
 
@@ -18897,17 +19191,42 @@ function saveContractSignature(dataUrl) {
     saveSingleContractToFirestore(c);
   }
 
+  // ✅ Génération factures UNIQUEMENT après signature
+  // (sécurité anti doublon)
+  const docs = getAllDocuments() || [];
+  const hasAnyInvoiceForThisContract = docs.some(
+    (d) => d.type === "facture" && d.contractId === c.id,
+  );
+
+  if (!hasAnyInvoiceForThisContract) {
+    // Lance la logique complète (facture initiale + échéances + rattrapage)
+    if (typeof rebuildContractInvoices === "function") {
+      rebuildContractInvoices(c);
+    } else if (typeof checkScheduledInvoices === "function") {
+      // fallback
+      c.pricing = c.pricing || {};
+      c.pricing.nextInvoiceDate = computeNextInvoiceDate(c) || "";
+      saveContracts(list);
+      checkScheduledInvoices();
+    }
+  }
+
   fillContractForm(c);
 
   showConfirmDialog({
     title: "Contrat signé",
-    message: "Signature enregistrée pour ce contrat syndic.",
+    message:
+      "Signature enregistrée ✅\n\n" +
+      (hasAnyInvoiceForThisContract
+        ? "Des factures existaient déjà : aucune nouvelle facture n’a été recréée."
+        : "La facturation du contrat a été déclenchée automatiquement."),
     confirmLabel: "OK",
     cancelLabel: "",
     variant: "success",
     icon: "✍️",
   });
 }
+
 
 function syncContractsWithDevis(updatedDevis) {
   if (!updatedDevis || !updatedDevis.id) return;
