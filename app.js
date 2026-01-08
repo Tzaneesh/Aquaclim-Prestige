@@ -7214,27 +7214,28 @@ function saveDocument() {
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
-  // =====================================================
-  // ✅ BLOQUAGE FACTURE PARTICULIER >= 150 €
-  // ❌ MAIS SEULEMENT SI C’EST UNE NOUVELLE FACTURE
-  // =====================================================
-  if (doc.type === "facture" && !isExistingDoc) {
-    const clientType = String(existing?.conditionsType || "particulier").toLowerCase();
+// =====================================================
+// ✅ BLOQUAGE FACTURE PARTICULIER >= 150 €
+// ❌ MAIS SEULEMENT SI C’EST UNE NOUVELLE FACTURE
+// =====================================================
+if (doc.type === "facture" && !isExistingDoc) {
+  const clientType = String(doc.conditionsType || "").toLowerCase();
 
-    if (clientType === "particulier" && totalTTC >= 150) {
-      showConfirmDialog({
-        title: "Devis obligatoire",
-        message:
-          "Cette facture dépasse 150 € (client particulier).\n\n" +
-          "Un devis doit être créé et accepté avant facturation.",
-        confirmLabel: "Créer le devis",
-        cancelLabel: "Annuler",
-        variant: "warning",
-        icon: "🧾",
-      });
-      return; // ⛔ on bloque UNIQUEMENT les nouvelles factures
-    }
+  if (clientType === "particulier" && totalTTC >= 150) {
+    showConfirmDialog({
+      title: "Devis obligatoire",
+      message:
+        "Cette facture dépasse 150 € (client particulier).\n\n" +
+        "Un devis doit être créé et accepté avant facturation.",
+      confirmLabel: "Créer le devis",
+      cancelLabel: "Annuler",
+      variant: "warning",
+      icon: "🧾",
+    });
+    return;
   }
+}
+
 
   const docs = getAllDocuments();
   const idx = docs.findIndex((d) => d.id === doc.id);
@@ -19340,5 +19341,6 @@ if (tvaInput) {
   });
 }
 });
+
 
 
