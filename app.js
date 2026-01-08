@@ -7066,41 +7066,33 @@ function loadDocument(id) {
 function saveDocument() {
   // ==== BLOCAGE TVA MICRO ====
   try {
-    const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
+    const status = getMicroTVAStatus();
     const selectedRate = Number(document.getElementById("tvaRate")?.value || 0);
 
-    // ✅ Si on est en franchise → interdire TVA 20
     if (status.mode === "franchise" && selectedRate > 0) {
-      if (typeof showConfirmDialog === "function") {
-        showConfirmDialog({
-          title: "TVA impossible",
-          message:
-            "Tu es encore sous le seuil micro (moins de 37 500 €). " +
-            "Les devis et factures DOIVENT rester en TVA 0 %. Impossible de sauvegarder en 20 %.",
-          confirmLabel: "OK",
-          cancelLabel: "",
-          variant: "warning",
-          icon: "⚠️",
-        });
-      }
-      return; // ❌ STOP
+      showConfirmDialog({
+        title: "TVA impossible",
+        message:
+          "Tu es encore sous le seuil micro (moins de 37 500 €).\n" +
+          "Les devis et factures DOIVENT rester en TVA 0 %.",
+        confirmLabel: "OK",
+        variant: "warning",
+        icon: "⚠️",
+      });
+      return;
     }
 
-    // ✅ Si TVA obligatoire → interdire TVA 0 sur nouveaux docs
     if (status.mode === "obligatoire" && selectedRate === 0) {
-      if (typeof showConfirmDialog === "function") {
-        showConfirmDialog({
-          title: "TVA obligatoire",
-          message:
-            "Le seuil micro de 37 500 € a été dépassé.\n" +
-            "La TVA de 20 % est désormais obligatoire sur les nouveaux documents.",
-          confirmLabel: "OK",
-          cancelLabel: "",
-          variant: "warning",
-          icon: "⚠️",
-        });
-      }
-      return; // ❌ STOP
+      showConfirmDialog({
+        title: "TVA obligatoire",
+        message:
+          "Le seuil micro a été dépassé.\n" +
+          "La TVA de 20 % est désormais obligatoire sur les nouveaux documents.",
+        confirmLabel: "OK",
+        variant: "warning",
+        icon: "⚠️",
+      });
+      return;
     }
   } catch (e) {
     console.error("Erreur contrôle TVA :", e);
@@ -7108,23 +7100,16 @@ function saveDocument() {
 
   const clientName = document.getElementById("clientName").value.trim();
   const clientAddress = document.getElementById("clientAddress").value.trim();
-  const clientCivility = (document.getElementById("clientCivility")?.value || "").trim();
-
+  const clientCivility = document.getElementById("clientCivility")?.value || "";
   const clientPhone = document.getElementById("clientPhone").value.trim();
   const clientEmail = document.getElementById("clientEmail").value.trim();
-  const docSubject = (document.getElementById("docSubject")?.value || "").trim();
-
-  // 🔥 Civilité du lieu d’intervention
-  const siteCivility = (document.getElementById("siteCivility")?.value || "").trim();
-  const siteName = (document.getElementById("siteName")?.value || "").trim();
-  const siteAddress = (document.getElementById("siteAddress")?.value || "").trim();
+  const docSubject = document.getElementById("docSubject")?.value.trim() || "";
 
   if (!clientName || !clientAddress) {
     showConfirmDialog({
       title: "Informations client manquantes",
       message: "Merci de renseigner au minimum le nom et l'adresse du client.",
       confirmLabel: "OK",
-      cancelLabel: "",
       variant: "warning",
       icon: "⚠️",
     });
@@ -7136,7 +7121,6 @@ function saveDocument() {
       title: "Objet manquant",
       message: "Veuillez saisir l'objet du devis ou de la facture.",
       confirmLabel: "OK",
-      cancelLabel: "",
       variant: "warning",
       icon: "⚠️",
     });
@@ -7150,35 +7134,22 @@ function saveDocument() {
     const kind = line.dataset.kind || "";
 
     if (kind === "produits" || kind === "fournitures") {
-      const purchaseInput = line.querySelector(".prestation-purchase");
-      const purchaseVal = parseFloat(purchaseInput?.value || "0");
-      if (!purchaseVal || purchaseVal <= 0) {
-        missingPurchase = true;
-      }
+      const purchaseVal = parseFloat(line.querySelector(".prestation-purchase")?.value || "0");
+      if (!purchaseVal || purchaseVal <= 0) missingPurchase = true;
     }
 
-    const desc = (line.querySelector(".prestation-desc")?.value || "").trim();
+    const desc = line.querySelector(".prestation-desc")?.value.trim();
     const qty = parseFloat(line.querySelector(".prestation-qty")?.value || "0");
     const price = parseFloat(line.querySelector(".prestation-price")?.value || "0");
-    const unit = (line.querySelector(".prestation-unit")?.value || "").trim();
-    const detail = line.dataset.detail || "";
-
-    const datesInputs = line.querySelectorAll(".prestation-date");
-    const dates = [];
-    datesInputs.forEach((i) => {
-      const v = i.value.trim();
-      if (v) dates.push(v);
-    });
+    const unit = line.querySelector(".prestation-unit")?.value || "";
 
     if (desc) {
       prestations.push({
         desc,
-        detail,
-        qty: qty || 0,
-        price: price || 0,
-        total: (qty || 0) * (price || 0),
+        qty,
+        price,
+        total: qty * price,
         unit,
-        dates,
         kind,
       });
     }
@@ -7187,22 +7158,19 @@ function saveDocument() {
   if (missingPurchase) {
     showConfirmDialog({
       title: "Prix d'achat manquant",
-      message:
-        "Merci de renseigner le prix d'achat pour toutes les prestations Produits / Fournitures.",
+      message: "Merci de renseigner le prix d'achat pour tous les produits.",
       confirmLabel: "OK",
-      cancelLabel: "",
       variant: "warning",
       icon: "⚠️",
     });
     return;
   }
 
-  if (prestations.length === 0) {
+  if (!prestations.length) {
     showConfirmDialog({
       title: "Aucune prestation",
-      message: "Ajoute au moins une prestation avant d'enregistrer le document.",
+      message: "Ajoute au moins une prestation avant d'enregistrer.",
       confirmLabel: "OK",
-      cancelLabel: "",
       variant: "warning",
       icon: "⚠️",
     });
@@ -7217,67 +7185,11 @@ function saveDocument() {
   const notes = document.getElementById("notes").value;
 
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
-  const wasPaid = existing ? !!existing.paid : false;
-  const oldStatus = existing ? existing.status || "" : "";
+  const isExistingDoc = !!existing; // 🔑 CLÉ DU FIX
 
-  let conditionsType = existing ? existing.conditionsType || "" : "";
-  const cbClientPart = document.getElementById("clientParticulier");
-  const cbClientSyn = document.getElementById("clientSyndic");
-
-  if (cbClientPart && cbClientPart.checked) {
-    conditionsType = "particulier";
-  } else if (cbClientSyn && cbClientSyn.checked) {
-    conditionsType = "agence";
-  } else {
-    conditionsType = "";
-  }
-
-  let status = "";
-  if (docType === "devis") {
-    status = existing && existing.status ? existing.status : "en_attente";
-  } else {
-    status = existing && existing.status ? existing.status : "";
-  }
-
-  let wasCloture = existing?.status === "cloture";
-  let paymentMode = "";
-  let paymentDate = "";
-  let paid = false;
-
-  if (docType === "facture") {
-    const sel = document.querySelector('input[name="payMode"]:checked');
-    if (sel && sel.value) {
-      paymentMode = sel.value;
-      const pdInput = document.getElementById("paymentDate");
-      const pd = pdInput ? pdInput.value : "";
-      paymentDate = pd || docDate;
-    } else if (existing && existing.type === "facture") {
-      paymentMode = existing.paymentMode || "";
-      paymentDate = existing.paymentDate || "";
-    }
-    paid = !!paymentMode;
-  }
-
-  let subtotal = 0;
-  prestations.forEach((p) => (subtotal += p.total));
-
-  const discountCb = document.getElementById("discountEnabled");
-  const discountInput = document.getElementById("discountPercentInput");
-
-  let discountRate = 0;
-  let discountAmount = 0;
-  if (discountCb && discountInput && discountCb.checked) {
-    discountRate = parseFloat(discountInput.value) || 0;
-    if (discountRate < 0) discountRate = 0;
-    if (discountRate > 100) discountRate = 100;
-    discountAmount = subtotal * (discountRate / 100);
-  }
-
-  let baseAfterDiscount = subtotal - discountAmount;
-  if (baseAfterDiscount < 0) baseAfterDiscount = 0;
-
-  const tvaAmount = baseAfterDiscount * (tvaRate / 100);
-  const totalTTC = baseAfterDiscount + tvaAmount;
+  let subtotal = prestations.reduce((s, p) => s + p.total, 0);
+  const tvaAmount = subtotal * (tvaRate / 100);
+  const totalTTC = subtotal + tvaAmount;
 
   const doc = {
     id: currentDocumentId || Date.now().toString(),
@@ -7286,7 +7198,6 @@ function saveDocument() {
     date: docDate,
     validityDate,
     subject: docSubject,
-
     client: {
       civility: clientCivility,
       name: clientName,
@@ -7294,91 +7205,35 @@ function saveDocument() {
       phone: clientPhone,
       email: clientEmail,
     },
-
-    siteCivility,
-    siteName,
-    siteAddress,
-
     prestations,
-    tvaRate,
     subtotal,
-    discountRate,
-    discountAmount,
+    tvaRate,
     tvaAmount,
     totalTTC,
     notes,
-    paid,
-    paymentMode,
-    paymentDate,
-    status,
-    conditionsType,
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
-  // ✅ BLOQUAGE AVANT SAUVEGARDE : facture particulier >= 150€ => créer devis, pas de facture
-  if (doc && doc.type === "facture") {
-    const clientType = String(doc.conditionsType || "particulier").trim().toLowerCase();
-    const total = Number(doc.totalTTC);
+  // =====================================================
+  // ✅ BLOQUAGE FACTURE PARTICULIER >= 150 €
+  // ❌ MAIS SEULEMENT SI C’EST UNE NOUVELLE FACTURE
+  // =====================================================
+  if (doc.type === "facture" && !isExistingDoc) {
+    const clientType = String(existing?.conditionsType || "particulier").toLowerCase();
 
-    if (clientType === "particulier" && isFinite(total) && total >= 150) {
+    if (clientType === "particulier" && totalTTC >= 150) {
       showConfirmDialog({
         title: "Devis obligatoire",
         message:
-          `Cette intervention dépasse 150 € (particulier).\n\n` +
-          `✅ Un devis doit être créé et accepté AVANT de facturer.\n\n` +
-          `Souhaites-tu créer un devis maintenant ?\n` +
-          `(La facture sera générée automatiquement quand le devis sera "Accepté".)`,
+          "Cette facture dépasse 150 € (client particulier).\n\n" +
+          "Un devis doit être créé et accepté avant facturation.",
         confirmLabel: "Créer le devis",
         cancelLabel: "Annuler",
         variant: "warning",
         icon: "🧾",
-        onConfirm: () => {
-          const devis = generateDevisFromInvoice(doc);
-          if (!devis) return;
-
-          devis.type = "devis";
-          devis.date = new Date().toISOString().slice(0, 10);
-          devis.status = devis.status || "en_attente";
-
-          const all = getAllDocuments();
-          all.push(devis);
-          saveDocuments(all);
-
-          if (typeof saveSingleDocumentToFirestore === "function") {
-            saveSingleDocumentToFirestore(devis);
-          }
-
-          if (typeof switchListType === "function") switchListType("devis");
-          if (typeof loadDocumentsList === "function") loadDocumentsList();
-          if (typeof loadDocument === "function") loadDocument(devis.id);
-        },
       });
-
-      return; // ✅ STOP => on n’enregistre PAS la facture
+      return; // ⛔ on bloque UNIQUEMENT les nouvelles factures
     }
-  }
-
-  // 📌 Un devis qui vient de passer en "cloture" ?
-  const justClotured =
-    doc.type === "devis" && oldStatus !== "cloture" && doc.status === "cloture";
-
-  let autoRapportRecord = null;
-  let shouldCreateRapport = false;
-
-  if (doc.type === "devis" && !wasCloture && doc.status === "cloture") {
-    shouldCreateRapport = true;
-  }
-
-  if (existing) {
-    const diffEntries = computeDocumentDiff(existing, doc) || [];
-    diffEntries.forEach((entry) => {
-      addHistoryEntry(doc, { type: entry.type, detail: entry.detail });
-    });
-  } else {
-    addHistoryEntry(doc, {
-      type: "create",
-      detail: `Document créé (${doc.type === "facture" ? "Facture" : "Devis"} ${doc.number || ""})`,
-    });
   }
 
   const docs = getAllDocuments();
@@ -7389,105 +7244,17 @@ function saveDocument() {
   saveDocuments(docs);
   saveSingleDocumentToFirestore(doc);
 
-  // =======================================
-  // 📄 Création automatique du rapport depuis devis clôturé
-  // =======================================
-  if (shouldCreateRapport && typeof createRapportFromDevis === "function") {
-    createRapportFromDevis(doc);
-
-    showConfirmDialog({
-      title: "Rapport généré",
-      message:
-        "Le devis a été clôturé et un rapport d’intervention intelligent a été créé automatiquement.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "success",
-      icon: "📝",
-    });
-  }
-
-  // 💥 Si on vient de passer une facture de NON PAYÉE à PAYÉE depuis le formulaire
-  if (
-    doc.type === "facture" &&
-    typeof wasPaid !== "undefined" &&
-    !wasPaid &&
-    doc.paid &&
-    typeof handleAfterInvoicePaid === "function"
-  ) {
-    handleAfterInvoicePaid(doc);
-  }
-
-  // ===============================
-  // 📝 Création automatique d'un rapport depuis un devis clôturé
-  // ===============================
-  if (justClotured && typeof createRapportFromDevis === "function") {
-    try {
-      autoRapportRecord = createRapportFromDevis(doc);
-
-      if (autoRapportRecord && typeof showConfirmDialog === "function") {
-        showConfirmDialog({
-          title: "Rapport d’intervention créé",
-          message:
-            "Le devis a été clôturé et un rapport technique a été généré automatiquement.\n" +
-            "Souhaites-tu ouvrir ce rapport maintenant pour le compléter ?",
-          confirmLabel: "Ouvrir le rapport",
-          cancelLabel: "Plus tard",
-          variant: "info",
-          icon: "📝",
-          onConfirm: () => {
-            if (typeof openRapportPopupForEdit === "function") {
-              openRapportPopupForEdit(autoRapportRecord.id);
-            } else if (typeof openPiscineRapportGenerator === "function") {
-              openPiscineRapportGenerator(autoRapportRecord.id);
-            }
-          },
-          onCancel: () => {},
-        });
-      }
-    } catch (e) {
-      console.error("Erreur création rapport auto depuis devis cloturé :", e);
-    }
-  }
-
-  if (typeof updateClientsFromDocument === "function") {
-    updateClientsFromDocument(doc);
-  }
-
-  // Pop-up intelligente selon le type de document
-  const typeLabel = doc.type === "facture" ? "facture" : "devis";
-  const numero = doc.number ? ` ${doc.number}` : "";
-
   showConfirmDialog({
     title: "Enregistrement réussi",
-    message: `Le document ${typeLabel}${numero} a été enregistré avec succès.`,
+    message: `La ${doc.type} ${doc.number || ""} a été enregistrée.`,
     confirmLabel: "OK",
-    cancelLabel: "",
     variant: "success",
     icon: "✅",
   });
 
   currentDocumentId = doc.id;
   loadDocumentsList();
-  updateTransformButtonVisibility();
-  if (typeof refreshHomeStats === "function") {
-    refreshHomeStats();
-  }
-
-  if (typeof computeCA === "function") {
-    computeCA();
-  }
-
-  try {
-    renderHistory(doc);
-  } catch (e) {
-    console.error("Erreur renderHistory après sauvegarde:", e);
-  }
-
-  if (typeof refreshDocumentHealthUI === "function") {
-    refreshDocumentHealthUI(doc);
-  }
 }
-
 
 // Supprimer depuis la LISTE (bouton "Supprimer" dans le tableau)
 
@@ -19573,4 +19340,5 @@ if (tvaInput) {
   });
 }
 });
+
 
