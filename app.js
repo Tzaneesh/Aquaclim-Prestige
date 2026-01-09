@@ -5823,33 +5823,81 @@ function getCurrentClientType() {
   return "particulier";
 }
 
-function setTVA(rate) {
+function setTVA(rate, opts = {}) {
+  const requested = Number(rate) || 0;
+
+  // showAlert = true uniquement sur action utilisateur
+  const showAlert = opts.showAlert === true;
+
+  // ✅ VERROU MICRO TVA
+  try {
+    if (typeof getMicroTVAStatus === "function") {
+      const status = getMicroTVAStatus(); // { mode: "franchise" | "obligatoire", ... }
+
+      // 1) Sous seuil => interdit de passer à 20
+      if (status?.mode === "franchise" && requested > 0) {
+        if (showAlert && typeof showConfirmDialog === "function") {
+          showConfirmDialog({
+            title: "TVA impossible",
+            message:
+              "Tu es encore sous le seuil micro (CA encaissé < 37 500 €).\n" +
+              "Tu ne peux pas passer à 20 % pour le moment.",
+            confirmLabel: "OK",
+            variant: "warning",
+            icon: "⚠️",
+          });
+        }
+        // ⛔ On force l'UI à rester à 0
+        return setTVA(0, { showAlert: false, _internal: true });
+      }
+
+      // 2) TVA obligatoire => interdit de repasser à 0
+      if (status?.mode === "obligatoire" && requested === 0) {
+        if (showAlert && typeof showConfirmDialog === "function") {
+          showConfirmDialog({
+            title: "TVA obligatoire",
+            message:
+              "Le seuil micro a été dépassé.\n" +
+              "La TVA de 20 % est désormais obligatoire, tu ne peux plus revenir à 0 %.",
+            confirmLabel: "OK",
+            variant: "warning",
+            icon: "⚠️",
+          });
+        }
+        // ⛔ On force l'UI à rester à 20
+        return setTVA(20, { showAlert: false, _internal: true });
+      }
+    }
+  } catch (e) {
+    console.warn("[MicroTVA] setTVA lock error:", e);
+  }
+
   // 1) Radios devis/facture
   const tva0 = document.getElementById("tva0");
   const tva20 = document.getElementById("tva20");
-  if (tva0) tva0.checked = Number(rate) === 0;
-  if (tva20) tva20.checked = Number(rate) === 20;
+  if (tva0) tva0.checked = requested === 0;
+  if (tva20) tva20.checked = requested === 20;
 
   // 2) Radios contrat (si présents)
   const ct0 = document.getElementById("ctTva0");
   const ct20 = document.getElementById("ctTva20");
-  if (ct0) ct0.checked = Number(rate) === 0;
-  if (ct20) ct20.checked = Number(rate) === 20;
+  if (ct0) ct0.checked = requested === 0;
+  if (ct20) ct20.checked = requested === 20;
 
   // 3) Valeur utilisée par calculs
   const tvaInput = document.getElementById("tvaRate");
-  if (tvaInput) tvaInput.value = String(rate);
+  if (tvaInput) tvaInput.value = String(requested);
 
   // 4) Texte TVA / 293B
   const tvaNote = document.getElementById("tvaNote");
   if (tvaNote) {
-    // si tu as créé getTVALineForDocuments(), mets-le ici
     if (typeof getTVALineForDocuments === "function") {
       tvaNote.textContent = getTVALineForDocuments();
     } else {
-      tvaNote.textContent = (Number(rate) === 0)
-        ? "TVA non applicable, article 293 B du CGI."
-        : "TVA 20 % applicable.";
+      tvaNote.textContent =
+        requested === 0
+          ? "TVA non applicable, article 293 B du CGI."
+          : "TVA 20 % applicable.";
     }
   }
 
@@ -19571,6 +19619,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
