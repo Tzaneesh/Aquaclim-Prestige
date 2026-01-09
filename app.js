@@ -2679,6 +2679,7 @@ function addCurrentClientFromContract() {
 
   saveClients(clients);
   refreshClientDatalist();
+  if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
 
   if (typeof saveSingleClientToFirestore === "function") {
     saveSingleClientToFirestore(clientObj);
@@ -2721,6 +2722,7 @@ function deleteCurrentClientFromContract() {
       clients.splice(existingIdx, 1);
       saveClients(clients);
       refreshClientDatalist();
+      if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
 
       // 🔴 2. Suppression Firestore (si possible)
       if (
@@ -2793,6 +2795,7 @@ function addCurrentClient() {
 
   saveClients(clients);
   refreshClientDatalist();
+  if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
 
   if (typeof saveSingleClientToFirestore === "function") {
     saveSingleClientToFirestore(clientObj);
@@ -2982,6 +2985,7 @@ function deleteClientFromList(index) {
       clients.splice(index, 1);
       saveClients(clients);
       refreshClientDatalist();
+      if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
       filterClientsList(); // pour recharger la liste avec tri + pagination
 
       showConfirmDialog({
@@ -3089,6 +3093,7 @@ function saveEditedClient() {
 
   saveClients(clients);
   refreshClientDatalist();
+  if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
   openClientsListPopup(); // recharge la liste triée / paginée
 
   // Popup de succès
@@ -6821,6 +6826,7 @@ function newDocument(type) {
   // 🔁 IMPORTANT : recharge de la datalist clients
   if (typeof refreshClientDatalist === "function") {
     refreshClientDatalist();
+    if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
   }
 }
 
@@ -14321,6 +14327,7 @@ enforceContractMicroTVA(false);
 // 🔁 datalist clients
 if (typeof refreshClientDatalist === "function") {
   refreshClientDatalist();
+  if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
 }
 
 
@@ -14623,6 +14630,7 @@ async function syncClientsWithFirestore() {
 
         if (typeof refreshClientDatalist === "function") {
           refreshClientDatalist();
+          if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
         }
 
         updateOfflineBadge();
@@ -19188,6 +19196,65 @@ function autoFillDates() {
   });
 }
 
+// ================= iPhone : dropdown natif pour "Nom client" =================
+
+function _isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+function _fillClientSelectIOS() {
+  const sel = document.getElementById("clientNameIOS");
+  if (!sel) return;
+
+  const clients = (typeof getClients === "function" ? getClients() : [])
+    .filter(c => c && c.name);
+
+  clients.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  // 1) reset
+  sel.innerHTML = "";
+
+  // 2) option vide (obligatoire)
+  const opt0 = document.createElement("option");
+  opt0.value = "";
+  opt0.textContent = "— Choisir un client —";
+  sel.appendChild(opt0);
+
+  // 3) options clients
+  for (const c of clients) {
+    const opt = document.createElement("option");
+    opt.value = c.name;
+    opt.textContent = c.name;
+    sel.appendChild(opt);
+  }
+}
+
+function _enableIOSClientDropdown() {
+  const input = document.getElementById("clientName");
+  const sel = document.getElementById("clientNameIOS");
+  if (!input || !sel) return;
+
+  if (!_isIOS()) return; // PC = rien
+
+  // Remplit la liste iPhone
+  _fillClientSelectIOS();
+
+  // iPhone : on cache l'input, on montre le select
+  input.style.display = "none";
+  sel.style.display = "block";
+
+  // Quand tu choisis => on copie dans l'input (car ton code bosse avec l'input)
+  sel.onchange = () => {
+    input.value = sel.value || "";
+    if (typeof onClientNameChange === "function") onClientNameChange();
+  };
+}
+
+// AU CHARGEMENT
+window.addEventListener("load", () => {
+  _enableIOSClientDropdown();
+});
+
 
 /* ======================
    INIT (tu gardes ton window.onload)
@@ -19375,6 +19442,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
