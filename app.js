@@ -7609,6 +7609,38 @@ function refreshMicroTVAState(showAlert = false) {
 
   const alreadyObligatoire = status && status.mode === "obligatoire";
 
+  // ✅ Retour possible en franchise (2 ans sous seuil)
+// On PROPOSE, on ne force pas automatiquement.
+if (alreadyObligatoire) {
+  const back = canReturnToFranchiseTVA();
+
+  if (back.ok && showAlert && typeof showConfirmDialog === "function") {
+    showConfirmDialog({
+      title: "TVA : retour possible",
+      message:
+        `Tu es sous le seuil ${MICRO_TVA_THRESHOLD_BASE} € sur 2 ans :\n` +
+        `- ${back.year - 1} : ${formatEuroFallback(back.caLastYear)}\n` +
+        `- ${back.year} : ${formatEuroFallback(back.caThisYear)}\n\n` +
+        `➡️ Veux-tu repasser en franchise (TVA 0 %) ?`,
+      confirmLabel: "Oui, repasser en 0%",
+      cancelLabel: "Non, je garde TVA 20%",
+      variant: "info",
+      icon: "ℹ️",
+      onConfirm: () => {
+        saveMicroTVAStatus({
+          mode: "franchise",
+          returnedYear: back.year,
+          returnedCA: back.caThisYear,
+        });
+
+        // refresh UI direct
+        refreshMicroTVAState(false);
+      },
+    });
+  }
+}
+
+
   // 1) Déclenchement TVA : seulement si on dépasse le seuil ET qu'on n'était pas déjà en TVA
   const shouldActivateNow = !alreadyObligatoire && caTTC >= MICRO_TVA_THRESHOLD_BASE;
 
@@ -7712,6 +7744,44 @@ function computeCurrentYearCAForMicro() {
 
   return { year: currentYear, caTTC: totalTTC };
 }
+
+function computeYearCAForMicro(year) {
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
+  let totalTTC = 0;
+
+  docs.forEach((f) => {
+    if (!f.paid) return;
+
+    const refDate = f.paymentDate || f.date;
+    const d = new Date(refDate + "T00:00:00");
+    if (isNaN(d.getTime()) || d.getFullYear() !== year) return;
+
+    const val = Number(f.totalTTC || 0);
+    if (!isNaN(val)) totalTTC += val;
+  });
+
+  return totalTTC;
+}
+function canReturnToFranchiseTVA() {
+  const now = new Date();
+  const y = now.getFullYear();
+
+  const caThisYear = computeYearCAForMicro(y);
+  const caLastYear = computeYearCAForMicro(y - 1);
+
+  // ✅ règle simplifiée (celle que tu veux) : 2 années sous le seuil de base
+  const under2Years =
+    caThisYear < MICRO_TVA_THRESHOLD_BASE &&
+    caLastYear < MICRO_TVA_THRESHOLD_BASE;
+
+  return {
+    ok: under2Years,
+    caThisYear,
+    caLastYear,
+    year: y,
+  };
+}
+
 
 function formatEuroFallback(v) {
   if (typeof formatEuro === "function") return formatEuro(v);
@@ -19528,6 +19598,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
