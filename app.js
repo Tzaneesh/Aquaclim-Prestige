@@ -7001,6 +7001,16 @@ function loadDocument(id) {
   }
 
   setTVA(doc.tvaRate === 20 ? 20 : 0);
+  // ✅ Nettoyage sécurité : si TVA = 0, on force TVAAmount = 0 et on supprime les traces TVA
+if (Number(doc.tvaRate || 0) === 0) {
+  doc.tvaAmount = 0;
+
+  // Si jamais tu avais stocké un numéro TVA dans le doc (ancienne version)
+  delete doc.vatNumber;
+  delete doc.companyVat;
+  delete doc.companyVatNumber;
+}
+
   updateDocType();
   updateTransformButtonVisibility();
   refreshDevisStatusUI(doc.type, doc.validityDate || "");
@@ -7136,6 +7146,19 @@ function loadDocument(id) {
   });
 
   calculateTotals(); // et on laisse faire la logique dégressive normale
+  // ✅ On resauvegarde si on a nettoyé un doc ancien
+try {
+  const docsAll = getAllDocuments();
+  const idx2 = docsAll.findIndex((d) => d.id === doc.id);
+  if (idx2 >= 0) {
+    docsAll[idx2] = doc;
+    saveDocuments(docsAll);
+    if (typeof saveSingleDocumentToFirestore === "function") {
+      saveSingleDocumentToFirestore(doc);
+    }
+  }
+} catch (e) {}
+
 
   document.getElementById("formTitle").textContent =
     (doc.type === "devis" ? "Devis " : "Facture ") + doc.number;
@@ -19736,6 +19759,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
