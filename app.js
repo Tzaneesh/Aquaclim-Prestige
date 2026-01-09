@@ -125,6 +125,10 @@ function applyCompanySettingsToUI(settings) {
   document.querySelectorAll(".js-company-siret").forEach((el) => {
     el.textContent = s.siret;
   });
+  document.querySelectorAll(".js-company-vat").forEach((el) => {
+  el.textContent = s.vatNumber || "";
+});
+
 }
 
 // ================== CONSTANTES / MODÈLES ==================
@@ -12209,7 +12213,13 @@ img.sig-client {
       <p class="contact">
         ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
         Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
-        SIRET : <strong>${getCompanySettings().siret}</strong>
+      SIRET : <strong>${getCompanySettings().siret}</strong><br>
+${
+  (!isDevis && (doc.tvaRate || 0) > 0 && getCompanySettings().vatNumber)
+    ? `N° TVA : <strong>${getCompanySettings().vatNumber}</strong>`
+    : ""
+}
+
       </p>
 
     </div>
@@ -19673,6 +19683,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
