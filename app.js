@@ -19061,6 +19061,12 @@ document.addEventListener("DOMContentLoaded", () => {
   // Anti double-bind (si tu recolle/merge)
   if (document.body.dataset.domReadyBound === "1") return;
   document.body.dataset.domReadyBound = "1";
+// 🔥 INIT FIREBASE AU DÉMARRAGE
+if (!db) {
+  initFirebase().catch((err) => {
+    console.error("Erreur init Firebase au démarrage", err);
+  });
+}
 
   // Badge + sync queue
   updateOfflineBadge();
@@ -19174,6 +19180,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
