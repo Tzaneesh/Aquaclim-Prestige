@@ -1100,6 +1100,14 @@ async function initFirebase() {
     firebase.initializeApp(firebaseConfig);
   }
   db = firebase.firestore();
+  // ✅ Offline persistence (cache IndexedDB)
+try {
+  await db.enablePersistence({ synchronizeTabs: true });
+  console.log("[Firestore] Persistence ENABLED");
+} catch (e) {
+  console.warn("[Firestore] Persistence not enabled:", e?.code || e);
+}
+
 
   try {
 // 1️⃣ LIVE DOCUMENTS (devis / factures) — synchro PC ⇄ iPhone
@@ -1164,6 +1172,16 @@ if (typeof refreshMicroTVAState === "function") {
   if (navigator.onLine) {
     processSyncQueue();
   }
+
+  window.addEventListener("online", () => {
+  updateOfflineBadge();
+  if (typeof processSyncQueue === "function") processSyncQueue();
+});
+
+window.addEventListener("offline", () => {
+  updateOfflineBadge();
+});
+
 }
 
 // ================== GESTION CLIENTS ==================
@@ -19351,6 +19369,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
