@@ -7287,6 +7287,12 @@ function saveDocument() {
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
   const isExistingDoc = !!existing; // 🔑 CLÉ DU FIX
 
+  // ✅ Type client (pour déclencher la popup devis obligatoire)
+const conditionsType = document.getElementById("clientSyndic")?.checked
+  ? "agence"
+  : "particulier";
+
+
   let subtotal = prestations.reduce((s, p) => s + p.total, 0);
   const tvaAmount = subtotal * (tvaRate / 100);
   const totalTTC = subtotal + tvaAmount;
@@ -7311,6 +7317,7 @@ function saveDocument() {
     tvaAmount,
     totalTTC,
     notes,
+    conditionsType,
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
@@ -7658,35 +7665,51 @@ if (alreadyObligatoire) {
 }
 
 
-  // 1) Déclenchement TVA : seulement si on dépasse le seuil ET qu'on n'était pas déjà en TVA
-  const shouldActivateNow = !alreadyObligatoire && caTTC >= MICRO_TVA_THRESHOLD_BASE;
+// ✅ Règles micro TVA (prestations de services) :
+// - si CA encaissé année N > seuil MAJORÉ => TVA en cours d'année
+// - si CA encaissé année N-1 > seuil BASE (mais <= majoré) => TVA depuis le 01/01 de N
+const caLastYear = computeYearCAForMicro(year - 1);
 
-  // 2) Mode final : si déjà obligatoire => reste obligatoire
-  // sinon => franchise, sauf si on vient d'activer
-  const nextMode = alreadyObligatoire ? "obligatoire" : (shouldActivateNow ? "obligatoire" : "franchise");
+const exceedToleranceThisYear = caTTC > MICRO_TVA_THRESHOLD_TOLERANCE; // ex: 41250
+const exceedBaseLastYear = caLastYear > MICRO_TVA_THRESHOLD_BASE;      // ex: 37500
 
-  // 3) Si on active maintenant => on sauvegarde la date/année d'activation
-  if (shouldActivateNow) {
-    saveMicroTVAStatus({
-      mode: "obligatoire",
-      activatedYear: year,
-      activatedCA: caTTC,
+// Mode final : si déjà obligatoire => reste obligatoire
+// sinon => obligatoire si (seuil majoré dépassé cette année) OU (seuil base dépassé l'an dernier)
+const nextMode =
+  alreadyObligatoire || exceedToleranceThisYear || exceedBaseLastYear
+    ? "obligatoire"
+    : "franchise";
+
+// Activation (sauvegarde) seulement si on passe de franchise -> obligatoire
+const shouldActivateNow = !alreadyObligatoire && nextMode === "obligatoire";
+
+if (shouldActivateNow) {
+  saveMicroTVAStatus({
+    mode: "obligatoire",
+    activatedYear: year,
+    activatedCA: caTTC,
+  });
+
+  if (showAlert && typeof showConfirmDialog === "function") {
+    const message = exceedToleranceThisYear
+      ? `Seuil majoré dépassé.\nCA encaissé ${year} : ${formatEuroFallback(caTTC)}\n` +
+        `Seuil majoré : ${formatEuroFallback(MICRO_TVA_THRESHOLD_TOLERANCE)}\n\n` +
+        `➡️ TVA 20 % obligatoire en cours d'année.`
+      : `Seuil dépassé l'an dernier.\nCA encaissé ${year - 1} : ${formatEuroFallback(caLastYear)}\n` +
+        `Seuil base : ${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}\n\n` +
+        `➡️ TVA 20 % obligatoire depuis le 01/01/${year}.`;
+
+    showConfirmDialog({
+      title: "TVA obligatoire",
+      message,
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️",
     });
-
-    if (showAlert && typeof showConfirmDialog === "function") {
-      showConfirmDialog({
-        title: "Seuil TVA dépassé",
-        message:
-          `CA encaissé ${year} : ${formatEuroFallback(caTTC)}\n` +
-          `Seuil franchise : ${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}\n\n` +
-          `➡️ TVA 20 % obligatoire sur les nouveaux devis et factures.`,
-        confirmLabel: "OK",
-        cancelLabel: "",
-        variant: "warning",
-        icon: "⚠️",
-      });
-    }
   }
+}
+
 
   // 4) Badge dashboard
   const badge = document.getElementById("dashTVAMicroBadge");
@@ -7763,13 +7786,19 @@ function computeCurrentYearCAForMicro() {
 }
 
 function computeYearCAForMicro(year) {
-  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter(
+    (d) => d.type === "facture" && (d.date || d.paymentDate)
+  );
+
   let totalTTC = 0;
 
   docs.forEach((f) => {
     if (!f.paid) return;
 
-    const refDate = f.paymentDate || f.date;
+    // ✅ CA encaissé = date de paiement si dispo, sinon date facture (fallback)
+    const refDate = (f.paymentDate || f.date || "").slice(0, 10); // "YYYY-MM-DD"
+    if (!refDate) return;
+
     const d = new Date(refDate + "T00:00:00");
     if (isNaN(d.getTime()) || d.getFullYear() !== year) return;
 
@@ -7779,6 +7808,7 @@ function computeYearCAForMicro(year) {
 
   return totalTTC;
 }
+
 function canReturnToFranchiseTVA() {
   const now = new Date();
   const y = now.getFullYear();
@@ -19642,6 +19672,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
