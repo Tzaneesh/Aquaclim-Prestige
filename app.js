@@ -972,6 +972,9 @@ let currentAttestationSource = null;
 
 // Firebase Firestore
 let db = null;
+let unsubDocs = null;
+let unsubContracts = null;
+let unsubClients = null;
 
 // ================== OFFLINE / SYNC QUEUE ==================
 
@@ -1099,27 +1102,31 @@ async function initFirebase() {
   db = firebase.firestore();
 
   try {
-    // 1️⃣ SYNC DOCUMENTS (devis / factures)
-    const snapshot = await db.collection("documents").get();
+// 1️⃣ LIVE DOCUMENTS (devis / factures) — synchro PC ⇄ iPhone
+if (unsubDocs) unsubDocs(); // évite de s'abonner 2 fois
+unsubDocs = db.collection("documents").onSnapshot(
+  (snapshot) => {
     const cloudDocs = [];
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
       if (data) cloudDocs.push(data);
     });
 
-    if (cloudDocs.length > 0) {
-      localStorage.setItem("documents", JSON.stringify(cloudDocs));
-    } else {
-      const local = localStorage.getItem("documents");
-      if (local) {
-        const docs = JSON.parse(local);
-        for (const d of docs) {
-          if (d.id) {
-            await db.collection("documents").doc(d.id).set(d);
-          }
-        }
-      }
-    }
+    // Firestore = vérité → on écrase le local
+    localStorage.setItem("documents", JSON.stringify(cloudDocs));
+
+    // 🔄 Rafraîchissement UI après MAJ
+    if (typeof loadDocumentsList === "function") loadDocumentsList();
+    if (typeof loadYearFilter === "function") loadYearFilter();
+    if (typeof refreshHomeStats === "function") refreshHomeStats();
+    if (typeof computeCA === "function") computeCA();
+    if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+
+    updateOfflineBadge();
+  },
+  (err) => console.error("Erreur onSnapshot documents :", err)
+);
+
 
     // 2️⃣ SYNC CONTRATS
     await syncContractsWithFirestore();
@@ -14479,44 +14486,46 @@ async function deleteContractFromFirestore(id) {
 async function syncContractsWithFirestore() {
   if (!db) return;
 
+  // ✅ évite d'avoir plusieurs listeners si initFirebase est relancé
+  if (unsubContracts) unsubContracts();
+
   try {
-    const snap = await db.collection("contracts").get();
-    const cloudContracts = [];
-    snap.forEach((doc) => {
-      const data = doc.data();
-      if (data && data.id) {
-        cloudContracts.push(data);
-      }
-    });
+    unsubContracts = db.collection("contracts").onSnapshot(
+      (snap) => {
+        const cloudContracts = [];
+        snap.forEach((doc) => {
+          const data = doc.data();
+          if (data && data.id) cloudContracts.push(data);
+        });
 
-    if (cloudContracts.length > 0) {
-      console.log(
-        "[Contracts] Chargement depuis Firestore :",
-        cloudContracts.length,
-        "contrats",
-      );
-      saveContracts(cloudContracts);
-    } else {
-      const localContracts = getAllContracts();
-      if (localContracts.length > 0) {
-        console.log("[Contracts] Firestore vide, push des contrats locaux");
-        for (const c of localContracts) {
-          await db.collection("contracts").doc(c.id).set(c, { merge: true });
+        console.log(
+          "[Contracts] Live depuis Firestore :",
+          cloudContracts.length,
+          "contrats",
+        );
+
+        // ✅ Firestore = vérité -> on écrase le local
+        saveContracts(cloudContracts);
+
+        // 🔄 Si on est déjà sur l'onglet contrats, on recharge la liste
+        if (
+          typeof loadContractsList === "function" &&
+          currentListType === "contrat"
+        ) {
+          loadContractsList();
         }
-      }
-    }
 
-    // 🔄 Si on est déjà sur l'onglet contrats, on recharge la liste
-    if (
-      typeof loadContractsList === "function" &&
-      currentListType === "contrat"
-    ) {
-      loadContractsList();
-    }
+        updateOfflineBadge();
+      },
+      (e) => {
+        console.error("Erreur onSnapshot contrats Firestore :", e);
+      }
+    );
   } catch (e) {
     console.error("Erreur sync contrats Firestore :", e);
   }
 }
+
 
 // ----- Firestore clients -----
 
@@ -14564,44 +14573,45 @@ async function deleteClientFromFirestore(client) {
     console.error("Erreur Firestore (delete client)", e);
   }
 }
-
 async function syncClientsWithFirestore() {
   if (!db) return;
 
-  try {
-    const snap = await db.collection("clients").get();
-    const cloudClients = [];
-    snap.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data && data.name) {
-        cloudClients.push(data);
-      }
-    });
+  // ✅ évite les abonnements multiples
+  if (unsubClients) unsubClients();
 
-    if (cloudClients.length > 0) {
-      console.log(
-        "[Clients] Chargement depuis Firestore :",
-        cloudClients.length,
-        "clients",
-      );
-      saveClients(cloudClients);
-      refreshClientDatalist();
-    } else {
-      const localClients = getClients();
-      if (localClients.length > 0) {
-        console.log("[Clients] Firestore vide, push des clients locaux");
-        for (const c of localClients) {
-          const id = c.id || getClientDocId(c);
-          c.id = id;
-          await db.collection("clients").doc(id).set(c, { merge: true });
+  try {
+    unsubClients = db.collection("clients").onSnapshot(
+      (snap) => {
+        const cloudClients = [];
+        snap.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.name) cloudClients.push(data);
+        });
+
+        console.log(
+          "[Clients] Live depuis Firestore :",
+          cloudClients.length,
+          "clients",
+        );
+
+        // ✅ Firestore = vérité → on écrase le local
+        saveClients(cloudClients);
+
+        if (typeof refreshClientDatalist === "function") {
+          refreshClientDatalist();
         }
+
+        updateOfflineBadge();
+      },
+      (e) => {
+        console.error("Erreur onSnapshot clients Firestore :", e);
       }
-      refreshClientDatalist();
-    }
+    );
   } catch (e) {
     console.error("Erreur sync clients Firestore :", e);
   }
 }
+
 
 // ----- Récupération d'un tarif dans PRESTATION_TEMPLATES -----
 
@@ -19341,6 +19351,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
