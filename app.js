@@ -5092,6 +5092,15 @@ if (!window.__pdfViewerPopstateBound) {
   });
 }
 
+function _isIOS() {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent);
+}
+
+function _pdfUrlForViewer(doc) {
+  // iPhone: éviter bloburl (ça sort l'app et tu restes coincé)
+  return _isIOS() ? doc.output("datauristring") : doc.output("bloburl");
+}
+
 
 function generatePDFRapportFromRecord(record, mode = "print") {
   if (!window.jspdf || !window.jspdf.jsPDF) {
@@ -5394,8 +5403,9 @@ function generatePDFRapportFromRecord(record, mode = "print") {
     if (mode === "print") {
       doc.autoPrint();
     }
-    const url = doc.output("bloburl");
-    openPdfViewer(url);
+ const url = _pdfUrlForViewer(doc);
+openPdfViewer(url);
+
   }
 }
 
@@ -9268,8 +9278,9 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
     if (mode === "print") {
       if (doc.autoPrint) doc.autoPrint();
     }
-    const url = doc.output("bloburl");
-    openPdfViewer(url);
+ const url = _pdfUrlForViewer(doc);
+openPdfViewer(url);
+
   }
 }
 
@@ -19442,6 +19453,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
