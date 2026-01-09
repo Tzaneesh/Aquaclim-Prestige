@@ -19500,6 +19500,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Dashboard + followup
   if (typeof refreshHomeStats === "function") refreshHomeStats();
   if (typeof renderClientsFollowup === "function") renderClientsFollowup();
+    // ✅ TVA micro : calcule le CA encaissé et force TVA 0% / 20% selon statut
+  if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(true);
+
 
   // Double clic fiche client
   const docClientInput = document.getElementById("clientName");
@@ -19598,6 +19601,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
