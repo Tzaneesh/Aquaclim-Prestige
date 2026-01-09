@@ -976,193 +976,45 @@ let unsubDocs = null;
 let unsubContracts = null;
 let unsubClients = null;
 
-// ================== OFFLINE / SYNC QUEUE ==================
+// ================== OFFLINE (Firestore natif) ==================
+// Objectif :
+// - Online : temps réel multi-appareils via onSnapshot
+// - Offline : Firestore garde les modifs en local et sync automatiquement au retour réseau
 
-const SYNC_QUEUE_KEY = "acp_sync_queue_v1";
-
-function getSyncQueue() {
-  try {
-    return JSON.parse(localStorage.getItem(SYNC_QUEUE_KEY) || "[]");
-  } catch (e) {
-    console.error("Queue sync corrompue :", e);
-    localStorage.removeItem(SYNC_QUEUE_KEY);
-    return [];
-  }
-}
-
-function saveSyncQueue(queue) {
-  try {
-    localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(queue || []));
-  } catch (e) {
-    console.error("Erreur save sync queue :", e);
-  }
-}
-
-function enqueueSync(op) {
-  const queue = getSyncQueue();
-  queue.push({
-    ...op,
-    ts: Date.now(),
-  });
-  saveSyncQueue(queue);
-  updateOfflineBadge();
-}
-
-/**
- * Met à jour le badge en bas à droite
- */
 function updateOfflineBadge() {
   const badge = document.getElementById("offlineBadge");
   if (!badge) return;
 
-  const queue = getSyncQueue();
-  const pending = queue.length;
-  const online = navigator.onLine;
-
-  if (!online) {
-    badge.textContent = "Hors ligne – données en local";
+  if (!navigator.onLine) {
+    badge.textContent = "📴 Hors ligne — modifs gardées en local (sync auto au retour réseau)";
     badge.className = "offline-badge offline";
     badge.style.display = "flex";
     return;
   }
 
-  if (pending > 0) {
-    badge.textContent = `Synchronisation en attente (${pending})…`;
-    badge.className = "offline-badge syncing";
-    badge.style.display = "flex";
-    return;
-  }
-
-  // tout est OK → petit message puis on masque
-  badge.textContent = "✅ Données synchronisées";
+  badge.textContent = "🟢 En ligne — synchronisation automatique";
   badge.className = "offline-badge online";
   badge.style.display = "flex";
 
   setTimeout(() => {
+    if (!navigator.onLine) return;
     badge.style.display = "none";
-  }, 2000);
+  }, 1500);
 }
 
-/**
- * Rejoue la file d’attente vers Firestore
- */
-async function processSyncQueue() {
-  if (!db || !navigator.onLine) {
+// Bind online/offline UNE seule fois
+if (!window.__netListenersBound) {
+  window.__netListenersBound = true;
+
+  window.addEventListener("online", () => {
+    console.log("[NET] Retour en ligne");
     updateOfflineBadge();
-    return;
-  }
+  });
 
-  let queue = getSyncQueue();
-  if (!queue.length) {
+  window.addEventListener("offline", () => {
+    console.log("[NET] Passage hors-ligne");
     updateOfflineBadge();
-    return;
-  }
-
-  const stillPending = [];
-
-  for (const op of queue) {
-    try {
-      const colRef = db.collection(op.collection);
-      if (op.action === "set") {
-        await colRef.doc(op.docId).set(op.data, { merge: true });
-      } else if (op.action === "delete") {
-        await colRef.doc(op.docId).delete();
-      }
-      // ok, on ne le remet pas
-    } catch (e) {
-      console.error("Erreur sync op Firestore :", op, e);
-      stillPending.push(op); // restera en attente
-    }
-  }
-
-  saveSyncQueue(stillPending);
-  updateOfflineBadge();
-}
-
-// ================== FIREBASE / SYNC ==================
-
-async function initFirebase() {
-  if (!window.firebase) {
-    console.error("Firebase non disponible");
-    return;
-  }
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyDLrNwmfmbpmGkJYdswlOP3qSgFMbCjy0k",
-    authDomain: "aquaclim-prestige-e70d6.firebaseapp.com",
-    projectId: "aquaclim-prestige-e70d6",
-    storageBucket: "aquaclim-prestige-e70d6.firebasestorage.app",
-    messagingSenderId: "305566055348",
-    appId: "1:305566055348:web:175c174c115ca457bd50e1",
-  };
-
-  if (firebase.apps.length === 0) {
-    firebase.initializeApp(firebaseConfig);
-  }
-
-  db = firebase.firestore();
-
-  // ✅ Offline persistence (cache IndexedDB)
-  try {
-    await db.enablePersistence({ synchronizeTabs: true });
-    console.log("[Firestore] Persistence ENABLED");
-  } catch (e) {
-    console.warn("[Firestore] Persistence not enabled:", e?.code || e);
-  }
-
-  // ✅ Bind online/offline listeners une seule fois
-  if (!window.__netListenersBound) {
-    window.__netListenersBound = true;
-
-    window.addEventListener("online", () => {
-      updateOfflineBadge();
-      if (typeof processSyncQueue === "function") processSyncQueue();
-    });
-
-    window.addEventListener("offline", () => {
-      updateOfflineBadge();
-    });
-  }
-
-  try {
-    // 1️⃣ LIVE DOCUMENTS (devis / factures)
-    if (unsubDocs) unsubDocs();
-    unsubDocs = db.collection("documents").onSnapshot(
-      (snapshot) => {
-        const cloudDocs = [];
-        snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
-          if (data) cloudDocs.push(data);
-        });
-
-        localStorage.setItem("documents", JSON.stringify(cloudDocs));
-
-        // 🔄 UI refresh (documents)
-        if (typeof loadDocumentsList === "function") loadDocumentsList();
-        if (typeof loadYearFilter === "function") loadYearFilter();
-        if (typeof refreshHomeStats === "function") refreshHomeStats();
-        if (typeof computeCA === "function") computeCA();
-        if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
-
-        updateOfflineBadge();
-      },
-      (err) => console.error("Erreur onSnapshot documents :", err)
-    );
-
-    // 2️⃣ LIVE CONTRATS (ta version onSnapshot dans syncContractsWithFirestore)
-    await syncContractsWithFirestore();
-
-    // 3️⃣ LIVE CLIENTS (ta version onSnapshot dans syncClientsWithFirestore)
-    await syncClientsWithFirestore();
-  } catch (e) {
-    console.error("Erreur de synchronisation Firestore :", e);
-  }
-
-  // Badge + queue
-  updateOfflineBadge();
-  if (navigator.onLine && typeof processSyncQueue === "function") {
-    processSyncQueue();
-  }
+  });
 }
 
 
@@ -3139,44 +2991,29 @@ function generatePDFRapport() {
   closeRapportPopup();
 }
 
-function saveSingleDocumentToFirestore(doc) {
+async function saveSingleDocumentToFirestore(doc) {
   if (!doc || !doc.id) {
     console.warn("Document sans id, impossible de sauvegarder dans Firestore.");
     return;
   }
 
-  // 🔒 Si Firestore n'est pas initialisé → queue de secours
   if (!db) {
-    enqueueSync({
-      collection: "documents",
-      action: "set",
-      docId: doc.id,
-      data: doc,
-    });
+    console.warn("[Firestore] DB non initialisée (save document)");
     return;
   }
 
-  // ✅ Écriture Firestore (online ou offline → Firestore gère)
-  db.collection("documents")
-    .doc(doc.id)
-    .set(doc, { merge: true })
-    .catch((err) => {
-      console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err);
-
-      // 🔁 En ultime secours seulement
-      enqueueSync({
-        collection: "documents",
-        action: "set",
-        docId: doc.id,
-        data: doc,
-      });
-    });
+  try {
+    await db.collection("documents").doc(doc.id).set(doc, { merge: true });
+  } catch (err) {
+    console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err);
+  }
 
   // 🔄 Lien devis → contrats (logique métier, OK ici)
   if (typeof syncContractsWithDevis === "function") {
     syncContractsWithDevis(doc);
   }
 }
+
 
 
 // ================== LISTE CLIENTS (popup) ==================
@@ -14447,22 +14284,13 @@ function backToContracts() {
 async function saveSingleContractToFirestore(contract) {
   if (!contract || !contract.id) return;
 
-  if (!db || !navigator.onLine) {
-    enqueueSync({
-      collection: "contracts",
-      action: "set",
-      docId: contract.id,
-      data: contract,
-    });
+  if (!db) {
+    console.warn("[Firestore] DB non initialisée (save contract)");
     return;
   }
 
   try {
-    await db
-      .collection("contracts")
-      .doc(contract.id)
-      .set(contract, { merge: true });
-    processSyncQueue();
+    await db.collection("contracts").doc(contract.id).set(contract, { merge: true });
   } catch (e) {
     console.error("Erreur Firestore (save contract)", e);
   }
@@ -14471,30 +14299,18 @@ async function saveSingleContractToFirestore(contract) {
 async function deleteContractFromFirestore(id) {
   if (!id) return;
 
-  // 🔒 Si Firestore pas prêt -> queue secours
   if (!db) {
-    enqueueSync({
-      collection: "contracts",
-      action: "delete",
-      docId: id,
-    });
+    console.warn("[Firestore] DB non initialisée (delete contract)");
     return;
   }
 
   try {
-    // ✅ Firestore gère offline/online avec persistence
     await db.collection("contracts").doc(id).delete();
   } catch (e) {
     console.error("Erreur Firestore (delete contract)", e);
-
-    // 🔁 Secours : on met en queue si ça échoue
-    enqueueSync({
-      collection: "contracts",
-      action: "delete",
-      docId: id,
-    });
   }
 }
+
 
 
 async function syncContractsWithFirestore() {
@@ -14549,53 +14365,34 @@ async function saveSingleClientToFirestore(client) {
   const id = client.id || getClientDocId(client);
   client.id = id;
 
-  if (!db || !navigator.onLine) {
-    enqueueSync({
-      collection: "clients",
-      action: "set",
-      docId: id,
-      data: client,
-    });
+  if (!db) {
+    console.warn("[Firestore] DB non initialisée (save client)");
     return;
   }
 
   try {
     await db.collection("clients").doc(id).set(client, { merge: true });
-    processSyncQueue();
   } catch (e) {
     console.error("Erreur Firestore (save client)", e);
   }
 }
 
-async function deleteClientFromFirestore(client) {
-  if (!client) return;
-  const id = client.id || getClientDocId(client);
+
+async function deleteClientFromFirestore(id) {
   if (!id) return;
 
-  // 🔒 Si Firestore pas prêt -> queue secours
   if (!db) {
-    enqueueSync({
-      collection: "clients",
-      action: "delete",
-      docId: id,
-    });
+    console.warn("[Firestore] DB non initialisée (delete client)");
     return;
   }
 
   try {
-    // ✅ Firestore gère offline/online avec persistence
     await db.collection("clients").doc(id).delete();
   } catch (e) {
     console.error("Erreur Firestore (delete client)", e);
-
-    // 🔁 Secours : on met en queue si ça échoue
-    enqueueSync({
-      collection: "clients",
-      action: "delete",
-      docId: id,
-    });
   }
 }
+
 
 async function syncClientsWithFirestore() {
   if (!db) return;
@@ -19232,27 +19029,29 @@ initFirebase().then(() => {
 };
 
 /* ======================
-   NET STATE
+   NET STATE (Firestore natif)
 ====================== */
 
-window.addEventListener("online", () => {
-  console.log("[NET] Reconnexion détectée");
-  updateOfflineBadge();
-  if (!db) {
-    initFirebase()
-      .then(processSyncQueue)
-      .catch(() => {
-        updateOfflineBadge();
-      });
-  } else {
-    processSyncQueue();
-  }
-});
+if (!window.__netListenersBound) {
+  window.__netListenersBound = true;
 
-window.addEventListener("offline", () => {
-  console.log("[NET] Passage hors-ligne");
-  updateOfflineBadge();
-});
+  window.addEventListener("online", () => {
+    console.log("[NET] Reconnexion détectée");
+    updateOfflineBadge();
+
+    // Si Firebase n'est pas initialisé, on init. Sinon rien :
+    // Firestore sync automatiquement les writes offline.
+    if (!db) {
+      initFirebase().catch(() => updateOfflineBadge());
+    }
+  });
+
+  window.addEventListener("offline", () => {
+    console.log("[NET] Passage hors-ligne");
+    updateOfflineBadge();
+  });
+}
+
 
 /* ======================
    ✅ UN SEUL DOMContentLoaded
@@ -19265,7 +19064,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Badge + sync queue
   updateOfflineBadge();
-  if (navigator.onLine && db) processSyncQueue();
+
 
   // Rapport inputs
   const rapPhotos = document.getElementById("rapPhotosInput");
@@ -19375,6 +19174,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
