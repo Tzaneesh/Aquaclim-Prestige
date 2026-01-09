@@ -73,6 +73,8 @@ function getDefaultCompanySettings() {
     phone: "06 03 53 77 73",
     email: "aquaclimprestige@gmail.com",
     siret: "XXXXXXXXXXXXX",
+    vatNumber: "", // ex: FRxx123456789
+
     ribHolder: "AquaClim Prestige – Le Blevennec Loïc",
     bankName: "Banque Fictive",
     iban: "FR76 1234 5678 9012 3456 7890 123",
@@ -2026,6 +2028,7 @@ function fillCompanySettingsForm() {
   setVal("confSubtitle", s.subtitle);
   setVal("confLegalName", s.legalName);
   setVal("confSiret", s.siret);
+  setVal("confVatNumber", s.vatNumber);
   setVal("confAddress", s.address);
   setVal("confPhone", s.phone);
   setVal("confEmail", s.email);
@@ -2043,6 +2046,8 @@ function saveCompanySettingsFromForm() {
     subtitle: getVal("confSubtitle"),
     legalName: getVal("confLegalName"),
     siret: getVal("confSiret"),
+    vatNumber: getVal("confVatNumber"),
+
     address: getVal("confAddress"),
     phone: getVal("confPhone"),
     email: getVal("confEmail"),
@@ -2062,6 +2067,20 @@ function saveCompanySettingsFromForm() {
     variant: "success",
     icon: "✅",
   });
+}
+function getTVALineForDocuments() {
+  const s = getCompanySettings();
+  const status = getMicroTVAStatus(); // doit renvoyer { mode: "franchise"|"obligatoire" }
+
+  if (status?.mode === "obligatoire") {
+    // TVA active => on affiche le numéro
+    return s.vatNumber
+      ? `TVA intracom : ${s.vatNumber}`
+      : `TVA intracom : (numéro manquant)`;
+  }
+
+  // Franchise => mention obligatoire
+  return "TVA non applicable, article 293B du CGI";
 }
 
 /* ========== ATTESTATION CLIM ========== */
@@ -7580,31 +7599,34 @@ function getMicroTvaStatus() {
 }
 
 // ✅ SOURCE DE VÉRITÉ UNIQUE : statut micro TVA + UI + badge
+// RÈGLE : une fois "obligatoire", ON NE REVIENT PAS en arrière automatiquement.
 function refreshMicroTVAState(showAlert = false) {
   const { year, caTTC } = computeCurrentYearCAForMicro();
   const status = getMicroTVAStatus(); // { mode, activatedYear, activatedCA }
 
-  // 1) Mode désiré = basé UNIQUEMENT sur le CA encaissé année courante
-  const shouldBeObligatoire = caTTC >= MICRO_TVA_THRESHOLD_BASE;
-  const nextMode = shouldBeObligatoire ? "obligatoire" : "franchise";
+  const alreadyObligatoire = status && status.mode === "obligatoire";
 
-  // 2) Si changement de mode => on sauvegarde
-  const modeChanged = !status || status.mode !== nextMode;
-  const yearMismatch = nextMode === "obligatoire" && (!status || status.activatedYear !== year);
+  // 1) Déclenchement TVA : seulement si on dépasse le seuil ET qu'on n'était pas déjà en TVA
+  const shouldActivateNow = !alreadyObligatoire && caTTC >= MICRO_TVA_THRESHOLD_BASE;
 
-  if (modeChanged || yearMismatch) {
+  // 2) Mode final : si déjà obligatoire => reste obligatoire
+  // sinon => franchise, sauf si on vient d'activer
+  const nextMode = alreadyObligatoire ? "obligatoire" : (shouldActivateNow ? "obligatoire" : "franchise");
+
+  // 3) Si on active maintenant => on sauvegarde la date/année d'activation
+  if (shouldActivateNow) {
     saveMicroTVAStatus({
-      mode: nextMode,
-      activatedYear: nextMode === "obligatoire" ? year : null,
-      activatedCA: nextMode === "obligatoire" ? caTTC : 0,
+      mode: "obligatoire",
+      activatedYear: year,
+      activatedCA: caTTC,
     });
 
-    if (showAlert && nextMode === "obligatoire" && typeof showConfirmDialog === "function") {
+    if (showAlert && typeof showConfirmDialog === "function") {
       showConfirmDialog({
-        title: "Seuil TVA micro-entreprise dépassé",
+        title: "Seuil TVA dépassé",
         message:
-          `Ton chiffre d'affaires encaissé ${year} atteint ${formatEuroFallback(caTTC)}.\n\n` +
-          `Seuil de franchise : ${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}.\n\n` +
+          `CA encaissé ${year} : ${formatEuroFallback(caTTC)}\n` +
+          `Seuil franchise : ${formatEuroFallback(MICRO_TVA_THRESHOLD_BASE)}\n\n` +
           `➡️ TVA 20 % obligatoire sur les nouveaux devis et factures.`,
         confirmLabel: "OK",
         cancelLabel: "",
@@ -7614,8 +7636,7 @@ function refreshMicroTVAState(showAlert = false) {
     }
   }
 
-
-  // 3) Badge dashboard (toujours synchro)
+  // 4) Badge dashboard
   const badge = document.getElementById("dashTVAMicroBadge");
   if (badge) {
     if (nextMode === "obligatoire") {
@@ -7626,12 +7647,10 @@ function refreshMicroTVAState(showAlert = false) {
     }
   }
 
-  // 4) Forcer la TVA du formulaire devis/facture en cohérence (si champs présents)
+  // 5) Forcer la TVA dans l'UI (devis/facture/contrat) selon le statut
   const forcedRate = nextMode === "obligatoire" ? 20 : 0;
 
-  if (typeof setTVA === "function") {
-    setTVA(forcedRate); // setTVA a déjà ton garde-fou micro :contentReference[oaicite:4]{index=4}
-  }
+  if (typeof setTVA === "function") setTVA(forcedRate);
 
   const tva0 = document.getElementById("tva0");
   const tva20 = document.getElementById("tva20");
@@ -7640,22 +7659,22 @@ function refreshMicroTVAState(showAlert = false) {
     tva20.checked = forcedRate === 20;
   }
 
-  // 5) (Optionnel mais propre) synchroniser radios contrat si présentes
   const ct0 = document.getElementById("ctTva0");
   const ct20 = document.getElementById("ctTva20");
   if (ct0 && ct20) {
     ct0.checked = forcedRate === 0;
     ct20.checked = forcedRate === 20;
   }
-  // 6) Si le popup CA est ouvert, on le rerender pour MAJ TVA/CA instantanément
+
+  // 6) Si popup CA ouvert => refresh
   const overlay = document.getElementById("caReportOverlay");
   const isOpen = overlay && !overlay.classList.contains("hidden");
-  if (isOpen && typeof renderCAReport === "function") {
-    renderCAReport();
-  }
+  if (isOpen && typeof renderCAReport === "function") renderCAReport();
 
+  // IMPORTANT : on renvoie le mode final
   return { year, caTTC, mode: nextMode };
 }
+
 
 
 function saveMicroTVAStatus(status) {
@@ -19506,6 +19525,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
