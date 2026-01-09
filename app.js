@@ -10148,6 +10148,7 @@ if (!mode) {
 
 // 💾 On sauvegarde d'abord la facture modifiée
 saveDocuments(docs);
+  if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(true);
 
 
   // ⚠️ Sécurité : on sauvegarde aussi dans Firestore si dispo
@@ -19672,6 +19673,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
