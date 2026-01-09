@@ -3145,34 +3145,39 @@ function saveSingleDocumentToFirestore(doc) {
     return;
   }
 
-  // Hors ligne ou Firestore HS → on met en file d’attente
-  if (!db || !navigator.onLine) {
+  // 🔒 Si Firestore n'est pas initialisé → queue de secours
+  if (!db) {
     enqueueSync({
       collection: "documents",
       action: "set",
       docId: doc.id,
       data: doc,
     });
-    if (typeof syncContractsWithDevis === "function") {
-      syncContractsWithDevis(doc);
-    }
     return;
   }
 
+  // ✅ Écriture Firestore (online ou offline → Firestore gère)
   db.collection("documents")
     .doc(doc.id)
     .set(doc, { merge: true })
-    .then(() => {
-      processSyncQueue();
-    })
-    .catch((err) =>
-      console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err),
-    );
+    .catch((err) => {
+      console.error("Erreur Firestore (saveSingleDocumentToFirestore) :", err);
 
+      // 🔁 En ultime secours seulement
+      enqueueSync({
+        collection: "documents",
+        action: "set",
+        docId: doc.id,
+        data: doc,
+      });
+    });
+
+  // 🔄 Lien devis → contrats (logique métier, OK ici)
   if (typeof syncContractsWithDevis === "function") {
     syncContractsWithDevis(doc);
   }
 }
+
 
 // ================== LISTE CLIENTS (popup) ==================
 let clientsPopupList = []; // liste courante affichée dans le popup
@@ -14466,7 +14471,8 @@ async function saveSingleContractToFirestore(contract) {
 async function deleteContractFromFirestore(id) {
   if (!id) return;
 
-  if (!db || !navigator.onLine) {
+  // 🔒 Si Firestore pas prêt -> queue secours
+  if (!db) {
     enqueueSync({
       collection: "contracts",
       action: "delete",
@@ -14476,12 +14482,20 @@ async function deleteContractFromFirestore(id) {
   }
 
   try {
+    // ✅ Firestore gère offline/online avec persistence
     await db.collection("contracts").doc(id).delete();
-    processSyncQueue();
   } catch (e) {
     console.error("Erreur Firestore (delete contract)", e);
+
+    // 🔁 Secours : on met en queue si ça échoue
+    enqueueSync({
+      collection: "contracts",
+      action: "delete",
+      docId: id,
+    });
   }
 }
+
 
 async function syncContractsWithFirestore() {
   if (!db) return;
@@ -14556,8 +14570,10 @@ async function saveSingleClientToFirestore(client) {
 async function deleteClientFromFirestore(client) {
   if (!client) return;
   const id = client.id || getClientDocId(client);
+  if (!id) return;
 
-  if (!db || !navigator.onLine) {
+  // 🔒 Si Firestore pas prêt -> queue secours
+  if (!db) {
     enqueueSync({
       collection: "clients",
       action: "delete",
@@ -14567,12 +14583,20 @@ async function deleteClientFromFirestore(client) {
   }
 
   try {
+    // ✅ Firestore gère offline/online avec persistence
     await db.collection("clients").doc(id).delete();
-    processSyncQueue();
   } catch (e) {
     console.error("Erreur Firestore (delete client)", e);
+
+    // 🔁 Secours : on met en queue si ça échoue
+    enqueueSync({
+      collection: "clients",
+      action: "delete",
+      docId: id,
+    });
   }
 }
+
 async function syncClientsWithFirestore() {
   if (!db) return;
 
@@ -19351,6 +19375,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
