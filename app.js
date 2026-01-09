@@ -5008,24 +5008,31 @@ function openPdfViewer(url) {
   const overlay = document.getElementById("pdfViewerOverlay");
   const frame = document.getElementById("pdfViewerFrame");
 
-  // fallback si overlay absent
+  // ✅ iPhone : JAMAIS window.open (sinon lecteur PDF natif = bloqué)
+  // ✅ PC : si overlay absent -> nouvel onglet OK
   if (!overlay || !frame) {
-    window.open(url, "_blank");
+    if (!isIOS()) window.open(url, "_blank");
     return;
   }
 
   lastAppViewBeforePDF = getCurrentAppView();
 
-  frame.src = url;
-  overlay.classList.remove("hidden");
-overlay.scrollTop = 0;
+  // important : reset avant de charger (évite bugs iOS)
+  frame.src = "about:blank";
 
+  // petit délai pour laisser Safari respirer
+  setTimeout(() => {
+    frame.src = url;
+    overlay.classList.remove("hidden");
+    overlay.scrollTop = 0;
+  }, 30);
 
   // bouton "retour" (PWA iPhone/Android)
   try {
     history.pushState({ pdfOpen: true }, "", location.href);
   } catch (e) {}
 }
+
 
 function bindPdfViewerCloseUX() {
   const overlay = document.getElementById("pdfViewerOverlay");
@@ -5092,9 +5099,7 @@ if (!window.__pdfViewerPopstateBound) {
   });
 }
 
-function _isIOS() {
-  return /iPad|iPhone|iPod/.test(navigator.userAgent);
-}
+
 
 function _pdfUrlForViewer(doc) {
   // iPhone: éviter bloburl (ça sort l'app et tu restes coincé)
@@ -19209,9 +19214,19 @@ function autoFillDates() {
 
 // ================= iPhone : dropdown natif pour "Nom client" =================
 
-function _isIOS() {
+function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
+
+function getPdfUrl(doc) {
+  // iPhone → data URI (reste dans l'app)
+  if (isIOS()) {
+    return doc.output("datauristring");
+  }
+  // PC / Android → blob (rapide)
+  return doc.output("bloburl");
+}
+
 
 function _fillClientSelectIOS() {
   const sel = document.getElementById("clientNameIOS");
@@ -19453,6 +19468,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
