@@ -5824,69 +5824,72 @@ function getCurrentClientType() {
 }
 
 function setTVA(rate) {
-  const seuilMicro = MICRO_TVA_THRESHOLD_BASE; // 37500
-  const { caTTC: currentCA } = computeCurrentYearCAForMicro();
+  // ✅ Le cerveau : le statut TVA, pas le CA annuel
+  const status = getMicroTVAStatus(); // doit renvoyer { mode: "franchise" | "obligatoire" }
 
- // ======================================================
-// 🚫 BLOCAGE TVA 20% si CA < seuil micro-entreprise
-// ======================================================
- if (rate === 20 && currentCA < seuilMicro) {
-
-  if (typeof showConfirmDialog === "function") {
-    showConfirmDialog({
+  // 1) On force selon le statut (règle simple)
+  if (status?.mode === "franchise" && rate > 0) {
+    showConfirmDialog?.({
       title: "TVA non applicable",
       message:
-        "Tu es encore sous le seuil micro (37 500 € encaissés TTC).\n\n" +
-        "On reste automatiquement en TVA 0 %.",
+        "Tu es en franchise en base.\n\n" +
+        "➡️ TVA 20 % interdite : on reste automatiquement en TVA 0 %.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
       icon: "ℹ️",
     });
-  } else {
-    alert("Impossible : tant que vous êtes sous le seuil micro-entreprise, la TVA 20% est interdite.");
+    rate = 0;
   }
 
-  // ✅ On rétablit 0% dans l’UI (devis/facture)
+  if (status?.mode === "obligatoire" && rate === 0) {
+    showConfirmDialog?.({
+      title: "TVA obligatoire",
+      message:
+        "La TVA est active.\n\n" +
+        "➡️ TVA 20 % obligatoire sur les nouveaux documents.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "warning",
+      icon: "⚠️",
+    });
+    rate = 20;
+  }
+
+  // 2) Radios devis/facture
   const tva0 = document.getElementById("tva0");
   const tva20 = document.getElementById("tva20");
-  if (tva20) tva20.checked = false;
-  if (tva0) tva0.checked = true;
+  if (tva0) tva0.checked = rate === 0;
+  if (tva20) tva20.checked = rate === 20;
 
-  // ✅ (optionnel) synchro radios CONTRAT si tu les as
+  // 3) Radios contrat (si présents)
   const ct0 = document.getElementById("ctTva0");
   const ct20 = document.getElementById("ctTva20");
-  if (ct20) ct20.checked = false;
-  if (ct0) ct0.checked = true;
+  if (ct0) ct0.checked = rate === 0;
+  if (ct20) ct20.checked = rate === 20;
 
-  // ✅ Force TVA = 0 partout
-  rate = 0;
-
-  // ✅ Et on quitte : pas besoin de continuer avec le rate=20 initial
-  // (le reste de la fonction va s'exécuter normalement avec rate=0 si tu veux)
-  // -> soit return setTVA(0) (non), soit juste continuer, mais propre = return après mise à jour
-  // Ici, le plus safe : on applique tout de suite l'UI TVA 0 et recalcul.
+  // 4) Input hidden
   const tvaInput = document.getElementById("tvaRate");
-  if (tvaInput) tvaInput.value = "0";
+  if (tvaInput) tvaInput.value = String(rate);
 
+  // 5) Texte + labels
+  const clientType = typeof getCurrentClientType === "function" ? getCurrentClientType() : "particulier";
   const tvaNote = document.getElementById("tvaNote");
   const totalLabel = document.getElementById("totalLabel");
-  const clientType = getCurrentClientType();
 
   if (clientType === "syndic") {
-    if (tvaNote) tvaNote.textContent = "";
-    if (totalLabel) totalLabel.textContent = "TOTAL HT :";
+    if (tvaNote) tvaNote.textContent = ""; // à toi de décider si tu veux afficher 293B aussi pour syndic
+    if (totalLabel) totalLabel.textContent = rate === 0 ? "TOTAL HT :" : "NET À PAYER :";
   } else {
-    if (tvaNote) tvaNote.textContent = "TVA non applicable, article 293 B du CGI.";
+    if (tvaNote) tvaNote.textContent = getTVALineForDocuments(); // ✅ "TVA intracom..." OU "293B"
     if (totalLabel) totalLabel.textContent = "NET À PAYER :";
   }
 
+  // 6) Recalculs
   if (typeof calculateTotals === "function") calculateTotals();
   if (typeof recomputeContract === "function") recomputeContract();
+}
 
-  return; // ✅ STOP ici
-}
-}
 function updateButtonColors() {
   const type = document.getElementById("docType").value;
   const isDevis = type === "devis";
@@ -19525,6 +19528,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
