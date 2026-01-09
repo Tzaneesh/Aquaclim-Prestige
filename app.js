@@ -1815,7 +1815,8 @@ function openClientSheet(name) {
 
             _addRelanceToInvoice(invoiceNumber, "whatsapp");
             const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
-            openPdfViewer(url);  
+            openExternalLink(url);
+  
           },
           onCancel: () => {
             // 1) email depuis le bouton
@@ -1852,7 +1853,8 @@ function openClientSheet(name) {
             const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 
             // ✅ IMPORTANT : ne pas “naviguer” dans ton app (évite l’effet “ça efface”)
-            openPdfViewer(url);  
+            openExternalLink(url);
+
           },
         });
       });
@@ -4279,7 +4281,8 @@ function sendByWhatsApp() {
     "?text=" +
     encodeURIComponent(body);
 
-  openPdfViewer(url);  
+  openExternalLink(url);
+
   closeSendPopup();
 }
 
@@ -4953,7 +4956,8 @@ ${company.companyName || "AquaClim Prestige"}`;
       // ouvre WhatsApp
       const wa = phone.replace(/\D/g, "");
       const url = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
-      openPdfViewer(url);  
+      openExternalLink(url);
+ 
     },
     onCancel: () => {
       if (!email) {
@@ -5427,11 +5431,13 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   if (mode === "download") {
     doc.save(fileName);
   } else {
-    if (mode === "print") {
-      doc.autoPrint();
-    }
- const url = _pdfUrlForViewer(doc);
-openPdfViewer(url);  
+if (mode === "print" && !isIOS()) {
+  doc.autoPrint();
+}
+
+const url = getPdfUrl(doc);
+openPdfViewer(url);
+
 
   }
 }
@@ -9302,11 +9308,13 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   if (mode === "download") {
     doc.save(fileName);
   } else {
-    if (mode === "print") {
-      if (doc.autoPrint) doc.autoPrint();
-    }
- const url = _pdfUrlForViewer(doc);
-openPdfViewer(url);  
+if (mode === "print" && !isIOS()) {
+  if (doc.autoPrint) doc.autoPrint();
+}
+
+const url = getPdfUrl(doc);
+openPdfViewer(url);
+
 
   }
 }
@@ -19498,6 +19506,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
