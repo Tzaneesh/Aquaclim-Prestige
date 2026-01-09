@@ -19519,6 +19519,36 @@ document.addEventListener("DOMContentLoaded", () => {
   if (typeof renderClientsFollowup === "function") renderClientsFollowup();
 if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
 
+// ===============================
+// ✅ TVA – BIND UNIQUE (clic user)
+// ===============================
+if (!window.__tvaUiBound) {
+  window.__tvaUiBound = true;
+
+  // Radios devis/facture
+  document.getElementById("tva0")?.addEventListener("change", () => {
+    if (document.getElementById("tva0")?.checked) setTVA(0, { showAlert: true });
+  });
+  document.getElementById("tva20")?.addEventListener("change", () => {
+    if (document.getElementById("tva20")?.checked) setTVA(20, { showAlert: true });
+  });
+
+  // Radios contrat
+  document.getElementById("ctTva0")?.addEventListener("change", () => {
+    if (document.getElementById("ctTva0")?.checked) setTVA(0, { showAlert: true });
+  });
+  document.getElementById("ctTva20")?.addEventListener("change", () => {
+    if (document.getElementById("ctTva20")?.checked) setTVA(20, { showAlert: true });
+  });
+
+  // Si jamais tu as aussi un <select id="tvaRate"> utilisé quelque part :
+  document.getElementById("tvaRate")?.addEventListener("change", (e) => {
+    // ⚠️ seulement si c'est un vrai select visible manipulé par l'utilisateur
+    // sinon tu peux supprimer ce listener
+    const v = Number(e.target.value) || 0;
+    setTVA(v, { showAlert: true });
+  });
+}
 
 
 
@@ -19611,14 +19641,8 @@ document.addEventListener("click", (e) => {
   setTimeout(autoFillDates, 50);
 });
 
-// 🚫 CONTRAT – Blocage TVA 20% si micro (si tu gardes enforceContractMicroTVA)
-const tvaInput = document.getElementById("tvaRate");
-if (tvaInput) {
-  tvaInput.addEventListener("change", () => {
-    if (typeof enforceContractMicroTVA === "function") enforceContractMicroTVA();
-  });
-}
 });
+
 
 
 
