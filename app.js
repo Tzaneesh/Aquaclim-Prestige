@@ -5824,71 +5824,40 @@ function getCurrentClientType() {
 }
 
 function setTVA(rate) {
-  // ✅ Le cerveau : le statut TVA, pas le CA annuel
-  const status = getMicroTVAStatus(); // doit renvoyer { mode: "franchise" | "obligatoire" }
-
-  // 1) On force selon le statut (règle simple)
-  if (status?.mode === "franchise" && rate > 0) {
-    showConfirmDialog?.({
-      title: "TVA non applicable",
-      message:
-        "Tu es en franchise en base.\n\n" +
-        "➡️ TVA 20 % interdite : on reste automatiquement en TVA 0 %.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "info",
-      icon: "ℹ️",
-    });
-    rate = 0;
-  }
-
-  if (status?.mode === "obligatoire" && rate === 0) {
-    showConfirmDialog?.({
-      title: "TVA obligatoire",
-      message:
-        "La TVA est active.\n\n" +
-        "➡️ TVA 20 % obligatoire sur les nouveaux documents.",
-      confirmLabel: "OK",
-      cancelLabel: "",
-      variant: "warning",
-      icon: "⚠️",
-    });
-    rate = 20;
-  }
-
-  // 2) Radios devis/facture
+  // 1) Radios devis/facture
   const tva0 = document.getElementById("tva0");
   const tva20 = document.getElementById("tva20");
-  if (tva0) tva0.checked = rate === 0;
-  if (tva20) tva20.checked = rate === 20;
+  if (tva0) tva0.checked = Number(rate) === 0;
+  if (tva20) tva20.checked = Number(rate) === 20;
 
-  // 3) Radios contrat (si présents)
+  // 2) Radios contrat (si présents)
   const ct0 = document.getElementById("ctTva0");
   const ct20 = document.getElementById("ctTva20");
-  if (ct0) ct0.checked = rate === 0;
-  if (ct20) ct20.checked = rate === 20;
+  if (ct0) ct0.checked = Number(rate) === 0;
+  if (ct20) ct20.checked = Number(rate) === 20;
 
-  // 4) Input hidden
+  // 3) Valeur utilisée par calculs
   const tvaInput = document.getElementById("tvaRate");
   if (tvaInput) tvaInput.value = String(rate);
 
-  // 5) Texte + labels
-  const clientType = typeof getCurrentClientType === "function" ? getCurrentClientType() : "particulier";
+  // 4) Texte TVA / 293B
   const tvaNote = document.getElementById("tvaNote");
-  const totalLabel = document.getElementById("totalLabel");
-
-  if (clientType === "syndic") {
-    if (tvaNote) tvaNote.textContent = ""; // à toi de décider si tu veux afficher 293B aussi pour syndic
-    if (totalLabel) totalLabel.textContent = rate === 0 ? "TOTAL HT :" : "NET À PAYER :";
-  } else {
-    if (tvaNote) tvaNote.textContent = getTVALineForDocuments(); // ✅ "TVA intracom..." OU "293B"
-    if (totalLabel) totalLabel.textContent = "NET À PAYER :";
+  if (tvaNote) {
+    // si tu as créé getTVALineForDocuments(), mets-le ici
+    if (typeof getTVALineForDocuments === "function") {
+      tvaNote.textContent = getTVALineForDocuments();
+    } else {
+      tvaNote.textContent = (Number(rate) === 0)
+        ? "TVA non applicable, article 293 B du CGI."
+        : "TVA 20 % applicable.";
+    }
   }
 
-  // 6) Recalculs
+  // 5) Recalcul
   if (typeof calculateTotals === "function") calculateTotals();
   if (typeof recomputeContract === "function") recomputeContract();
 }
+
 
 function updateButtonColors() {
   const type = document.getElementById("docType").value;
@@ -19500,8 +19469,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Dashboard + followup
   if (typeof refreshHomeStats === "function") refreshHomeStats();
   if (typeof renderClientsFollowup === "function") renderClientsFollowup();
-    // ✅ TVA micro : calcule le CA encaissé et force TVA 0% / 20% selon statut
-  if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(true);
+if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+
+
 
 
   // Double clic fiche client
@@ -19601,6 +19571,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
