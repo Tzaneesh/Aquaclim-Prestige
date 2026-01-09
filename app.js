@@ -5008,30 +5008,42 @@ function openPdfViewer(url) {
   const overlay = document.getElementById("pdfViewerOverlay");
   const frame = document.getElementById("pdfViewerFrame");
 
-  // ✅ iPhone : JAMAIS window.open (sinon lecteur PDF natif = bloqué)
-  // ✅ PC : si overlay absent -> nouvel onglet OK
+  const ios = isIOS();
+  const pwa = isStandalonePWA();
+
+  // fallback si viewer absent
   if (!overlay || !frame) {
-    if (!isIOS()) window.open(url, "_blank");
+    // ✅ Safari iPhone (pas PWA) : nouvel onglet OK
+    if (ios && !pwa) {
+      window.open(url, "_blank");
+      return;
+    }
+    // ✅ PC/Android : nouvel onglet OK
+    if (!ios) {
+      window.open(url, "_blank");
+      return;
+    }
+    // ✅ iPhone PWA : surtout pas (sinon tu te coinces)
+    alert("Aperçu PDF indisponible (viewer manquant). Ouvre depuis Safari.");
     return;
   }
 
   lastAppViewBeforePDF = getCurrentAppView();
 
-  // important : reset avant de charger (évite bugs iOS)
+  // reset
   frame.src = "about:blank";
 
-  // petit délai pour laisser Safari respirer
   setTimeout(() => {
     frame.src = url;
     overlay.classList.remove("hidden");
     overlay.scrollTop = 0;
   }, 30);
 
-  // bouton "retour" (PWA iPhone/Android)
   try {
     history.pushState({ pdfOpen: true }, "", location.href);
   } catch (e) {}
 }
+
 
 
 function bindPdfViewerCloseUX() {
@@ -19218,14 +19230,25 @@ function isIOS() {
   return /iPad|iPhone|iPod/.test(navigator.userAgent);
 }
 
+function isStandalonePWA() {
+  // iOS Safari (ancien) + standard
+  return window.navigator.standalone === true ||
+    window.matchMedia?.("(display-mode: standalone)")?.matches === true;
+}
+
+// doc = instance jsPDF
 function getPdfUrl(doc) {
-  // iPhone → data URI (reste dans l'app)
-  if (isIOS()) {
-    return doc.output("datauristring");
-  }
-  // PC / Android → blob (rapide)
+  // ✅ iPhone en PWA => DATA URI obligatoire (évite lecteur PDF iOS bloquant)
+  if (isIOS() && isStandalonePWA()) return doc.output("datauristring");
+
+  // iPhone Safari normal => tu peux rester en blob si tu veux,
+  // mais datauri est souvent plus stable -> tu peux aussi mettre datauristring ici.
+  if (isIOS()) return doc.output("datauristring");
+
+  // PC/Android => blob rapide
   return doc.output("bloburl");
 }
+
 
 
 function _fillClientSelectIOS() {
@@ -19468,6 +19491,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
