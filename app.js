@@ -1099,90 +1099,72 @@ async function initFirebase() {
   if (firebase.apps.length === 0) {
     firebase.initializeApp(firebaseConfig);
   }
+
   db = firebase.firestore();
+
   // ✅ Offline persistence (cache IndexedDB)
-try {
-  await db.enablePersistence({ synchronizeTabs: true });
-  console.log("[Firestore] Persistence ENABLED");
-} catch (e) {
-  console.warn("[Firestore] Persistence not enabled:", e?.code || e);
-}
-
-
   try {
-// 1️⃣ LIVE DOCUMENTS (devis / factures) — synchro PC ⇄ iPhone
-if (unsubDocs) unsubDocs(); // évite de s'abonner 2 fois
-unsubDocs = db.collection("documents").onSnapshot(
-  (snapshot) => {
-    const cloudDocs = [];
-    snapshot.forEach((docSnap) => {
-      const data = docSnap.data();
-      if (data) cloudDocs.push(data);
+    await db.enablePersistence({ synchronizeTabs: true });
+    console.log("[Firestore] Persistence ENABLED");
+  } catch (e) {
+    console.warn("[Firestore] Persistence not enabled:", e?.code || e);
+  }
+
+  // ✅ Bind online/offline listeners une seule fois
+  if (!window.__netListenersBound) {
+    window.__netListenersBound = true;
+
+    window.addEventListener("online", () => {
+      updateOfflineBadge();
+      if (typeof processSyncQueue === "function") processSyncQueue();
     });
 
-    // Firestore = vérité → on écrase le local
-    localStorage.setItem("documents", JSON.stringify(cloudDocs));
+    window.addEventListener("offline", () => {
+      updateOfflineBadge();
+    });
+  }
 
-    // 🔄 Rafraîchissement UI après MAJ
-    if (typeof loadDocumentsList === "function") loadDocumentsList();
-    if (typeof loadYearFilter === "function") loadYearFilter();
-    if (typeof refreshHomeStats === "function") refreshHomeStats();
-    if (typeof computeCA === "function") computeCA();
-    if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+  try {
+    // 1️⃣ LIVE DOCUMENTS (devis / factures)
+    if (unsubDocs) unsubDocs();
+    unsubDocs = db.collection("documents").onSnapshot(
+      (snapshot) => {
+        const cloudDocs = [];
+        snapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data) cloudDocs.push(data);
+        });
 
-    updateOfflineBadge();
-  },
-  (err) => console.error("Erreur onSnapshot documents :", err)
-);
+        localStorage.setItem("documents", JSON.stringify(cloudDocs));
 
+        // 🔄 UI refresh (documents)
+        if (typeof loadDocumentsList === "function") loadDocumentsList();
+        if (typeof loadYearFilter === "function") loadYearFilter();
+        if (typeof refreshHomeStats === "function") refreshHomeStats();
+        if (typeof computeCA === "function") computeCA();
+        if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
 
-    // 2️⃣ SYNC CONTRATS
+        updateOfflineBadge();
+      },
+      (err) => console.error("Erreur onSnapshot documents :", err)
+    );
+
+    // 2️⃣ LIVE CONTRATS (ta version onSnapshot dans syncContractsWithFirestore)
     await syncContractsWithFirestore();
 
-    // 3️⃣ SYNC CLIENTS
+    // 3️⃣ LIVE CLIENTS (ta version onSnapshot dans syncClientsWithFirestore)
     await syncClientsWithFirestore();
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
 
-  // 🔄 Rafraîchissement UI
-  if (typeof loadDocumentsList === "function") {
-    loadDocumentsList();
-  }
-  if (typeof refreshClientDatalist === "function") {
-    refreshClientDatalist();
-  }
-  // 🔁 Met à jour le filtre des années après la synchro
-  if (typeof loadYearFilter === "function") {
-    loadYearFilter();
-  }
-  // 🏠 Met à jour le dashboard CA / impayés etc.
-  if (typeof refreshHomeStats === "function") {
-    refreshHomeStats();
-  }
-
-  computeCA();
-// ✅ Recalcule statut micro TVA + UI (après synchro Firestore)
-if (typeof refreshMicroTVAState === "function") {
-  refreshMicroTVAState(false);
-}
-
-  // Mise à jour badge + tentative de vidage de la queue
+  // Badge + queue
   updateOfflineBadge();
-  if (navigator.onLine) {
+  if (navigator.onLine && typeof processSyncQueue === "function") {
     processSyncQueue();
   }
-
-  window.addEventListener("online", () => {
-  updateOfflineBadge();
-  if (typeof processSyncQueue === "function") processSyncQueue();
-});
-
-window.addEventListener("offline", () => {
-  updateOfflineBadge();
-});
-
 }
+
 
 // ================== GESTION CLIENTS ==================
 function getClients() {
@@ -19369,6 +19351,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
