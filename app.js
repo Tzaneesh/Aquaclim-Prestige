@@ -7740,6 +7740,27 @@ if (shouldActivateNow) {
   return { year, caTTC, mode: nextMode };
 }
 
+function resetMicroTVAStatusUI() {
+  showConfirmDialog({
+    title: "Réinitialiser TVA micro",
+    message:
+      "Ça remet la TVA en mode franchise (0%) et enlève le badge.\n" +
+      "À utiliser seulement si tu avais activé la TVA par erreur / test.",
+    confirmLabel: "Oui, réinitialiser",
+    cancelLabel: "Annuler",
+    variant: "warning",
+    icon: "🧹",
+    onConfirm: () => {
+      // ✅ met explicitement le statut en franchise
+      saveMicroTVAStatus({ mode: "franchise", resetAt: Date.now() });
+
+      // ✅ refresh UI + badge
+      refreshMicroTVAState(false);
+    },
+  });
+}
+
+
 
 
 function saveMicroTVAStatus(status) {
@@ -19669,6 +19690,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
