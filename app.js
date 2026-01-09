@@ -7173,7 +7173,7 @@ function saveDocument() {
     const status = getMicroTVAStatus();
     const selectedRate = Number(document.getElementById("tvaRate")?.value || 0);
 
-    if (status.mode === "franchise" && selectedRate > 0) {
+    if (status?.mode === "franchise" && selectedRate > 0) {
       showConfirmDialog({
         title: "TVA impossible",
         message:
@@ -7186,7 +7186,7 @@ function saveDocument() {
       return;
     }
 
-    if (status.mode === "obligatoire" && selectedRate === 0) {
+    if (status?.mode === "obligatoire" && selectedRate === 0) {
       showConfirmDialog({
         title: "TVA obligatoire",
         message:
@@ -7202,12 +7202,13 @@ function saveDocument() {
     console.error("Erreur contrôle TVA :", e);
   }
 
-  const clientName = document.getElementById("clientName").value.trim();
-  const clientAddress = document.getElementById("clientAddress").value.trim();
+  // === Champs client + objet ===
+  const clientName = document.getElementById("clientName")?.value?.trim() || "";
+  const clientAddress = document.getElementById("clientAddress")?.value?.trim() || "";
   const clientCivility = document.getElementById("clientCivility")?.value || "";
-  const clientPhone = document.getElementById("clientPhone").value.trim();
-  const clientEmail = document.getElementById("clientEmail").value.trim();
-  const docSubject = document.getElementById("docSubject")?.value.trim() || "";
+  const clientPhone = document.getElementById("clientPhone")?.value?.trim() || "";
+  const clientEmail = document.getElementById("clientEmail")?.value?.trim() || "";
+  const docSubject = document.getElementById("docSubject")?.value?.trim() || "";
 
   if (!clientName || !clientAddress) {
     showConfirmDialog({
@@ -7231,6 +7232,7 @@ function saveDocument() {
     return;
   }
 
+  // === Prestations ===
   const prestations = [];
   let missingPurchase = false;
 
@@ -7242,7 +7244,7 @@ function saveDocument() {
       if (!purchaseVal || purchaseVal <= 0) missingPurchase = true;
     }
 
-    const desc = line.querySelector(".prestation-desc")?.value.trim();
+    const desc = line.querySelector(".prestation-desc")?.value?.trim() || "";
     const qty = parseFloat(line.querySelector(".prestation-qty")?.value || "0");
     const price = parseFloat(line.querySelector(".prestation-price")?.value || "0");
     const unit = line.querySelector(".prestation-unit")?.value || "";
@@ -7281,25 +7283,34 @@ function saveDocument() {
     return;
   }
 
-  const docType = document.getElementById("docType").value;
-  const docNumber = document.getElementById("docNumber").value;
-  const docDate = document.getElementById("docDate").value;
-  const validityDate = document.getElementById("validityDate").value;
-  const tvaRate = parseFloat(document.getElementById("tvaRate").value) || 0;
-  const notes = document.getElementById("notes").value;
+  // === Infos document ===
+  const docType = document.getElementById("docType")?.value || "devis";
+  const docNumber = document.getElementById("docNumber")?.value || "";
+  const docDate = document.getElementById("docDate")?.value || "";
+  const validityDate = document.getElementById("validityDate")?.value || "";
+  const tvaRate = parseFloat(document.getElementById("tvaRate")?.value || "0") || 0;
+  const notes = document.getElementById("notes")?.value || "";
 
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
-  const isExistingDoc = !!existing; // 🔑 CLÉ DU FIX
+  const isExistingDoc = !!existing;
 
-  // ✅ Type client (pour déclencher la popup devis obligatoire)
-const conditionsType = document.getElementById("clientSyndic")?.checked
-  ? "agence"
-  : "particulier";
+  // ✅ Type client (pour popup devis obligatoire)
+  const conditionsType = document.getElementById("clientSyndic")?.checked
+    ? "agence"
+    : "particulier";
 
-
-  let subtotal = prestations.reduce((s, p) => s + p.total, 0);
+  // === Totaux ===
+  let subtotal = prestations.reduce((s, p) => s + (Number(p.total) || 0), 0);
   const tvaAmount = subtotal * (tvaRate / 100);
   const totalTTC = subtotal + tvaAmount;
+
+  // ✅ Paiement (factures) — robuste (évite retour à "à payer")
+  const payMode = document.querySelector('input[name="payMode"]:checked')?.value || "";
+  const paymentDateInput = document.getElementById("paymentDate");
+  const paymentDate = paymentDateInput ? (paymentDateInput.value || "") : "";
+
+  // payé si un mode est sélectionné (≠ "")
+  const isPaid = (docType === "facture" && payMode !== "");
 
   const doc = {
     id: currentDocumentId || Date.now().toString(),
@@ -7308,6 +7319,7 @@ const conditionsType = document.getElementById("clientSyndic")?.checked
     date: docDate,
     validityDate,
     subject: docSubject,
+
     client: {
       civility: clientCivility,
       name: clientName,
@@ -7315,6 +7327,7 @@ const conditionsType = document.getElementById("clientSyndic")?.checked
       phone: clientPhone,
       email: clientEmail,
     },
+
     prestations,
     subtotal,
     tvaRate,
@@ -7322,25 +7335,57 @@ const conditionsType = document.getElementById("clientSyndic")?.checked
     totalTTC,
     notes,
     conditionsType,
+
+    // ✅ Paiement : on sauvegarde correctement
+    // et on garde l'existant si l'UI renvoie vide par bug
+    paymentMode:
+      docType === "facture"
+        ? (payMode !== "" ? payMode : (existing?.paymentMode || ""))
+        : (existing?.paymentMode || ""),
+
+    paid:
+      docType === "facture"
+        ? (payMode !== "" ? true : false)
+        : (existing?.paid || false),
+
+    paymentDate:
+      docType === "facture"
+        ? (payMode !== ""
+            ? (paymentDate || existing?.paymentDate || new Date().toISOString().slice(0, 10))
+            : "")
+        : (existing?.paymentDate || ""),
+
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
-// ✅ Devis obligatoire >150€ : si besoin, on crée le devis à partir de la facture
-// et on BLOQUE l'enregistrement de la facture.
-if (typeof maybeForceDevisInsteadOfSavingInvoice === "function") {
-  const blocked = maybeForceDevisInsteadOfSavingInvoice(doc);
-  if (blocked) return;
-}
+  // ✅ Devis obligatoire >150€ : si besoin, on crée le devis à partir de la facture
+  // et on BLOQUE l'enregistrement de la facture.
+  if (typeof maybeForceDevisInsteadOfSavingInvoice === "function") {
+    const blocked = maybeForceDevisInsteadOfSavingInvoice(doc);
+    if (blocked) return;
+  }
 
-
-
+  // === Save local ===
   const docs = getAllDocuments();
   const idx = docs.findIndex((d) => d.id === doc.id);
   if (idx >= 0) docs[idx] = doc;
   else docs.push(doc);
 
   saveDocuments(docs);
-  saveSingleDocumentToFirestore(doc);
+
+  // === Save Firestore (si dispo) ===
+  try {
+    if (typeof saveSingleDocumentToFirestore === "function") {
+      saveSingleDocumentToFirestore(doc);
+    }
+  } catch (e) {
+    console.warn("Firestore save failed:", e);
+  }
+
+  // ✅ Recalcule TVA/CA après encaissement / sauvegarde
+  try {
+    if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+  } catch (e) {}
 
   showConfirmDialog({
     title: "Enregistrement réussi",
@@ -7353,6 +7398,7 @@ if (typeof maybeForceDevisInsteadOfSavingInvoice === "function") {
   currentDocumentId = doc.id;
   loadDocumentsList();
 }
+
 
 // Supprimer depuis la LISTE (bouton "Supprimer" dans le tableau)
 
@@ -19690,6 +19736,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
