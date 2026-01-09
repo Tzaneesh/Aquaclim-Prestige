@@ -12286,17 +12286,16 @@ img.sig-client {
       <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
          <h1>${getCompanySettings().companyName}</h1>
       <p class="subtitle">${getCompanySettings().subtitle}</p>
-      <p class="contact">
-        ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
-        Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
-      SIRET : <strong>${getCompanySettings().siret}</strong><br>
-${
-  (!isDevis && (doc.tvaRate || 0) > 0 && getCompanySettings().vatNumber)
-    ? `N° TVA : <strong>${getCompanySettings().vatNumber}</strong>`
-    : ""
-}
-
-      </p>
+     <p class="contact">
+  ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
+  Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
+  SIRET : <strong>${getCompanySettings().siret}</strong><br>
+  ${
+    (!isDevis && Number(doc.tvaRate || 0) > 0 && getCompanySettings().vatNumber)
+      ? `N° TVA : <strong>${getCompanySettings().vatNumber}</strong><br>`
+      : ""
+  }
+</p>
 
     </div>
 
@@ -19759,6 +19758,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
