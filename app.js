@@ -7325,27 +7325,13 @@ const conditionsType = document.getElementById("clientSyndic")?.checked
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
-// =====================================================
-// ✅ BLOQUAGE FACTURE PARTICULIER >= 150 €
-// ❌ MAIS SEULEMENT SI C’EST UNE NOUVELLE FACTURE
-// =====================================================
-if (doc.type === "facture" && !isExistingDoc) {
-  const clientType = String(doc.conditionsType || "").toLowerCase();
-
-  if (clientType === "particulier" && totalTTC >= 150) {
-    showConfirmDialog({
-      title: "Devis obligatoire",
-      message:
-        "Cette facture dépasse 150 € (client particulier).\n\n" +
-        "Un devis doit être créé et accepté avant facturation.",
-      confirmLabel: "Créer le devis",
-      cancelLabel: "Annuler",
-      variant: "warning",
-      icon: "🧾",
-    });
-    return;
-  }
+// ✅ Devis obligatoire >150€ : si besoin, on crée le devis à partir de la facture
+// et on BLOQUE l'enregistrement de la facture.
+if (typeof maybeForceDevisInsteadOfSavingInvoice === "function") {
+  const blocked = maybeForceDevisInsteadOfSavingInvoice(doc);
+  if (blocked) return;
 }
+
 
 
   const docs = getAllDocuments();
@@ -19683,6 +19669,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
