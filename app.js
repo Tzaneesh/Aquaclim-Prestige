@@ -1288,7 +1288,8 @@ function openGoogleMapsItinerary(address) {
   const a = (address || "").toString().trim();
   if (!a) return;
   const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`;
-  openPdfViewer(url);
+  openExternalLink(url);
+ 
 }
 
 function _normalizePhoneForWA(phone) {
@@ -1814,7 +1815,7 @@ function openClientSheet(name) {
 
             _addRelanceToInvoice(invoiceNumber, "whatsapp");
             const url = `https://wa.me/${wa}?text=${encodeURIComponent(message)}`;
-            openPdfViewer(url);
+            openPdfViewer(url);  
           },
           onCancel: () => {
             // 1) email depuis le bouton
@@ -1851,7 +1852,7 @@ function openClientSheet(name) {
             const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message)}`;
 
             // ✅ IMPORTANT : ne pas “naviguer” dans ton app (évite l’effet “ça efface”)
-            openPdfViewer(url);
+            openPdfViewer(url);  
           },
         });
       });
@@ -4278,7 +4279,7 @@ function sendByWhatsApp() {
     "?text=" +
     encodeURIComponent(body);
 
-  openPdfViewer(url);
+  openPdfViewer(url);  
   closeSendPopup();
 }
 
@@ -4952,7 +4953,7 @@ ${company.companyName || "AquaClim Prestige"}`;
       // ouvre WhatsApp
       const wa = phone.replace(/\D/g, "");
       const url = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
-      openPdfViewer(url);
+      openPdfViewer(url);  
     },
     onCancel: () => {
       if (!email) {
@@ -5005,34 +5006,33 @@ function getCurrentAppView() {
 }
 
 function openPdfViewer(url) {
-  const overlay = document.getElementById("pdfViewerOverlay");
-  const frame = document.getElementById("pdfViewerFrame");
-
   const ios = isIOS();
   const pwa = isStandalonePWA();
 
-  // fallback si viewer absent
+  // ✅ PC / Android => comportement inchangé : nouvel onglet
+  if (!ios) {
+    window.open(url, "_blank");
+    return;
+  }
+
+  // ✅ Safari iPhone (pas PWA) => nouvel onglet
+  if (ios && !pwa) {
+    window.open(url, "_blank");
+    return;
+  }
+
+  // ✅ PWA iOS => overlay / iframe ONLY (JAMAIS window.open)
+  const overlay = document.getElementById("pdfViewerOverlay");
+  const frame = document.getElementById("pdfViewerFrame");
+
   if (!overlay || !frame) {
-    // ✅ Safari iPhone (pas PWA) : nouvel onglet OK
-    if (ios && !pwa) {
-      window.open(url, "_blank");
-      return;
-    }
-    // ✅ PC/Android : nouvel onglet OK
-    if (!ios) {
-      window.open(url, "_blank");
-      return;
-    }
-    // ✅ iPhone PWA : surtout pas (sinon tu te coinces)
     alert("Aperçu PDF indisponible (viewer manquant). Ouvre depuis Safari.");
     return;
   }
 
   lastAppViewBeforePDF = getCurrentAppView();
 
-  // reset
   frame.src = "about:blank";
-
   setTimeout(() => {
     frame.src = url;
     overlay.classList.remove("hidden");
@@ -5042,6 +5042,16 @@ function openPdfViewer(url) {
   try {
     history.pushState({ pdfOpen: true }, "", location.href);
   } catch (e) {}
+}
+
+function openExternalLink(url) {
+  // PWA iOS => on "sort" proprement via location (pas d'iframe)
+  if (isIOS() && isStandalonePWA()) {
+    window.location.href = url;
+    return;
+  }
+  // Sinon nouvel onglet
+  window.open(url, "_blank");
 }
 
 
@@ -5114,9 +5124,9 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 function _pdfUrlForViewer(doc) {
-  // iPhone: éviter bloburl (ça sort l'app et tu restes coincé)
-  return _isIOS() ? doc.output("datauristring") : doc.output("bloburl");
+  return getPdfUrl(doc);
 }
+
 
 
 function generatePDFRapportFromRecord(record, mode = "print") {
@@ -5421,7 +5431,7 @@ function generatePDFRapportFromRecord(record, mode = "print") {
       doc.autoPrint();
     }
  const url = _pdfUrlForViewer(doc);
-openPdfViewer(url);
+openPdfViewer(url);  
 
   }
 }
@@ -9296,7 +9306,7 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
       if (doc.autoPrint) doc.autoPrint();
     }
  const url = _pdfUrlForViewer(doc);
-openPdfViewer(url);
+openPdfViewer(url);  
 
   }
 }
@@ -19238,16 +19248,13 @@ function isStandalonePWA() {
 
 // doc = instance jsPDF
 function getPdfUrl(doc) {
-  // ✅ iPhone en PWA => DATA URI obligatoire (évite lecteur PDF iOS bloquant)
+  // ✅ SEULEMENT PWA iOS => datauristring (évite Quick Look)
   if (isIOS() && isStandalonePWA()) return doc.output("datauristring");
 
-  // iPhone Safari normal => tu peux rester en blob si tu veux,
-  // mais datauri est souvent plus stable -> tu peux aussi mettre datauristring ici.
-  if (isIOS()) return doc.output("datauristring");
-
-  // PC/Android => blob rapide
+  // ✅ Partout ailleurs => bloburl (Safari iOS + PC + Android)
   return doc.output("bloburl");
 }
+
 
 
 
@@ -19491,6 +19498,7 @@ if (tvaInput) {
   });
 }
 });
+
 
 
 
