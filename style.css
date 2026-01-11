@@ -3728,6 +3728,11 @@ body.is-dragging .visit-entry {
   margin:0;
 }
 
+/* ✅ Intervention faite = barrée */
+.visit-entry.is-done{
+  text-decoration: line-through;
+  opacity: 0.55;
+}
 
 
 

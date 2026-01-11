@@ -929,7 +929,6 @@ const RAPPORT_TEMPLATES = [
 ];
 
 const MARGIN_MULTIPLIER = 1.4;
-
 // ================== VARIABLES GLOBALES ==================
 
 let currentDocumentId = null;
@@ -943,6 +942,8 @@ let db = null;
 let unsubDocs = null;
 let unsubContracts = null;
 let unsubClients = null;
+let manualPlanningItems = [];
+let contractPlanningOverrides = [];
 
 // ================== OFFLINE / SYNC QUEUE ==================
 
@@ -13491,7 +13492,7 @@ let currentPlanningData = [];
 let manualPopupDate = null;
 
 // ✅ OVERRIDES CONTRAT + DND INSTANCES
-let contractPlanningOverrides = loadContractPlanningOverrides();
+
 let planningSortables = [];
 
 function loadContractPlanningOverrides() {
@@ -13538,6 +13539,50 @@ async function applyContractPlanningOverride(contractId, originalDate, newDate) 
   } catch (e) {
     console.error("applyContractPlanningOverride error:", e);
   }
+}
+
+function applyCompanySettingsToUI(settings) {
+  const s = settings || {};
+
+  document.querySelectorAll(".js-company-name").forEach((el) => {
+    el.textContent = s.companyName || "";
+  });
+
+  document.querySelectorAll(".js-company-subtitle").forEach((el) => {
+    el.textContent = s.subtitle || "";
+  });
+
+  document.querySelectorAll(".js-company-legal").forEach((el) => {
+    el.textContent = s.legalName || "";
+  });
+
+  document.querySelectorAll(".js-company-address").forEach((el) => {
+    el.textContent = s.address || "";
+  });
+
+  document.querySelectorAll(".js-company-phone").forEach((el) => {
+    el.textContent = s.phone || "";
+  });
+
+  document.querySelectorAll(".js-company-email").forEach((el) => {
+    el.textContent = s.email || "";
+  });
+
+  document.querySelectorAll(".js-company-siret").forEach((el) => {
+    el.textContent = s.siret || "";
+  });
+
+  document.querySelectorAll(".js-company-vat").forEach((el) => {
+    el.textContent = s.vatNumber || "";
+  });
+
+  document.querySelectorAll(".js-company-vat-line").forEach((line) => {
+    if (s.vatNumber && s.vatNumber.trim() !== "") {
+      line.classList.remove("hidden");
+    } else {
+      line.classList.add("hidden");
+    }
+  });
 }
 
 
@@ -13918,6 +13963,8 @@ if (visits === 1) {
 
     const div = document.createElement("div");
     div.className = "visit-entry visit-manual";
+if (item.isDone) div.classList.add("is-done");
+
     div.dataset.manualId = item.id;
 
     div.innerHTML =
@@ -13930,15 +13977,18 @@ if (visits === 1) {
 
     column.list.appendChild(div);
 
-    info.items.push({
-      id: item.id,
-      type: "manual",
-      service,
-      clientName,
-      address: item.address || "",
-      phone: item.phone || "",
-      notes: item.notes || "",
-    });
+info.items.push({
+  id: item.id,
+  type: "manual",
+  service,
+  clientName,
+  address: item.address || "",
+  phone: item.phone || "",
+  notes: item.notes || "",
+  sourceId: item.sourceId || "",       // ✅ AJOUT
+  sourceType: item.sourceType || "",   // ✅ (optionnel mais utile)
+});
+
   });
 
   // ===========================
@@ -14107,10 +14157,33 @@ function openPlanningDayDetails(dateStr) {
             ${notesHtml}
             ${phoneHtml}
 
-            <button class="delete-manual-btn"
-              onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
-              🗑️ Supprimer
-            </button>
+<button class="btn btn-small btn-secondary"
+  onclick="${
+    item.sourceId
+      ? `openDevisAcceptedActionPopup('${item.sourceId}')`
+      : `showConfirmDialog({
+          title:'Replanifier',
+          message:'Pour déplacer un passage manuel : glisse-dépose la carte sur un autre jour ✅',
+          confirmLabel:'OK',
+          cancelLabel:'',
+          variant:'info',
+          icon:'ℹ️'
+        })`
+  }">
+  🔁 Replanifier / changer
+</button>
+
+
+    <button class="btn btn-small btn-secondary"
+  onclick="toggleManualPlanningDone('${item.id}', '${dateStr}')">
+  ${manualPlanningItems.find(x=>x.id===item.id)?.isDone ? "↩ Annuler fait" : "✅ Fait"}
+</button>
+
+<button class="delete-manual-btn"
+  onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
+  🗑️ Supprimer
+</button>
+
           </div>
         `;
       }
@@ -14277,10 +14350,19 @@ function loadPlanningPrestations() {
   });
 }
 
-function deleteManualPlanningItem(id, dateStr) {
+function toggleManualPlanningDone(manualId, dateStr) {
+  const it = (manualPlanningItems || []).find(x => x.id === manualId);
+  if (!it) return;
 
-  openPlanningDayDetails(dateStr); // Ré-ouvre la colonne mise à jour
+  it.isDone = !it.isDone;
+  it.doneAt = it.isDone ? new Date().toISOString() : "";
+
+  upsertManualPlanningItemToFirestore(it).catch(()=>{});
+
+  try { renderPlanningWeek(); } catch(e){}
+  try { if (dateStr) openPlanningDayDetails(dateStr); } catch(e){}
 }
+
 
 async function deleteManualPlanningItem(id, dateStr) {
   try {
@@ -14346,28 +14428,10 @@ function _toast(title, msg){
 }
 
 function _createManualItemFromDevis(devis, dateISO, labelPrefix) {
-  if (!devis) return null;
+  if (!devis || !dateISO) return null;
 
   const meta = _ensureMeta(devis);
-
-  // ✅ Anti-doublon : si déjà lié à un item, on met juste à jour
-  if (meta.planningItemId) {
-    const existing = manualPlanningItems.find((x) => x.id === meta.planningItemId);
-    if (existing) {
-      existing.date = dateISO;
-
-      const base =
-        existing.clientName ||
-        existing.prestation ||
-        existing.sourceNumber ||
-        "Devis";
-      existing.label = `${labelPrefix} ${String(base)}`.trim();
-
-     
-      meta.planningDate = dateISO;
-      return meta.planningItemId;
-    }
-  }
+  manualPlanningItems = manualPlanningItems || [];
 
   // ✅ Client SAFE (jamais object)
   const client = String(
@@ -14381,37 +14445,77 @@ function _createManualItemFromDevis(devis, dateISO, labelPrefix) {
     ) ?? ""
   ).trim();
 
-  // ✅ Prestation SAFE (jamais object)
-  const prestation = String(
-    devis.prestation ?? devis.title ?? meta.prestation ?? ""
+  // ✅ TITRE = OBJET du devis (ton "objet" affiché en liste)
+  // fallback si vide : 1ère prestation desc
+  const firstDesc = Array.isArray(devis.prestations) && devis.prestations[0]?.desc
+    ? String(devis.prestations[0].desc).trim()
+    : "";
+
+// ✅ TITRE = TITRE DE LA PRESTATION (pas le devis)
+const title = String(
+  devis.prestations?.[0]?.title ??
+  devis.prestations?.[0]?.desc ??
+  meta.prestation ??
+  ""
+).trim();
+
+
+  // ✅ LABEL = prefix + titre (le GROS du planning)
+  const label = `${labelPrefix} ${title}`.trim();
+
+  const address = String(
+    devis.address ?? meta.address ?? devis.client?.address ?? ""
   ).trim();
 
-  const address = String(devis.address ?? meta.address ?? devis.client?.address ?? "").trim();
-  const phone   = String(devis.phone ?? meta.phone ?? devis.client?.phone ?? "").trim();
+  const phone = String(
+    devis.phone ?? meta.phone ?? devis.client?.phone ?? ""
+  ).trim();
 
-  const labelBase =
-    client || prestation || (devis.number ? `Devis ${devis.number}` : "Devis accepté");
-  const label = `${labelPrefix} ${labelBase}`.trim();
+  const notes = String(devis.notes ?? meta.notes ?? "").trim();
 
+  // ✅ Anti-doublon : si déjà lié à un item, on met à jour + Firestore
+  if (meta.planningItemId) {
+    const existing = manualPlanningItems.find((x) => x.id === meta.planningItemId);
+    if (existing) {
+      existing.date = dateISO;
+      existing.label = label;          // gros = objet devis
+      existing.clientName = client;    // petit = client
+      existing.address = address;
+      existing.phone = phone;
+      existing.notes = notes;
+      existing.sourceType = "devis";
+      existing.sourceId = devis.id;
+      existing.sourceNumber = devis.number || "";
+
+      meta.planningDate = dateISO;
+
+      // ✅ sync Firestore
+      try { upsertManualPlanningItemToFirestore(existing).catch(()=>{}); } catch(e){}
+
+      return meta.planningItemId;
+    }
+  }
+
+  // ✅ Nouveau item
   const itemId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
   const item = {
     id: itemId,
     date: dateISO,
-    label,
-    prestation,
-    clientName: client,
+    label,             // gros (objet devis)
+    clientName: client,// petit (client)
     address,
     phone,
-    notes: String(devis.notes ?? meta.notes ?? "").trim(),
+    notes,
     sourceType: "devis",
     sourceId: devis.id,
     sourceNumber: devis.number || "",
   };
-upsertManualPlanningItemToFirestore(item).catch(()=>{});
+
+  // ✅ Firestore d'abord
+  try { upsertManualPlanningItemToFirestore(item).catch(()=>{}); } catch(e){}
 
   manualPlanningItems.push(item);
-
 
   meta.planningItemId = itemId;
   meta.planningDate = dateISO;
@@ -14512,10 +14616,32 @@ const client = getClientText(devis.clientName || devis.client || meta.clientName
 
     <div style="margin-top:12px; padding:10px; border:1px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(0,0,0,.02);">
       <div style="font-weight:800;">${escapeHtml(client)}</div>
-      <div style="opacity:.8; font-size:13px;">Devis: ${escapeHtml(devis.number || devis.id)}</div>
+      ${(() => {
+  const p0 = Array.isArray(devis.prestations) ? devis.prestations[0] : null;
+  const presta = String(p0?.title ?? p0?.desc ?? meta?.prestation ?? "").trim();
+  const num = String(devis.number || devis.id || "").trim();
+
+  // ✅ Affiche la prestation en priorité
+  return `
+    <div style="opacity:.9; font-size:13px;">
+      ${presta ? `Prestation : <strong>${escapeHtml(presta)}</strong>` : `Devis : ${escapeHtml(num)}`}
+    </div>
+  `;
+})()}
+
     </div>
 
+      <div style="border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:12px;">
+        <div style="font-weight:900;">0) 🛒 Commande</div>
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:10px;">
+          <button id="acceptPlannerBtnOrder" class="btn btn-secondary" type="button">🛒 À commander</button>
+          <button id="acceptPlannerBtnOrdered" class="btn btn-secondary" type="button">✅ Commande passée</button>
+        </div>
+      </div>
+
+
     <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:14px;">
+
 
       <div style="border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:12px;">
         <div style="font-weight:900;">1) 📅 Planifier une intervention</div>
@@ -14552,6 +14678,17 @@ const client = getClientText(devis.clientName || devis.client || meta.clientName
   overlay.querySelector('#acceptPlannerClose')?.addEventListener('click', ()=> overlay.remove());
   overlay.addEventListener('click', (e)=>{ if (e.target === overlay) overlay.remove(); });
 
+  overlay.querySelector('#acceptPlannerBtnOrder')?.addEventListener('click', ()=>{
+    setDevisOrderState(devisId, "a_commander");
+    overlay.remove();
+  });
+
+  overlay.querySelector('#acceptPlannerBtnOrdered')?.addEventListener('click', ()=>{
+    setDevisOrderState(devisId, "commande_passee");
+    overlay.remove();
+  });
+
+
   overlay.querySelector('#acceptPlannerBtnPlan')?.addEventListener('click', ()=>{
     const dateISO = (overlay.querySelector('#acceptPlannerDate')?.value || _iso(d0));
     _applyNextAction(devisId, 'planifie', dateISO);
@@ -14571,38 +14708,68 @@ const client = getClientText(devis.clientName || devis.client || meta.clientName
   });
 }
 
-function _applyNextAction(devisId, action, dateISO){
+
+function _applyNextAction(devisId, action, dateISO) {
   const docs = getAllDocuments();
-  const idx = docs.findIndex(d=>d.id===devisId);
+  const idx = docs.findIndex((d) => d.id === devisId);
   if (idx === -1) return;
+
   const devis = docs[idx];
   const meta = _ensureMeta(devis);
 
   meta.nextAction = action;
   meta.nextActionUpdatedAt = new Date().toISOString();
-meta.planningDate = dateISO || "";
 
+  // ✅ La grille planning = UNIQUEMENT les RDV planifiés
+  const actionUsesDate = (action === "planifie");
+  meta.planningDate = actionUsesDate ? (dateISO || "") : "";
 
-  // Crée un item planning
-  if (action === 'planifie') {
-    _createManualItemFromDevis(devis, dateISO, '📅');
-    _toast('Planning', 'Intervention ajoutée ✅');
-  }
-  if (action === 'attente_reception') {
-    _createManualItemFromDevis(devis, dateISO, '📦 EN ATTENTE:');
-    _toast('En attente', 'Ajouté dans "À traiter" 📦');
-  }
-  if (action === 'a_appeler') {
-    _createManualItemFromDevis(devis, dateISO, '📞 APPELER:');
-    _toast('À appeler', 'Ajouté dans le planning 📞');
-  }
-saveDocumentToFirestore(devis).catch(()=>{});
+  // ✅ Si on quitte "planifie", on enlève du planning (sinon illogique)
+  try { _removePlanningItemForDevis(devis); } catch(e) {}
 
+  // ✅ Seul "planifie" crée un item dans la grille
+  if (action === "planifie") {
+    _createManualItemFromDevis(devis, dateISO, "📅");
+  }
+
+  saveDocumentToFirestore(devis).catch(() => {});
   saveDocuments(docs);
 
-  try{ renderPlanningWeek(); }catch(e){}
-  try{ if (typeof loadDocumentsList==='function') loadDocumentsList(); }catch(e){}
+  try { renderPlanningWeek(); } catch (e) {}
+  try { if (typeof loadDocumentsList === "function") loadDocumentsList(); } catch (e) {}
+  try { renderPlanningSidebar(); } catch (e) {}
 }
+
+// ===============================
+// ✅ COMMANDE (SANS SOUS-MENU)
+// ===============================
+function setDevisOrderState(devisId, state) {
+  const docs = getAllDocuments();
+  const idx = docs.findIndex(d => d.id === devisId);
+  if (idx === -1) return;
+
+  const d = docs[idx];
+  const meta = _ensureMeta(d);
+
+  // state = "" | "a_commander" | "commande_passee"
+  meta.orderState = state || "";
+  meta.orderUpdatedAt = new Date().toISOString();
+
+  if (meta.orderState === "commande_passee") {
+    meta.orderDate = meta.orderDate || new Date().toISOString().slice(0, 10);
+  } else {
+    meta.orderDate = meta.orderDate || "";
+  }
+
+  saveDocuments(docs);
+  saveDocumentToFirestore(d).catch(()=>{});
+
+  try { renderPlanningSidebar(); } catch(e){}
+  try { if (typeof loadDocumentsList === "function") loadDocumentsList(); } catch(e){}
+
+  _toast("Commande", state ? "Statut commande mis à jour ✅" : "Commande réinitialisée ✅");
+}
+
 
 function _getAcceptedTodos(){
   const docs = getAllDocuments();
@@ -14670,20 +14837,36 @@ function renderPlanningSidebar(){
 
   const todos = _getAcceptedTodos();
 
-  const mkItem = (d, actionsHtml) => {
-    const meta = d.meta || {};
-    const client = getClientText(d.clientName ?? d.client ?? meta.clientName).trim() || "Client";
+const mkItem = (d, actionsHtml) => {
+  const meta = d.meta || {};
+  const client = getClientText(d.clientName ?? d.client ?? meta.clientName).trim() || "Client";
+
+  const number = d.number || d.id;
+  const date = meta.planningDate || "";
+  const order = meta.orderState || "";
+  const orderTxt =
+    order === "a_commander" ? "🛒 À commander" :
+    order === "commande_passee" ? "✅ Commande passée" :
+    "";
+
+  // ✅ TITRE = PRESTATION (priorité)
+  const p0 = Array.isArray(d.prestations) ? d.prestations[0] : null;
+  const presta = String(p0?.title ?? p0?.desc ?? meta.prestation ?? "").trim();
+
+  return `
+    <div class="todo-item">
+      <div class="line1">${escapeHtml(client)}</div>
+      <div class="line2">
+        ${presta ? escapeHtml(presta) : "Devis: " + escapeHtml(number)}
+        ${date ? " • " + escapeHtml(date) : ""}
+        ${orderTxt ? ' • <span style="font-weight:800;">' + escapeHtml(orderTxt) + "</span>" : ""}
+      </div>
+      <div class="todo-actions">${actionsHtml}</div>
+    </div>
+  `;
+};
 
 
-    const number = d.number || d.id;
-    const date = meta.planningDate || '';
-    return `
-      <div class="todo-item">
-        <div class="line1">${escapeHtml(client)}</div>
-        <div class="line2">Devis: ${escapeHtml(number)}${date ? ' • ' + escapeHtml(date) : ''}</div>
-        <div class="todo-actions">${actionsHtml}</div>
-      </div>`;
-  };
 
   const section = (title, list, buildActions) => {
     const items = (list||[]).map(d=>mkItem(d, buildActions(d))).join('')
@@ -20388,7 +20571,7 @@ function renderClientsFollowup() {
   const unpaid = factures.filter((f) => !f.paid);
 
   if (!unpaid.length) {
-    tbody.innerHTML = `<tr><td colspan="5" class="no-docs-cell">✅ Aucun impayé 🎉</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" class="no-docs-cell">✅ Aucun impayé </td></tr>`;
     return;
   }
 
