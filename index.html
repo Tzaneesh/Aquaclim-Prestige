@@ -30,7 +30,10 @@
   Tél : <span class="js-company-phone">06 03 53 77 73</span> –
   Email : <span class="js-company-email">aquaclimprestige@gmail.com</span><br>
   SIRET : <strong class="js-company-siret">XXXXXXXXXXXXX</strong>
-  N° TVA : <strong class="js-company-vat">FRXXXXXXXXXXX</strong>
+  
+<span class="js-company-vat-line hidden">
+  N° TVA : <strong class="js-company-vat"></strong>
+</span>
 </p>
 
       </div>
@@ -219,10 +222,19 @@
     </button>
   </div>
 
-  <div id="planningGrid" class="planning-grid"></div>
+<div class="planning-layout">
+  <div class="planning-main">
+    <div id="planningGrid" class="planning-grid"></div>
 
-  <!-- détails du jour sélectionné -->
-  <div id="planningDetails" class="planning-details hidden"></div>
+    <!-- détails du jour sélectionné -->
+    <div id="planningDetails" class="planning-details hidden"></div>
+  </div>
+
+  <!-- ✅ Sidebar "À traiter" -->
+<aside id="planningSidebar" class="planning-sidebar"></aside>
+
+</div>
+
 </div>
 
 </div> <!-- fin .dashboard -->
@@ -310,6 +322,24 @@
         <input type="text" id="confSubtitle" />
       </div>
     </div>
+
+<div class="card">
+  <h3>🛟 Sauvegarde / restauration</h3>
+
+  <button class="btn btn-primary" type="button" onclick="exportBackupJSON()">
+    ⬇️ Export JSON (backup)
+  </button>
+
+  <input id="importBackupInput" type="file" accept="application/json"
+         style="display:none"
+         onchange="importBackupJSON(this.files[0])" />
+
+  <button class="btn btn-secondary" type="button"
+          onclick="document.getElementById('importBackupInput').click()">
+    ⬆️ Import JSON (restaurer)
+  </button>
+</div>
+
 
     <div class="row">
       <div class="form-group">
@@ -1073,7 +1103,7 @@
 
 <!-- ================= SANTÉ DU DOCUMENT ================= -->
 
-<div id="documentHealthCard" class="health-card no-print" style="margin-top:20px;">
+<div id="documentHealthCard" class="card health-card no-print hidden" style="margin-top:20px;">
   <h3 class="section-title">Santé du document</h3>
 
   <table class="document-health-table">
@@ -1089,6 +1119,7 @@
     </tbody>
   </table>
 </div>
+
 
 
       <!-- Notes -->
@@ -1146,16 +1177,17 @@
 <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>
 
-  <div class="card">
-    <div class="contract-header-blue">
-  <h2>🟦 Contrat d’entretien Piscine / Spa</h2>
-</div>
+ <div class="card">
+  <div class="contract-header-blue">
+    <h2>🟦 Contrat d’entretien Piscine / Spa</h2>
+  </div>
+
   <!-- Bandeau lien devis / contrat -->
-    <div id="ctDevisBanner"
-         class="devis-banner"
-         style="display:none; margin:10px 0; padding:8px 12px; background:#e3f2fd; border-left:4px solid #1976d2; border-radius:4px; font-size:14px;">
-      <!-- Le texte sera rempli par le JS -->
-    </div>
+  <div id="ctDevisBanner" class="devis-banner" style="display:none; margin:10px 0; padding:8px 12px; background:#e3f2fd; border-left:4px solid #1976d2; border-radius:4px; font-size:14px;">
+    <!-- Le texte sera rempli par le JS -->
+  </div>
+</div>
+
 
 
     <!-- ================= INFOS CLIENT ================= -->
@@ -1569,26 +1601,28 @@
     <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
   </div>
 
+
+  <!-- ================= SANTÉ DU DOCUMENT (CONTRAT) ================= -->
+  <div id="contractDocumentHealthCard" class="health-card no-print">
+      <h3 class="section-title">Santé du document</h3>
+
+    <table class="document-health-table">
+      <thead>
+        <tr>
+          <th>Catégorie</th>
+          <th>Statut</th>
+          <th>Détails</th>
+        </tr>
+      </thead>
+      <tbody id="contractDocumentHealthBody">
+        <tr><td colspan="3">Analyse en cours...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
   </div> <!-- fin .card -->
 
-<!-- ================= SANTÉ DU CONTRAT ================= -->
-
-<div id="contractHealthCard" class="health-card no-print" style="margin-top:20px;">
-  <h3 class="section-title">Santé du contrat</h3>
-
-  <table class="document-health-table">
-    <thead>
-      <tr>
-        <th>Catégorie</th>
-        <th>Statut</th>
-        <th>Détails</th>
-      </tr>
-    </thead>
-    <tbody id="contractHealthBody">
-      <tr><td colspan="3">Analyse en cours...</td></tr>
-    </tbody>
-  </table>
-</div>
 
 </section> <!-- fin #contractView -->
 
@@ -1872,6 +1906,10 @@
 
         <label>Email</label>
         <input type="text" id="editClientEmail">
+<label>Notes privées (digicode, portail, clés…)</label>
+<textarea id="editClientPrivateNotes" rows="4"
+  placeholder="Ex: Digicode 1234 • Portail à droite • Clés sous le pot…"></textarea>
+
 
         <div style="margin-top:10px; display:flex; gap:10px;">
           <button class="btn btn-primary btn-small" onclick="saveEditedClient()">💾 Enregistrer</button>
@@ -1940,6 +1978,7 @@
 
   <iframe id="pdfViewerFrame" class="pdf-frame" title="Aperçu PDF"></iframe>
 </div>
+<div id="toastContainer" class="toast-container"></div>
 
 
 <!-- Librairie SignaturePad -->

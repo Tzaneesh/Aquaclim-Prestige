@@ -125,9 +125,18 @@ function applyCompanySettingsToUI(settings) {
   document.querySelectorAll(".js-company-siret").forEach((el) => {
     el.textContent = s.siret;
   });
-  document.querySelectorAll(".js-company-vat").forEach((el) => {
+document.querySelectorAll(".js-company-vat").forEach((el) => {
   el.textContent = s.vatNumber || "";
 });
+
+document.querySelectorAll(".js-company-vat-line").forEach((line) => {
+  if (s.vatNumber && s.vatNumber.trim() !== "") {
+    line.classList.remove("hidden");
+  } else {
+    line.classList.add("hidden");
+  }
+});
+
 
 }
 
@@ -1085,7 +1094,7 @@ async function processSyncQueue() {
   updateOfflineBadge();
 }
 
-// ================== FIREBASE / SYNC ==================
+/// ================== FIREBASE / SYNC ==================
 
 async function initFirebase() {
   if (!window.firebase) {
@@ -1108,9 +1117,9 @@ async function initFirebase() {
 
   db = firebase.firestore();
 
-  // ✅ Offline persistence (cache IndexedDB)
+  // ✅ Offline persistence (cache IndexedDB) — sans multi-onglet
   try {
-    await db.enablePersistence({ synchronizeTabs: true });
+    await db.enablePersistence(); // <-- sans synchronizeTabs
     console.log("[Firestore] Persistence ENABLED");
   } catch (e) {
     console.warn("[Firestore] Persistence not enabled:", e?.code || e);
@@ -1143,6 +1152,11 @@ async function initFirebase() {
 
         localStorage.setItem("documents", JSON.stringify(cloudDocs));
 
+        // ⚠️ mets un guard si jamais sanitizeManualPlanningItems n’existe pas
+        if (typeof sanitizeManualPlanningItems === "function") {
+          sanitizeManualPlanningItems();
+        }
+
         // 🔄 UI refresh (documents)
         if (typeof loadDocumentsList === "function") loadDocumentsList();
         if (typeof loadYearFilter === "function") loadYearFilter();
@@ -1155,11 +1169,15 @@ async function initFirebase() {
       (err) => console.error("Erreur onSnapshot documents :", err)
     );
 
-    // 2️⃣ LIVE CONTRATS (ta version onSnapshot dans syncContractsWithFirestore)
-    await syncContractsWithFirestore();
+    // 2️⃣ LIVE CONTRATS
+    if (typeof syncContractsWithFirestore === "function") {
+      await syncContractsWithFirestore();
+    }
 
-    // 3️⃣ LIVE CLIENTS (ta version onSnapshot dans syncClientsWithFirestore)
-    await syncClientsWithFirestore();
+    // 3️⃣ LIVE CLIENTS
+    if (typeof syncClientsWithFirestore === "function") {
+      await syncClientsWithFirestore();
+    }
   } catch (e) {
     console.error("Erreur de synchronisation Firestore :", e);
   }
@@ -1293,10 +1311,42 @@ function _cleanPhoneForTel(phone) {
 function openGoogleMapsItinerary(address) {
   const a = (address || "").toString().trim();
   if (!a) return;
-  const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(a)}`;
-  openExternalLink(url);
- 
+
+  if (!navigator.geolocation) {
+    // fallback simple
+    const url =
+      `https://www.google.com/maps/dir/?api=1` +
+      `&origin=My+Location` +
+      `&destination=${encodeURIComponent(a)}` +
+      `&travelmode=driving`;
+    openExternalLink(url);
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const origin = `${pos.coords.latitude},${pos.coords.longitude}`;
+      const url =
+        `https://www.google.com/maps/dir/?api=1` +
+        `&origin=${encodeURIComponent(origin)}` +
+        `&destination=${encodeURIComponent(a)}` +
+        `&travelmode=driving`;
+      openExternalLink(url);
+    },
+    () => {
+      // si le GPS refuse → fallback "My Location"
+      const url =
+        `https://www.google.com/maps/dir/?api=1` +
+        `&origin=My+Location` +
+        `&destination=${encodeURIComponent(a)}` +
+        `&travelmode=driving`;
+      openExternalLink(url);
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
 }
+
+
 
 function _normalizePhoneForWA(phone) {
   if (!phone) return "";
@@ -1519,6 +1569,8 @@ function openClientSheet(name) {
   const phone = client?.phone || "";
   const email = client?.email || "";
   const type = client?.type || client?.clientType || "";
+const privateNotes = client?.privateNotes || "";
+
 
   const html = `
 <div id="clientSheetOverlay" class="popup-overlay">
@@ -1553,6 +1605,25 @@ function openClientSheet(name) {
           ${phone ? `<a style="text-decoration:none;" target="_blank" href="https://wa.me/${encodeURIComponent(String(phone).replaceAll(" ", "").replaceAll(".", "").replaceAll("-", "").replaceAll("+", ""))}">💬 WhatsApp</a>` : ""}
         </div>
       </div>
+
+<div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+  <button class="btn btn-primary btn-small" type="button"
+          onclick="createDocForClient('devis', decodeURIComponent('${encodeURIComponent(n)}'))"
+>
+    ➕ Créer devis
+  </button>
+
+  <button class="btn btn-success btn-small" type="button"
+     onclick="createDocForClient('facture', decodeURIComponent('${encodeURIComponent(n)}'))"
+    ➕ Créer facture
+  </button>
+
+  <button class="btn btn-secondary btn-small" type="button"
+       onclick="openPlanningForClient(decodeURIComponent('${encodeURIComponent(n)}'))"
+    🗓️ Ouvrir planning client
+  </button>
+</div>
+
 
       <button id="clientSheetCloseBtn" style="
         border:0; background:#1f6fe5; color:#fff; padding:10px 12px;
@@ -1866,6 +1937,56 @@ function openClientSheet(name) {
       });
     });
 }
+
+function exportBackupJSON() {
+  const backup = {
+    version: "backup_v1",
+    ts: new Date().toISOString(),
+    localStorage: {},
+  };
+
+  // ✅ on embarque TOUT le localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    backup.localStorage[k] = localStorage.getItem(k);
+  }
+
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "backup_app.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function importBackupJSON(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(String(reader.result || "{}"));
+      if (!data || !data.localStorage) throw new Error("Format invalide");
+
+      // ⚠️ on remplace le localStorage par le backup
+      localStorage.clear();
+      Object.keys(data.localStorage).forEach((k) => {
+        localStorage.setItem(k, data.localStorage[k]);
+      });
+
+      // ✅ reload app
+      location.reload();
+    } catch (e) {
+      alert("Import impossible : fichier backup invalide.");
+    }
+  };
+  reader.readAsText(file);
+}
+
 
 // ================== CLIENT (DEVIS / FACTURES) ==================
 
@@ -2266,6 +2387,10 @@ function generatePDFAttestation(mode = "print") {
 
 function detectRapportTypeFromDevis(devis) {
   const text = JSON.stringify(devis.prestations || []).toLowerCase();
+  // ✅ Détection fiable via "kind"
+  if (text.includes('"kind":"entretien_clim"')) return "entretien_clim";
+  if (text.includes('"kind":"depannage_clim"')) return "depannage_clim";
+
 
   if (text.includes("entretien piscine")) return "entretien_piscine";
   if (text.includes("piscine sel")) return "entretien_piscine";
@@ -3028,10 +3153,12 @@ function deleteClientFromList(index) {
 
 function exportClientsCSV() {
   const clients = getClients();
-  let csv = "Nom;Adresse;Téléphone;Email\n";
+ let csv = "Nom;Adresse;Téléphone;Email;Notes privées\n";
+
 
   clients.forEach((c) => {
-    csv += `${c.name};${c.address};${c.phone || ""};${c.email || ""}\n`;
+csv += `${c.name};${c.address};${c.phone || ""};${c.email || ""};${(c.privateNotes || "").replaceAll("\n"," ") }\n`;
+
   });
 
   const blob = new Blob([csv], { type: "text/csv" });
@@ -3056,6 +3183,8 @@ function editClient(index) {
   document.getElementById("editClientAddress").value = c.address;
   document.getElementById("editClientPhone").value = c.phone;
   document.getElementById("editClientEmail").value = c.email;
+document.getElementById("editClientPrivateNotes").value = c.privateNotes || "";
+
 
   document.getElementById("editClientForm").classList.remove("hidden");
 }
@@ -3065,6 +3194,8 @@ function openAddClientFromList() {
   document.getElementById("editClientAddress").value = "";
   document.getElementById("editClientPhone").value = "";
   document.getElementById("editClientEmail").value = "";
+document.getElementById("editClientPrivateNotes").value = "";
+
 
   editingClientIndex = null; // mode création
 
@@ -3079,15 +3210,13 @@ function cancelEditClient() {
 function saveEditedClient() {
   const clients = getClients();
 
-  const newClient = {
-    name: document.getElementById("editClientName").value.trim(),
-    address: document.getElementById("editClientAddress").value.trim(),
-    phone: document.getElementById("editClientPhone").value.trim(),
-    email: document.getElementById("editClientEmail").value.trim(),
-  };
+  const name = document.getElementById("editClientName").value.trim();
+  const address = document.getElementById("editClientAddress").value.trim();
+  const phone = document.getElementById("editClientPhone").value.trim();
+  const email = document.getElementById("editClientEmail").value.trim();
+  const privateNotes = document.getElementById("editClientPrivateNotes").value.trim();
 
-  // Nom obligatoire
-  if (!newClient.name) {
+  if (!name) {
     showConfirmDialog({
       title: "Nom obligatoire",
       message: "Merci de renseigner au minimum le nom du client.",
@@ -3099,30 +3228,54 @@ function saveEditedClient() {
     return;
   }
 
-  let title;
-  let message;
+  let title, message;
+  let clientObj;
 
-  if (
-    editingClientIndex === null ||
-    typeof editingClientIndex === "undefined"
-  ) {
-    // ➕ AJOUT NOUVEAU CLIENT
-    clients.push(newClient);
+  if (editingClientIndex === null || typeof editingClientIndex === "undefined") {
+    // ➕ Nouveau client
+    clientObj = {
+      id: getClientDocId({ name, address }),
+      name,
+      address,
+      phone,
+      email,
+      privateNotes,
+    };
+    clients.push(clientObj);
     title = "Client ajouté";
     message = "Le client a été ajouté à la base.";
   } else {
-    // ✏️ MODIFICATION CLIENT EXISTANT
-    clients[editingClientIndex] = newClient;
+    // ✏️ Modif client existant (on garde l'ancien id + champs)
+    const old = clients[editingClientIndex] || {};
+    clientObj = {
+      ...old,
+      name,
+      address,
+      phone,
+      email,
+      privateNotes,
+    };
+    // sécurité : si old n’avait pas d’id
+    if (!clientObj.id) clientObj.id = getClientDocId({ name, address });
+
+    clients[editingClientIndex] = clientObj;
     title = "Client modifié";
     message = "Les informations du client ont été mises à jour.";
   }
 
+  // ✅ Save local
   saveClients(clients);
   refreshClientDatalist();
   if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
-  openClientsListPopup(); // recharge la liste triée / paginée
+  openClientsListPopup();
 
-  // Popup de succès
+  // ✅ Save Firestore (IMPORTANT pour ne plus perdre les notes)
+  try {
+    if (typeof saveSingleClientToFirestore === "function") {
+      saveSingleClientToFirestore(clientObj);
+    }
+  } catch (e) {}
+
   showConfirmDialog({
     title,
     message,
@@ -3132,6 +3285,7 @@ function saveEditedClient() {
     icon: "✅",
   });
 }
+
 
 function closeClientsListPopup() {
   const overlay = document.getElementById("clientsPopup");
@@ -3792,6 +3946,65 @@ function refreshAfterDocsChange() {
   }
 }
 
+// ✅ Crée un nouveau devis/facture pré-rempli pour ce client
+function createDocForClient(type, clientName) {
+  try { closeClientSheetOverlay(); } catch (e) {}
+
+  // 1) Aller dans la bonne vue (devis / factures)
+  if (typeof openFromHome === "function") openFromHome(type);
+
+  // 2) Créer un nouveau doc
+  if (typeof resetForm === "function") resetForm(type);
+
+  // 3) Pré-remplir client
+  const c = _getClientByName(clientName);
+  if (!c) return;
+
+  const n = document.getElementById("clientName");
+  const a = document.getElementById("clientAddress");
+  const p = document.getElementById("clientPhone");
+  const m = document.getElementById("clientEmail");
+
+  if (n) n.value = c.name || "";
+  if (a) a.value = c.address || "";
+  if (p) p.value = c.phone || "";
+  if (m) m.value = c.email || "";
+
+  // (optionnel) déclenche les auto-fill si tu en as
+  try { if (typeof onClientNameChange === "function") onClientNameChange(); } catch(e){}
+}
+
+// ✅ Ouvre planning et "saute" sur le 1er jour de la semaine où ce client apparaît
+function openPlanningForClient(clientName) {
+  try { closeClientSheetOverlay(); } catch (e) {}
+
+  if (typeof showHome === "function") showHome();
+
+  // laisse le temps au planning de se rendre
+  setTimeout(() => {
+    try { if (typeof renderPlanningWeek === "function") renderPlanningWeek(); } catch(e){}
+
+    const name = (clientName || "").trim().toLowerCase();
+    if (!name) return;
+
+    // cherche dans la semaine courante
+    const found = (window.currentPlanningData || []).find((d) =>
+      (d.items || []).some((it) =>
+        ((it.clientName || "") + "").trim().toLowerCase() === name
+      )
+    );
+
+    if (found && typeof openPlanningDayDetails === "function") {
+      openPlanningDayDetails(found.date);
+    }
+
+    // scroll planning
+    const grid = document.getElementById("planningGrid");
+    if (grid) grid.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 50);
+}
+
+
 
 // ===== ENVOI EMAIL / WHATSAPP (DEVIS / FACTURE / CONTRAT) =====
 
@@ -3989,7 +4202,8 @@ function buildSendMessage(entity) {
           ? entity.pricing.totalHT
           : null;
 
-  const totalTxt = totalTTC != null ? _fmtMoneyEUR(totalTTC) : "";
+ const totalTxt = totalTTC != null ? fmtMoney(totalTTC) : "";
+
 
   // Dates devis
   const validity =
@@ -4246,7 +4460,8 @@ function sendByEmail() {
   }
 
   const { mailSubject } = buildSendMessage(currentSendDoc);
-  const body = document.getElementById("sendMessagePreview")?.value || "";
+  const body =
+    document.getElementById("sendMessagePreview")?.value || "";
 
   const url =
     "mailto:" +
@@ -4256,9 +4471,11 @@ function sendByEmail() {
     "&body=" +
     encodeURIComponent(body);
 
-  window.location.href = url;
+  window.open(url, "_blank");
+
   closeSendPopup();
 }
+
 
 function _normalizePhoneToWhatsApp(phoneRaw) {
   if (!phoneRaw) return "";
@@ -5074,7 +5291,8 @@ function openPdfViewer(url) {
 function openExternalLink(url) {
   // PWA iOS => on "sort" proprement via location (pas d'iframe)
   if (isIOS() && isStandalonePWA()) {
-    window.location.href = url;
+    window.open(url, "_blank");
+
     return;
   }
   // Sinon nouvel onglet
@@ -7583,6 +7801,7 @@ function duplicateCurrent() {
 }
 
 function backToList() {
+hideHealthCardsEverywhere();
   document.getElementById("formView").classList.add("hidden");
   document.getElementById("listView").classList.remove("hidden");
   currentDocumentId = null;
@@ -8582,6 +8801,18 @@ function daysBetween(d1, d2) {
   }
 }
 
+function hideHealthCardsEverywhere() {
+  document.getElementById("documentHealthCard")?.classList.add("hidden");
+  document.getElementById("contractDocumentHealthCard")?.classList.add("hidden");
+}
+
+function showHealthCardForCurrentView(view) {
+  hideHealthCardsEverywhere();
+  if (view === "doc") document.getElementById("documentHealthCard")?.classList.remove("hidden");
+  if (view === "contract") document.getElementById("contractDocumentHealthCard")?.classList.remove("hidden");
+}
+
+
 /* =======================  ===========================
    Module d’analyse automatique de la santé d’un document
    ================================================================ */
@@ -8589,26 +8820,31 @@ function daysBetween(d1, d2) {
 function refreshDocumentHealthUI(doc) {
   if (!doc) return;
 
-  // 1️⃣ On choisit le bon tableau en fonction de l'écran affiché
   let tbody = null;
   const contractView = document.getElementById("contractView");
+  const contractViewVisible = contractView && !contractView.classList.contains("hidden");
 
-  if (contractView && !contractView.classList.contains("hidden")) {
-    // On est sur un CONTRAT
-    tbody = document.getElementById("contractHealthBody");
+  // ✅ FORCER l'affichage de la bonne carte (sinon elle peut rester cachée)
+  const cardId = contractViewVisible ? "contractDocumentHealthCard" : "documentHealthCard";
+  const card = document.getElementById(cardId);
+  if (card) {
+    card.classList.remove("hidden");
+    card.style.display = ""; // laisse le CSS décider
+  }
+
+  if (contractViewVisible) {
+    tbody = document.getElementById("contractDocumentHealthBody");
   } else {
-    // On est sur un devis / facture
     tbody = document.getElementById("documentHealthBody");
   }
 
   if (!tbody) return;
   tbody.innerHTML = "";
-
   const rows = [];
 
-  // On déduit le contexte une bonne fois pour toutes
+  // Contexte
   const docType = doc.type || "";
-  const isContract = tbody.id === "contractHealthBody";
+  const isContract = contractViewVisible; // showing contract screen = contract context
   const isInvoice = !isContract && docType === "facture";
   const isQuote = !isContract && docType === "devis";
 
@@ -9596,6 +9832,12 @@ function refreshContractsStatuses() {
   }
 }
 
+function isContractSigned(contract) {
+  return !!(contract && (contract.signature || contract._inheritedSignature));
+}
+
+
+
 function updateContractsAlert() {
   const alertBox = document.getElementById("contractsAlert");
   const tabBtn = document.getElementById("tabContrats");
@@ -9620,6 +9862,7 @@ function updateContractsAlert() {
   }
 }
 
+
 function renderContractStatusBadge(contract) {
   const meta = contract.meta || {};
   const devisStatus = (meta.sourceDevisStatus || "").toLowerCase();
@@ -9636,14 +9879,33 @@ function renderContractStatusBadge(contract) {
     return `<span class="status-badge status-refused">Résilié</span>`;
   }
 
-  // 🎯 CAS CONTRAT LIÉ À UN DEVIS (tant qu'il n'est ni terminé ni résilié)
+  // 🧭 Statut manuel prioritaire (utile si signature papier, etc.)
+  const manual = contract?.meta?.manualStatus || "";
+  if (manual === "pending_signature") {
+    return `<span class="status-badge status-pending">En attente signature</span>`;
+  }
+  if (manual === "in_progress") {
+    return `<span class="status-badge status-accepted">En cours</span>`;
+  }
+
+  // ✅ Signature réelle (contrat signé OU signature héritée du devis)
+  const isSigned =
+    typeof isContractSigned === "function"
+      ? isContractSigned(contract)
+      : !!contract.signature;
+
+  // ✍️ Si pas signé → En attente signature
+  if (!isSigned) {
+    return `<span class="status-badge status-pending">En attente signature</span>`;
+  }
+
+  // 🎯 Cas contrat lié à un devis
   if (meta.sourceDevisNumber) {
     if (devisStatus === "accepte" || devisStatus === "accepted") {
       return `<span class="status-badge status-accepted">En cours</span>`;
     }
 
     if (devisStatus === "cloture" || devisStatus === "closed") {
-      // Côté contrat, on appelle ça "Terminé"
       return `<span class="status-badge status-terminated">Terminé</span>`;
     }
 
@@ -9660,11 +9922,10 @@ function renderContractStatusBadge(contract) {
       return `<span class="status-badge status-refused">Non validé</span>`;
     }
 
-    // fallback si bizarre
     return `<span class="status-badge status-pending">En attente</span>`;
   }
 
-  // 🎯 CONTRAT SANS DEVIS → statut normal
+  // 🎯 Contrat sans devis → statut normal
   if (cst === CONTRACT_STATUS.EN_COURS)
     return `<span class="status-badge status-accepted">En cours</span>`;
 
@@ -9673,6 +9934,50 @@ function renderContractStatusBadge(contract) {
 
   return `<span class="status-badge status-pending">En attente</span>`;
 }
+
+function renderContractStatusCell(contract) {
+  const badge = renderContractStatusBadge(contract);
+  const manual = contract?.meta?.manualStatus || "";
+
+  return `
+    <div class="contract-status-cell">
+      ${badge}
+      <select class="contract-status-select"
+              title="Forcer le statut (utile si signature papier)"
+              onchange="setContractManualStatusFromList('${contract.id}', this.value)">
+        <option value="" ${manual === "" ? "selected" : ""}>Auto</option>
+        <option value="pending_signature" ${manual === "pending_signature" ? "selected" : ""}>
+          En attente signature
+        </option>
+        <option value="in_progress" ${manual === "in_progress" ? "selected" : ""}>
+          En cours
+        </option>
+      </select>
+    </div>
+  `;
+}
+
+function setContractManualStatusFromList(contractId, value) {
+  const list = getAllContracts();
+  const idx = list.findIndex((c) => c.id === contractId);
+  if (idx === -1) return;
+
+  list[idx].meta = list[idx].meta || {};
+  list[idx].meta.manualStatus = value || ""; // "" => retour en Auto
+
+  saveContracts(list);
+
+  // si tu as une sauvegarde Firestore par contrat
+  if (typeof saveSingleContractToFirestore === "function") {
+    saveSingleContractToFirestore(list[idx]);
+  }
+
+  // refresh liste
+  if (typeof loadContractsList === "function") {
+    loadContractsList();
+  }
+}
+
 
 // ---- Popup résiliation ----
 
@@ -9954,7 +10259,8 @@ function loadContractsList() {
 
     const totalHT = c.pricing?.totalHT != null ? c.pricing.totalHT : 0;
 
-    const statutHTML = renderContractStatusBadge(c);
+    const statutHTML = renderContractStatusCell(c);
+
 
     let renewedLink = "";
     if (c.meta && c.meta.renewedTo) {
@@ -10278,6 +10584,15 @@ saveDocuments(docs);
   }
 }
 
+function isClimDevis(doc) {
+  const list = Array.isArray(doc?.prestations) ? doc.prestations : [];
+  return list.some((p) => {
+    const k = String(p?.kind || "").toLowerCase();
+    return k === "entretien_clim" || k === "depannage_clim";
+  });
+}
+
+
 function setDevisStatus(id, status, skipRapport = false) {
   const docs = getAllDocuments();
   const idx = docs.findIndex((d) => d.id === id);
@@ -10302,57 +10617,63 @@ function setDevisStatus(id, status, skipRapport = false) {
     loadDocumentsList();
   }
 
-  // 2) Si on vient de passer à "cloture" → créer un rapport technique auto
-  //    (sauf si skipRapport = true, ex : fin de contrat)
-  if (
-    status === "cloture" &&
-    oldStatus !== "cloture" &&
-    !skipRapport &&
-    typeof createRapportFromDevis === "function"
-  ) {
-    try {
-      const rapports =
-        (typeof getAllRapports === "function" ? getAllRapports() : []) || [];
+// 2) Si on vient de passer à "cloture" → créer un rapport technique auto
+//    (sauf si skipRapport = true, ex : fin de contrat)
+if (
+  status === "cloture" &&
+  oldStatus !== "cloture" &&
+  !skipRapport &&
+  typeof createRapportFromDevis === "function"
+) {
+  try {
+    const rapports =
+      (typeof getAllRapports === "function" ? getAllRapports() : []) || [];
 
-      // évite de générer plusieurs rapports pour le même devis
-      const already = rapports.find(
-        (r) => r.source && r.source.type === "devis" && r.source.id === doc.id,
-      );
+    // évite de générer plusieurs rapports pour le même devis
+    const already = rapports.find(
+      (r) => r?.source?.type === "devis" && r?.source?.id === doc.id
+    );
 
-      if (!already) {
-        const rapport = createRapportFromDevis(doc); // ⚠️ doit juste créer + sauver, pas ouvrir de popup
+    // ✅ STOP : si devis CLIM → pas de rapport technique auto (attestation seulement)
+    const skipAutoRapport = (typeof isClimDevis === "function") ? isClimDevis(doc) : false;
 
-        const numero = doc.number || doc.id || "";
+    if (!already && !skipAutoRapport) {
+      const rapport = createRapportFromDevis(doc); // ⚠️ doit juste créer + sauver, pas ouvrir de popup
+      const numero = doc.number || doc.id || "";
 
-        if (typeof showConfirmDialog === "function") {
-          showConfirmDialog({
-            title: "Rapport d’intervention créé",
-            message:
-              `Le devis ${numero} a été clôturé et un rapport technique d’intervention ` +
-              `a été généré automatiquement.`,
-            confirmLabel: "OK",
-            cancelLabel: "",
-            variant: "success",
-            icon: "📝",
-          });
-        } else {
-          console.log(
-            "[Devis] Rapport technique créé pour le devis",
-            numero,
-            rapport && rapport.id,
-          );
-        }
+      if (typeof showConfirmDialog === "function") {
+        showConfirmDialog({
+          title: "Rapport d’intervention créé",
+          message:
+            `Le devis ${numero} a été clôturé et un rapport technique d’intervention ` +
+            `a été généré automatiquement.`,
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "success",
+          icon: "📝",
+        });
+      } else {
+        console.log(
+          "[Devis] Rapport technique créé pour le devis",
+          numero,
+          rapport && rapport.id
+        );
       }
-    } catch (e) {
-      console.error(
-        "Erreur lors de la création automatique du rapport depuis un devis clôturé :",
-        e,
-      );
     }
+  } catch (e) {
+    console.error(
+      "Erreur lors de la création automatique du rapport depuis un devis clôturé :",
+      e
+    );
   }
+}
+
 
   // 3) Si on vient de passer à "accepte" → logique contrats + facture auto (comme avant)
   if (status === "accepte" && oldStatus !== "accepte") {
+// ✅ SOLO MODE : dès qu'un devis est accepté, on force une "prochaine action"
+try { setTimeout(() => maybeOpenDevisAcceptedPlanner(doc), 0); } catch(e) {}
+
     const contracts =
       (typeof getAllContracts === "function" ? getAllContracts() : []) || [];
 
@@ -11067,6 +11388,24 @@ function saveDescEditor() {
 
   closeDescEditor();
 }
+
+function getClientText(x){
+  if (x == null) return "";
+  if (typeof x === "string") return x;
+  if (typeof x === "number") return String(x);
+
+  if (typeof x === "object") {
+    // ton format principal: client: { name, address, ... }
+    if (typeof x.name === "string") return x.name;
+    // fallback possibles
+    if (typeof x.clientName === "string") return x.clientName;
+    if (typeof x.label === "string") return x.label;
+  }
+
+  return "";
+}
+
+
 
 // ================== SUPPRESSION DES MODÈLES PERSONNALISÉS ==================
 
@@ -12726,6 +13065,7 @@ function hideAllSections() {
 ============================ */
 
 function showHome() {
+  hideHealthCardsEverywhere();
   const tabHome = document.getElementById("tabHome");
   const tabDevis = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
@@ -13489,10 +13829,27 @@ function renderPlanningWeek() {
 
     for (let i = 0; i < visits; i++) {
       // date originale "prévue" pour cette visite (répartition dans la semaine)
-      const dayIndexOriginal = Math.min(
-        6,
-        Math.floor(((i + 0.5) * 7) / visits),
-      );
+   // 👉 jour du contrat (lundi, mardi, etc.)
+const startISO = contract?.pricing?.startDate;
+const d = startISO ? new Date(startISO + "T00:00:00") : null;
+
+// convertit getDay() (dim=0) → lun=0
+const preferredIndex =
+  d && !isNaN(d) ? (d.getDay() + 6) % 7 : 3; // 3 = jeudi secours
+
+let dayIndexOriginal;
+
+// ✅ 1 passage = même jour que le contrat
+if (visits === 1) {
+  dayIndexOriginal = preferredIndex;
+} else {
+  // ✅ plusieurs passages = logique existante
+  dayIndexOriginal = Math.min(
+    6,
+    Math.floor(((i + 0.5) * 7) / visits),
+  );
+}
+
       const originalDateISO = dayColumns[dayIndexOriginal].dateStr;
 
       // ✅ override éventuel (si déplacée)
@@ -13591,6 +13948,68 @@ function renderPlanningWeek() {
   initPlanningDnD();
 }
 
+function openPlanningTour(dateStr) {
+  const day = currentPlanningData.find((d) => d.date === dateStr);
+  const items = (day && day.items) ? day.items : [];
+
+  // 1) récupérer les adresses valides (contract + manual)
+  const addresses = items
+    .map((it) => (it.address || "").toString().trim())
+    .filter((a) => a.length > 0);
+
+  // dédoublonner en gardant l'ordre
+  const uniq = [];
+  const seen = new Set();
+  for (const a of addresses) {
+    const key = a.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
+      uniq.push(a);
+    }
+  }
+
+  if (!uniq.length) {
+    showConfirmDialog({
+      title: "Tournée impossible",
+      message: "Aucune adresse trouvée sur ce jour.",
+      confirmLabel: "OK",
+      cancelLabel: "",
+      variant: "info",
+      icon: "ℹ️",
+    });
+    return;
+  }
+
+  // ✅ IMPORTANT : départ = ma position
+  const origin = "My+Location";
+
+  // 2) construire l’URL Google Maps (multi-stop)
+  if (uniq.length === 1) {
+    const url =
+      `https://www.google.com/maps/dir/?api=1` +
+      `&origin=${origin}` +
+      `&destination=${encodeURIComponent(uniq[0])}` +
+      `&travelmode=driving`;
+    openExternalLink(url);
+    return;
+  }
+
+  const destination = uniq[uniq.length - 1];
+  const waypoints = uniq.slice(0, -1);
+
+  const url =
+    "https://www.google.com/maps/dir/?api=1" +
+    "&origin=" + origin +
+    "&destination=" + encodeURIComponent(destination) +
+    (waypoints.length
+      ? "&waypoints=" + waypoints.map(encodeURIComponent).join("%7C")
+      : "") +
+    "&travelmode=driving";
+
+  openExternalLink(url);
+}
+
+
 function openPlanningDayDetails(dateStr) {
   const detailsEl = document.getElementById("planningDetails");
   if (!detailsEl) return;
@@ -13599,9 +14018,7 @@ function openPlanningDayDetails(dateStr) {
   document.querySelectorAll(".day-column").forEach((col) => {
     col.classList.remove("is-selected");
   });
-  const selectedCol = document.querySelector(
-    `.day-column[data-date="${dateStr}"]`,
-  );
+  const selectedCol = document.querySelector(`.day-column[data-date="${dateStr}"]`);
   if (selectedCol) selectedCol.classList.add("is-selected");
 
   const day = currentPlanningData.find((d) => d.date === dateStr);
@@ -13611,72 +14028,82 @@ function openPlanningDayDetails(dateStr) {
     month: "2-digit",
   });
 
-  let html = `<h3>Détails pour ${frDate}</h3>`;
+  let html = `
+    <div class="planning-details-header">
+      <h3>Détails pour ${frDate}</h3>
+      <button type="button"
+              class="btn btn-small btn-secondary"
+              onclick="openPlanningTour('${dateStr}')">
+        🗺️ Ouvrir la tournée
+      </button>
+    </div>
+  `;
 
   if (!day || !day.items.length) {
     html += `<div class="visit-empty">Aucun passage prévu.</div>`;
   } else {
     day.items.forEach((item) => {
+
+      // 🔒 notes privées depuis la fiche client
+      const c = item.clientName ? _getClientByName(item.clientName) : null;
+      const notes = (c?.privateNotes || "").trim();
+      const notesHtml = notes
+        ? `<div style="margin-top:6px; padding:6px 8px; border-radius:10px; background:#fff8e5; border:1px solid #f3d08a;">
+             <strong>🔒 Notes privées</strong><br>
+             <span style="white-space:pre-line;">${escapeHtml(notes)}</span>
+           </div>`
+        : "";
+
+      const addressHtml = item.address
+        ? `<a
+             href="https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${encodeURIComponent(item.address)}"
+             target="_blank"
+             style="text-decoration:none;color:#1f6fe5;font-weight:700;"
+             title="Ouvrir l’itinéraire Google Maps"
+           >📍 ${escapeHtml(item.address)}</a><br>`
+        : "";
+
+      const phoneHtml = item.phone
+        ? `<a
+             href="tel:${_cleanPhoneForTel(item.phone)}"
+             style="text-decoration:none;font-weight:700;"
+             title="Appeler le client"
+           >📞 ${escapeHtml(item.phone)}</a><br>`
+        : "";
+
       if (item.type === "contract") {
-        html += `<div class="planning-details-entry">
-          <strong>${escapeHtml(item.clientName)}</strong><br>
-       ${
-         item.address
-           ? `<a
-         href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}"
-         target="_blank"
-         style="text-decoration:none;color:#1f6fe5;font-weight:700;"
-         title="Ouvrir l’itinéraire Google Maps"
-       >📍 ${escapeHtml(item.address)}</a><br>`
-           : ""
-       }
-${
-  item.phone
-    ? `<a
-         href="tel:${_cleanPhoneForTel(item.phone)}"
-         style="text-decoration:none;font-weight:700;"
-         title="Appeler le client"
-       >📞 ${escapeHtml(item.phone)}</a><br>`
-    : ""
-}
+        html += `
+          <div class="planning-details-entry">
+            <strong>${escapeHtml(item.clientName)}</strong><br>
+            ${addressHtml}
+            ${notesHtml}
+            ${phoneHtml}
+            ${
+              item.serviceLabel
+                ? `<span class="visit-pool">${escapeHtml(item.serviceLabel)}</span>`
+                : ""
+            }
+          </div>
+        `;
+      }
 
-          ${
-            item.serviceLabel
-              ? `<span class="visit-pool">${escapeHtml(item.serviceLabel)}</span>`
-              : ""
-          }
-        </div>`;
-      } else if (item.type === "manual") {
+      if (item.type === "manual") {
         const service = item.service || item.label || "Intervention";
-        html += `<div class="planning-details-entry">
-    <strong>${escapeHtml(service)}</strong><br>
-    ${item.clientName ? escapeHtml(item.clientName) + "<br>" : ""}
-${
-  item.address
-    ? `<a
-         href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.address)}"
-         target="_blank"
-         style="text-decoration:none;color:#1f6fe5;font-weight:700;"
-         title="Ouvrir l’itinéraire Google Maps"
-       >📍 ${escapeHtml(item.address)}</a><br>`
-    : ""
-}
-${
-  item.phone
-    ? `<a
-         href="tel:${_cleanPhoneForTel(item.phone)}"
-         style="text-decoration:none;font-weight:700;"
-         title="Appeler le client"
-       >📞 ${escapeHtml(item.phone)}</a><br>`
-    : ""
-}
 
+        html += `
+          <div class="planning-details-entry">
+            <strong>${escapeHtml(service)}</strong><br>
+            ${item.clientName ? escapeHtml(item.clientName) + "<br>" : ""}
+            ${addressHtml}
+            ${notesHtml}
+            ${phoneHtml}
 
-    <button class="delete-manual-btn"
-      onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
-      🗑️ Supprimer
-    </button>
-  </div>`;
+            <button class="delete-manual-btn"
+              onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
+              🗑️ Supprimer
+            </button>
+          </div>
+        `;
       }
     });
   }
@@ -13825,6 +14252,513 @@ function deleteManualPlanningItem(id, dateStr) {
   renderPlanningWeek();
   openPlanningDayDetails(dateStr); // Ré-ouvre la colonne mise à jour
 }
+
+
+/* =========================================================
+   ✅ SOLO MODE : Devis accepté → Action → Planning + Sidebar
+   ========================================================= */
+
+function _iso(d){
+  const x = new Date(d);
+  const y = x.getFullYear();
+  const m = String(x.getMonth()+1).padStart(2,'0');
+  const da = String(x.getDate()).padStart(2,'0');
+  return `${y}-${m}-${da}`;
+}
+function _addDays(d, n){
+  const x = new Date(d);
+  x.setDate(x.getDate()+n);
+  return x;
+}
+function _nextBusinessDay(d){
+  let x = new Date(d);
+  x = _addDays(x, 1);
+  while (x.getDay() === 0 || x.getDay() === 6) x = _addDays(x, 1);
+  return x;
+}
+function _ensureMeta(doc){
+  doc.meta = doc.meta || {};
+  return doc.meta;
+}
+function _toast(title, msg){
+  const box = document.getElementById('toastContainer');
+  if (!box) return;
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<div class="t1">${escapeHtml(title||'')}</div><div class="t2">${escapeHtml(msg||'')}</div>`;
+  box.appendChild(el);
+  setTimeout(()=>{ try{ el.remove(); }catch(e){} }, 3500);
+}
+
+function _createManualItemFromDevis(devis, dateISO, labelPrefix) {
+  if (!devis) return null;
+
+  const meta = _ensureMeta(devis);
+
+  // ✅ Anti-doublon : si déjà lié à un item, on met juste à jour
+  if (meta.planningItemId) {
+    const existing = manualPlanningItems.find((x) => x.id === meta.planningItemId);
+    if (existing) {
+      existing.date = dateISO;
+
+      const base =
+        existing.clientName ||
+        existing.prestation ||
+        existing.sourceNumber ||
+        "Devis";
+      existing.label = `${labelPrefix} ${String(base)}`.trim();
+
+      saveManualPlanningItems();
+      meta.planningDate = dateISO;
+      return meta.planningItemId;
+    }
+  }
+
+  // ✅ Client SAFE (jamais object)
+  const client = String(
+    getClientText(
+      devis.clientName ??
+        devis.client?.name ??
+        devis.client?.clientName ??
+        devis.client ??
+        meta.clientName ??
+        ""
+    ) ?? ""
+  ).trim();
+
+  // ✅ Prestation SAFE (jamais object)
+  const prestation = String(
+    devis.prestation ?? devis.title ?? meta.prestation ?? ""
+  ).trim();
+
+  const address = String(devis.address ?? meta.address ?? devis.client?.address ?? "").trim();
+  const phone   = String(devis.phone ?? meta.phone ?? devis.client?.phone ?? "").trim();
+
+  const labelBase =
+    client || prestation || (devis.number ? `Devis ${devis.number}` : "Devis accepté");
+  const label = `${labelPrefix} ${labelBase}`.trim();
+
+  const itemId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  const item = {
+    id: itemId,
+    date: dateISO,
+    label,
+    prestation,
+    clientName: client,
+    address,
+    phone,
+    notes: String(devis.notes ?? meta.notes ?? "").trim(),
+    sourceType: "devis",
+    sourceId: devis.id,
+    sourceNumber: devis.number || "",
+  };
+
+  manualPlanningItems.push(item);
+  saveManualPlanningItems();
+
+  meta.planningItemId = itemId;
+  meta.planningDate = dateISO;
+
+  return itemId;
+}
+
+function sanitizeManualPlanningItems() {
+  const docs = JSON.parse(localStorage.getItem("documents") || "[]");
+  let changed = false;
+
+  docs.forEach(d => {
+    // ❌ Date invalide / objet
+    if (d.planningDate && typeof d.planningDate !== "string") {
+      delete d.planningDate;
+      changed = true;
+    }
+
+    // ❌ Mauvais format
+    if (typeof d.planningDate === "string" && !isISO(d.planningDate)) {
+      delete d.planningDate;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    localStorage.setItem("documents", JSON.stringify(docs));
+    console.log("🧹 Planning nettoyé (dates invalides supprimées)");
+  }
+}
+
+
+function removePlanningDuplicates() {
+  const seen = new Set();
+  const cleaned = [];
+
+  for (const it of manualPlanningItems) {
+    const key = [
+      it.date || "",
+      it.sourceType || "",
+      it.sourceId || "",
+      (it.label || "").replace(/\s+/g, " ").trim(),
+    ].join("|");
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+    cleaned.push(it);
+  }
+
+  if (cleaned.length !== manualPlanningItems.length) {
+    manualPlanningItems = cleaned;
+    saveManualPlanningItems();
+  }
+
+  try { renderPlanningWeek(); } catch (e) {}
+  try { renderPlanningSidebar(); } catch (e) {}
+  console.log("✅ Doublons planning supprimés:", cleaned.length);
+}
+
+
+
+function maybeOpenDevisAcceptedPlanner(devis){
+  if (!devis || devis.type !== 'devis') return;
+  if ((devis.status||'') !== 'accepte') return;
+
+  const meta = _ensureMeta(devis);
+  // Si déjà une action, on ne re-popup pas
+  if (meta.nextAction) return;
+
+  openDevisAcceptedActionPopup(devis.id);
+}
+
+function openDevisAcceptedActionPopup(devisId){
+  const docs = getAllDocuments();
+  const devis = docs.find(d=>d.id===devisId);
+  if (!devis) return;
+
+  // kill ancien overlay
+  const old = document.getElementById('acceptPlannerOverlay');
+  if (old) old.remove();
+
+  const meta = _ensureMeta(devis);
+const client = getClientText(devis.clientName || devis.client || meta.clientName).trim() || "Client";
+
+  const overlay = document.createElement('div');
+  overlay.id = 'acceptPlannerOverlay';
+  overlay.className = 'popup-overlay';
+
+  overlay.innerHTML = `
+  <div style="width:min(720px, 100%); max-height:92vh; overflow:auto; background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.25); padding:16px; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+      <div>
+        <div style="font-weight:900; font-size:22px;">✅ Devis accepté</div>
+  
+      </div>
+      <button class="btn btn-secondary" type="button" id="acceptPlannerClose">✖</button>
+    </div>
+
+    <div style="margin-top:12px; padding:10px; border:1px solid rgba(0,0,0,.08); border-radius:12px; background:rgba(0,0,0,.02);">
+      <div style="font-weight:800;">${escapeHtml(client)}</div>
+      <div style="opacity:.8; font-size:13px;">Devis: ${escapeHtml(devis.number || devis.id)}</div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:14px;">
+
+      <div style="border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:12px;">
+        <div style="font-weight:900;">1) 📅 Planifier une intervention</div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:10px;">
+          <input id="acceptPlannerDate" type="date" style="padding:8px; border-radius:10px; border:1px solid rgba(0,0,0,.2);" />
+          <button id="acceptPlannerBtnPlan" class="btn btn-primary" type="button">Ajouter</button>
+        </div>
+      </div>
+
+      <div style="border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:12px;">
+        <div style="font-weight:900;">2) 📦 En attente de réception du matériel</div>
+        <div style="margin-top:10px;">
+          <button id="acceptPlannerBtnWait" class="btn btn-secondary" type="button">Mettre en attente</button>
+        </div>
+      </div>
+
+      <div style="border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:12px;">
+        <div style="font-weight:900;">3) 📞 À appeler / à caler</div>
+        <div style="margin-top:10px;">
+          <button id="acceptPlannerBtnCall" class="btn btn-secondary" type="button">Créer "À appeler"</button>
+        </div>
+      </div>
+
+    </div>
+  </div>`;
+
+  document.body.appendChild(overlay);
+
+  // date défaut = prochain jour ouvré
+  const d0 = _nextBusinessDay(new Date());
+  const dateInput = overlay.querySelector('#acceptPlannerDate');
+  if (dateInput) dateInput.value = _iso(d0);
+
+  overlay.querySelector('#acceptPlannerClose')?.addEventListener('click', ()=> overlay.remove());
+  overlay.addEventListener('click', (e)=>{ if (e.target === overlay) overlay.remove(); });
+
+  overlay.querySelector('#acceptPlannerBtnPlan')?.addEventListener('click', ()=>{
+    const dateISO = (overlay.querySelector('#acceptPlannerDate')?.value || _iso(d0));
+    _applyNextAction(devisId, 'planifie', dateISO);
+    overlay.remove();
+  });
+
+  overlay.querySelector('#acceptPlannerBtnWait')?.addEventListener('click', ()=>{
+    const dateISO = _iso(_addDays(new Date(), 3)); // simple: J+3
+    _applyNextAction(devisId, 'attente_reception', dateISO);
+    overlay.remove();
+  });
+
+  overlay.querySelector('#acceptPlannerBtnCall')?.addEventListener('click', ()=>{
+    const dateISO = _iso(_nextBusinessDay(new Date()));
+    _applyNextAction(devisId, 'a_appeler', dateISO);
+    overlay.remove();
+  });
+}
+
+function _applyNextAction(devisId, action, dateISO){
+  const docs = getAllDocuments();
+  const idx = docs.findIndex(d=>d.id===devisId);
+  if (idx === -1) return;
+  const devis = docs[idx];
+  const meta = _ensureMeta(devis);
+
+  meta.nextAction = action;
+  meta.nextActionUpdatedAt = new Date().toISOString();
+
+  // Crée un item planning
+  if (action === 'planifie') {
+    _createManualItemFromDevis(devis, dateISO, '📅');
+    _toast('Planning', 'Intervention ajoutée ✅');
+  }
+  if (action === 'attente_reception') {
+    _createManualItemFromDevis(devis, dateISO, '📦 EN ATTENTE:');
+    _toast('En attente', 'Ajouté dans "À traiter" 📦');
+  }
+  if (action === 'a_appeler') {
+    _createManualItemFromDevis(devis, dateISO, '📞 APPELER:');
+    _toast('À appeler', 'Ajouté dans le planning 📞');
+  }
+
+  saveDocuments(docs);
+
+  try{ renderPlanningWeek(); }catch(e){}
+  try{ if (typeof loadDocumentsList==='function') loadDocumentsList(); }catch(e){}
+}
+
+function _getAcceptedTodos(){
+  const docs = getAllDocuments();
+const devis = docs
+  .filter(d => d.type === 'devis' && (d.status||'') === 'accepte')
+  .filter(d => !isContractMaintenanceDevis(d));
+
+
+  const out = { non_planifie:[], attente_reception:[], a_appeler:[] };
+
+  for (const d of devis){
+    const meta = d.meta || {};
+    const a = meta.nextAction || 'non_planifie';
+    if (a === 'planifie') continue;
+    (out[a] || out.non_planifie).push(d);
+  }
+  return out;
+}
+
+function closeDevisAndAutoInvoice(devisId){
+  const docs0 = getAllDocuments();
+  const devis0 = docs0.find(d => d.id === devisId && d.type === "devis");
+  if (!devis0) return;
+
+  // ✅ 1) Ne pas gérer ici les devis d’entretien qui viennent d’un contrat
+  if (isContractMaintenanceDevis(devis0)) {
+    try { renderPlanningSidebar(); } catch(e){}
+    return;
+  }
+
+  // ✅ 2) Clôturer le devis (ta logique existante)
+  if (typeof setDevisStatus === "function") {
+    setDevisStatus(devisId, "cloture");
+  }
+
+  // ✅ 3) Eviter doublon facture
+  const docs = getAllDocuments();
+  const already = docs.find(d => d.type === "facture" && d.sourceDevisId === devisId);
+  if (already) {
+    try { renderPlanningSidebar(); } catch(e){}
+    return;
+  }
+
+  // ✅ 4) Créer la facture auto
+  const devis = docs.find(d => d.id === devisId && d.type === "devis");
+  if (!devis) return;
+
+  const invoice = createInvoiceFromDevis(devis);
+
+  // ✅ 5) Refresh UI
+  try { if (typeof refreshHomeStats === "function") refreshHomeStats(); } catch(e){}
+  try { if (typeof loadDocumentsList === "function") loadDocumentsList(); } catch(e){}
+  try { renderPlanningWeek(); } catch(e){}
+  try { renderPlanningSidebar(); } catch(e){}
+
+  // petit log
+  console.log("[SIDEBAR] Devis clôturé + facture créée:", invoice?.number);
+}
+
+
+
+function renderPlanningSidebar(){
+  const el = document.getElementById('planningSidebar');
+  if (!el) return;
+
+  const todos = _getAcceptedTodos();
+
+  const mkItem = (d, actionsHtml) => {
+    const meta = d.meta || {};
+    const client = getClientText(d.clientName ?? d.client ?? meta.clientName).trim() || "Client";
+
+
+    const number = d.number || d.id;
+    const date = meta.planningDate || '';
+    return `
+      <div class="todo-item">
+        <div class="line1">${escapeHtml(client)}</div>
+        <div class="line2">Devis: ${escapeHtml(number)}${date ? ' • ' + escapeHtml(date) : ''}</div>
+        <div class="todo-actions">${actionsHtml}</div>
+      </div>`;
+  };
+
+  const section = (title, list, buildActions) => {
+    const items = (list||[]).map(d=>mkItem(d, buildActions(d))).join('')
+      || `<div style="opacity:.65; font-size:13px; margin-top:8px;">Rien ici ✅</div>`;
+    return `
+      <div class="todo-section">
+        <div class="todo-title">
+          <span>${escapeHtml(title)}</span>
+          <span class="todo-badge">${(list||[]).length}</span>
+        </div>
+        ${items}
+      </div>`;
+  };
+
+  el.innerHTML = `
+    <h3>📅 À plannifier</h3>
+
+    ${section('⚠️ Acceptés mais non planifiés', todos.non_planifie, (d)=>`
+      <button class="btn btn-primary" type="button" onclick="openDevisAcceptedActionPopup('${d.id}')">Choisir action</button>
+    `)}
+
+    ${section('📦 En attente de réception', todos.attente_reception, (d)=>`
+      <button class="btn btn-primary" type="button" onclick="_openPlanDateOnly('${d.id}')">📅 Planifier</button>
+<button class="btn btn-secondary" type="button" onclick="closeDevisAndAutoInvoice('${d.id}')">✅ Fait</button>
+
+    `)}
+
+    ${section('📞 À appeler / à caler', todos.a_appeler, (d)=>`
+      <button class="btn btn-primary" type="button" onclick="_markCalled('${d.id}')">✅ Appelé</button>
+      <button class="btn btn-secondary" type="button" onclick="_openPlanDateOnly('${d.id}')">📅 Planifier</button>
+    `)}
+  `;
+}
+
+
+function isContractMaintenanceDevis(d){
+  if (!d || d.type !== "devis") return false;
+
+  // vient d’un contrat (selon ton modèle)
+  const fromContract = !!d.contractId || !!d.meta?.contractId || !!d.sourceContractId;
+  if (!fromContract) return false;
+
+  // On détecte entretien piscine/jacuzzi
+  const prestations = Array.isArray(d.prestations) ? d.prestations : [];
+  const kinds = prestations.map(p => p?.kind).filter(Boolean);
+
+  const isMaintenance =
+    kinds.includes("piscine_chlore") ||
+    kinds.includes("piscine_sel") ||
+    kinds.includes("entretien_jacuzzi") ||
+    kinds.includes("entretien_piscine");
+
+  return isMaintenance;
+}
+
+
+function _openPlanDateOnly(devisId){
+  const docs = getAllDocuments();
+  const devis = docs.find(d=>d.id===devisId);
+  if (!devis) return;
+
+  const old = document.getElementById('planDateOnlyOverlay');
+  if (old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'planDateOnlyOverlay';
+  overlay.className = 'popup-overlay';
+  overlay.innerHTML = `
+  <div style="width:min(520px, 100%); background:#fff; border-radius:14px; box-shadow:0 10px 40px rgba(0,0,0,.25); padding:16px; font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-weight:900;">📅 Planifier</div>
+      <button class="btn btn-secondary" type="button" id="planDateOnlyClose">✖</button>
+    </div>
+    <div style="opacity:.75; margin-top:6px;">Choisis une date, terminé.</div>
+    <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+      <input id="planDateOnlyInput" type="date" style="padding:8px; border-radius:10px; border:1px solid rgba(0,0,0,.2);" />
+      <button id="planDateOnlyOk" class="btn btn-primary" type="button">OK</button>
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+
+  const d0 = _nextBusinessDay(new Date());
+  overlay.querySelector('#planDateOnlyInput').value = _iso(d0);
+
+  overlay.querySelector('#planDateOnlyClose')?.addEventListener('click', ()=>overlay.remove());
+  overlay.addEventListener('click', (e)=>{ if (e.target===overlay) overlay.remove(); });
+
+  overlay.querySelector('#planDateOnlyOk')?.addEventListener('click', ()=>{
+    const dateISO = overlay.querySelector('#planDateOnlyInput')?.value || _iso(d0);
+    _applyNextAction(devisId, 'planifie', dateISO);
+    overlay.remove();
+  });
+}
+
+function _markDone(devisId){
+  const docs = getAllDocuments();
+  const idx = docs.findIndex(d=>d.id===devisId);
+  if (idx===-1) return;
+  const d = docs[idx];
+  const meta=_ensureMeta(d);
+
+  meta.nextAction = 'planifie';
+  meta.nextActionUpdatedAt = new Date().toISOString();
+  saveDocuments(docs);
+
+  _toast('OK', 'Marqué comme fait ✅');
+  try{ renderPlanningWeek(); }catch(e){}
+}
+
+function _markCalled(devisId){
+  const docs = getAllDocuments();
+  const idx = docs.findIndex(d=>d.id===devisId);
+  if (idx===-1) return;
+  const d = docs[idx];
+  const meta=_ensureMeta(d);
+
+  // après "appelé" → on force planification ensuite
+  meta.nextAction = 'non_planifie';
+  meta.nextActionUpdatedAt = new Date().toISOString();
+  saveDocuments(docs);
+
+  _toast('Appel', 'Marqué comme appelé. Maintenant: planifier 📅');
+  try{ renderPlanningWeek(); }catch(e){}
+}
+
+/* Hook : à chaque rendu planning → refresh sidebar */
+if (typeof renderPlanningWeek === 'function') {
+  const _oldRenderPlanningWeek = renderPlanningWeek;
+  renderPlanningWeek = function(){
+    try{ _oldRenderPlanningWeek(); }catch(e){}
+    try{ renderPlanningSidebar(); }catch(e){}
+  };
+}
+
 
 // ----- LocalStorage contrats -----
 
@@ -14618,12 +15552,17 @@ function openContractFromList(id) {
   if (listView) listView.classList.add("hidden");
   if (contractView) contractView.classList.remove("hidden");
 
+  // ✅ IMPORTANT : afficher la bonne carte "Santé du document" (contrat)
+  showHealthCardForCurrentView("contract");
+
   fillContractForm(contract);
 
+  // ✅ Mets à jour la santé DU CONTRAT (et pas celle des devis/factures)
   if (typeof refreshDocumentHealthUI === "function") {
-    refreshDocumentHealthUI(contract);
+    refreshDocumentHealthUI(contract, { target: "contract" });
   }
 }
+
 
 function deleteContractFromList(id) {
   const contracts = getAllContracts();
@@ -14712,6 +15651,7 @@ function transformContractFromList(id) {
 }
 
 function backToContracts() {
+  hideHealthCardsEverywhere();
   const contractView = document.getElementById("contractView");
   const listView = document.getElementById("listView");
   if (contractView) contractView.classList.add("hidden");
@@ -14897,7 +15837,23 @@ async function syncClientsWithFirestore() {
         );
 
         // ✅ Firestore = vérité → on écrase le local
-        saveClients(cloudClients);
+   // ✅ Firestore = vérité → MAIS on évite d'écraser les notes privées locales par accident
+const local = getClients();
+
+cloudClients.forEach((cc) => {
+  const match =
+    local.find((lc) => lc.id && cc.id && lc.id === cc.id) ||
+    local.find((lc) => (lc.name || "").toLowerCase() === (cc.name || "").toLowerCase());
+
+  if (match && (!cc.privateNotes || String(cc.privateNotes).trim() === "")) {
+    if (match.privateNotes && String(match.privateNotes).trim() !== "") {
+      cc.privateNotes = match.privateNotes;
+    }
+  }
+});
+
+saveClients(cloudClients);
+
 
         if (typeof refreshClientDatalist === "function") {
           refreshClientDatalist();
@@ -15596,40 +16552,59 @@ function fillContractForm(contract) {
   }
 
   // ---------- 13. STATUT CONTRAT (lié au devis) ----------
-  const ctStatus = document.getElementById("ctStatus");
-  if (ctStatus) {
-    // On récupère le statut du devis lié si présent
-    const meta = contract.meta || {};
-    let statusCode = (
-      meta.sourceDevisStatus ||
-      meta.devisStatus ||
-      contract.status ||
-      ""
-    ).toLowerCase();
 
-    let displayStatus = "En attente"; // valeur par défaut
+const ctStatus = document.getElementById("ctStatus");
+if (ctStatus) {
+  const meta = contract.meta || {};
 
-    // Mapping :
-    // devis accepté   -> En cours
-    // devis en attente -> En attente
-    // devis refusé / expiré -> Non validé
-    if (statusCode === "accepte" || statusCode === "accepted") {
-      displayStatus = "En cours";
-    } else if (
-      statusCode === "refuse" ||
-      statusCode === "refused" ||
-      statusCode === "expire" ||
-      statusCode === "expired"
-    ) {
-      displayStatus = "Non validé";
+  let statusCode = (
+    meta.sourceDevisStatus ||
+    meta.devisStatus ||
+    contract.status ||
+    ""
+  ).toLowerCase();
+
+  let displayStatus = "En attente";
+
+  // 🧭 1) Statut manuel prioritaire (AFFICHAGE UNIQUEMENT)
+  const manual = meta.manualStatus || "";
+  if (manual === "pending_signature") {
+    displayStatus = "En attente signature";
+  } else if (manual === "in_progress") {
+    displayStatus = "En cours";
+  } else {
+    // 🧠 2) Sinon, logique auto actuelle
+    const isSigned = isContractSigned(contract);
+
+    if (!isSigned) {
+      displayStatus = "En attente signature";
     } else {
-      // tout le reste (en_attente, pending, vide...) -> En attente
-      displayStatus = "En attente";
+      if (statusCode === "accepte" || statusCode === "accepted") {
+        displayStatus = "En cours";
+      } else if (
+        statusCode === "refuse" ||
+        statusCode === "refused" ||
+        statusCode === "expire" ||
+        statusCode === "expired"
+      ) {
+        displayStatus = "Non validé";
+      } else {
+        displayStatus = "En attente";
+      }
     }
-
-    ctStatus.textContent = displayStatus;
   }
+
+  ctStatus.textContent = displayStatus;
 }
+
+// ✅ Synchroniser le select manuel (hors du bloc ctStatus, mais dans fillContractForm)
+const ctManual = document.getElementById("ctManualStatus");
+if (ctManual) {
+  ctManual.value = contract.meta?.manualStatus || "";
+}
+
+  }
+
 
 /* ============================================================
    BANDEAU COULEUR POUR CONTRAT LIÉ AU DEVIS
@@ -15976,7 +16951,8 @@ function saveContract() {
   // ✅ Cas 2 : Pas de devis obligatoire OU devis déjà accepté
 
   // ✅ VERROU : pas de facturation tant que le contrat n'est pas signé
-  const isSigned = !!contract.signature;
+  const isSigned = isContractSigned(contract);
+
 
   if (!isSigned) {
     // On neutralise l’échéancier tant que pas signé
@@ -19523,7 +20499,7 @@ function _enableIOSClientDropdown() {
   const sel = document.getElementById("clientNameIOS");
   if (!input || !sel) return;
 
-  if (!_isIOS()) return; // PC = rien
+  if (!isIOS()) return; // PC = rien
 
   // Remplit la liste iPhone
   _fillClientSelectIOS();
@@ -19538,12 +20514,6 @@ function _enableIOSClientDropdown() {
     if (typeof onClientNameChange === "function") onClientNameChange();
   };
 }
-
-// AU CHARGEMENT
-window.addEventListener("load", () => {
-  _enableIOSClientDropdown();
-});
-
 
 /* ======================
    INIT (tu gardes ton window.onload)
@@ -19585,6 +20555,28 @@ initFirebase().then(() => {
 });
 
   if (typeof initContractsUI === "function") initContractsUI();
+
+  // ===============================
+  // ✅ CLEAN STARTUP (PROPRE)
+  // ===============================
+  try { _enableIOSClientDropdown(); } catch(e){}
+
+  // ✅ 1) Nettoie les vieux items cassés
+  try { sanitizeManualPlanningItems(); } catch(e){}
+
+  // ✅ 2) Supprime les doublons MAIS une seule fois (migration)
+  try {
+    const key = "planning_migration_v1_done";
+    if (localStorage.getItem(key) !== "1") {
+      removePlanningDuplicates();
+      localStorage.setItem(key, "1");
+    }
+  } catch(e){}
+
+  // ✅ 3) Sidebar
+  try { renderPlanningSidebar(); } catch(e){ console.error("SIDEBAR ERROR:", e); }
+
+
 };
 
 /* ======================
@@ -19758,6 +20750,8 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
+
 
 
 

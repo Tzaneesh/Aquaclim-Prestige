@@ -1000,6 +1000,15 @@ textarea {
    font-weight: bold;
     color: #0d47a1;
 }
+
+/* ✅ CONTRAT : titre "Santé du document" comme devis/facture */
+#contractDocumentHealthCard h3.section-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1a74d9;
+  margin: 25px 0 15px;
+}
+
 .block p { margin: 3px 0; }
 /* Labels des champs */
 #contractView .form-group label {
@@ -3488,6 +3497,235 @@ textarea {
 }
 body.is-dragging .visit-entry {
   cursor: grabbing;
+}
+
+.contract-status-cell{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  align-items:flex-start;
+}
+
+.contract-status-select{
+  font-size:12px;
+  padding:6px 8px;
+  border-radius:10px;
+  border:1px solid #cfd8dc;
+  background:#fff;
+  outline:none;
+}
+
+/* ================================
+   PLANNING LAYOUT + SIDEBAR (SOLO)
+   ================================ */
+
+.planning-layout{
+  display:flex;
+  gap:14px;
+  align-items:flex-start;
+}
+
+.planning-main{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.planning-sidebar{
+  width: 340px;
+  flex: 0 0 340px;
+  background: rgba(255,255,255,.9);
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 6px 20px rgba(0,0,0,.06);
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow: auto;
+}
+
+.planning-sidebar h3{
+  margin: 4px 0 10px 0;
+  font-weight: 900;
+}
+
+.todo-section{
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+
+.todo-title{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.todo-badge{
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.1);
+  opacity: .85;
+}
+
+.todo-item{
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 12px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: rgba(0,0,0,.02);
+}
+
+.todo-item .line1{
+  font-weight: 900;
+}
+
+.todo-item .line2{
+  font-size: 12px;
+  opacity: .75;
+  margin-top: 2px;
+}
+
+.todo-actions{
+  display:flex;
+  gap:8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Toast (petites alertes) */
+.toast-container{
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 99999;
+}
+
+.toast{
+  background: #111;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,.25);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  max-width: 320px;
+}
+
+.toast .t1{ font-weight: 900; }
+.toast .t2{ opacity: .85; font-size: 13px; margin-top: 2px; }
+
+@media (max-width: 1050px){
+  .planning-layout{ flex-direction: column; }
+  .planning-sidebar{
+    width: 100%;
+    flex: 1 1 auto;
+    position: static;
+    max-height: none;
+  }
+}
+
+/* =========================================================
+   ✅ PLANNING – POLISH (OVERRIDES ONLY)
+   (à laisser TOUT en bas pour écraser proprement)
+========================================================= */
+
+.planning-card .planning-grid {
+  gap: 10px;
+}
+
+.planning-card .day-column {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 14px;
+  padding: 10px;
+  min-height: 120px;
+  transition: box-shadow 0.15s ease, transform 0.05s ease, border-color 0.15s;
+}
+
+.planning-card .day-column:hover {
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+  transform: translateY(-1px);
+}
+
+.planning-card .day-column.is-weekend {
+  background: #f8fafc;
+}
+
+.planning-card .day-column.is-today {
+  background: #f1f5f9;
+  border-color: rgba(26, 116, 217, 0.35);
+}
+
+.planning-card .day-column-header {
+  font-size: 12px;
+  font-weight: 800;
+  color: #334155;
+  padding-bottom: 6px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.planning-card .planning-add-btn {
+  background: rgba(26, 116, 217, 0.10);
+  color: #1a74d9;
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-weight: 800;
+}
+
+.planning-card .planning-add-btn:hover {
+  background: rgba(26, 116, 217, 0.18);
+}
+
+.planning-card .visit-entry {
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 7px 8px;
+  margin-bottom: 6px;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.06);
+}
+
+.planning-card .visit-entry:hover {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
+}
+
+.planning-card .visit-entry:not(.visit-manual) {
+  border-left: 4px solid #16a34a; /* contrat = vert */
+}
+
+.planning-card .visit-entry.visit-manual {
+  border-left: 4px solid #2563eb; /* manuel = bleu */
+  background: #f8fafc;
+}
+
+.planning-card .visit-pool {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #64748b;
+}
+
+.planning-card .visit-empty {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+
+.planning-details-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.planning-details-header h3{
+  margin:0;
 }
 
 
