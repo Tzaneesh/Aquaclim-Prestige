@@ -93,53 +93,6 @@ function getCompanySettings() {
   }
 }
 
-function saveCompanySettings(settings) {
-  const clean = { ...getDefaultCompanySettings(), ...settings };
-  try {
-    localStorage.setItem(COMPANY_SETTINGS_KEY, JSON.stringify(clean));
-  } catch (e) {}
-  applyCompanySettingsToUI(clean);
-}
-
-function applyCompanySettingsToUI(settings) {
-  const s = settings || getCompanySettings();
-
-  document.querySelectorAll(".js-company-name").forEach((el) => {
-    el.textContent = s.companyName;
-  });
-  document.querySelectorAll(".js-company-subtitle").forEach((el) => {
-    el.textContent = s.subtitle;
-  });
-  document.querySelectorAll(".js-company-legal").forEach((el) => {
-    el.textContent = s.legalName;
-  });
-  document.querySelectorAll(".js-company-address").forEach((el) => {
-    el.textContent = s.address;
-  });
-  document.querySelectorAll(".js-company-phone").forEach((el) => {
-    el.textContent = s.phone;
-  });
-  document.querySelectorAll(".js-company-email").forEach((el) => {
-    el.textContent = s.email;
-  });
-  document.querySelectorAll(".js-company-siret").forEach((el) => {
-    el.textContent = s.siret;
-  });
-document.querySelectorAll(".js-company-vat").forEach((el) => {
-  el.textContent = s.vatNumber || "";
-});
-
-document.querySelectorAll(".js-company-vat-line").forEach((line) => {
-  if (s.vatNumber && s.vatNumber.trim() !== "") {
-    line.classList.remove("hidden");
-  } else {
-    line.classList.add("hidden");
-  }
-});
-
-
-}
-
 // ================== CONSTANTES / MODÈLES ==================
 
 // Modèles de prestations (Particulier / Syndic + descriptions + types)
@@ -1131,7 +1084,8 @@ db.collection("config").doc("companySettings").onSnapshot((doc) => {
   if (!data) return;
 
   // cache local (optionnel)
-  localStorage.setItem("companySettings", JSON.stringify(data));
+  localStorage.setItem("acp_company_settings_v1", JSON.stringify(data));
+
 
   // applique dans l’UI
   try { applyCompanySettingsToUI(data); } catch(e) {}
@@ -2223,7 +2177,12 @@ async function saveCompanySettingsFromForm() {
   };
 
   try {
+    // 1️⃣ Sauvegarde Firestore
     await saveCompanySettingsToFirestore(settings);
+
+    // 2️⃣ Mise à jour immédiate de l’UI (IMPORTANT)
+    applyCompanySettingsToUI(settings);
+
   } catch (e) {
     console.error("saveCompanySettingsToFirestore error:", e);
   }
@@ -2237,6 +2196,7 @@ async function saveCompanySettingsFromForm() {
     icon: "✅",
   });
 }
+
 
 async function saveCompanySettingsToFirestore(settings) {
   if (!db) return;
