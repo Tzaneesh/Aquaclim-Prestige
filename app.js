@@ -1128,15 +1128,29 @@ async function initFirebase() {
 // =================== SETTINGS (company) ===================
 db.collection("config").doc("companySettings").onSnapshot((doc) => {
   const data = doc.exists ? doc.data() : null;
-  if (!data) return;
 
-  // cache local (optionnel)
-  localStorage.setItem("companySettings", JSON.stringify(data));
-
-  // applique dans l’UI
-  try { applyCompanySettingsToUI(data); } catch(e) {}
-  try { fillCompanySettingsForm(); } catch(e) {}
+  if (data) {
+    // cache local optionnel
+    localStorage.setItem("companySettings", JSON.stringify(data));
+    try { applyCompanySettingsToUI(data); } catch(e) {}
+    try { fillCompanySettingsForm(); } catch(e) {}
+  } else {
+    // ✅ IMPORTANT : si rien dans Firestore, on "reset" l'affichage
+    try {
+      applyCompanySettingsToUI({
+        companyName: "",
+        subtitle: "",
+        legalName: "",
+        address: "",
+        phone: "",
+        email: "",
+        siret: "",
+        vatNumber: "", // <-- cache la ligne TVA
+      });
+    } catch(e) {}
+  }
 });
+
 
 // =================== PLANNING MANUEL ===================
 db.collection("planningManual").onSnapshot((snap) => {
@@ -14216,6 +14230,7 @@ function closeManualPlanningPopup() {
 
   overlay.classList.add("hidden");
 }
+
 async function confirmManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay || !manualPopupDate) return;
