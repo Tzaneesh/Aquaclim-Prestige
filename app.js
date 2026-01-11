@@ -1125,6 +1125,45 @@ async function initFirebase() {
     console.warn("[Firestore] Persistence not enabled:", e?.code || e);
   }
 
+// =================== SETTINGS (company) ===================
+db.collection("config").doc("companySettings").onSnapshot((doc) => {
+  const data = doc.exists ? doc.data() : null;
+  if (!data) return;
+
+  // cache local (optionnel)
+  localStorage.setItem("companySettings", JSON.stringify(data));
+
+  // applique dans l’UI
+  try { applyCompanySettingsToUI(data); } catch(e) {}
+  try { fillCompanySettingsForm(); } catch(e) {}
+});
+
+// =================== PLANNING MANUEL ===================
+db.collection("planningManual").onSnapshot((snap) => {
+  const arr = [];
+  snap.forEach((d) => arr.push(d.data()));
+  manualPlanningItems = arr;
+
+  // cache local (optionnel)
+  localStorage.setItem("manualPlanningItems", JSON.stringify(arr));
+
+  try { renderPlanningWeek(); } catch(e) {}
+  try { renderPlanningSidebar(); } catch(e) {}
+});
+
+// =================== OVERRIDES CONTRATS ===================
+db.collection("contractPlanningOverrides").onSnapshot((snap) => {
+  const arr = [];
+  snap.forEach((d) => arr.push(d.data()));
+  contractPlanningOverrides = arr;
+
+  // cache local (optionnel)
+  localStorage.setItem("contractPlanningOverrides", JSON.stringify(arr));
+
+  try { renderPlanningWeek(); } catch(e) {}
+});
+
+
   // ✅ Bind online/offline listeners une seule fois
   if (!window.__netListenersBound) {
     window.__netListenersBound = true;
@@ -2163,7 +2202,7 @@ function fillCompanySettingsForm() {
   setVal("confBic", s.bic);
 }
 
-function saveCompanySettingsFromForm() {
+async function saveCompanySettingsFromForm() {
   const getVal = (id) => (document.getElementById(id)?.value || "").trim();
 
   const settings = {
@@ -2172,7 +2211,6 @@ function saveCompanySettingsFromForm() {
     legalName: getVal("confLegalName"),
     siret: getVal("confSiret"),
     vatNumber: getVal("confVatNumber"),
-
     address: getVal("confAddress"),
     phone: getVal("confPhone"),
     email: getVal("confEmail"),
@@ -2182,7 +2220,11 @@ function saveCompanySettingsFromForm() {
     bic: getVal("confBic"),
   };
 
-  saveCompanySettings(settings);
+  try {
+    await saveCompanySettingsToFirestore(settings);
+  } catch (e) {
+    console.error("saveCompanySettingsToFirestore error:", e);
+  }
 
   showConfirmDialog({
     title: "Paramètres enregistrés",
@@ -2193,6 +2235,12 @@ function saveCompanySettingsFromForm() {
     icon: "✅",
   });
 }
+
+async function saveCompanySettingsToFirestore(settings) {
+  if (!db) return;
+  await db.collection("config").doc("companySettings").set(settings, { merge: true });
+}
+
 function getTVALineForDocuments() {
   const s = getCompanySettings();
   const status = getMicroTVAStatus(); // doit renvoyer { mode: "franchise"|"obligatoire" }
@@ -13463,10 +13511,20 @@ if (typeof renderPlanningWeek === "function") {
 }
 }
 
+async function saveDocumentToFirestore(docObj) {
+  if (!db || !docObj?.id) return;
+  await db.collection("documents").doc(docObj.id).set(docObj, { merge: true });
+}
+
+async function upsertManualPlanningItemToFirestore(item) {
+  if (!db || !item?.id) return;
+  await db.collection("planningManual").doc(item.id).set(item, { merge: true });
+}
+
+
 // ====== PLANNING HEBDO ======
 
 let planningWeekOffset = 0;
-let manualPlanningItems = loadManualPlanningItems();
 let currentPlanningData = [];
 let manualPopupDate = null;
 
@@ -13493,24 +13551,6 @@ function saveContractPlanningOverrides() {
   } catch (e) {}
 }
 
-function loadManualPlanningItems() {
-  try {
-    const raw = localStorage.getItem("manualPlanningItems") || "[]";
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch (e) {
-    return [];
-  }
-}
-
-function saveManualPlanningItems() {
-  try {
-    localStorage.setItem(
-      "manualPlanningItems",
-      JSON.stringify(manualPlanningItems),
-    );
-  } catch (e) {}
-}
 
 function getOverriddenContractDate(contractId, originalDateISO) {
   const ov = contractPlanningOverrides.find(
@@ -13519,31 +13559,37 @@ function getOverriddenContractDate(contractId, originalDateISO) {
   return ov ? ov.newDate : originalDateISO;
 }
 
-function applyContractPlanningOverride(contractId, originalDate, newDate) {
-  contractPlanningOverrides = contractPlanningOverrides.filter(
-    (o) => !(o.contractId === contractId && o.originalDate === originalDate),
-  );
+async function applyContractPlanningOverride(contractId, originalDate, newDate) {
+  try {
+    if (!db) return;
 
-  contractPlanningOverrides.push({
-    id: generateId("OVR"),
-    contractId,
-    originalDate,
-    newDate,
-  });
+    const id = `${contractId}__${originalDate}`; // ID stable (important)
+    await db.collection("contractPlanningOverrides").doc(id).set({
+      id,
+      contractId,
+      originalDate,
+      newDate,
+      updatedAt: Date.now(),
+    }, { merge: true });
 
-  saveContractPlanningOverrides();
-  renderPlanningWeek();
+    // Pas besoin de renderPlanningWeek() : ton onSnapshot contractPlanningOverrides le fera.
+  } catch (e) {
+    console.error("applyContractPlanningOverride error:", e);
+  }
 }
+
 
 function moveManualPlanningItemToDate(manualId, newDateISO) {
   const idx = manualPlanningItems.findIndex((it) => it.id === manualId);
   if (idx === -1) return;
 
   manualPlanningItems[idx].date = newDateISO;
-  saveManualPlanningItems();
-  renderPlanningWeek();
 }
 
+async function moveManualPlanningItemToDate(manualId, newDateISO) {
+  if (!db) return;
+  await db.collection("planningManual").doc(manualId).set({ date: newDateISO }, { merge: true });
+}
 
 function initPlanningDnD() {
   // ✅ Sortable pas chargé => pas de drag
@@ -13643,9 +13689,10 @@ function getServiceLabelForContract(contract) {
 // ================== PLANNING HEBDOMADAIRE ==================
 
 function changePlanningWeek(delta) {
-  planningWeekOffset += delta;
+  planningWeekOffset = (planningWeekOffset || 0) + delta;
   renderPlanningWeek();
 }
+
 
 function getMondayOfWeek(offset) {
   const today = new Date();
@@ -14169,7 +14216,7 @@ function closeManualPlanningPopup() {
 
   overlay.classList.add("hidden");
 }
-function confirmManualPlanningPopup() {
+async function confirmManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay || !manualPopupDate) return;
 
@@ -14193,7 +14240,8 @@ function confirmManualPlanningPopup() {
   // Label qui s’affiche dans la case du planning
   const label = prestation || client;
 
-  manualPlanningItems.push({
+  // ✅ item planning
+  const item = {
     id: Date.now().toString(36),
     date: manualPopupDate,
     label,
@@ -14202,12 +14250,37 @@ function confirmManualPlanningPopup() {
     address,
     phone,
     notes,
-  });
+    createdAt: Date.now(),
+  };
 
-  saveManualPlanningItems();
-  overlay.classList.add("hidden");
-  renderPlanningWeek();
+  try {
+    // ✅ Firestore = source de vérité
+    if (!db) throw new Error("Firestore db non initialisé");
+    await db.collection("planningManual").doc(item.id).set(item);
+
+    // ✅ Ferme la popup
+    overlay.classList.add("hidden");
+
+    // ✅ Optionnel: reset champs
+    const elPresta = document.getElementById("planningPopupPrestation");
+    const elClient = document.getElementById("planningPopupClient");
+    const elAddress = document.getElementById("planningPopupAddress");
+    const elPhone = document.getElementById("planningPopupPhone");
+    const elNotes = document.getElementById("planningPopupNotes");
+    if (elPresta) elPresta.value = "";
+    if (elClient) elClient.value = "";
+    if (elAddress) elAddress.value = "";
+    if (elPhone) elPhone.value = "";
+    if (elNotes) elNotes.value = "";
+
+    // ✅ Pas besoin de manualPlanningItems.push()
+    // Ton onSnapshot(planningManual) va récupérer et rafraîchir automatiquement.
+  } catch (e) {
+    console.error("Erreur ajout planning manuel:", e);
+    alert("Impossible d’enregistrer l’intervention (vérifie ta connexion).");
+  }
 }
+
 
 function loadPlanningPrestations() {
   const select = document.getElementById("planningPopupPrestation");
@@ -14242,16 +14315,35 @@ function loadPlanningPrestations() {
 }
 
 function deleteManualPlanningItem(id, dateStr) {
-  // On filtre pour retirer l’intervention
-  manualPlanningItems = manualPlanningItems.filter((item) => item.id !== id);
 
-  // On sauvegarde l'état
-  saveManualPlanningItems();
-
-  // On refresh l'affichage
-  renderPlanningWeek();
   openPlanningDayDetails(dateStr); // Ré-ouvre la colonne mise à jour
 }
+
+async function deleteManualPlanningItem(id, dateStr) {
+  try {
+    if (db) await db.collection("planningManual").doc(id).delete();
+    // Pas besoin de render ici : le onSnapshot planningManual va refresh tout.
+    // Si tu veux garder le panneau du jour à jour instant :
+    if (dateStr) openPlanningDayDetails(dateStr);
+  } catch (e) {
+    console.error("deleteManualPlanningItem error:", e);
+  }
+}
+
+async function moveManualPlanningItemToDate(manualId, newDateISO) {
+  try {
+    if (!db) return;
+    await db.collection("planningManual").doc(manualId).set(
+      { date: newDateISO },
+      { merge: true }
+    );
+    // Pas besoin de render ici non plus: le onSnapshot le fera.
+  } catch (e) {
+    console.error("moveManualPlanningItemToDate error:", e);
+  }
+}
+
+
 
 
 /* =========================================================
@@ -14308,7 +14400,7 @@ function _createManualItemFromDevis(devis, dateISO, labelPrefix) {
         "Devis";
       existing.label = `${labelPrefix} ${String(base)}`.trim();
 
-      saveManualPlanningItems();
+     
       meta.planningDate = dateISO;
       return meta.planningItemId;
     }
@@ -14353,9 +14445,10 @@ function _createManualItemFromDevis(devis, dateISO, labelPrefix) {
     sourceId: devis.id,
     sourceNumber: devis.number || "",
   };
+upsertManualPlanningItemToFirestore(item).catch(()=>{});
 
   manualPlanningItems.push(item);
-  saveManualPlanningItems();
+
 
   meta.planningItemId = itemId;
   meta.planningDate = dateISO;
@@ -14407,7 +14500,7 @@ function removePlanningDuplicates() {
 
   if (cleaned.length !== manualPlanningItems.length) {
     manualPlanningItems = cleaned;
-    saveManualPlanningItems();
+
   }
 
   try { renderPlanningWeek(); } catch (e) {}
@@ -14524,6 +14617,8 @@ function _applyNextAction(devisId, action, dateISO){
 
   meta.nextAction = action;
   meta.nextActionUpdatedAt = new Date().toISOString();
+meta.planningDate = dateISO || "";
+
 
   // Crée un item planning
   if (action === 'planifie') {
@@ -14538,6 +14633,7 @@ function _applyNextAction(devisId, action, dateISO){
     _createManualItemFromDevis(devis, dateISO, '📞 APPELER:');
     _toast('À appeler', 'Ajouté dans le planning 📞');
   }
+saveDocumentToFirestore(devis).catch(()=>{});
 
   saveDocuments(docs);
 
