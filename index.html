@@ -323,24 +323,6 @@
       </div>
     </div>
 
-<div class="card">
-  <h3>🛟 Sauvegarde / restauration</h3>
-
-  <button class="btn btn-primary" type="button" onclick="exportBackupJSON()">
-    ⬇️ Export JSON (backup)
-  </button>
-
-  <input id="importBackupInput" type="file" accept="application/json"
-         style="display:none"
-         onchange="importBackupJSON(this.files[0])" />
-
-  <button class="btn btn-secondary" type="button"
-          onclick="document.getElementById('importBackupInput').click()">
-    ⬆️ Import JSON (restaurer)
-  </button>
-</div>
-
-
     <div class="row">
       <div class="form-group">
         <label for="confLegalName">Nom légal / gérant</label>
@@ -399,6 +381,23 @@
         <input type="text" id="confBic" />
       </div>
     </div>
+
+<div class="card">
+  <h3>🛟 Sauvegarde / restauration</h3>
+
+  <button class="btn btn-primary" type="button" onclick="exportBackupJSON()">
+    ⬇️ Export JSON (backup)
+  </button>
+
+  <input id="importBackupInput" type="file" accept="application/json"
+         style="display:none"
+         onchange="importBackupJSON(this.files[0])" />
+
+  <button class="btn btn-secondary" type="button"
+          onclick="document.getElementById('importBackupInput').click()">
+    ⬆️ Import JSON (restaurer)
+  </button>
+</div>
 
     <div class="actions no-print" style="margin-top:20px;">
       <button class="btn btn-primary" type="button" onclick="saveCompanySettingsFromForm()">
