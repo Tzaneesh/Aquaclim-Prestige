@@ -5375,34 +5375,23 @@ function transferRapportToClientCurrent() {
 }
 
 // =====================================
-// PDF VIEWER – iPhone / PWA (FUSION)
+// PDF VIEWER – iPhone / PWA (SAFE OVERLAY + HISTORY)
 // =====================================
 let lastAppViewBeforePDF = null;
+let __pdfHistoryPushed = false;
+let __closingFromPopstate = false;
 
 function getCurrentAppView() {
-  const views = [
-    "homeView",
-    "listView",
-    "formView",
-    "contractView",
-    "attestationView",
-    "settingsView"
-  ];
-
-  return views.find(id => {
+  const views = ["homeView", "listView", "formView", "contractView", "attestationView", "settingsView"];
+  return views.find((id) => {
     const el = document.getElementById(id);
     return el && !el.classList.contains("hidden");
   });
 }
 
-// ===============================
-// 📱 iOS PWA – aperçu SAFE (SANS iframe)
-// ===============================
-
 function openPdfViewer(html) {
   const overlay = document.getElementById("pdfViewerOverlay");
   const content = document.getElementById("pdfViewerContent");
-
   if (!overlay || !content) {
     alert("Aperçu indisponible");
     return;
@@ -5410,27 +5399,67 @@ function openPdfViewer(html) {
 
   lastAppViewBeforePDF = getCurrentAppView();
 
-  // 🔥 INJECTION DIRECTE (AUCUNE URL)
+  // Injecte le HTML (pas d’URL, pas de blob, pas d’iframe)
   content.innerHTML = html;
 
+  // Affiche overlay
   overlay.classList.remove("hidden");
   overlay.style.display = "flex";
   overlay.style.pointerEvents = "auto";
+
+  // Bloque scroll derrière
+  document.documentElement.style.overflow = "hidden";
+  document.body.style.overflow = "hidden";
+
+  // ✅ Ajoute une entrée d’historique pour que "Retour" ferme l’overlay
+  // (uniquement si pas déjà poussé)
+  if (!__pdfHistoryPushed) {
+    __pdfHistoryPushed = true;
+    try {
+      history.pushState({ __pdfOverlay: true }, "");
+    } catch (e) {}
+  }
 }
 
-function openExternalLink(url) {
-  // iPhone PWA : JAMAIS window.open
-  if (isIOS() && isStandalonePWA()) {
-    window.location.href = url;
-    return;
+function closePdfViewer() {
+  const overlay = document.getElementById("pdfViewerOverlay");
+  const content = document.getElementById("pdfViewerContent");
+
+  if (content) content.innerHTML = "";
+
+  if (overlay) {
+    overlay.classList.add("hidden");
+    overlay.style.display = "none";
+    overlay.style.pointerEvents = "none";
   }
 
-  // Autres cas
-  window.open(url, "_blank");
+  // Réactive scroll
+  document.documentElement.style.overflow = "";
+  document.body.style.overflow = "";
+
+  // ✅ Si on a poussé une state, on revient en arrière (ça déclenche popstate)
+  if (__pdfHistoryPushed && !__closingFromPopstate) {
+    __closingFromPopstate = true;
+    try {
+      history.back();
+      return; // le reste se fera dans popstate
+    } catch (e) {
+      __closingFromPopstate = false;
+    }
+  }
+
+  // Retour app view
+  __pdfHistoryPushed = false;
+  __closingFromPopstate = false;
+
+  if (lastAppViewBeforePDF && typeof showView === "function") {
+    showView(lastAppViewBeforePDF);
+  } else if (typeof showHome === "function") {
+    showHome();
+  }
 }
 
-
-
+// Bind close UX (clic fond + ESC) — garde ton idée, version safe
 function bindPdfViewerCloseUX() {
   const overlay = document.getElementById("pdfViewerOverlay");
   if (!overlay || window.__pdfViewerUXBound) return;
@@ -5447,28 +5476,59 @@ function bindPdfViewerCloseUX() {
     }
   });
 }
-
 document.addEventListener("DOMContentLoaded", bindPdfViewerCloseUX);
 
-function closePdfViewer() {
-  const overlay = document.getElementById("pdfViewerOverlay");
-  const content = document.getElementById("pdfViewerContent");
+// ✅ popstate : si overlay ouvert -> ferme sans boucle
+if (!window.__pdfViewerPopstateBound) {
+  window.__pdfViewerPopstateBound = true;
 
-  if (content) content.innerHTML = "";
+  window.addEventListener("popstate", () => {
+    const overlay = document.getElementById("pdfViewerOverlay");
+    if (!overlay || overlay.classList.contains("hidden")) return;
 
-  if (overlay) {
+    __closingFromPopstate = true;
+    __pdfHistoryPushed = false;
+
+    // ferme overlay sans refaire history.back()
+    const content = document.getElementById("pdfViewerContent");
+    if (content) content.innerHTML = "";
     overlay.classList.add("hidden");
     overlay.style.display = "none";
     overlay.style.pointerEvents = "none";
-  }
+    document.documentElement.style.overflow = "";
+    document.body.style.overflow = "";
 
-  if (lastAppViewBeforePDF && typeof showView === "function") {
-    showView(lastAppViewBeforePDF);
-  } else if (typeof showHome === "function") {
-    showHome();
-  }
+    __closingFromPopstate = false;
+
+    if (lastAppViewBeforePDF && typeof showView === "function") {
+      showView(lastAppViewBeforePDF);
+    } else if (typeof showHome === "function") {
+      showHome();
+    }
+  });
 }
 
+
+async function openExternalLink(url) {
+  if (isIOS && isStandalonePWA && isIOS() && isStandalonePWA()) {
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast?.("Lien copié 📋");
+    } catch (e) {
+      showConfirmDialog?.({
+        title: "Lien externe",
+        message: "Copie ce lien et ouvre-le dans Safari :\n\n" + url,
+        confirmLabel: "OK",
+        cancelLabel: "",
+        variant: "info",
+        icon: "🔗",
+      });
+    }
+    return;
+  }
+
+  window.open(url, "_blank");
+}
 
 
 
@@ -21254,6 +21314,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
