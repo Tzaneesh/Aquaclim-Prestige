@@ -1117,8 +1117,12 @@ db.collection("config").doc("companySettings").onSnapshot((doc) => {
 
 
   // applique dans l’UI
-  try { applyCompanySettingsToUI(data); } catch(e) {}
-  try { fillCompanySettingsForm(); } catch(e) {}
+try { applyCompanySettingsToUI(data); } catch(e) {}
+try { fillCompanySettingsForm(); } catch(e) {}
+
+// ✅ TVA = toujours recalculée depuis le CA (source de vérité)
+try { if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false); } catch(e) {}
+
 });
 
 
@@ -8105,10 +8109,12 @@ const exceedBaseLastYear = caLastYear > MICRO_TVA_THRESHOLD_BASE;      // ex: 37
 
 // Mode final : si déjà obligatoire => reste obligatoire
 // sinon => obligatoire si (seuil majoré dépassé cette année) OU (seuil base dépassé l'an dernier)
+// ✅ MODE AUTOMATIQUE : si tu es sous le seuil -> franchise ; sinon -> obligatoire
 const nextMode =
-  alreadyObligatoire || exceedToleranceThisYear || exceedBaseLastYear
+  exceedToleranceThisYear || exceedBaseLastYear
     ? "obligatoire"
     : "franchise";
+;
 
 // Activation (sauvegarde) seulement si on passe de franchise -> obligatoire
 const shouldActivateNow = !alreadyObligatoire && nextMode === "obligatoire";
@@ -21157,6 +21163,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
