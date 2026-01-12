@@ -1,4 +1,4 @@
-const CACHE_NAME = "acp-cache-v1"; // tu peux laisser v1, plus besoin de bump à chaque fois
+const CACHE_NAME = "acp-cache-2026-01-12-01"; // tu peux laisser v1, plus besoin de bump à chaque fois
 const ASSETS = [
   "./",
   "./index.html",
