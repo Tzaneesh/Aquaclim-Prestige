@@ -44,18 +44,22 @@ self.addEventListener("fetch", (event) => {
   }
 
   // ✅ 2) JS + CSS => network first (LA solution anti-bug)
-  if (req.destination === "script" || req.destination === "style") {
-    event.respondWith(
-      fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-          return res;
-        })
-        .catch(() => caches.match(req))
-    );
-    return;
-  }
+if (req.destination === "script" || req.destination === "style") {
+  event.respondWith(
+    fetch(req, { cache: "no-store" })
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+        return res;
+      })
+      .catch(() => {
+        // ✅ IMPORTANT: ne pas renvoyer une vieille version de JS/CSS
+        // => on force un échec clair plutôt qu'un mismatch silencieux
+        return new Response("", { status: 504, statusText: "Offline - no stale script" });
+      })
+  );
+  return;
+}
 
   // ✅ 3) Images (et le reste) => cache first (OK)
   event.respondWith(
