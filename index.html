@@ -2,7 +2,20 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+<!-- ✅ PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#1a74d9">
+
+<!-- ✅ iOS PWA -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="AquaClim">
+<link rel="apple-touch-icon" href="logo.png">
+
+
+  
   <title>AquaClim Prestige - Devis & Factures</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
@@ -1984,6 +1997,10 @@
   <iframe id="pdfViewerFrame" class="pdf-frame" title="Aperçu PDF"></iframe>
 </div>
 <div id="toastContainer" class="toast-container"></div>
+<div id="pwaBar" class="no-print" style="display:none; position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:99999; background:rgba(255,255,255,.92); border:1px solid rgba(0,0,0,.12); border-radius:16px; padding:10px; box-shadow:0 10px 25px rgba(0,0,0,.12); gap:10px;">
+  <button class="btn btn-secondary" type="button" onclick="pwaRefreshNow()">↻ Actualiser</button>
+  <button class="btn btn-primary" type="button" onclick="showHome()">🏠 Accueil</button>
+</div>
 
 
 <!-- Librairie SignaturePad -->
@@ -1999,6 +2016,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
