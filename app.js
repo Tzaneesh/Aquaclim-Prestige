@@ -1112,13 +1112,17 @@ db.collection("config").doc("companySettings").onSnapshot((doc) => {
   const data = doc.exists ? doc.data() : null;
   if (!data) return;
 
-  // cache local (optionnel)
   localStorage.setItem("acp_company_settings_v1", JSON.stringify(data));
 
+  applyCompanySettingsToUI(data);
+  fillCompanySettingsForm();
 
-  // applique dans l’UI
-try { applyCompanySettingsToUI(data); } catch(e) {}
-try { fillCompanySettingsForm(); } catch(e) {}
+  // ✅ TVA toujours recalculée depuis le CA (pas imposée par le cache/settings)
+  if (typeof refreshMicroTVAState === "function") {
+    refreshMicroTVAState(false);
+  }
+});
+
 
 // ✅ TVA = toujours recalculée depuis le CA (source de vérité)
 try { if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false); } catch(e) {}
@@ -21163,6 +21167,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
