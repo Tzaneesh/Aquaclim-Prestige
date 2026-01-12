@@ -3734,6 +3734,18 @@ body.is-dragging .visit-entry {
   opacity: 0.55;
 }
 
+/* ✅ iPhone: laisse de la place en bas pour les boutons + safe-area */
+@media (max-width: 600px){
+  #listView,
+  #clientsView,
+  #clientList,
+  .list-view,
+  .page-main,
+  .card{
+    padding-bottom: calc(140px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
 
 
 
