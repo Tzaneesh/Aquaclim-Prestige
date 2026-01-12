@@ -33,11 +33,21 @@
       window.addEventListener("error", function (e) {
         log("❌ JS ERROR: " + (e.message || "unknown"));
         log((e.filename || "") + ":" + (e.lineno || "") + ":" + (e.colno || ""));
+        if (e.error && e.error.stack) log(e.error.stack);
       });
+
+      // ✅ Capte aussi les erreurs de chargement (script/css/img)
+      window.addEventListener("error", function (e) {
+        var t = e.target || e.srcElement;
+        if (t && (t.src || t.href)) {
+          log("❌ RESSOURCE KO: " + (t.src || t.href));
+        }
+      }, true);
 
       window.addEventListener("unhandledrejection", function (e) {
         log("❌ PROMISE REJECTION: " + String(e.reason && (e.reason.stack || e.reason.message || e.reason)));
       });
+
 
       window.__APP_STARTED__ = function () {
         var b = document.getElementById("bootBar");
@@ -2073,6 +2083,7 @@ background:red;color:white;padding:10px;font-weight:bold">
 
 </body>
 </html>
+
 
 
 
