@@ -5840,33 +5840,36 @@ function deleteRapport(rapId) {
     cancelLabel: "Annuler",
     variant: "danger",
     icon: "🗑️",
-onConfirm: () => {
-  const list = getAllRapports().filter((r) => r.id !== rapId);
-  saveRapports(list);
-  loadRapportsList();
+    onConfirm: () => {
+      const list = getAllRapports().filter((r) => r.id !== rapId);
+      saveRapports(list);
+      loadRapportsList();
 
-  // ✅ delete Firestore (ou queue)
-  if (!db || !navigator.onLine) {
-    enqueueSync({
-      collection: "rapports",
-      action: "delete",
-      docId: rapId,
-    });
-    updateOfflineBadge();
-    return;
-  }
+      // ✅ delete Firestore (ou queue)
+      if (!db || !navigator.onLine) {
+        enqueueSync({
+          collection: "rapports",
+          action: "delete",
+          docId: rapId,
+        });
+        updateOfflineBadge();
+        return;
+      }
 
-  db.collection("rapports").doc(rapId).delete().catch((e) => {
-    console.error("Erreur Firestore delete rapport:", e);
-    enqueueSync({
-      collection: "rapports",
-      action: "delete",
-      docId: rapId,
-    });
+      db.collection("rapports").doc(rapId).delete().catch((e) => {
+        console.error("Erreur Firestore delete rapport:", e);
+        enqueueSync({
+          collection: "rapports",
+          action: "delete",
+          docId: rapId,
+        });
+      });
+
+      processSyncQueue();
+    },
   });
+}
 
-  processSyncQueue();
-},
 
 
 function openRapportPopupForEdit(rapportId) {
@@ -9668,33 +9671,36 @@ function deleteAttestation(attId) {
     cancelLabel: "Annuler",
     variant: "danger",
     icon: "🗑️",
-onConfirm: () => {
-  const list = getAllAttestations().filter((a) => a.id !== attId);
-  saveAttestations(list);
-  loadAttestationsList();
+    onConfirm: () => {
+      const list = getAllAttestations().filter((a) => a.id !== attId);
+      saveAttestations(list);
+      loadAttestationsList();
 
-  // ✅ delete Firestore (ou queue)
-  if (!db || !navigator.onLine) {
-    enqueueSync({
-      collection: "attestations",
-      action: "delete",
-      docId: attId,
-    });
-    updateOfflineBadge();
-    return;
-  }
+      // ✅ delete Firestore (ou queue)
+      if (!db || !navigator.onLine) {
+        enqueueSync({
+          collection: "attestations",
+          action: "delete",
+          docId: attId,
+        });
+        updateOfflineBadge();
+        return;
+      }
 
-  db.collection("attestations").doc(attId).delete().catch((e) => {
-    console.error("Erreur Firestore delete attestation:", e);
-    enqueueSync({
-      collection: "attestations",
-      action: "delete",
-      docId: attId,
-    });
+      db.collection("attestations").doc(attId).delete().catch((e) => {
+        console.error("Erreur Firestore delete attestation:", e);
+        enqueueSync({
+          collection: "attestations",
+          action: "delete",
+          docId: attId,
+        });
+      });
+
+      processSyncQueue();
+    },
   });
+}
 
-  processSyncQueue();
-},
 
 
 function openAttestationForInvoice(doc) {
@@ -21151,6 +21157,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
