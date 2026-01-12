@@ -20989,7 +20989,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-function blockBlankLinksIOS() {
+// ===============================
+// 📱 iOS PWA – bloquer target=_blank
+// ===============================
+(function blockBlankLinksIOS() {
   document.addEventListener("click", function (e) {
     if (!isIOS() || !isStandalonePWA()) return;
 
@@ -21007,7 +21010,11 @@ function blockBlankLinksIOS() {
   }, true);
 })();
 
-function forceCloseBtn() {
+
+// ===============================
+// ✖️ Forcer le bouton fermer PDF
+// ===============================
+(function forceCloseBtn() {
   function bind() {
     const btn = document.getElementById("pdfViewerCloseBtn");
     if (!btn || btn.__ok) return;
@@ -21287,6 +21294,7 @@ if (!window.__pdfViewerPopstateBound) {
 }
 
 });
+
 
 
 
