@@ -1,3 +1,17 @@
+console.log("[BOOT] import.meta.url =", import.meta.url);
+console.log("[BOOT] SW controller =", !!navigator.serviceWorker?.controller, navigator.serviceWorker?.controller?.scriptURL);
+console.log("[BOOT] typeof loadCustomTemplates (avant init) =", typeof loadCustomTemplates);
+
+// Preuve ultime: lire le texte réellement chargé par le navigateur
+fetch(import.meta.url, { cache: "no-store" })
+  .then(r => r.text())
+  .then(t => {
+    console.log("[BOOT] source contient 'function loadCustomTemplates' =", t.includes("function loadCustomTemplates"));
+    console.log("[BOOT] source contient 'function initApp' =", t.includes("function initApp"));
+  })
+  .catch(e => console.log("[BOOT] fetch(import.meta.url) FAILED", e));
+
+
 // ✅ prouve que app.js démarre
 
 try {
@@ -21256,6 +21270,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
