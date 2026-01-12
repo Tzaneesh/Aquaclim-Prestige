@@ -13060,7 +13060,7 @@ printWindow.onload = function () {
   }
 };
 
-}
+
 
 // ================== CONTRATS PISCINE / SPA ==================
 
@@ -21331,6 +21331,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
