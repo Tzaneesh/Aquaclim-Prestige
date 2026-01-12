@@ -10049,20 +10049,32 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
       : "client") +
     ".pdf";
 
-  // Sortie : print / preview / download
-  if (mode === "download") {
-    doc.save(fileName);
-  } else {
+// Sortie : print / preview / download
+if (mode === "download") {
+  doc.save(fileName);
+  return;
+}
+
+// ✅ Print desktop (pas iOS)
 if (mode === "print" && !isIOS()) {
   if (doc.autoPrint) doc.autoPrint();
 }
 
+// ✅ Toujours générer une URL
 const url = getPdfUrl(doc);
-if (isIOS() && isStandalonePWA()) {   openPdfViewer(html); // ← HTML DIRECT   return; }
 
-
-  }
+// ✅ iOS PWA : ouvre ton viewer avec l'URL (PAS "html" inexistant)
+if (isIOS() && isStandalonePWA()) {
+  openPdfViewer(url);
+  return;
 }
+
+// ✅ sinon : ouvrir dans un nouvel onglet (ou iframe, selon ton app)
+window.open(url, "_blank");
+} 
+}
+
+console.log("[SCOPE CHECK] typeof loadCustomTemplates =", typeof loadCustomTemplates);
 
 function openAttestationPreview(attId) {
   const list = getAllAttestations();
@@ -21318,6 +21330,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
