@@ -12333,8 +12333,7 @@ function openPrintable(id, previewOnly) {
     </div>
   `;
   }
-
-  const printWindow = window.open("", "_blank");
+;
 
   const html = `<!DOCTYPE html>
 <html lang="fr">
@@ -12927,15 +12926,33 @@ img.sig-client {
 </body>
 </html>`;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+  // ✅ PWA iPhone : on ouvre l’aperçu dans l’app (overlay) => tu peux fermer
+if (isIOS() && isStandalonePWA()) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
 
-  printWindow.onload = function () {
-    printWindow.focus();
-    if (!previewOnly) {
-      printWindow.print();
-    }
-  };
+  openPdfViewer(url);
+
+  // ménage (évite d'accumuler)
+  setTimeout(() => {
+    try { URL.revokeObjectURL(url); } catch(e){}
+  }, 60000);
+
+  return;
+}
+
+// ✅ Normal (PC / Safari / Android) : nouvel onglet
+const printWindow = window.open("", "_blank");
+printWindow.document.write(html);
+printWindow.document.close();
+
+printWindow.onload = function () {
+  printWindow.focus();
+  if (!previewOnly) {
+    printWindow.print();
+  }
+};
+
 }
 
 // ================== CONTRATS PISCINE / SPA ==================
@@ -19118,16 +19135,32 @@ ${terminationBillingBlockTop}
 </body>
 </html>`;
 
-  const printWindow = window.open("", "_blank");
-  printWindow.document.write(html);
-  printWindow.document.close();
+  // ✅ PWA iPhone : on ouvre l’aperçu dans l’app (overlay) => tu peux fermer
+if (isIOS() && isStandalonePWA()) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
 
-  printWindow.onload = function () {
-    printWindow.focus();
-    if (!previewOnly) {
-      printWindow.print();
-    }
-  };
+  openPdfViewer(url);
+
+  setTimeout(() => {
+    try { URL.revokeObjectURL(url); } catch(e){}
+  }, 60000);
+
+  return;
+}
+
+// ✅ Normal (PC / Safari / Android) : nouvel onglet
+const printWindow = window.open("", "_blank");
+printWindow.document.write(html);
+printWindow.document.close();
+
+printWindow.onload = function () {
+  printWindow.focus();
+  if (!previewOnly) {
+    printWindow.print();
+  }
+};
+
 }
 
 function updateContractClientType(type) {
@@ -21204,6 +21237,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
