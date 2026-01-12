@@ -11111,8 +11111,7 @@ function loadCustomTemplates() {
       priceSyndic: tpl.priceSyndic || 0,
       descParticulier: tpl.descParticulier || "",
       descSyndic: tpl.descSyndic || "",
-    });
-  });
+    }
 }
 
 /**
@@ -21255,6 +21254,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
