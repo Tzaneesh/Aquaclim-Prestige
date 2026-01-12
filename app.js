@@ -19243,7 +19243,6 @@ printWindow.onload = function () {
   }
 };
 
-}
 
 function updateContractClientType(type) {
   // on stocke "particulier" ou "syndic" dans ctClientType
@@ -21317,6 +21316,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
