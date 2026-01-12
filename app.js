@@ -5435,13 +5435,13 @@ function openPdfViewer(url) {
 }
 
 function openExternalLink(url) {
-  // PWA iOS => on "sort" proprement via location (pas d'iframe)
+  // iPhone PWA : JAMAIS window.open
   if (isIOS() && isStandalonePWA()) {
-    window.open(url, "_blank");
-
+    window.location.href = url;
     return;
   }
-  // Sinon nouvel onglet
+
+  // Autres cas
   window.open(url, "_blank");
 }
 
@@ -5467,50 +5467,38 @@ function bindPdfViewerCloseUX() {
 document.addEventListener("DOMContentLoaded", bindPdfViewerCloseUX);
 
 
-
 function closePdfViewer() {
   const overlay = document.getElementById("pdfViewerOverlay");
   const frame = document.getElementById("pdfViewerFrame");
 
-  if (frame) frame.src = "about:blank";
-  if (overlay) overlay.classList.add("hidden");
+  // 1) cacher l’overlay TOUJOURS
+  if (overlay) {
+    overlay.classList.add("hidden");
+    overlay.style.display = "none";
+    overlay.style.pointerEvents = "none";
+  }
 
-  // si on a pushState → back ferme l’état PDF
-  try {
-    if (history.state && history.state.pdfOpen) {
-      history.back();
-      return;
-    }
-  } catch (e) {}
+  // 2) vider l’iframe
+  if (frame) {
+    frame.src = "about:blank";
+    try { frame.contentWindow?.stop?.(); } catch(e){}
+  }
 
-  // fallback : retour vue précédente
+  // 3) retour à l’app
   if (lastAppViewBeforePDF && typeof showView === "function") {
     showView(lastAppViewBeforePDF);
   } else if (typeof showHome === "function") {
     showHome();
   }
-}
 
-// Bind popstate UNE seule fois
-if (!window.__pdfViewerPopstateBound) {
-  window.__pdfViewerPopstateBound = true;
-
-  window.addEventListener("popstate", () => {
-    const overlay = document.getElementById("pdfViewerOverlay");
-    if (overlay && !overlay.classList.contains("hidden")) {
-      // fermeture "soft" (sans reboucler sur history.back)
-      const frame = document.getElementById("pdfViewerFrame");
-      if (frame) frame.src = "about:blank";
-      overlay.classList.add("hidden");
-
-      if (lastAppViewBeforePDF && typeof showView === "function") {
-        showView(lastAppViewBeforePDF);
-      } else if (typeof showHome === "function") {
-        showHome();
-      }
+  // 4) nettoyage history (SANS back)
+  try {
+    if (history.state && history.state.pdfOpen) {
+      history.replaceState(null, "", location.href);
     }
-  });
+  } catch(e){}
 }
+
 
 
 
@@ -21001,6 +20989,44 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+function blockBlankLinksIOS() {
+  document.addEventListener("click", function (e) {
+    if (!isIOS() || !isStandalonePWA()) return;
+
+    const link = e.target.closest("a");
+    if (!link) return;
+
+    const href = link.getAttribute("href");
+    const target = link.getAttribute("target");
+
+    if (href && (target === "_blank" || href.startsWith("http"))) {
+      e.preventDefault();
+      e.stopPropagation();
+      openExternalLink(href);
+    }
+  }, true);
+})();
+
+function forceCloseBtn() {
+  function bind() {
+    const btn = document.getElementById("pdfViewerCloseBtn");
+    if (!btn || btn.__ok) return;
+
+    btn.__ok = true;
+
+    ["click", "touchend"].forEach(evt => {
+      btn.addEventListener(evt, function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        closePdfViewer();
+      }, { passive: false, capture: true });
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", bind);
+  window.addEventListener("load", bind);
+})();
+
 
 /* ======================
    INIT (tu gardes ton window.onload)
@@ -21235,8 +21261,33 @@ document.addEventListener("click", (e) => {
   }
   setTimeout(autoFillDates, 50);
 });
+// ===============================
+// 📱 iOS PWA – gestion bouton RETOUR
+// ===============================
+if (!window.__pdfViewerPopstateBound) {
+  window.__pdfViewerPopstateBound = true;
+
+  window.addEventListener("popstate", () => {
+    const overlay = document.getElementById("pdfViewerOverlay");
+    if (!overlay || overlay.classList.contains("hidden")) return;
+
+    const frame = document.getElementById("pdfViewerFrame");
+    if (frame) frame.src = "about:blank";
+
+    overlay.classList.add("hidden");
+    overlay.style.display = "none";
+    overlay.style.pointerEvents = "none";
+
+    if (lastAppViewBeforePDF && typeof showView === "function") {
+      showView(lastAppViewBeforePDF);
+    } else if (typeof showHome === "function") {
+      showHome();
+    }
+  });
+}
 
 });
+
 
 
 
