@@ -1,3 +1,9 @@
+// ================== PWA / Service Worker ==================
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
 
 
 
@@ -20943,6 +20949,25 @@ function _enableIOSClientDropdown() {
   // ton app continue de bosser avec input.value comme avant
 }
 
+function pwaRefreshNow(){
+  try { if (typeof processSyncQueue === "function") processSyncQueue(); } catch(e){}
+  try { if (typeof refreshHomeStats === "function") refreshHomeStats(); } catch(e){}
+  try { if (typeof loadDocumentsList === "function") loadDocumentsList(); } catch(e){}
+  try { if (typeof computeCA === "function") computeCA(); } catch(e){}
+  try { if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false); } catch(e){}
+  try { if (typeof renderPlanningWeek === "function") renderPlanningWeek(); } catch(e){}
+  try { if (typeof renderPlanningSidebar === "function") renderPlanningSidebar(); } catch(e){}
+  try { if (typeof updateOfflineBadge === "function") updateOfflineBadge(); } catch(e){}
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const bar = document.getElementById("pwaBar");
+  if (!bar) return;
+  if (typeof isStandalonePWA === "function" && isStandalonePWA()) {
+    bar.style.display = "flex";
+  }
+});
+
 
 /* ======================
    INIT (tu gardes ton window.onload)
@@ -21179,6 +21204,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
