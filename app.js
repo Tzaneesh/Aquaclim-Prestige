@@ -13818,14 +13818,6 @@ function applyCompanySettingsToUI(settings) {
   });
 }
 
-
-function moveManualPlanningItemToDate(manualId, newDateISO) {
-  const idx = manualPlanningItems.findIndex((it) => it.id === manualId);
-  if (idx === -1) return;
-
-  manualPlanningItems[idx].date = newDateISO;
-}
-
 async function moveManualPlanningItemToDate(manualId, newDateISO) {
   if (!db) return;
   await db.collection("planningManual").doc(manualId).set({ date: newDateISO }, { merge: true });
@@ -13867,7 +13859,8 @@ function initPlanningDnD() {
     document.body.classList.add("is-dragging");
   },
 
-      onEnd(evt) {
+async onEnd(evt) {
+
         const itemEl = evt.item;
 
         const newDateISO = evt.to.closest(".day-column")?.dataset?.date;
@@ -13878,8 +13871,9 @@ function initPlanningDnD() {
         if (itemEl.classList.contains("visit-manual")) {
           const manualId = itemEl.dataset.manualId;
           if (!manualId) return;
-          moveManualPlanningItemToDate(manualId, newDateISO);
-          return;
+       await moveManualPlanningItemToDate(manualId, newDateISO);
+return;
+
         }
 
         // 🔵 CONTRAT
@@ -21328,6 +21322,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
