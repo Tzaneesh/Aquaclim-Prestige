@@ -20538,21 +20538,6 @@ function checkScheduledInvoices() {
 }
 
 
-function getCurrentAppView() {
-  const views = [
-    "homeView",
-    "listView",
-    "formView",
-    "contractView",
-    "attestationView",
-  ];
-
-  return views.find((id) => {
-    const el = document.getElementById(id);
-    return el && !el.classList.contains("hidden");
-  });
-}
-
 /* ======================
    SIGNATURE ELECTRONIQUE
 ====================== */
@@ -21317,6 +21302,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
