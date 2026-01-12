@@ -1,5 +1,15 @@
 // ✅ prouve que app.js démarre
-try { window.__APP_STARTED__ && window.__APP_STARTED__(); } catch(e) {}
+
+try {
+  if (window.__APP_STARTED__) {
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", window.__APP_STARTED__);
+    } else {
+      window.__APP_STARTED__();
+    }
+  }
+} catch (e) {}
+
 
 
 // ================== PWA / Service Worker ==================
@@ -21318,6 +21328,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
