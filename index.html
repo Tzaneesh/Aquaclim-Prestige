@@ -4,6 +4,48 @@
   <meta charset="UTF-8" />
  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- ✅ DEBUG iPhone (à enlever après) -->
+  <script>
+    (function () {
+      var bar = document.createElement("div");
+      bar.id = "bootBar";
+      bar.textContent = "BOOT: index.html OK — app.js pas encore lancé…";
+      bar.style.cssText =
+        "position:fixed;z-index:999999;top:0;left:0;right:0;padding:8px;background:#111;color:#fff;font:12px monospace;";
+      document.addEventListener("DOMContentLoaded", function () {
+        document.body.appendChild(bar);
+      });
+
+      function log(msg) {
+        var pre = document.getElementById("iosDebug");
+        if (!pre) {
+          pre = document.createElement("pre");
+          pre.id = "iosDebug";
+          pre.style.cssText =
+            "position:fixed;z-index:999999;top:38px;left:0;right:0;max-height:55%;overflow:auto;background:#000;color:#0f0;padding:10px;white-space:pre-wrap;font:12px monospace;";
+          document.addEventListener("DOMContentLoaded", function () {
+            document.body.appendChild(pre);
+          });
+        }
+        pre.textContent += msg + "\n";
+      }
+
+      window.addEventListener("error", function (e) {
+        log("❌ JS ERROR: " + (e.message || "unknown"));
+        log((e.filename || "") + ":" + (e.lineno || "") + ":" + (e.colno || ""));
+      });
+
+      window.addEventListener("unhandledrejection", function (e) {
+        log("❌ PROMISE REJECTION: " + String(e.reason && (e.reason.stack || e.reason.message || e.reason)));
+      });
+
+      window.__APP_STARTED__ = function () {
+        var b = document.getElementById("bootBar");
+        if (b) b.textContent = "✅ BOOT: app.js lancé";
+      };
+    })();
+  </script>
+
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a74d9">
@@ -2018,9 +2060,13 @@
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 
 <!-- ✅ App JS EN DERNIER -->
-<script src="app.js"></script>
+<script defer src="./app.js"
+  onerror="document.getElementById('bootBar').textContent='❌ app.js: chargement échoué (404/MIME/CSP)';">
+</script>
+
 </body>
 </html>
+
 
 
 
