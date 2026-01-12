@@ -11103,6 +11103,7 @@ function loadCustomTemplates() {
 
   list.forEach((tpl) => {
     if (!tpl || !tpl.kind || !tpl.label) return;
+
     PRESTATION_TEMPLATES.push({
       label: tpl.label,
       kind: tpl.kind,
@@ -11111,7 +11112,8 @@ function loadCustomTemplates() {
       priceSyndic: tpl.priceSyndic || 0,
       descParticulier: tpl.descParticulier || "",
       descSyndic: tpl.descSyndic || "",
-    }
+    });
+  });
 }
 
 /**
@@ -21254,6 +21256,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
