@@ -13818,11 +13818,6 @@ function applyCompanySettingsToUI(settings) {
   });
 }
 
-async function moveManualPlanningItemToDate(manualId, newDateISO) {
-  if (!db) return;
-  await db.collection("planningManual").doc(manualId).set({ date: newDateISO }, { merge: true });
-}
-
 function initPlanningDnD() {
   // ✅ Sortable pas chargé => pas de drag
   if (typeof Sortable === "undefined") {
@@ -21322,6 +21317,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
