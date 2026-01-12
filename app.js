@@ -2182,7 +2182,7 @@ function showAttestations() {
     loadRapportsList();
   }
 }
-
+window.showAttestations = showAttestations;
 // ================== VUE PARAMÈTRES ==================
 
 function showSettings() {
@@ -21322,6 +21322,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
