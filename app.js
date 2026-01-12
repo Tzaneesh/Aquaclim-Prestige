@@ -21047,6 +21047,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  document.addEventListener("DOMContentLoaded", bind);
+  window.addEventListener("load", bind);
+})();
+
+
   /* =====================================================
    ✅ INIT UNIQUE – COMPATIBLE type="module"
    ❌ PAS de window.onload
@@ -21250,6 +21255,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
