@@ -21247,22 +21247,14 @@ if (!window.__pdfViewerPopstateBound) {
     const overlay = document.getElementById("pdfViewerOverlay");
     if (!overlay || overlay.classList.contains("hidden")) return;
 
-    const frame = document.getElementById("pdfViewerFrame");
-    if (frame) frame.src = "about:blank";
-
-    overlay.classList.add("hidden");
-    overlay.style.display = "none";
-    overlay.style.pointerEvents = "none";
-
-    if (lastAppViewBeforePDF && typeof showView === "function") {
-      showView(lastAppViewBeforePDF);
-    } else if (typeof showHome === "function") {
-      showHome();
-    }
+    // ✅ maintenant on ferme proprement (plus d'iframe)
+    closePdfViewer();
   });
 }
 
+
 });
+
 
 
 
