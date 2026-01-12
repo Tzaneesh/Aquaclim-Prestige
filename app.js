@@ -1159,10 +1159,17 @@ db.collection("contractPlanningOverrides").onSnapshot((snap) => {
   if (!window.__netListenersBound) {
     window.__netListenersBound = true;
 
-    window.addEventListener("online", () => {
-      updateOfflineBadge();
-      if (typeof processSyncQueue === "function") processSyncQueue();
-    });
+window.addEventListener("online", async () => {
+  updateOfflineBadge();
+  try {
+    if (typeof processSyncQueue === "function") {
+      await processSyncQueue();
+    }
+  } catch(e) {
+    console.error("Erreur resync online:", e);
+  }
+});
+
 
     window.addEventListener("offline", () => {
       updateOfflineBadge();
@@ -21172,6 +21179,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
