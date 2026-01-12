@@ -3774,14 +3774,16 @@ body.is-dragging .visit-entry {
   z-index: 2;
 }
 
-#pdfViewerFrame {
+/* ✅ Remplace l’ancien iframe */
+#pdfViewerContent{
   width: 100%;
   height: 100%;
-  border: none;
   background: #fff;
-
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
+
+
 
 
 
