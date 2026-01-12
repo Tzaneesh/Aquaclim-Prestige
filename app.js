@@ -21047,25 +21047,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  document.addEventListener("DOMContentLoaded", bind);
-  window.addEventListener("load", bind);
-})();
-
+  /* =====================================================
+   ✅ INIT UNIQUE – COMPATIBLE type="module"
+   ❌ PAS de window.onload
+   ❌ PAS de double DOMContentLoaded
+===================================================== */
 
 /* ======================
-   INIT (tu gardes ton window.onload)
+   NET STATE
 ====================== */
 
-window.onload = function () {
+window.addEventListener("online", () => {
+  console.log("[NET] Reconnexion détectée");
+  updateOfflineBadge();
+  if (!db) {
+    initFirebase()
+      .then(processSyncQueue)
+      .catch(updateOfflineBadge);
+  } else {
+    processSyncQueue();
+  }
+});
+
+window.addEventListener("offline", () => {
+  console.log("[NET] Passage hors-ligne");
+  updateOfflineBadge();
+});
+
+/* ======================
+   INIT APP (ex-window.onload)
+====================== */
+
+function initApp() {
   loadCustomTemplates();
   loadCustomTexts();
-
   applyCompanySettingsToUI();
 
   setTVA(0);
   if (typeof refreshClientDatalist === "function") refreshClientDatalist();
   if (typeof loadYearFilter === "function") loadYearFilter();
-
   if (typeof switchListType === "function") switchListType("devis");
   if (typeof updateButtonColors === "function") updateButtonColors();
   if (typeof showHome === "function") showHome();
@@ -21085,23 +21105,18 @@ window.onload = function () {
     subjectInput.dataset.boundManualFlag = "1";
   }
 
-initFirebase().then(() => {
-  if (typeof refreshMicroTVAState === "function") {
-    refreshMicroTVAState(false);
-  }
-});
+  initFirebase().then(() => {
+    if (typeof refreshMicroTVAState === "function") {
+      refreshMicroTVAState(false);
+    }
+    if (navigator.onLine) processSyncQueue();
+  });
 
   if (typeof initContractsUI === "function") initContractsUI();
 
-  // ===============================
-  // ✅ CLEAN STARTUP (PROPRE)
-  // ===============================
   try { _enableIOSClientDropdown(); } catch(e){}
-
-  // ✅ 1) Nettoie les vieux items cassés
   try { sanitizeManualPlanningItems(); } catch(e){}
 
-  // ✅ 2) Supprime les doublons MAIS une seule fois (migration)
   try {
     const key = "planning_migration_v1_done";
     if (localStorage.getItem(key) !== "1") {
@@ -21110,199 +21125,131 @@ initFirebase().then(() => {
     }
   } catch(e){}
 
-  // ✅ 3) Sidebar
-  try { renderPlanningSidebar(); } catch(e){ console.error("SIDEBAR ERROR:", e); }
-
-
-};
+  try { renderPlanningSidebar(); } catch(e){}
+}
 
 /* ======================
-   NET STATE
-====================== */
-
-window.addEventListener("online", () => {
-  console.log("[NET] Reconnexion détectée");
-  updateOfflineBadge();
-  if (!db) {
-    initFirebase()
-      .then(processSyncQueue)
-      .catch(() => {
-        updateOfflineBadge();
-      });
-  } else {
-    processSyncQueue();
-  }
-});
-
-window.addEventListener("offline", () => {
-  console.log("[NET] Passage hors-ligne");
-  updateOfflineBadge();
-});
-
-/* ======================
-   ✅ UN SEUL DOMContentLoaded
+   🚀 POINT D’ENTRÉE UNIQUE
 ====================== */
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Anti double-bind (si tu recolle/merge)
   if (document.body.dataset.domReadyBound === "1") return;
   document.body.dataset.domReadyBound = "1";
 
-  // Badge + sync queue
   updateOfflineBadge();
-  if (navigator.onLine && db) processSyncQueue();
 
-  // Rapport inputs
-  const rapPhotos = document.getElementById("rapPhotosInput");
-  if (rapPhotos) rapPhotos.addEventListener("change", _onRapportPhotosChange);
+  // 🔥 INIT PRINCIPAL
+  initApp();
 
-  const rapFiles = document.getElementById("rapFilesInput");
-  if (rapFiles) rapFiles.addEventListener("change", _onRapportFilesChange);
+  // ======================
+  // UI / EVENTS
+  // ======================
 
-  // Dashboard + followup
+  document.getElementById("rapPhotosInput")
+    ?.addEventListener("change", _onRapportPhotosChange);
+
+  document.getElementById("rapFilesInput")
+    ?.addEventListener("change", _onRapportFilesChange);
+
   if (typeof refreshHomeStats === "function") refreshHomeStats();
   if (typeof renderClientsFollowup === "function") renderClientsFollowup();
-if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
 
-// ===============================
-// ✅ TVA – BIND UNIQUE (clic user)
-// ===============================
-if (!window.__tvaUiBound) {
-  window.__tvaUiBound = true;
+  /* ===== TVA ===== */
+  if (!window.__tvaUiBound) {
+    window.__tvaUiBound = true;
 
-  // Radios devis/facture
-  document.getElementById("tva0")?.addEventListener("change", () => {
-    if (document.getElementById("tva0")?.checked) setTVA(0, { showAlert: true });
-  });
-  document.getElementById("tva20")?.addEventListener("change", () => {
-    if (document.getElementById("tva20")?.checked) setTVA(20, { showAlert: true });
-  });
+    document.getElementById("tva0")
+      ?.addEventListener("change", () => setTVA(0, { showAlert: true }));
 
-  // Radios contrat
-  document.getElementById("ctTva0")?.addEventListener("change", () => {
-    if (document.getElementById("ctTva0")?.checked) setTVA(0, { showAlert: true });
-  });
-  document.getElementById("ctTva20")?.addEventListener("change", () => {
-    if (document.getElementById("ctTva20")?.checked) setTVA(20, { showAlert: true });
-  });
+    document.getElementById("tva20")
+      ?.addEventListener("change", () => setTVA(20, { showAlert: true }));
 
-  // Si jamais tu as aussi un <select id="tvaRate"> utilisé quelque part :
-  document.getElementById("tvaRate")?.addEventListener("change", (e) => {
-    // ⚠️ seulement si c'est un vrai select visible manipulé par l'utilisateur
-    // sinon tu peux supprimer ce listener
-    const v = Number(e.target.value) || 0;
-    setTVA(v, { showAlert: true });
-  });
-}
+    document.getElementById("ctTva0")
+      ?.addEventListener("change", () => setTVA(0, { showAlert: true }));
 
-
-
-  // Double clic fiche client
-  const docClientInput = document.getElementById("clientName");
-  const ctClientInput = document.getElementById("ctClientName");
-
-  if (docClientInput) {
-    docClientInput.addEventListener("dblclick", () =>
-      openClientSheet(docClientInput.value),
-    );
-  }
-  if (ctClientInput) {
-    ctClientInput.addEventListener("dblclick", () =>
-      openClientSheet(ctClientInput.value),
-    );
+    document.getElementById("ctTva20")
+      ?.addEventListener("change", () => setTVA(20, { showAlert: true }));
   }
 
-// =====================================
-// SIGNATURE POPUP – BIND UNIQUE (ROBUSTE)
-// =====================================
-if (!window.__signaturePopupBound) {
-  window.__signaturePopupBound = true;
+  /* ===== Double clic client ===== */
+  document.getElementById("clientName")
+    ?.addEventListener("dblclick", (e) =>
+      openClientSheet(e.target.value)
+    );
 
-  // Ouvre la popup quand on clique "Bon pour accord"
+  document.getElementById("ctClientName")
+    ?.addEventListener("dblclick", (e) =>
+      openClientSheet(e.target.value)
+    );
+
+  /* ===== Signature ===== */
+  if (!window.__signaturePopupBound) {
+    window.__signaturePopupBound = true;
+
+    document.addEventListener("click", (e) => {
+      const el = e.target;
+      if (!el) return;
+
+      if (
+        el.id === "approveDevis" ||
+        el.closest?.("#approveDevis") ||
+        el.closest?.('label[for="approveDevis"]')
+      ) {
+        openSignaturePopup();
+      }
+
+      if (el.id === "signatureClear") signaturePad?.clear();
+
+      if (el.id === "signatureClose") {
+        window.currentContractSignatureMode = false;
+        document.getElementById("signaturePopup")?.classList.add("hidden");
+      }
+
+      if (el.id === "signatureValidate") {
+        if (!signaturePad || signaturePad.isEmpty()) {
+          showConfirmDialog?.({
+            title: "Signature manquante",
+            message: "Merci de signer avant de valider.",
+            confirmLabel: "OK",
+            variant: "warning",
+            icon: "✍️",
+          });
+          return;
+        }
+
+        const dataUrl = signaturePad.toDataURL("image/png");
+
+        if (window.currentContractSignatureMode) {
+          saveContractSignature(dataUrl);
+          window.currentContractSignatureMode = false;
+        } else {
+          saveSignatureToCurrentDocument(dataUrl);
+        }
+
+        document.getElementById("signaturePopup")?.classList.add("hidden");
+      }
+    });
+  }
+
+  /* ===== Auto fill dates ===== */
   document.addEventListener("click", (e) => {
-    const el = e.target;
-    if (!el) return;
-
-    const approve =
-      el.id === "approveDevis" ||
-      el.closest?.("#approveDevis") ||
-      el.closest?.('label[for="approveDevis"]');
-
-    if (approve) openSignaturePopup();
-  });
-
-  // Clear
-  document.addEventListener("click", (e) => {
-    const el = e.target;
-    if (el && el.id === "signatureClear") {
-      signaturePad?.clear();
-    }
-  });
-
-  // Close
-  document.addEventListener("click", (e) => {
-    const el = e.target;
-    if (el && el.id === "signatureClose") {
-      window.currentContractSignatureMode = false;
-      document.getElementById("signaturePopup")?.classList.add("hidden");
-    }
-  });
-
-  // Validate
-  document.addEventListener("click", (e) => {
-    const el = e.target;
-    if (!el || el.id !== "signatureValidate") return;
-
-    if (!signaturePad || signaturePad.isEmpty()) {
-      showConfirmDialog?.({
-        title: "Signature manquante",
-        message: "Merci de signer dans la zone prévue avant de valider.",
-        confirmLabel: "OK",
-        variant: "warning",
-        icon: "✍️",
-      });
+    const popup = document.getElementById("signaturePopup");
+    if (popup && !popup.classList.contains("hidden") && popup.contains(e.target)) {
       return;
     }
-
-    const dataUrl = signaturePad.toDataURL("image/png");
-
-    if (window.currentContractSignatureMode) {
-      saveContractSignature(dataUrl);
-      window.currentContractSignatureMode = false;
-    } else {
-      saveSignatureToCurrentDocument(dataUrl);
-    }
-
-    document.getElementById("signaturePopup")?.classList.add("hidden");
+    setTimeout(autoFillDates, 50);
   });
-}
 
-// Auto-fill dates after any click (sans casser la popup signature)
-document.addEventListener("click", (e) => {
-  const popup = document.getElementById("signaturePopup");
-  if (popup && !popup.classList.contains("hidden") && popup.contains(e.target)) {
-    return; // ignore les clics dans la popup
+  /* ===== iOS back ===== */
+  if (!window.__pdfViewerPopstateBound) {
+    window.__pdfViewerPopstateBound = true;
+    window.addEventListener("popstate", () => {
+      const overlay = document.getElementById("pdfViewerOverlay");
+      if (!overlay || overlay.classList.contains("hidden")) return;
+      closePdfViewer();
+    });
   }
-  setTimeout(autoFillDates, 50);
 });
-// ===============================
-// 📱 iOS PWA – gestion bouton RETOUR
-// ===============================
-if (!window.__pdfViewerPopstateBound) {
-  window.__pdfViewerPopstateBound = true;
-
-  window.addEventListener("popstate", () => {
-    const overlay = document.getElementById("pdfViewerOverlay");
-    if (!overlay || overlay.classList.contains("hidden")) return;
-
-    // ✅ maintenant on ferme proprement (plus d'iframe)
-    closePdfViewer();
-  });
-}
-
-
-});
-
 
 
 
