@@ -16147,22 +16147,25 @@ async function syncContractsWithFirestore() {
           if (data && data.id) cloudContracts.push(data);
         });
 
-        console.log(
-          "[Contracts] Live depuis Firestore :",
-          cloudContracts.length,
-          "contrats",
-        );
+        console.log("[Contracts] Live depuis Firestore :", cloudContracts.length, "contrats");
 
         // ✅ Firestore = vérité -> on écrase le local
         saveContracts(cloudContracts);
 
-        // 🔄 Si on est déjà sur l'onglet contrats, on recharge la liste
-        if (
-          typeof loadContractsList === "function" &&
-          currentListType === "contrat"
-        ) {
-          loadContractsList();
+        // ✅ 1) Mets à jour les badges/alertes (même si pas dans l’onglet)
+        try { if (typeof updateContractsAlert === "function") updateContractsAlert(); } catch(e) {}
+
+        // ✅ 2) Si l’onglet contrats est ouvert -> recharge la liste
+        if (typeof loadContractsList === "function" && currentListType === "contrat") {
+          try { loadContractsList(); } catch(e) {}
         }
+
+        // ✅ 3) Home / stats (si tu es sur l’accueil)
+        try { if (typeof refreshHomeStats === "function") refreshHomeStats(); } catch(e) {}
+
+        // ✅ 4) Planning (si tes contrats impactent planning / sidebar)
+        try { if (typeof renderPlanningWeek === "function") renderPlanningWeek(); } catch(e) {}
+        try { if (typeof renderPlanningSidebar === "function") renderPlanningSidebar(); } catch(e) {}
 
         updateOfflineBadge();
       },
@@ -16174,6 +16177,7 @@ async function syncContractsWithFirestore() {
     console.error("Erreur sync contrats Firestore :", e);
   }
 }
+
 
 
 // ----- Firestore clients -----
@@ -20921,16 +20925,20 @@ function _enableIOSClientDropdown() {
   // Remplit la liste iPhone
   _fillClientSelectIOS();
 
-  // iPhone : on cache l'input, on montre le select
-  input.style.display = "none";
+  // ✅ IMPORTANT : on NE CACHE PLUS l'input → tu peux taper à la main
+  input.style.display = "block";
   sel.style.display = "block";
 
-  // Quand tu choisis => on copie dans l'input (car ton code bosse avec l'input)
+  // Quand tu choisis dans la liste => on copie dans l'input
   sel.onchange = () => {
     input.value = sel.value || "";
     if (typeof onClientNameChange === "function") onClientNameChange();
   };
+
+  // (optionnel) si tu tapes à la main, on ne bloque rien
+  // ton app continue de bosser avec input.value comme avant
 }
+
 
 /* ======================
    INIT (tu gardes ton window.onload)
@@ -21167,6 +21175,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
