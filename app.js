@@ -948,6 +948,8 @@ let contractPlanningOverrides = [];
 // ================== OFFLINE / SYNC QUEUE ==================
 
 const SYNC_QUEUE_KEY = "acp_sync_queue_v1";
+const DEVICE_ID_KEY = "acp_device_id_v1";
+
 
 function getSyncQueue() {
   try {
@@ -1022,6 +1024,8 @@ async function processSyncQueue() {
   }
 
   let queue = getSyncQueue();
+  const queueSnapshot = queue.slice(); // copie pour backup
+
   if (!queue.length) {
     updateOfflineBadge();
     return;
@@ -1045,6 +1049,30 @@ async function processSyncQueue() {
   }
 
   saveSyncQueue(stillPending);
+  // ✅ Backup cloud de la queue (audit) quand on est online
+try {
+  let deviceId = localStorage.getItem(DEVICE_ID_KEY);
+  if (!deviceId) {
+    deviceId = "dev-" + Date.now() + "-" + Math.floor(Math.random() * 100000);
+    localStorage.setItem(DEVICE_ID_KEY, deviceId);
+  }
+
+  // On log seulement si on avait des ops
+  if (queueSnapshot.length) {
+    const logId = deviceId + "-" + Date.now();
+    await db.collection("syncOutbox").doc(logId).set({
+      id: logId,
+      deviceId,
+      createdAt: new Date().toISOString(),
+      totalOps: queueSnapshot.length,
+      failedOps: stillPending.length,
+      ops: queueSnapshot,
+    }, { merge: true });
+  }
+} catch (e) {
+  console.warn("Backup syncOutbox impossible:", e);
+}
+
   updateOfflineBadge();
 }
 
@@ -1120,6 +1148,8 @@ db.collection("contractPlanningOverrides").onSnapshot((snap) => {
   try { renderPlanningWeek(); } catch(e) {}
 });
 
+  
+
 
   // ✅ Bind online/offline listeners une seule fois
   if (!window.__netListenersBound) {
@@ -1169,6 +1199,29 @@ db.collection("contractPlanningOverrides").onSnapshot((snap) => {
     if (typeof syncContractsWithFirestore === "function") {
       await syncContractsWithFirestore();
     }
+// =================== ATTESTATIONS (LIVE) ===================
+db.collection("attestations").onSnapshot((snap) => {
+  const arr = [];
+  snap.forEach((d) => arr.push(d.data()));
+
+  // Firestore = vérité -> on écrase le local
+  localStorage.setItem("attestations", JSON.stringify(arr));
+
+  try { if (typeof loadAttestationsList === "function") loadAttestationsList(); } catch(e) {}
+  updateOfflineBadge();
+});
+
+// =================== RAPPORTS (LIVE) ===================
+db.collection("rapports").onSnapshot((snap) => {
+  const arr = [];
+  snap.forEach((d) => arr.push(d.data()));
+
+  // Firestore = vérité -> on écrase le local
+  localStorage.setItem("rapports", JSON.stringify(arr));
+
+  try { if (typeof loadRapportsList === "function") loadRapportsList(); } catch(e) {}
+  updateOfflineBadge();
+});
 
     // 3️⃣ LIVE CLIENTS
     if (typeof syncClientsWithFirestore === "function") {
@@ -4552,8 +4605,40 @@ function getAllAttestations() {
 }
 
 function saveAttestations(list) {
-  localStorage.setItem("attestations", JSON.stringify(list));
+  localStorage.setItem("attestations", JSON.stringify(list || []));
+
+  // ✅ push Firestore (ou queue si offline)
+  if (!db || !navigator.onLine) {
+    (list || []).forEach((att) => {
+      if (!att || !att.id) return;
+      enqueueSync({
+        collection: "attestations",
+        action: "set",
+        docId: att.id,
+        data: att,
+      });
+    });
+    updateOfflineBadge();
+    return;
+  }
+
+  // online -> envoi direct
+  (list || []).forEach((att) => {
+    if (!att || !att.id) return;
+    db.collection("attestations").doc(att.id).set(att, { merge: true }).catch((e)=> {
+      console.error("Erreur Firestore attestation set:", e);
+      enqueueSync({
+        collection: "attestations",
+        action: "set",
+        docId: att.id,
+        data: att,
+      });
+    });
+  });
+
+  processSyncQueue();
 }
+
 
 function saveAttestationOnly() {
   saveAttestationFromForm();
@@ -4734,8 +4819,40 @@ function getAllRapports() {
 }
 
 function saveRapports(list) {
-  localStorage.setItem("rapports", JSON.stringify(list));
+  localStorage.setItem("rapports", JSON.stringify(list || []));
+
+  // ✅ push Firestore (ou queue si offline)
+  if (!db || !navigator.onLine) {
+    (list || []).forEach((r) => {
+      if (!r || !r.id) return;
+      enqueueSync({
+        collection: "rapports",
+        action: "set",
+        docId: r.id,
+        data: r,
+      });
+    });
+    updateOfflineBadge();
+    return;
+  }
+
+  // online -> envoi direct
+  (list || []).forEach((r) => {
+    if (!r || !r.id) return;
+    db.collection("rapports").doc(r.id).set(r, { merge: true }).catch((e)=> {
+      console.error("Erreur Firestore rapport set:", e);
+      enqueueSync({
+        collection: "rapports",
+        action: "set",
+        docId: r.id,
+        data: r,
+      });
+    });
+  });
+
+  processSyncQueue();
 }
+
 
 function _fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
@@ -5723,13 +5840,34 @@ function deleteRapport(rapId) {
     cancelLabel: "Annuler",
     variant: "danger",
     icon: "🗑️",
-    onConfirm: () => {
-      const list = getAllRapports().filter((r) => r.id !== rapId);
-      saveRapports(list);
-      loadRapportsList();
-    },
+onConfirm: () => {
+  const list = getAllRapports().filter((r) => r.id !== rapId);
+  saveRapports(list);
+  loadRapportsList();
+
+  // ✅ delete Firestore (ou queue)
+  if (!db || !navigator.onLine) {
+    enqueueSync({
+      collection: "rapports",
+      action: "delete",
+      docId: rapId,
+    });
+    updateOfflineBadge();
+    return;
+  }
+
+  db.collection("rapports").doc(rapId).delete().catch((e) => {
+    console.error("Erreur Firestore delete rapport:", e);
+    enqueueSync({
+      collection: "rapports",
+      action: "delete",
+      docId: rapId,
+    });
   });
-}
+
+  processSyncQueue();
+},
+
 
 function openRapportPopupForEdit(rapportId) {
   const list = getAllRapports();
@@ -9530,13 +9668,34 @@ function deleteAttestation(attId) {
     cancelLabel: "Annuler",
     variant: "danger",
     icon: "🗑️",
-    onConfirm: () => {
-      const list = getAllAttestations().filter((a) => a.id !== attId);
-      saveAttestations(list);
-      loadAttestationsList();
-    },
+onConfirm: () => {
+  const list = getAllAttestations().filter((a) => a.id !== attId);
+  saveAttestations(list);
+  loadAttestationsList();
+
+  // ✅ delete Firestore (ou queue)
+  if (!db || !navigator.onLine) {
+    enqueueSync({
+      collection: "attestations",
+      action: "delete",
+      docId: attId,
+    });
+    updateOfflineBadge();
+    return;
+  }
+
+  db.collection("attestations").doc(attId).delete().catch((e) => {
+    console.error("Erreur Firestore delete attestation:", e);
+    enqueueSync({
+      collection: "attestations",
+      action: "delete",
+      docId: attId,
+    });
   });
-}
+
+  processSyncQueue();
+},
+
 
 function openAttestationForInvoice(doc) {
   if (!doc) return;
@@ -20992,6 +21151,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
