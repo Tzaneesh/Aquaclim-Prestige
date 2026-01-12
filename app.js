@@ -1238,8 +1238,9 @@ db.collection("rapports").onSnapshot((snap) => {
   // Badge + queue
   updateOfflineBadge();
   if (navigator.onLine && typeof processSyncQueue === "function") {
-    processSyncQueue();
-  }
+  await processSyncQueue();
+}
+
 }
 
 
@@ -21171,6 +21172,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
