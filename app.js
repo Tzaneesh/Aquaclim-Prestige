@@ -1,3 +1,7 @@
+// ✅ prouve que app.js démarre
+try { window.__APP_STARTED__ && window.__APP_STARTED__(); } catch(e) {}
+
+
 // ================== PWA / Service Worker ==================
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -21314,6 +21318,7 @@ if (!window.__pdfViewerPopstateBound) {
 
 
 });
+
 
 
 
