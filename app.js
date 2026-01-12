@@ -13048,20 +13048,6 @@ if (isIOS() && isStandalonePWA()) {
   return;
 }
 
-// ✅ Normal (PC / Safari / Android) : nouvel onglet
-const printWindow = window.open("", "_blank");
-printWindow.document.write(html);
-printWindow.document.close();
-
-printWindow.onload = function () {
-  printWindow.focus();
-  if (!previewOnly) {
-    printWindow.print();
-  }
-};
-
-
-
 // ================== CONTRATS PISCINE / SPA ==================
 
 // --- Statuts de contrat ---
@@ -21331,6 +21317,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
