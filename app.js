@@ -5395,43 +5395,27 @@ function getCurrentAppView() {
   });
 }
 
-function openPdfViewer(url) {
-  const ios = isIOS();
-  const pwa = isStandalonePWA();
+// ===============================
+// 📱 iOS PWA – aperçu SAFE (SANS iframe)
+// ===============================
 
-  // ✅ PC / Android => comportement inchangé : nouvel onglet
-  if (!ios) {
-    window.open(url, "_blank");
-    return;
-  }
-
-  // ✅ Safari iPhone (pas PWA) => nouvel onglet
-  if (ios && !pwa) {
-    window.open(url, "_blank");
-    return;
-  }
-
-  // ✅ PWA iOS => overlay / iframe ONLY (JAMAIS window.open)
+function openPdfViewer(html) {
   const overlay = document.getElementById("pdfViewerOverlay");
-  const frame = document.getElementById("pdfViewerFrame");
+  const content = document.getElementById("pdfViewerContent");
 
-  if (!overlay || !frame) {
-    alert("Aperçu PDF indisponible (viewer manquant). Ouvre depuis Safari.");
+  if (!overlay || !content) {
+    alert("Aperçu indisponible");
     return;
   }
 
   lastAppViewBeforePDF = getCurrentAppView();
 
-  frame.src = "about:blank";
-  setTimeout(() => {
-    frame.src = url;
-    overlay.classList.remove("hidden");
-    overlay.scrollTop = 0;
-  }, 30);
+  // 🔥 INJECTION DIRECTE (AUCUNE URL)
+  content.innerHTML = html;
 
-  try {
-    history.pushState({ pdfOpen: true }, "", location.href);
-  } catch (e) {}
+  overlay.classList.remove("hidden");
+  overlay.style.display = "flex";
+  overlay.style.pointerEvents = "auto";
 }
 
 function openExternalLink(url) {
@@ -5466,37 +5450,23 @@ function bindPdfViewerCloseUX() {
 
 document.addEventListener("DOMContentLoaded", bindPdfViewerCloseUX);
 
-
 function closePdfViewer() {
   const overlay = document.getElementById("pdfViewerOverlay");
-  const frame = document.getElementById("pdfViewerFrame");
+  const content = document.getElementById("pdfViewerContent");
 
-  // 1) cacher l’overlay TOUJOURS
+  if (content) content.innerHTML = "";
+
   if (overlay) {
     overlay.classList.add("hidden");
     overlay.style.display = "none";
     overlay.style.pointerEvents = "none";
   }
 
-  // 2) vider l’iframe
-  if (frame) {
-    frame.src = "about:blank";
-    try { frame.contentWindow?.stop?.(); } catch(e){}
-  }
-
-  // 3) retour à l’app
   if (lastAppViewBeforePDF && typeof showView === "function") {
     showView(lastAppViewBeforePDF);
   } else if (typeof showHome === "function") {
     showHome();
   }
-
-  // 4) nettoyage history (SANS back)
-  try {
-    if (history.state && history.state.pdfOpen) {
-      history.replaceState(null, "", location.href);
-    }
-  } catch(e){}
 }
 
 
@@ -5811,7 +5781,7 @@ if (mode === "print" && !isIOS()) {
 }
 
 const url = getPdfUrl(doc);
-openPdfViewer(url);
+if (isIOS() && isStandalonePWA()) {   openPdfViewer(html); // ← HTML DIRECT   return; }
 
 
   }
@@ -9952,7 +9922,7 @@ if (mode === "print" && !isIOS()) {
 }
 
 const url = getPdfUrl(doc);
-openPdfViewer(url);
+if (isIOS() && isStandalonePWA()) {   openPdfViewer(html); // ← HTML DIRECT   return; }
 
 
   }
@@ -12916,10 +12886,9 @@ img.sig-client {
 
   // ✅ PWA iPhone : on ouvre l’aperçu dans l’app (overlay) => tu peux fermer
 if (isIOS() && isStandalonePWA()) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-
-  openPdfViewer(url);
+  openPdfViewer(html); // ← HTML DIRECT
+  return;
+}
 
   // ménage (évite d'accumuler)
   setTimeout(() => {
@@ -19125,10 +19094,10 @@ ${terminationBillingBlockTop}
 
   // ✅ PWA iPhone : on ouvre l’aperçu dans l’app (overlay) => tu peux fermer
 if (isIOS() && isStandalonePWA()) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
+  openPdfViewer(html); // ← HTML DIRECT
+  return;
+}
 
-  openPdfViewer(url);
 
   setTimeout(() => {
     try { URL.revokeObjectURL(url); } catch(e){}
@@ -21294,6 +21263,7 @@ if (!window.__pdfViewerPopstateBound) {
 }
 
 });
+
 
 
 
