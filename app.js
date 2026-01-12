@@ -10063,18 +10063,19 @@ if (mode === "print" && !isIOS()) {
 // ✅ Toujours générer une URL
 const url = getPdfUrl(doc);
 
-// ✅ iOS PWA : ouvre ton viewer avec l'URL (PAS "html" inexistant)
+// ✅ iOS PWA : ouvre ton viewer avec l'URL
 if (isIOS() && isStandalonePWA()) {
   openPdfViewer(url);
   return;
 }
 
-// ✅ sinon : ouvrir dans un nouvel onglet (ou iframe, selon ton app)
+// ✅ sinon : ouvrir dans un nouvel onglet
 window.open(url, "_blank");
-} 
-}
+} // <-- (A) ferme le else / bloc sortie
 
-console.log("[SCOPE CHECK] typeof loadCustomTemplates =", typeof loadCustomTemplates);
+} // <-- (B) ferme la fonction generatePDFAttestationFromRecord
+
+
 
 function openAttestationPreview(attId) {
   const list = getAllAttestations();
@@ -21330,6 +21331,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
