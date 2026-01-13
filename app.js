@@ -18927,6 +18927,8 @@ ${terminationBillingBlockTop}
     <p>
       Le client informe de tout changement d’usage (location, forte fréquentation),
       travaux, panne, fuite ou modification technique.
+      Le client garantit le bon fonctionnement de la filtration (pompe, horloge, vannes)
+      et un temps de filtration suffisant.
     </p>
 
     <p class="label" style="margin-top:4px;">5.6 Obligation de moyens</p>
@@ -18936,80 +18938,131 @@ ${terminationBillingBlockTop}
       d’un usage intensif ou d’un matériel défaillant et peut nécessiter des interventions hors contrat.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.7 Installations non conformes</p>
+    <p class="label" style="margin-top:4px;">5.7 Absence d’obligation de résultat</p>
+    <p>
+      Le prestataire n’est tenu à aucune obligation de résultat.
+      La qualité de l’eau et le bon fonctionnement de l’installation dépendent notamment
+      de facteurs indépendants de son intervention : conditions météorologiques, usage du bassin,
+      qualité de l’eau de remplissage, état et âge du matériel, réglages automatiques,
+      interventions de tiers ou décisions du client.
+      Aucun engagement de résultat permanent (eau cristalline, absence totale d’algues,
+      stabilité chimique continue) ne peut être garanti dans le cadre du présent contrat.
+    </p>
+
+    <p class="label" style="margin-top:4px;">5.8 Limitation de responsabilité</p>
+    <p>
+      La responsabilité du prestataire est strictement limitée aux dommages directs,
+      prouvés et imputables à une faute caractérisée dans l’exécution de la prestation.
+      En tout état de cause, la responsabilité financière du prestataire ne pourra excéder
+      le montant total des sommes effectivement encaissées au titre du présent contrat
+      sur l’année contractuelle en cours.
+      Sont exclus tous dommages indirects, pertes d’exploitation, pertes d’usage,
+      préjudices commerciaux ou frais annexes.
+    </p>
+
+    <p class="label" style="margin-top:4px;">5.9 Installations non conformes</p>
     <p>
       En cas d’installation dangereuse ou non conforme (fuite importante, électricité défectueuse,
       surchauffe moteur…), les interventions peuvent être suspendues jusqu’à remise en conformité.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.8 Locations saisonnières & usage intensif</p>
+    <p class="label" style="margin-top:4px;">5.10 Locations saisonnières & usage intensif</p>
     <p>
       En cas de location (Airbnb, saisonnier) ou usage intensif,
       des passages supplémentaires peuvent être nécessaires et facturés.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.9 Assurance & responsabilités</p>
+    <p class="label" style="margin-top:4px;">5.11 Assurance & exclusions</p>
     <p>
       AquaClim Prestige est assuré en RC Pro.
       La responsabilité ne couvre pas les défauts structurels, la plomberie enterrée,
       le matériel ancien ou non conforme, ni la mauvaise utilisation par le client.
+      Le prestataire n’est pas responsable d’un mauvais traitement lié à un matériel défaillant.
     </p>
 
-  <p class="label" style="margin-top:4px;">5.10 Durée – renouvellement – résiliation</p>
-<p>
-  Le contrat est conclu pour la période définie. Il peut être résilié à tout moment,
-  par le client ou par le prestataire, avec un préavis de <strong>30 jours calendaires</strong>.
-  La résiliation doit être adressée <strong>exclusivement par courrier recommandé avec accusé de réception (LRAR)</strong>.
+    ${
+      pr.clientType === "syndic"
+        ? `
+    <p class="label" style="margin-top:4px;">5.12 Exploitation et interventions de tiers</p>
+    <p>
+      Le prestataire n’assure pas l’exploitation quotidienne de l’installation.
+      Toute intervention, réglage ou modification réalisée par un tiers
+      exonère le prestataire de toute responsabilité sur les conséquences
+      directes ou indirectes pouvant en résulter.
+    </p>
+    `
+        : ""
+    }
 
-</p>
-<p>
-  Les prestations réalisées, ainsi que celles prévues durant la période de préavis,
-  restent intégralement dues. En cas d’impayés répétés, d’accès impossible récurrent,
-  d’installation dangereuse ou de force majeure, le prestataire peut suspendre ou résilier
-  le contrat sans préavis.
-</p>
+    <p class="label" style="margin-top:4px;">5.13 Durée – renouvellement – résiliation</p>
+    ${
+      pr.clientType === "syndic"
+        ? `
+    <p>
+      Le présent contrat est conclu pour une durée ferme de 12 mois et renouvelable
+      par tacite reconduction sauf dénonciation par lettre recommandée avec accusé
+      de réception au moins <strong>3 mois avant l’échéance</strong>.
+    </p>
+    <p>
+      Toute résiliation en cours d’année, quelle qu’en soit la cause, entraîne
+      l’exigibilité de la totalité de la redevance annuelle, sans ristourne
+      pour la période non courue.
+    </p>
+    `
+        : `
+    <p>
+      Le contrat est conclu pour la période définie. Il peut être résilié à tout moment,
+      par le client ou par le prestataire, avec un préavis de <strong>30 jours calendaires</strong>.
+      La résiliation doit être adressée exclusivement par courrier recommandé
+      avec accusé de réception (LRAR).
+    </p>
+    <p>
+      Les prestations réalisées, ainsi que celles prévues durant la période de préavis,
+      restent intégralement dues.
+    </p>
+    `
+    }
+
+    <p>
+      En cas d’impayés répétés, d’accès impossible récurrent,
+      d’installation dangereuse ou de force majeure, le prestataire peut suspendre
+      ou résilier le contrat selon les conditions ci-dessus.
+    </p>
 
     <!-- Encadré automatique si résilié -->
     ${resiliationHTML}
 
-    <p class="label" style="margin-top:4px;">5.11 Photos (preuve)</p>
+    <p class="label" style="margin-top:4px;">5.14 Photos (preuve)</p>
     <p>
       Le prestataire peut prendre des photos avant/après intervention.
       Elles peuvent servir de preuve en cas de litige.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.12 Délais d’intervention</p>
+    <p class="label" style="margin-top:4px;">5.15 Délais d’intervention</p>
     <p>
       Les interventions sont réalisées dans un délai raisonnable selon le planning.
       Aucun délai impératif ne peut être imposé sans accord écrit.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.13 Eau verte & intempéries</p>
+    <p class="label" style="margin-top:4px;">5.16 Eau verte & intempéries</p>
     <p>
       Les eaux vertes, algues, sable saharien, pollen ou dépôts liés aux intempéries
       relèvent d’interventions hors contrat et peuvent être facturés.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.14 Filtration & matériel</p>
-    <p>
-      Le client garantit le bon fonctionnement de la filtration (pompe, horloge, vannes)
-      et un temps de filtration suffisant.
-      Le prestataire n’est pas responsable d’un mauvais traitement lié à un matériel défaillant.
-    </p>
-
-    <p class="label" style="margin-top:4px;">5.15 Réclamations</p>
+    <p class="label" style="margin-top:4px;">5.17 Réclamations</p>
     <p>
       Toute réclamation doit être formulée par écrit sous 48 h.
       Passé ce délai, l’intervention est considérée conforme.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.16 Révision annuelle</p>
+    <p class="label" style="margin-top:4px;">5.18 Révision annuelle</p>
     <p>
       Les tarifs peuvent être révisés chaque 1er janvier
       selon l’évolution des coûts et de l’indice Syntec.
     </p>
 
-    <p class="label" style="margin-top:4px;">5.17 Données personnelles</p>
+    <p class="label" style="margin-top:4px;">5.19 Données personnelles</p>
     <p>
       Les données clients sont utilisées uniquement pour la gestion et ne sont jamais revendues.
       AquaClim Prestige garantit la confidentialité des accès, codes et informations fournies.
@@ -19017,6 +19070,7 @@ ${terminationBillingBlockTop}
 
   </div>
 </div>
+
 
   <!-- 6. Tarifs & paiement -->
 
@@ -21197,6 +21251,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
