@@ -19233,15 +19233,27 @@ if (isIOS() && isStandalonePWA()) {
 
 // ✅ Normal (PC / Safari / Android) : nouvel onglet
 const printWindow = window.open("", "_blank");
+
+// 🔒 Popup bloquée → fallback propre (évite le crash)
+if (!printWindow) {
+  // 1) fallback simple : ouvre dans la même page
+  // (ou affiche un bouton "Ouvrir le PDF" si tu préfères)
+  const dataUrl = "data:text/html;charset=utf-8," + encodeURIComponent(html);
+  window.location.href = dataUrl;
+  return;
+}
+
+printWindow.document.open();
 printWindow.document.write(html);
 printWindow.document.close();
 
 printWindow.onload = function () {
-  printWindow.focus();
+  try { printWindow.focus(); } catch (e) {}
   if (!previewOnly) {
-    printWindow.print();
+    try { printWindow.print(); } catch (e) {}
   }
 };
+
 
 
 function updateContractClientType(type) {
@@ -21316,6 +21328,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
