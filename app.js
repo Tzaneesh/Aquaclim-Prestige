@@ -20874,7 +20874,6 @@ function _enableIOSClientDropdown() {
   // (optionnel) si tu tapes à la main, on ne bloque rien
   // ton app continue de bosser avec input.value comme avant
 }
-
 function pwaRefreshNow(){
   try { if (typeof processSyncQueue === "function") processSyncQueue(); } catch(e){}
   try { if (typeof refreshHomeStats === "function") refreshHomeStats(); } catch(e){}
@@ -20886,35 +20885,27 @@ function pwaRefreshNow(){
   try { if (typeof updateOfflineBadge === "function") updateOfflineBadge(); } catch(e){}
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const bar = document.getElementById("pwaBar");
-  if (!bar) return;
-  if (typeof isStandalonePWA === "function" && isStandalonePWA()) {
-    bar.style.display = "flex";
-  }
-});
-
 // ===============================
 // 📱 iOS PWA – bloquer target=_blank
 // ===============================
 (function blockBlankLinksIOS() {
   document.addEventListener("click", function (e) {
+    if (typeof isIOS !== "function" || typeof isStandalonePWA !== "function") return;
     if (!isIOS() || !isStandalonePWA()) return;
 
-    const link = e.target.closest("a");
+    const link = e.target.closest?.("a");
     if (!link) return;
 
-    const href = link.getAttribute("href");
+    const href = link.getAttribute("href") || "";
     const target = link.getAttribute("target");
 
     if (href && (target === "_blank" || href.startsWith("http"))) {
       e.preventDefault();
       e.stopPropagation();
-      openExternalLink(href);
+      if (typeof openExternalLink === "function") openExternalLink(href);
     }
   }, true);
 })();
-
 
 // ===============================
 // ✖️ Forcer le bouton fermer PDF
@@ -20923,14 +20914,13 @@ document.addEventListener("DOMContentLoaded", () => {
   function bind() {
     const btn = document.getElementById("pdfViewerCloseBtn");
     if (!btn || btn.__ok) return;
-
     btn.__ok = true;
 
-    ["click", "touchend"].forEach(evt => {
+    ["click", "touchend"].forEach((evt) => {
       btn.addEventListener(evt, function (e) {
         e.preventDefault();
         e.stopPropagation();
-        closePdfViewer();
+        if (typeof closePdfViewer === "function") closePdfViewer();
       }, { passive: false, capture: true });
     });
   }
@@ -20939,38 +20929,30 @@ document.addEventListener("DOMContentLoaded", () => {
   window.addEventListener("load", bind);
 })();
 
-
-  /* =====================================================
-   ✅ INIT UNIQUE – COMPATIBLE type="module"
-   ❌ PAS de window.onload
-   ❌ PAS de double DOMContentLoaded
-===================================================== */
-
 /* ======================
    NET STATE
 ====================== */
-
 window.addEventListener("online", () => {
   console.log("[NET] Reconnexion détectée");
-  updateOfflineBadge();
+  if (typeof updateOfflineBadge === "function") updateOfflineBadge();
+
   if (!db) {
     initFirebase()
-      .then(processSyncQueue)
-      .catch(updateOfflineBadge);
+      .then(() => { if (typeof processSyncQueue === "function") processSyncQueue(); })
+      .catch(() => { if (typeof updateOfflineBadge === "function") updateOfflineBadge(); });
   } else {
-    processSyncQueue();
+    if (typeof processSyncQueue === "function") processSyncQueue();
   }
 });
 
 window.addEventListener("offline", () => {
   console.log("[NET] Passage hors-ligne");
-  updateOfflineBadge();
+  if (typeof updateOfflineBadge === "function") updateOfflineBadge();
 });
 
 /* ======================
-   INIT APP (ex-window.onload)
+   INIT APP
 ====================== */
-
 function initApp() {
   loadCustomTemplates();
   loadCustomTexts();
@@ -20984,26 +20966,20 @@ function initApp() {
   if (typeof updateButtonColors === "function") updateButtonColors();
   if (typeof showHome === "function") showHome();
 
-  if (
-    typeof checkScheduledInvoices === "function" &&
-    typeof countContractInstallmentInvoices === "function"
-  ) {
+  if (typeof checkScheduledInvoices === "function" &&
+      typeof countContractInstallmentInvoices === "function") {
     checkScheduledInvoices();
   }
 
   const subjectInput = document.getElementById("docSubject");
   if (subjectInput && !subjectInput.dataset.boundManualFlag) {
-    subjectInput.addEventListener("input", () => {
-      subjectInput.dataset.manualEdited = "1";
-    });
+    subjectInput.addEventListener("input", () => { subjectInput.dataset.manualEdited = "1"; });
     subjectInput.dataset.boundManualFlag = "1";
   }
 
   initFirebase().then(() => {
-    if (typeof refreshMicroTVAState === "function") {
-      refreshMicroTVAState(false);
-    }
-    if (navigator.onLine) processSyncQueue();
+    if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+    if (navigator.onLine && typeof processSyncQueue === "function") processSyncQueue();
   });
 
   if (typeof initContractsUI === "function") initContractsUI();
@@ -21022,11 +20998,20 @@ function initApp() {
   try { renderPlanningSidebar(); } catch(e){}
 }
 
+/* ======================
+   🚀 POINT D’ENTRÉE UNIQUE
+====================== */
 document.addEventListener("DOMContentLoaded", () => {
   if (document.body.dataset.domReadyBound === "1") return;
   document.body.dataset.domReadyBound = "1";
 
-  updateOfflineBadge();
+  // ✅ pwaBar ici (au lieu d’un 2e DOMContentLoaded)
+  const bar = document.getElementById("pwaBar");
+  if (bar && typeof isStandalonePWA === "function" && isStandalonePWA()) {
+    bar.style.display = "flex";
+  }
+
+  if (typeof updateOfflineBadge === "function") updateOfflineBadge();
 
   initApp();
 
@@ -21045,24 +21030,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("tva0")
       ?.addEventListener("change", () => window.setTVA?.(0, { showAlert: true }));
-
     document.getElementById("tva20")
       ?.addEventListener("change", () => window.setTVA?.(20, { showAlert: true }));
-
     document.getElementById("ctTva0")
       ?.addEventListener("change", () => window.setTVA?.(0, { showAlert: true }));
-
     document.getElementById("ctTva20")
       ?.addEventListener("change", () => window.setTVA?.(20, { showAlert: true }));
   }
 
+  /* ===== Double clic client ===== */
   document.getElementById("clientName")
     ?.addEventListener("dblclick", (e) => openClientSheet(e.target.value));
-
   document.getElementById("ctClientName")
     ?.addEventListener("dblclick", (e) => openClientSheet(e.target.value));
-});
-
 
   /* ===== Signature ===== */
   if (!window.__signaturePopupBound) {
@@ -21072,12 +21052,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const el = e.target;
       if (!el) return;
 
-      if (
-        el.id === "approveDevis" ||
-        el.closest?.("#approveDevis") ||
-        el.closest?.('label[for="approveDevis"]')
-      ) {
-        openSignaturePopup();
+      if (el.id === "approveDevis" || el.closest?.("#approveDevis") || el.closest?.('label[for="approveDevis"]')) {
+        if (typeof openSignaturePopup === "function") openSignaturePopup();
       }
 
       if (el.id === "signatureClear") signaturePad?.clear();
@@ -21116,9 +21092,7 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ===== Auto fill dates ===== */
   document.addEventListener("click", (e) => {
     const popup = document.getElementById("signaturePopup");
-    if (popup && !popup.classList.contains("hidden") && popup.contains(e.target)) {
-      return;
-    }
+    if (popup && !popup.classList.contains("hidden") && popup.contains(e.target)) return;
     setTimeout(autoFillDates, 50);
   });
 
@@ -21128,10 +21102,12 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("popstate", () => {
       const overlay = document.getElementById("pdfViewerOverlay");
       if (!overlay || overlay.classList.contains("hidden")) return;
-      closePdfViewer();
+      if (typeof closePdfViewer === "function") closePdfViewer();
     });
   }
 });
+
+
 
 
 
