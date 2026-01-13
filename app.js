@@ -7206,7 +7206,8 @@ function setConditions(type) {
       notesEl.value =
         "Paiement à 30 jours fin de mois.\n" +
         "Aucun escompte pour paiement anticipé.\n" +
-        "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
+        "En cas de retard de paiement : pénalités de retard calculées sur la base de trois fois le taux d’intérêt légal, ainsi qu’une indemnité forfaitaire pour frais de recouvrement de 40 € (articles L441-10 et D441-5 du Code de commerce).";
+
     }
   }
 
@@ -12014,6 +12015,11 @@ function openPrintable(id, previewOnly) {
     items.push(
       "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle.",
     );
+
+    items.push(
+  "Le présent devis est valable jusqu’à la date de validité indiquée. Passé ce délai, les prix sont susceptibles d’être révisés."
+);
+
 
     importantHtml = `
       <div class="important-block">
@@ -21168,6 +21174,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
