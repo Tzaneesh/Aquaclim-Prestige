@@ -7309,41 +7309,35 @@ function loadDocument(id) {
   document.getElementById("clientAddress").value = doc.client.address;
   document.getElementById("clientPhone").value = doc.client.phone;
   document.getElementById("clientEmail").value = doc.client.email;
+
   const civilitySelect = document.getElementById("clientCivility");
-  if (civilitySelect) {
-    civilitySelect.value = doc.client.civility || "";
-  }
+  if (civilitySelect) civilitySelect.value = doc.client.civility || "";
+
   const siteCivilityEl = document.getElementById("siteCivility");
   if (siteCivilityEl) siteCivilityEl.value = doc.siteCivility || "";
 
   document.getElementById("notes").value = doc.notes || "";
 
   const subjectInput = document.getElementById("docSubject");
-  if (subjectInput) {
-    subjectInput.value = doc.subject || "";
-  }
+  if (subjectInput) subjectInput.value = doc.subject || "";
 
   // 🚫 Ne pas afficher le nom du client dans l'objet (quel que soit le client)
   if (subjectInput && doc?.client?.name) {
     const clientName = String(doc.client.name).trim();
     if (clientName) {
-      // enlève " - Nom" ou " – Nom" en fin de texte
       subjectInput.value = String(subjectInput.value || "")
         .replace(new RegExp(`\\s*[–-]\\s*${clientName}\\s*$`, "i"), "")
         .trim();
     }
   }
-  doc.subject = subjectInput.value;
+  doc.subject = subjectInput?.value || doc.subject || "";
 
   const siteBlock = document.getElementById("siteBlock");
   const siteNameInp = document.getElementById("siteName");
   const siteAddrInp = document.getElementById("siteAddress");
   if (siteNameInp) siteNameInp.value = doc.siteName || "";
   if (siteAddrInp) siteAddrInp.value = doc.siteAddress || "";
-  if (siteBlock) {
-    siteBlock.style.display =
-      doc.conditionsType === "agence" ? "block" : "none";
-  }
+  if (siteBlock) siteBlock.style.display = doc.conditionsType === "agence" ? "block" : "none";
 
   updateButtonColors();
 
@@ -7378,15 +7372,14 @@ function loadDocument(id) {
   }
 
   setTVA(doc.tvaRate === 20 ? 20 : 0);
-  // ✅ Nettoyage sécurité : si TVA = 0, on force TVAAmount = 0 et on supprime les traces TVA
-if (Number(doc.tvaRate || 0) === 0) {
-  doc.tvaAmount = 0;
 
-  // Si jamais tu avais stocké un numéro TVA dans le doc (ancienne version)
-  delete doc.vatNumber;
-  delete doc.companyVat;
-  delete doc.companyVatNumber;
-}
+  // ✅ Nettoyage sécurité : si TVA = 0, on force TVAAmount = 0 et on supprime les traces TVA
+  if (Number(doc.tvaRate || 0) === 0) {
+    doc.tvaAmount = 0;
+    delete doc.vatNumber;
+    delete doc.companyVat;
+    delete doc.companyVatNumber;
+  }
 
   updateDocType();
   updateTransformButtonVisibility();
@@ -7397,6 +7390,7 @@ if (Number(doc.tvaRate || 0) === 0) {
   const discountInput = document.getElementById("discountPercentInput");
   const discountLine = document.getElementById("discountLine");
   const discRate = doc.discountRate != null ? doc.discountRate : 0;
+
   if (discountCb && discountInput) {
     if (discRate > 0) {
       discountCb.checked = true;
@@ -7410,6 +7404,15 @@ if (Number(doc.tvaRate || 0) === 0) {
       if (discountLine) discountLine.style.display = "none";
     }
   }
+
+  // helper affichage purchase
+  const _fmtPurchase = (v) => {
+    if (v == null) return "";
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return "";
+    // affiche "70" au lieu de "70.00"
+    return (Math.round(n * 100) / 100).toString();
+  };
 
   // Prestations
   prestationCount = 0;
@@ -7428,7 +7431,7 @@ if (Number(doc.tvaRate || 0) === 0) {
       line.dataset.autoPrice = "0";
     }
 
-    // ⚠️ on NE met plus basePrice = p.price ici
+    // layout / visibilité
     updatePurchaseVisibility(line);
     updatePriceLayout(line);
 
@@ -7437,57 +7440,39 @@ if (Number(doc.tvaRate || 0) === 0) {
     const priceInput = line.querySelector(".prestation-price");
     const unitInput = line.querySelector(".prestation-unit");
     const templateSelect = line.querySelector(".prestation-template");
-    const purchaseInput = line.querySelector(".prestation-purchase");
 
     if (descInput) descInput.value = p.desc;
     if (qtyInput) qtyInput.value = p.qty;
     if (priceInput) priceInput.value = p.price;
-    if (purchaseInput) purchaseInput.value = (p.purchase != null ? p.purchase : "");
-
     if (unitInput) unitInput.value = p.unit || "";
 
     // ==============================
     // 🎯 Choix du "modèle" (template)
     // ==============================
-
-    // kind réel stocké dans la ligne (contrat_echeance, contrat_normal, etc.)
     let effectiveKind = p.kind || "";
 
-    // Est-ce qu'on a déjà un modèle qui correspond à ce kind ?
-    let hasTemplateForKind = PRESTATION_TEMPLATES.some(
-      (t) => t.kind === effectiveKind,
-    );
+    let hasTemplateForKind = PRESTATION_TEMPLATES.some((t) => t.kind === effectiveKind);
 
-    // Si ce n'est PAS un modèle connu, mais que la facture est liée à un contrat,
-    // on essaie de deviner le bon modèle (piscine chlore / sel / spa) à partir du contrat.
     if (!hasTemplateForKind && doc.type === "facture" && doc.contractId) {
       const linkedContract = getContract(doc.contractId);
       const inferredKind = getTemplateKindForContract(linkedContract);
       if (inferredKind) {
         effectiveKind = inferredKind;
-        hasTemplateForKind = PRESTATION_TEMPLATES.some(
-          (t) => t.kind === effectiveKind,
-        );
+        hasTemplateForKind = PRESTATION_TEMPLATES.some((t) => t.kind === effectiveKind);
       }
     }
 
-    // 🔁 on remet le bon modèle dans le select
     if (templateSelect) {
-      const idx = PRESTATION_TEMPLATES.findIndex(
-        (t) => t.kind === effectiveKind,
-      );
+      const idx = PRESTATION_TEMPLATES.findIndex((t) => t.kind === effectiveKind);
       templateSelect.value = idx >= 0 ? String(idx) : "0";
     }
 
-    // 🧠 On recalcule le "prix de base" à partir du modèle + type client
     const template = PRESTATION_TEMPLATES.find((t) => t.kind === effectiveKind);
     if (template) {
       const custom = getCustomPrices();
-      const clientType = document.getElementById("clientSyndic")?.checked
-        ? "syndic"
-        : "particulier";
-
+      const clientType = document.getElementById("clientSyndic")?.checked ? "syndic" : "particulier";
       const key = template.kind + "_" + clientType;
+
       let base =
         custom[key] != null
           ? custom[key]
@@ -7495,50 +7480,57 @@ if (Number(doc.tvaRate || 0) === 0) {
             ? template.priceSyndic || 0
             : template.priceParticulier || 0;
 
-      line.dataset.basePrice = base.toFixed(2);
+      line.dataset.basePrice = Number(base || 0).toFixed(2);
+    }
+
+    // ✅ IMPORTANT : on remet le purchase APRÈS tous les updates (visibility/layout)
+    const purchaseInput = line.querySelector(".prestation-purchase");
+    if (purchaseInput) {
+      purchaseInput.value = _fmtPurchase(p.purchase);
     }
 
     // ⚙️ Dates…
     const datesContainer = line.querySelector(".prestation-dates");
-    datesContainer.innerHTML = "";
-    const dates = p.dates && p.dates.length ? p.dates : [""];
-    dates.forEach((dv) => {
-      const row = document.createElement("div");
-      row.className = "prestation-date-row";
+    if (datesContainer) {
+      datesContainer.innerHTML = "";
+      const dates = p.dates && p.dates.length ? p.dates : [""];
+      dates.forEach((dv) => {
+        const row = document.createElement("div");
+        row.className = "prestation-date-row";
 
-      const inp = document.createElement("input");
-      inp.type = "date";
-      inp.className = "prestation-date";
-      inp.value = dv || "";
+        const inp = document.createElement("input");
+        inp.type = "date";
+        inp.className = "prestation-date";
+        inp.value = dv || "";
 
-      row.appendChild(inp);
+        row.appendChild(inp);
 
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "prestation-date-remove";
-      btn.textContent = "✕";
-      btn.addEventListener("click", () => removePassageDate(btn));
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "prestation-date-remove";
+        btn.textContent = "✕";
+        btn.addEventListener("click", () => removePassageDate(btn));
 
-
-      row.appendChild(btn);
-      datesContainer.appendChild(row);
-    });
+        row.appendChild(btn);
+        datesContainer.appendChild(row);
+      });
+    }
   });
 
-  calculateTotals(); // et on laisse faire la logique dégressive normale
-  // ✅ On resauvegarde si on a nettoyé un doc ancien
-try {
-  const docsAll = getAllDocuments();
-  const idx2 = docsAll.findIndex((d) => d.id === doc.id);
-  if (idx2 >= 0) {
-    docsAll[idx2] = doc;
-    saveDocuments(docsAll);
-    if (typeof saveSingleDocumentToFirestore === "function") {
-      saveSingleDocumentToFirestore(doc);
-    }
-  }
-} catch (e) {}
+  calculateTotals();
 
+  // ✅ On resauvegarde si on a nettoyé un doc ancien
+  try {
+    const docsAll = getAllDocuments();
+    const idx2 = docsAll.findIndex((d) => d.id === doc.id);
+    if (idx2 >= 0) {
+      docsAll[idx2] = doc;
+      saveDocuments(docsAll);
+      if (typeof saveSingleDocumentToFirestore === "function") {
+        saveSingleDocumentToFirestore(doc);
+      }
+    }
+  } catch (e) {}
 
   document.getElementById("formTitle").textContent =
     (doc.type === "devis" ? "Devis " : "Facture ") + doc.number;
@@ -7549,14 +7541,9 @@ try {
     console.error("Erreur renderHistory:", e);
   }
 
-  // ====================================================
-  // 🔘 Empêcher le bouton "Bon pour accord" d'être coché
-  //      si aucune signature n'existe
-  // ====================================================
+  // 🔘 Empêcher le bouton "Bon pour accord" d'être coché si aucune signature n'existe
   const sigRadio = document.getElementById("signatureRadio");
-  if (sigRadio) {
-    sigRadio.checked = !!doc.signature; // cochée SEULEMENT si déjà signé
-  }
+  if (sigRadio) sigRadio.checked = !!doc.signature;
 
   if (typeof refreshDocumentHealthUI === "function") {
     refreshDocumentHealthUI(doc);
@@ -7567,6 +7554,7 @@ try {
     document.querySelectorAll(".prestation-line").forEach(_lockIndemnite40Line);
   }
 }
+
 
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
 
@@ -7606,12 +7594,17 @@ function saveDocument() {
   }
 
   // === Champs client + objet ===
-  const clientName = document.getElementById("clientName")?.value?.trim() || "";
-  const clientAddress = document.getElementById("clientAddress")?.value?.trim() || "";
+  const clientName =
+    document.getElementById("clientName")?.value?.trim() || "";
+  const clientAddress =
+    document.getElementById("clientAddress")?.value?.trim() || "";
   const clientCivility = document.getElementById("clientCivility")?.value || "";
-  const clientPhone = document.getElementById("clientPhone")?.value?.trim() || "";
-  const clientEmail = document.getElementById("clientEmail")?.value?.trim() || "";
-  const docSubject = document.getElementById("docSubject")?.value?.trim() || "";
+  const clientPhone =
+    document.getElementById("clientPhone")?.value?.trim() || "";
+  const clientEmail =
+    document.getElementById("clientEmail")?.value?.trim() || "";
+  const docSubject =
+    document.getElementById("docSubject")?.value?.trim() || "";
 
   if (!clientName || !clientAddress) {
     showConfirmDialog({
@@ -7639,34 +7632,44 @@ function saveDocument() {
   const prestations = [];
   let missingPurchase = false;
 
+  // helper: parse nombre FR "70,50" -> 70.5
+  const _num = (v) => {
+    const s = String(v ?? "").trim().replace(",", ".");
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   document.querySelectorAll(".prestation-line").forEach((line) => {
-    const kind = line.dataset.kind || "";
+    const kind = line?.dataset?.kind || "";
 
-    if (kind === "produits" || kind === "fournitures") {
-      const purchaseVal = parseFloat(line.querySelector(".prestation-purchase")?.value || "0");
-      if (!purchaseVal || purchaseVal <= 0) missingPurchase = true;
-    }
-
-    const desc = line.querySelector(".prestation-desc")?.value?.trim() || "";
-    const qty = parseFloat(line.querySelector(".prestation-qty")?.value || "0");
-    const price = parseFloat(line.querySelector(".prestation-price")?.value || "0");
+    const desc =
+      line.querySelector(".prestation-desc")?.value?.trim() || "";
+    const qty = _num(line.querySelector(".prestation-qty")?.value);
+    const price = _num(line.querySelector(".prestation-price")?.value);
     const unit = line.querySelector(".prestation-unit")?.value || "";
 
+    // ✅ prix d'achat seulement pour produits/fournitures
+    const isProduct = kind === "produits" || kind === "fournitures";
+    const purchase = isProduct
+      ? _num(line.querySelector(".prestation-purchase")?.value)
+      : 0;
+
+    if (isProduct) {
+      if (!purchase || purchase <= 0) missingPurchase = true;
+    }
+
     if (desc) {
-const purchase = parseFloat(line.querySelector(".prestation-purchase")?.value || "0") || 0;
+      prestations.push({
+        desc,
+        qty,
+        price,
+        total: qty * price,
+        unit,
+        kind,
 
-prestations.push({
-  desc,
-  qty,
-  price,
-  total: qty * price,
-  unit,
-  kind,
-
-  // ✅ on stocke le prix d'achat (uniquement utile pour produits/fournitures)
-  purchase: (kind === "produits" || kind === "fournitures") ? purchase : 0,
-});
-
+        // ✅ stocké => ne reset plus à la réouverture
+        purchase,
+      });
     }
   });
 
@@ -7697,11 +7700,10 @@ prestations.push({
   const docNumber = document.getElementById("docNumber")?.value || "";
   const docDate = document.getElementById("docDate")?.value || "";
   const validityDate = document.getElementById("validityDate")?.value || "";
-  const tvaRate = parseFloat(document.getElementById("tvaRate")?.value || "0") || 0;
+  const tvaRate = _num(document.getElementById("tvaRate")?.value);
   const notes = document.getElementById("notes")?.value || "";
 
   const existing = currentDocumentId ? getDocument(currentDocumentId) : null;
-  const isExistingDoc = !!existing;
 
   // ✅ Type client (pour popup devis obligatoire)
   const conditionsType = document.getElementById("clientSyndic")?.checked
@@ -7709,17 +7711,15 @@ prestations.push({
     : "particulier";
 
   // === Totaux ===
-  let subtotal = prestations.reduce((s, p) => s + (Number(p.total) || 0), 0);
+  const subtotal = prestations.reduce((s, p) => s + (Number(p.total) || 0), 0);
   const tvaAmount = subtotal * (tvaRate / 100);
   const totalTTC = subtotal + tvaAmount;
 
-  // ✅ Paiement (factures) — robuste (évite retour à "à payer")
-  const payMode = document.querySelector('input[name="payMode"]:checked')?.value || "";
+  // ✅ Paiement (factures)
+  const payMode =
+    document.querySelector('input[name="payMode"]:checked')?.value || "";
   const paymentDateInput = document.getElementById("paymentDate");
   const paymentDate = paymentDateInput ? (paymentDateInput.value || "") : "";
-
-  // payé si un mode est sélectionné (≠ "")
-  const isPaid = (docType === "facture" && payMode !== "");
 
   const doc = {
     id: currentDocumentId || Date.now().toString(),
@@ -7745,8 +7745,6 @@ prestations.push({
     notes,
     conditionsType,
 
-    // ✅ Paiement : on sauvegarde correctement
-    // et on garde l'existant si l'UI renvoie vide par bug
     paymentMode:
       docType === "facture"
         ? (payMode !== "" ? payMode : (existing?.paymentMode || ""))
@@ -7760,15 +7758,16 @@ prestations.push({
     paymentDate:
       docType === "facture"
         ? (payMode !== ""
-            ? (paymentDate || existing?.paymentDate || new Date().toISOString().slice(0, 10))
+            ? (paymentDate ||
+               existing?.paymentDate ||
+               new Date().toISOString().slice(0, 10))
             : "")
         : (existing?.paymentDate || ""),
 
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
-  // ✅ Devis obligatoire >150€ : si besoin, on crée le devis à partir de la facture
-  // et on BLOQUE l'enregistrement de la facture.
+  // ✅ Devis obligatoire >150€
   if (typeof maybeForceDevisInsteadOfSavingInvoice === "function") {
     const blocked = maybeForceDevisInsteadOfSavingInvoice(doc);
     if (blocked) return;
@@ -7779,7 +7778,6 @@ prestations.push({
   const idx = docs.findIndex((d) => d.id === doc.id);
   if (idx >= 0) docs[idx] = doc;
   else docs.push(doc);
-
   saveDocuments(docs);
 
   // === Save Firestore (si dispo) ===
@@ -21185,6 +21183,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
