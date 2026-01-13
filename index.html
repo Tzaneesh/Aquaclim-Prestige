@@ -1,0 +1,2026 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AquaClim Prestige - Devis & Factures</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+</head>
+
+<body>
+<div class="container">
+
+  <!-- EN-TÊTE -->
+  <header class="header">
+    <div class="header-inner">
+      <img src="logo.png" alt="AquaClim Prestige" class="header-logo" />
+      <div>
+       <h1 class="js-company-name">AquaClim Prestige</h1>
+<p class="subtitle js-company-subtitle">Entretien & Dépannage - Climatisation & Piscine</p>
+<p class="contact">
+  <span class="js-company-legal">Le Blevennec Loïc</span> –
+  <span class="js-company-address">2 avenue Cauvin, 06100 Nice</span><br>
+  Tél : <span class="js-company-phone">06 03 53 77 73</span> –
+  Email : <span class="js-company-email">aquaclimprestige@gmail.com</span><br>
+  SIRET : <strong class="js-company-siret">XXXXXXXXXXXXX</strong>
+  
+<span class="js-company-vat-line hidden">
+  N° TVA : <strong class="js-company-vat"></strong>
+</span>
+</p>
+
+      </div>
+    </div>
+  </header>
+
+  <!-- ONGLET DEVIS / FACTURES -->
+
+<!-- ONGLET ACCUEIL / DEVIS / CONTRATS / FACTURES -->
+<div class="top-nav no-print">
+  <button id="tabHome" class="btn tab-btn active" onclick="showHome()">🏠 Accueil</button>
+  <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
+  <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
+  <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
+  <button class="btn tab-btn" onclick="openTarifsPanelAny()">📋 Tarifs prestations</button>
+<button class="btn tab-btn" type="button" onclick="openClientsListPopup()">👥 Clients</button>
+  <button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
+  <button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
+  <button id="tabSettings" class="btn tab-btn" onclick="showSettings()">⚙️ Paramètres</button>
+</div>
+
+<div id="offlineBadge" class="offline-badge" style="display:none;">
+  Hors ligne – données en local
+</div>
+
+
+<section id="homeView">
+
+  <div class="dashboard">
+    <h2 class="dashboard-title">Vue d’ensemble</h2>
+
+    <div class="dashboard-grid">
+
+      <!-- 📄 Devis -->
+      <div class="dash-card" id="dashDevis">
+        <div class="dash-header">📄 Devis</div>
+        <div class="dash-stats">
+          <p id="dashDevisCount">0 devis enregistrés</p>
+          <p id="dashDevisStatus">–</p>
+          <p id="dashDevisLast">Dernier devis : –</p>
+        </div>
+        <button class="dash-btn" onclick="openFromHome('devis')">Voir les devis</button>
+      </div>
+
+      <!-- 📘 Contrats -->
+      <div class="dash-card" id="dashContrats">
+        <div class="dash-header">📘 Contrats</div>
+        <div class="dash-stats">
+          <p id="dashContractCount">0 contrats actifs</p>
+          <p id="dashContractRenew">À renouveler : –</p>
+        </div>
+        <!-- ⚠️ ICI : 'contrat' (singulier) -->
+        <button class="dash-btn" onclick="openFromHome('contrat')">Voir les contrats</button>
+      </div>
+
+      <!-- 💰 Factures -->
+      <div class="dash-card" id="dashFactures">
+        <div class="dash-header">💰 Factures</div>
+        <div class="dash-stats">
+          <p id="dashInvoiceCount">0 factures créées</p>
+          <p id="dashInvoiceUnpaid">Impayées : –</p>
+          <p id="dashInvoiceAmount">Montant impayé : –</p>
+        </div>
+        <!-- ⚠️ ICI : 'facture' (singulier) -->
+        <button class="dash-btn dash-btn-facture" onclick="openFromHome('facture')">Voir les factures</button>
+      </div>
+
+<!-- 📊 CHIFFRE D'AFFAIRES-->
+ <div class="dash-card dash-card-ca">
+        <div class="dash-card-header">
+          <span class="dash-card-icon">📊</span>
+          <div>
+            <h3>Chiffre d'affaires</h3>
+          </div>
+        </div>
+
+        <p id="dashCATotal">CA total : –</p>
+        <p id="dashCAPaid" class="dash-sub">Payé : –</p>
+        <p id="dashCAUnpaid" class="dash-sub">Impayé : –</p>
+        <p id="dashCAMonth" class="dash-sub">Mois en cours : –</p>
+        <p id="dashTVAMicroBadge"
+           class="dash-sub"
+           style="display:none; font-weight:600; color:#b00020;">
+          TVA activée (20 %)
+        </p>
+
+        <button class="dash-btn dash-btn-primary" onclick="openCAReport()">
+          Voir le CA détaillé
+        </button>
+      </div> <!-- fin .dash-card-ca -->
+
+    </div> <!-- fin .dashboard-grid -->
+
+    <!-- 🩺 Tableau État de santé global -->
+    <div class="card health-card">
+      <h2 class="section-title">État de santé global</h2>
+      <table class="health-table">
+        <thead>
+          <tr>
+            <th>Catégorie</th>
+            <th>Statut</th>
+            <th>Détail</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="healthRowFacturesLate">
+            <td>Factures critiques</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+
+          <tr id="healthRowFacturesPending">
+            <td>Factures en attente</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+
+          <tr id="healthRowDevis">
+            <td>Devis</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+
+          <tr id="healthRowContrats">
+            <td>Contrats</td>
+            <td class="health-status">–</td>
+            <td class="health-detail">–</td>
+          </tr>
+          <!-- Plus tard : ligne Agenda -->
+        </tbody>
+      </table>
+    </div> <!-- fin .health-card -->
+
+<!-- 👥 Clients à suivre -->
+<div class="card followup-card">
+  <div class="followup-header">
+    <h2 class="section-title">👥 Clients à suivre</h2>
+
+    <div class="followup-actions">
+      <select id="followupSort" onchange="renderClientsFollowup()">
+        <option value="amount_desc">Impayés (montant)</option>
+        <option value="late_desc">Retard (mois)</option>
+        <option value="name_asc">Nom (A → Z)</option>
+      </select>
+
+      <button class="btn btn-secondary btn-small" type="button" onclick="renderClientsFollowup()">
+        🔄 Rafraîchir
+      </button>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <table class="documents-table">
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Impayés</th>
+          <th>Dernière facture</th>
+          <th>Retard</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="followupClientsBody">
+        <tr><td colspan="5" class="no-docs-cell">Chargement…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+    <!-- 🗓️ Planning de la semaine -->
+   <div class="card planning-card">
+  <h2 class="section-title">Planning de la semaine</h2>
+
+  <div class="planning-header">
+    <button type="button" class="btn btn-secondary btn-small"
+            onclick="changePlanningWeek(-1)">
+      ← Semaine précédente
+    </button>
+
+    <span id="planningWeekLabel" class="planning-week-label"></span>
+
+    <button type="button" class="btn btn-secondary btn-small"
+            onclick="changePlanningWeek(1)">
+      Semaine suivante →
+    </button>
+  </div>
+
+<div class="planning-layout">
+  <div class="planning-main">
+    <div id="planningGrid" class="planning-grid"></div>
+
+    <!-- détails du jour sélectionné -->
+    <div id="planningDetails" class="planning-details hidden"></div>
+  </div>
+
+  <!-- ✅ Sidebar "À traiter" -->
+<aside id="planningSidebar" class="planning-sidebar"></aside>
+
+</div>
+
+</div>
+
+</div> <!-- fin .dashboard -->
+</section> <!-- fin #homeView -->
+
+<section id="attestationView" class="hidden">
+  <div class="card">
+    <h2>📑 Attestations & Rapports</h2>
+
+    <button class="btn btn-primary" onclick="openClimAttestationGenerator()">
+      Générer une attestation clim
+    </button>
+
+    <button class="btn btn-primary" onclick="openPiscineRapportGenerator()">
+      Générer un rapport d’intervention
+    </button>
+  </div>
+
+  <!-- 🧾 Historique des attestations -->
+  <div class="card">
+    <h3>Historique des attestations clim</h3>
+
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Client</th>
+          <th>Adresse</th>
+          <th>Unités</th>
+          <th>Source</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="attestationsTableBody">
+        <tr>
+          <td colspan="6" class="no-docs-cell">
+            Aucune attestation enregistrée pour le moment
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+<div class="card">
+  <h3>Historique des rapports d’intervention</h3>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Date</th>
+        <th>Client</th>
+        <th>Type</th>
+        <th>Source</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="rapportsTableBody">
+      <tr>
+        <td colspan="5" class="no-docs-cell">
+          Aucun rapport enregistré pour le moment
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</section>
+
+<!-- ================== PARAMÈTRES ENTREPRISE ================== -->
+<section id="settingsView" class="hidden">
+  <div class="card">
+    <h2 class="section-title">Paramètres de l’entreprise</h2>
+    <p style="margin-bottom:10px;">
+      Ces informations seront utilisées pour l’en-tête, les devis, factures, contrats,
+      attestations et coordonnées bancaires.
+    </p>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confCompanyName">Nom commercial</label>
+        <input type="text" id="confCompanyName" />
+      </div>
+      <div class="form-group">
+        <label for="confSubtitle">Sous-titre</label>
+        <input type="text" id="confSubtitle" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confLegalName">Nom légal / gérant</label>
+        <input type="text" id="confLegalName" />
+      </div>
+      <div class="form-group">
+        <label for="confSiret">SIRET</label>
+        <input type="text" id="confSiret" />
+      </div>
+        <div class="form-group">
+    <label for="confVatNumber">N° TVA intracom</label>
+    <input
+  type="text"
+  id="confVatNumber"
+  placeholder="FRXX123456789"
+  autocomplete="off"
+/>
+
+  </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confAddress">Adresse</label>
+        <input type="text" id="confAddress" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confPhone">Téléphone</label>
+        <input type="text" id="confPhone" />
+      </div>
+      <div class="form-group">
+        <label for="confEmail">Email</label>
+        <input type="email" id="confEmail" />
+      </div>
+    </div>
+
+    <hr style="margin:18px 0;">
+
+    <h3 class="section-title">Coordonnées bancaires (RIB / IBAN)</h3>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confRibHolder">Titulaire du compte</label>
+        <input type="text" id="confRibHolder" />
+      </div>
+      <div class="form-group">
+        <label for="confBankName">Banque</label>
+        <input type="text" id="confBankName" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="confIban">IBAN</label>
+        <input type="text" id="confIban" />
+      </div>
+      <div class="form-group">
+        <label for="confBic">BIC</label>
+        <input type="text" id="confBic" />
+      </div>
+    </div>
+
+<div class="card">
+  <h3>🛟 Sauvegarde / restauration</h3>
+
+  <button class="btn btn-primary" type="button" onclick="exportBackupJSON()">
+    ⬇️ Export JSON (backup)
+  </button>
+
+  <input id="importBackupInput" type="file" accept="application/json"
+         style="display:none"
+         onchange="importBackupJSON(this.files[0])" />
+
+  <button class="btn btn-secondary" type="button"
+          onclick="document.getElementById('importBackupInput').click()">
+    ⬆️ Import JSON (restaurer)
+  </button>
+</div>
+
+    <div class="actions no-print" style="margin-top:20px;">
+      <button class="btn btn-primary" type="button" onclick="saveCompanySettingsFromForm()">
+        💾 Enregistrer les paramètres
+      </button>
+     <button class="btn btn-danger" type="button" onclick="resetMicroTVAStatusUI()">
+  🧹 Réinitialiser TVA micro (test)
+</button>
+    </div>
+  </div>
+</section>
+
+
+
+
+
+<div id="rapportPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h2>📝 Rapport d’intervention</h2>
+
+    <div class="rapport-header-grid">
+      <div>
+        <label>Nom du client</label>
+        <input
+  type="text"
+  id="rapClientName"
+  list="clientsList"
+  autocomplete="off"
+  onchange="onRapportClientNameChange()"
+  onblur="onRapportClientNameChange()"
+/>
+
+      </div>
+
+      <div>
+        <label>Date d’intervention</label>
+        <input type="date" id="rapDate">
+      </div>
+    </div>
+
+    <label>Adresse</label>
+    <input type="text" id="rapClientAddress">
+
+    <label>Type de rapport</label>
+    <select id="rapportType" onchange="rebuildRapportChecklist()">
+      <option value="">— Choisir —</option>
+    </select>
+
+    <div id="rapportChecklist" class="rapport-checklist"></div>
+
+<div class="rapport-analyse" id="rapportAnalyse" style="display:none;">
+  <h4>Analyse de l’eau (optionnel)</h4>
+
+  <div class="rapport-analyse-grid">
+    <div class="form-group">
+      <label>pH mesuré</label>
+      <input type="number" id="rapPH" step="0.1" placeholder="ex : 7.4">
+    </div>
+
+    <div class="form-group">
+      <label>Chlore libre (mg/L)</label>
+      <input type="number" id="rapChlore" step="0.1" placeholder="ex : 2.5">
+    </div>
+  </div>
+</div>
+
+<label>Remarques / anomalies</label>
+<textarea id="rapNotes" rows="3"></textarea>
+
+<!-- ================= PHOTOS & DOCUMENTS ================= -->
+<div class="rapport-media-section">
+
+  <h4 class="rapport-section-title">📸 Photos de l’intervention</h4>
+  <div class="rapport-upload-box">
+    <input id="rapPhotosInput" type="file" accept="image/*" multiple />
+    <p class="rapport-upload-hint">Ajoute des photos avant / après, matériel, anomalies…</p>
+  </div>
+  <div id="rapPhotosPreview" class="rapport-photos-grid"></div>
+
+  <h4 class="rapport-section-title" style="margin-top:14px;">📎 Documents joints</h4>
+  <div class="rapport-upload-box">
+    <input
+      id="rapFilesInput"
+      type="file"
+      multiple
+      accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    />
+    <p class="rapport-upload-hint">Ajoute un PDF, un Word, des photos, etc.</p>
+  </div>
+
+  <div id="rapFilesList" class="rapport-files-list"></div>
+
+</div>
+
+
+<!-- ================= ACTIONS ================= -->
+<div class="popup-buttons popup-buttons-split">
+
+  <div class="popup-buttons-left">
+    <button
+      class="btn btn-secondary"
+      type="button"
+      onclick="exportRapportWordCurrent()"
+    >
+      🟦 Export Word
+    </button>
+
+    <button
+      class="btn btn-primary"
+      type="button"
+      onclick="transferRapportToClientCurrent()"
+    >
+      📤 Transférer au client
+    </button>
+  </div>
+
+  <div class="popup-buttons-right">
+    <button
+      class="btn btn-success"
+      type="button"
+      onclick="saveRapportOnly()"
+    >
+      💾 Enregistrer
+    </button>
+
+    <button
+      class="btn btn-secondary"
+      type="button"
+      onclick="closeRapportPopup()"
+    >
+      Fermer
+    </button>
+  </div>
+
+</div>
+
+</div>
+
+</div>
+
+<div id="attestationPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h2>Attestation d’entretien clim</h2>
+
+    <label>Nom du client</label>
+    <input
+  type="text"
+  id="attClientName"
+  list="clientsList"
+  autocomplete="off"
+  onchange="onAttClientNameChange()"
+  onblur="onAttClientNameChange()"
+/>
+
+
+    <label>Adresse</label>
+    <input type="text" id="attClientAddress">
+
+    <label>Date d’intervention</label>
+    <input type="date" id="attDate">
+
+    <label>Nombre d’unités clim entretenues</label>
+    <input type="number" id="attUnits" min="1" value="1">
+
+    <label>Remarques (optionnel)</label>
+    <textarea id="attNotes" rows="3"></textarea>
+
+<div class="popup-buttons">
+  <button class="btn btn-success" onclick="saveAttestationOnly()">Enregistrer</button>
+  <button class="btn btn-secondary" onclick="closeAttestationPopup()">Fermer</button>
+</div>
+
+  </div>
+</div>
+
+
+<!-- POPUP ajout manuel planning -->
+<div id="planningPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Ajouter une intervention</h3>
+    <p id="planningPopupDate" class="popup-date"></p>
+
+    <label>Prestation</label>
+    <select id="planningPopupPrestation"></select>
+
+    <label>Nom du client</label>
+    <input type="text" id="planningPopupClient">
+
+    <label>Adresse</label>
+    <input type="text" id="planningPopupAddress">
+
+    <label>Téléphone</label>
+    <input type="text" id="planningPopupPhone">
+
+    <label>Notes</label>
+    <textarea id="planningPopupNotes" placeholder="Notes supplémentaires..."></textarea>
+
+    <div class="popup-buttons">
+      <button class="btn btn-primary" onclick="confirmManualPlanningPopup()">Ajouter</button>
+      <button class="btn btn-secondary" onclick="closeManualPlanningPopup()">Annuler</button>
+    </div>
+  </div>
+</div>
+
+  <!-- LISTE DES DOCUMENTS -->
+
+<section id="listView" class="hidden">
+
+<div class="actions no-print">
+  <button id="createDevis" class="btn btn-primary" onclick="newDocument('devis')">➕ Nouveau devis</button>
+
+ <button id="createContract" class="btn btn-primary" onclick="newContract()">➕ Nouveau contrat</button>
+
+
+  <button id="createFacture" class="btn btn-success" onclick="newDocument('facture')">➕ Nouvelle facture</button>
+
+</div>
+
+
+    <!-- PANEL TARIFS -->
+    <div id="tarifsPanel" class="card no-print hidden">
+      <h2>Tarifs des prestations</h2>
+
+      <!-- actions top -->
+      <div class="tarifs-actions tarifs-actions-top">
+        <button class="btn btn-secondary" onclick="closeTarifsPanel()">← Retour</button>
+        <button class="btn btn-primary" onclick="saveTarifsFromUI()">💾 Enregistrer</button>
+        <button class="btn btn-devis" onclick="openAddPrestationPopup()">➕ Ajouter</button>
+        <button class="btn btn-danger" onclick="resetTarifs()">🧹 Réinitialiser</button>
+      </div>
+
+      <table class="documents-table">
+        <thead>
+          <tr>
+            <th>Prestation</th>
+            <th>Prix Particulier</th>
+            <th>Prix Syndic</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tarifsTableBody"></tbody>
+      </table>
+
+      <div id="descEditor" class="desc-editor hidden">
+        <h4>Texte détaillé du modèle</h4>
+        <label>Texte Particulier</label>
+        <textarea id="descPartInput"></textarea>
+
+        <label>Texte Syndic / Agence</label>
+        <textarea id="descSynInput"></textarea>
+
+        <div class="desc-editor-buttons">
+          <button class="btn btn-primary btn-small" onclick="saveDescEditor()">Enregistrer</button>
+          <button class="btn btn-secondary btn-small" onclick="closeDescEditor()">Fermer</button>
+        </div>
+      </div>
+
+      <div class="tarifs-actions tarifs-actions-bottom">
+        <button class="btn btn-secondary" onclick="closeTarifsPanel()">← Retour</button>
+        <button class="btn btn-primary" onclick="saveTarifsFromUI()">💾 Enregistrer</button>
+        <button class="btn btn-devis" onclick="openAddPrestationPopup()">➕ Ajouter</button>
+        <button class="btn btn-danger" onclick="resetTarifs()">🧹 Réinitialiser</button>
+      </div>
+    </div>
+
+    <!-- POPUP Ajouter prestation -->
+    <div id="prestationPopup" class="popup-overlay hidden">
+      <div class="popup">
+        <h3 id="popupTitle">Nouvelle prestation</h3>
+
+        <label>Nom de la prestation</label>
+        <input type="text" id="popupName">
+
+        <label>Prix Particulier</label>
+        <input type="number" id="popupPricePart" step="0.01" oninput="onPopupPricePartChange()">
+
+        <label>Prix Syndic</label>
+        <input type="number" id="popupPriceSyn" step="0.01">
+
+        <div class="popup-buttons">
+          <button class="btn btn-primary" onclick="confirmPrestationPopup()">Valider</button>
+          <button class="btn btn-secondary" onclick="closePrestationPopup()">Annuler</button>
+        </div>
+      </div>
+    </div>
+
+   <!-- TABLEAU DES DOCUMENTS -->
+  <div class="card" id="documentsCard">
+    <div class="filters-row no-print">
+      <span id="listTitle" class="list-title">Liste des devis</span>
+
+      <!-- Groupe filtres à droite -->
+      <div class="filters-group">
+
+        <!-- 🔍 Recherche devis / factures -->
+        <div class="doc-search-wrapper">
+          <input
+            type="text"
+            id="docSearchInput"
+            placeholder="Rechercher (n°, client, objet...)"
+            oninput="onDocumentsSearchChange()"
+          />
+        </div>
+
+        <!-- Filtre année (factures uniquement) -->
+        <div id="yearFilterContainer" class="hidden">
+          <label>Année</label>
+          <select id="yearFilter" onchange="loadDocumentsList()">
+            <option value="all">Toutes</option>
+          </select>
+        </div>
+
+        <!-- Tri (si tu l’as gardé) -->
+        <div class="sort-wrapper">
+          <label class="filter-label" for="sortDocumentsBy">Trier par</label>
+          <select id="sortDocumentsBy" onchange="loadDocumentsList()">
+            <option value="date_desc">Date</option>
+            <option value="number_desc">Numéro</option>
+          </select>
+        </div>
+
+        <!-- Bouton Export CSV -->
+        <div id="exportContainer" class="hidden">
+          <button
+            class="btn btn-secondary btn-small"
+            onclick="exportFacturesCSV()"
+          >
+            📥 Exporter (CSV)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Filtre "factures impayées" à l'intérieur de la carte -->
+    <div id="unpaidFilterContainer" class="hidden" style="margin-top:10px;">
+      <label style="font-size:14px;">
+        <input
+          type="checkbox"
+          id="filterUnpaid"
+          onchange="loadDocumentsList()"
+        >
+        Afficher seulement les factures impayées
+      </label>
+    </div>
+
+    <!-- Alerte contrats à renouveler (en dessous du bloc filtres) -->
+    <div id="contractsAlert" class="contracts-alert no-print hidden"></div>
+    <div id="contractsFilterBar" class="no-print hidden" style="margin-bottom:10px;">
+      <label style="font-size:14px;">
+        <input type="checkbox" id="filterRenewal" onchange="loadContractsList()">
+        Voir uniquement les contrats à renouveler / terminés
+      </label>
+    </div>
+
+    <table class="documents-table">
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Numéro</th>
+          <th>Client</th>
+          <th>Date</th>
+          <th>Montant</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="documentsTableBody">
+        <tr>
+          <td colspan="7" class="no-docs-cell">
+            Aucun document pour le moment
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+
+  </section>
+
+  <!-- FORMULAIRE DOCUMENT -->
+
+  <section id="formView" class="hidden">
+
+    <div class="actions no-print">
+      <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
+      <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
+      <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+      <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
+      <button id="transformButton" class="btn btn-success" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+<button id="rapportFromDevisButton" class="btn action-button" onclick="onGenerateRapportFromCurrent()">
+  📝 Générer rapport d’intervention
+</button>
+
+
+  <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
+<button class="btn action-button" type="button" onclick="openSendPopup()">📤 Envoyer au client</button>
+
+      <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
+    </div>
+
+    <div class="card">
+      <h2 id="formTitle">Nouveau document</h2>
+
+      <!-- type document -->
+      <div class="row">
+        <div class="form-group">
+         <label class="form-label">
+  Type<span class="required-star">*</span>
+</label>
+          <select id="docType" onchange="updateDocType(); updateTransformButtonVisibility();">
+            <option value="devis">Devis</option>
+            <option value="facture">Facture</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Numéro</label>
+          <input type="text" id="docNumber" readonly>
+        </div>
+
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="docDate" onchange="onDocDateChange()">
+        </div>
+
+        <div class="form-group" id="validityDateGroup">
+          <label>Valable jusqu’au</label>
+          <input type="date" id="validityDate" onchange="onValidityChange()">
+          <div id="devisStatusInfo" class="devis-status-info"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+       <label class="form-label">
+  Objet <span class="required-star">*</span>
+</label>
+        <input type="text" id="docSubject" placeholder="Ex : Entretien piscine + clim – Villa Martin">
+      </div>
+
+      <!-- type client -->
+      <div class="form-group">
+       <label class="form-label">
+  Type de client <span class="required-star">*</span>
+</label>
+        <div class="client-type-row">
+
+          <label class="client-type-option">
+            <input type="radio" name="clientType" value="particulier" id="clientParticulier" onchange="selectClientType('particulier')">
+            Particulier
+          </label>
+
+          <label class="client-type-option">
+            <input type="radio" name="clientType" value="syndic" id="clientSyndic" onchange="selectClientType('syndic')">
+          Agence immobilière
+          </label>
+
+        </div>
+      </div>
+
+      <!-- INFORMATIONS CLIENT -->
+<h3 class="section-title">Informations client</h3>
+
+<div class="row">
+  <div class="form-group" style="max-width: 140px;">
+    <label>Civilité</label>
+    <select id="clientCivility">
+      <option value="">—</option>
+      <option value="Monsieur">Monsieur</option>
+      <option value="Madame">Madame</option>
+      <option value="Monsieur et Madame">Monsieur ou Madame</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+   <label class="form-label">
+  Nom ou Société <span class="required-star">*</span>
+</label>
+    <input
+      type="text"
+      id="clientName"
+      list="clientsList"
+      autocomplete="off"
+      required
+      onchange="onClientNameChange()"
+      onblur="onClientNameChange()"
+    />
+    <datalist id="clientsList"></datalist>
+    <select id="clientNameIOS" style="display:none;"></select>
+
+  </div>
+
+  <!-- (le reste de tes champs Adresse / Téléphone / Email ne bouge pas) -->
+</div>
+
+
+        <div class="form-group">
+         <label class="form-label">
+  Adresse <span class="required-star">*</span>
+</label>
+          <input type="text" id="clientAddress">
+        </div>
+
+        <div class="form-group">
+          <label>Téléphone</label>
+          <input type="tel" id="clientPhone">
+        </div>
+
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="clientEmail">
+        </div>
+      </div>
+
+      <!-- boutons clients -->
+     <div class="row no-print" style="gap:10px; display:flex;">
+
+  <!-- Ajouter client -->
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="addCurrentClient()"
+  >
+    <span class="btn-icon-emoji">➕</span>
+    <span>Ajouter ce client</span>
+  </button>
+
+  <!-- Voir liste clients -->
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="openClientsListPopup()"
+  >
+    <span class="btn-icon-emoji">📋</span>
+    <span>Voir liste clients</span>
+  </button>
+
+  <!-- Supprimer client -->
+  <button
+    type="button"
+    class="btn btn-danger btn-small btn-icon"
+    onclick="deleteCurrentClient()"
+  >
+    <span class="btn-icon-emoji">🗑️</span>
+    <span>Supprimer ce client</span>
+  </button>
+
+</div>
+
+      <!-- Lieu d’intervention (si syndic/agence) -->
+    <div id="siteBlock" class="row" style="display:none;">
+
+  <div class="form-group" style="max-width: 150px;">
+    <label>Civilité lieu</label>
+    <select id="siteCivility" style="min-width: 250px;">
+
+      <option value="">—</option>
+      <option value="Chez Monsieur">Chez Monsieur</option>
+      <option value="Chez Madame">Chez Madame</option>
+      <option value="Appartement Monsieur">Appartement Monsieur</option>
+      <option value="Appartement Madame">Appartement Madame</option>
+      <option value="Villa Monsieur">Villa Monsieur</option>
+      <option value="Villa Madame">Villa Madame</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">
+  Nom du client sur site <span class="required-star">*</span>
+</label>
+    <input type="text" id="siteName" placeholder="Ex : Mme Dupont Élise">
+  </div>
+
+  <div class="form-group">
+<label class="form-label">
+  Adresse du lieu d'intervention <span class="required-star">*</span>
+</label>
+    <input type="text" id="siteAddress" placeholder="Ex : Résidence Le Parc, Bât A, 14 rue ...">
+  </div>
+
+</div>
+
+
+      <!-- PRESTATIONS -->
+      <div class="prestations-section">
+        <h3 class="section-title">Prestations</h3>
+
+        <div id="prestationsContainer"></div>
+
+        <button id="addPrestationBtn" class="btn action-button no-print" onclick="addPrestation()">
+          ➕ Ajouter une prestation
+        </button>
+      </div>
+
+      <!-- TOTAUX -->
+      <div class="totals">
+
+        <div class="total-line">
+          <span>Sous-total HT :</span>
+          <span id="subtotalHT">0,00 €</span>
+        </div>
+
+        <!-- Réduction dans la grille -->
+        <div class="totals-grid">
+          <div class="form-group discount-group">
+            <label>Réduction</label>
+            <div class="discount-row">
+              <label class="discount-toggle">
+                <input type="checkbox" id="discountEnabled" onchange="onDiscountToggle()">
+                Appliquer une réduction
+              </label>
+
+              <input
+                type="number"
+                id="discountPercentInput"
+                min="0"
+                max="100"
+                value="0"
+                step="0.01"
+                oninput="onDiscountPercentChange()"
+                disabled
+              >
+              <span class="discount-percent-symbol">%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 🔻 BLOC TVA DÉPLACÉ ICI, SOUS LA RÉDUCTION -->
+        <div class="form-group tva-group">
+          <label>TVA</label>
+
+          <div class="tva-options">
+            <label>
+              <input type="radio" name="tvaRadio" id="tva0" checked onchange="onMainTvaRadioChange(0)"> 0 %
+            </label>
+            <label>
+              <input type="radio" name="tvaRadio" id="tva20" onchange="onMainTvaRadioChange(20)"> 20 %
+            </label>
+          </div>
+
+          <div class="tva-rate-wrapper">
+            <input type="number" id="tvaRate" value="0" step="0.01" readonly>
+            <span class="tva-percent-symbol">%</span>
+          </div>
+        </div>
+
+        <div id="discountLine" class="total-line" style="display:none;">
+          <span id="discountLabel">Réduction :</span>
+          <span id="discountAmount">0,00 €</span>
+        </div>
+
+        <div class="total-line">
+          <span>TVA :</span>
+          <span id="tvaAmount">0,00 €</span>
+        </div>
+
+        <div class="total-line grand-total">
+          <span id="totalLabel">NET À PAYER :</span>
+          <span id="totalTTC">0,00 €</span>
+        </div>
+
+        <div class="tva-note" id="tvaNote">TVA non applicable, article 293 B du CGI.</div>
+      </div>
+
+
+      <!-- SECTION PAIEMENT (factures) -->
+      <div class="form-group no-print" id="paymentSection">
+        <label>Règlement</label>
+
+        <div class="pay-line">
+          <label><input type="radio" name="payMode" id="payNone" value="" checked onchange="onPayModeChange()"> Facture non réglée</label>
+        </div>
+
+        <div class="pay-line">
+          <label><input type="radio" name="payMode" value="especes" id="payEspeces" onchange="onPayModeChange()"> Espèces</label>
+          <label><input type="radio" name="payMode" value="cb" id="payCB" onchange="onPayModeChange()"> Carte bancaire</label>
+          <label><input type="radio" name="payMode" value="virement" id="payVirement" onchange="onPayModeChange()"> Virement</label>
+          <label><input type="radio" name="payMode" value="cheque" id="payCheque" onchange="onPayModeChange()"> Chèque</label>
+        </div>
+
+        <div id="paymentDateWrapper" class="payment-date-wrapper">
+          <label>Date de règlement</label>
+          <input type="date" id="paymentDate">
+        </div>
+      </div>
+
+<div class="form-group no-print devis-signature-trigger">
+  <label style="display:flex; align-items:center; gap:10px; margin:0;">
+    <input type="radio" id="approveDevis" name="approveDoc">
+
+    Bon pour accord – signer électroniquement
+  </label>
+</div>
+
+<!-- ================= HISTORIQUE DOCUMENT ================= -->
+
+<div id="historyCard" class="history-card no-print">
+  <h3 class="section-title">Historique du document</h3>
+  <div id="historyList" class="history-list">
+    <div class="history-empty">Aucune modification pour le moment.</div>
+  </div>
+</div>
+
+<!-- ================= SANTÉ DU DOCUMENT ================= -->
+
+<div id="documentHealthCard" class="card health-card no-print hidden" style="margin-top:20px;">
+  <h3 class="section-title">Santé du document</h3>
+
+  <table class="document-health-table">
+    <thead>
+      <tr>
+        <th>Catégorie</th>
+        <th>Statut</th>
+        <th>Détails</th>
+      </tr>
+    </thead>
+    <tbody id="documentHealthBody">
+      <tr><td colspan="3">Analyse en cours...</td></tr>
+    </tbody>
+  </table>
+</div>
+
+
+
+      <!-- Notes -->
+      <div class="form-group">
+        <label>Notes / Conditions</label>
+        <textarea id="notes" placeholder="Conditions de paiement, garanties, etc."></textarea>
+      </div>
+
+      <!-- ACTIONS BAS -->
+    <div class="actions no-print">
+      <button class="btn btn-secondary" onclick="backToList()">← Retour</button>
+      <button class="btn action-button" onclick="saveDocument()">💾 Enregistrer</button>
+      <button class="btn action-button" onclick="openPrintable()">🖨️ Imprimer</button>
+      <button class="btn action-button" onclick="duplicateCurrent()">🧾 Dupliquer</button>
+      <button id="transformButton" class="btn btn-success" style="display:none;" onclick="transformToInvoice()">🔁 Facture</button>
+<button id="rapportFromDevisButton" class="btn action-button" onclick="onGenerateRapportFromCurrent()">
+  📝 Générer rapport d’intervention
+</button>
+
+
+  <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
+<button class="btn action-button" type="button" onclick="openSendPopup()">📤 Envoyer au client</button>
+
+      <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
+    </div>
+
+  </section>
+
+<!-- ========================================================= -->
+<!-- ===============   PAGE  CONTRAT PISCINE/SPA   ============ -->
+<!-- ========================================================= -->
+
+<section id="contractView" class="hidden">
+
+  <div class="actions no-print" style="margin-bottom:20px;">
+    <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
+    <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
+    <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
+<button id="contractTransformButtonTop" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+
+
+      <button class="btn btn-primary" onclick="createDevisFromCurrentContract()">🧾 Créer un devis</button>
+<button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
+  <span class="icon">🔁</span> Renouveler
+</button>
+<button class="btn btn-primary" onclick="openContractSchedulePopup()">
+  📅 Voir l’échéancier
+</button>
+    <button class="btn btn-primary" type="button" onclick="openSendPopupContract()">📤 Envoyer au client</button>
+
+<button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
+<button class="btn btn-danger" type="button" onclick="markContractNoRenew(currentContractId)">
+  🚫 Ne pas renouveler
+</button>
+<button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
+  </div>
+
+ <div class="card">
+  <div class="contract-header-blue">
+    <h2>🟦 Contrat d’entretien Piscine / Spa</h2>
+  </div>
+
+  <!-- Bandeau lien devis / contrat -->
+  <div id="ctDevisBanner" class="devis-banner" style="display:none; margin:10px 0; padding:8px 12px; background:#e3f2fd; border-left:4px solid #1976d2; border-radius:4px; font-size:14px;">
+    <!-- Le texte sera rempli par le JS -->
+  </div>
+</div>
+
+
+
+    <!-- ================= INFOS CLIENT ================= -->
+
+<h3 class="section-title">1. Informations client</h3>
+
+<div class="row">
+  <div class="form-group">
+    <label>Civilité</label>
+    <select id="ctClientCivility">
+      <option value="">—</option>
+      <option value="Monsieur">Monsieur</option>
+      <option value="Madame">Madame</option>
+      <option value="Société">Monsieur ou Madame</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label class="form-label">
+  Nom ou Société <span class="required-star">*</span>
+</label>
+   <input
+  type="text"
+  id="ctClientName"
+  list="clientsList"
+  autocomplete="off"
+  required
+  onchange="onContractClientNameChange()"
+  onblur="onContractClientNameChange()"
+/>
+
+  </div>
+
+  <div class="form-group">
+   <label class="form-label">
+ Adresse <span class="required-star">*</span>
+</label>
+    <input type="text" id="ctClientAddress">
+  </div>
+
+  <div class="form-group">
+    <label>Téléphone</label>
+    <input type="text" id="ctClientPhone">
+  </div>
+
+  <div class="form-group">
+    <label>Email</label>
+    <input type="email" id="ctClientEmail">
+  </div>
+
+  <div class="form-group">
+    <label>Référence contrat</label>
+    <input type="text" id="ctReference">
+  </div>
+</div>
+
+<!-- Boutons clients pour les contrats -->
+<div class="row no-print" style="gap:10px; display:flex; margin-bottom:15px;">
+
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="addCurrentClientFromContract()"
+  >
+    ➕ Ajouter ce client
+  </button>
+
+  <button
+    type="button"
+    class="btn btn-primary btn-small btn-icon"
+    onclick="openClientsListPopup()"
+  >
+    📋 Voir liste clients
+  </button>
+
+  <button
+    type="button"
+    class="btn btn-danger btn-small btn-icon"
+    onclick="deleteCurrentClientFromContract()"
+  >
+    🗑️ Supprimer ce client
+  </button>
+
+</div>
+
+
+
+
+   <!-- ================= LIEU ================= -->
+<div id="ctSiteSection">
+  <h3 class="section-title">2. Lieu d’intervention</h3>
+
+  <div class="row">
+    <div class="form-group">
+      <label>Civilité du lieu</label>
+      <select id="ctSiteCivility">
+        <option value="">—</option>
+        <option value="Chez Monsieur">Chez Monsieur</option>
+        <option value="Chez Madame">Chez Madame</option>
+        <option value="Appartement Monsieur">Appartement Monsieur</option>
+        <option value="Appartement Madame">Appartement Madame</option>
+        <option value="Villa Monsieur">Villa Monsieur</option>
+        <option value="Villa Madame">Villa Madame</option>
+        <option value="Résidence">Résidence</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+     <label class="form-label">
+  Nom sur place <span class="required-star">*</span>
+</label>
+      <input type="text" id="ctSiteName">
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">
+ Adresse du bassin <span class="required-star">*</span>
+</label>
+      <input type="text" id="ctSiteAddress">
+    </div>
+  </div>
+</div>
+
+
+
+    <!-- ================= BASSIN ================= -->
+    <h3 class="section-title">3. Caractéristiques du bassin</h3>
+
+    <div class="row">
+<div class="form-group">
+  <label>Type de bassin</label>
+  <select id="ctPoolType">
+    <option value="piscine_chlore">🏊 Piscine au chlore (traitement classique)</option>
+    <option value="piscine_sel">🌊 Piscine au sel (électrolyseur)</option>
+    <option value="spa">🛁 Spa / Jacuzzi</option>
+  </select>
+</div>
+
+
+ <div class="form-group">
+  <label>Traitement / équipement principal</label>
+  <select id="ctEquipment">
+    <option value="">—</option>
+    <option value="Traitement manuel">Traitement manuel</option>
+    <option value="Électrolyseur au sel">Électrolyseur au sel</option>
+    <option value="Régulation automatique pH / redox">Régulation automatique pH / redox</option>
+    <option value="Autre (précisé en observation)">Autre (précisé en observation)</option>
+  </select>
+</div>
+
+
+<div class="form-group">
+  <label>Volume approximatif (m³)</label>
+  <input type="text" id="ctVolume">
+</div>
+
+      <div class="form-group">
+        <label>Particularités</label>
+        <textarea id="ctNotes" placeholder="Accès difficile, horaires, animaux…"></textarea>
+      </div>
+    </div>
+
+
+    <!-- ================= FRÉQUENCE ================= -->
+    <h3 class="section-title">4. Fréquence & planification</h3>
+
+    <div class="row">
+<div class="form-group">
+        <label for="ctStartDate">
+ Type de client <span class="required-star">*</span>
+</label>
+  <div class="client-type-row">
+    <label class="client-type-option">
+      <input type="radio" name="ctClientTypeChoice" value="particulier" id="ctClientParticulier" checked>
+      Particulier
+    </label>
+    <label class="client-type-option">
+      <input type="radio" name="ctClientTypeChoice" value="syndic" id="ctClientSyndic">
+      Agence immobilière
+    </label>
+  </div>
+  <!-- Valeur utilisée par le JS (comme avant) -->
+  <input type="hidden" id="ctClientType" value="particulier">
+</div>
+
+
+ <div class="form-group">
+  <label>Prestation principale (auto pour le tarif)</label>
+  <select id="ctMainService" disabled>
+    <option value="piscine_chlore">Piscine (Chlore)</option>
+    <option value="piscine_sel">Piscine (Sel)</option>
+    <option value="entretien_jacuzzi">Spa / Jacuzzi</option>
+  </select>
+</div>
+
+
+      <div class="form-group">
+        <label>Mode de passages</label>
+        <select id="ctMode">
+          <option value="standard">Standard : 1/mois hiver – 2/mois été</option>
+          <option value="intensif">Intensif : 2/mois hiver – 4/mois été</option>
+          <option value="custom">Personnalisé</option>
+        </select>
+      </div>
+
+<div class="form-group">
+  <label>Passages hiver (nov → avr)</label>
+  <select id="ctPassHiver">
+    <option value="0">0 – Sur demande</option>
+    <option value="1">1 passage / mois</option>
+    <option value="2">2 passages / mois</option>
+    <option value="4">4 passages / mois</option>
+  </select>
+</div>
+
+<div class="form-group">
+  <label>Passages été (mai → oct)</label>
+  <select id="ctPassEte">
+    <option value="0">0 – Sur demande</option>
+    <option value="1">1 passage / mois</option>
+    <option value="2" selected>2 passages / mois</option>
+    <option value="4">4 passages / mois</option>
+  </select>
+</div>
+
+    </div>
+
+    <div class="row">
+      <div class="form-group">
+        <label for="ctStartDate">
+  Début du contrat <span class="required-star">*</span>
+</label>
+
+        <input type="date" id="ctStartDate">
+      </div>
+
+ <div class="form-group">
+  <label>Durée du contrat</label>
+<select id="ctDuration" class="form-select">
+  <option value="4">4 mois – Saison été (juin → septembre)</option>
+  <option value="5">5 mois – Saison étendue</option>
+  <option value="6">6 mois – Saison longue (mai → octobre)</option>
+  <option value="12">12 mois – Annuel</option>
+</select>
+
+</div>
+
+
+      <div class="form-group">
+        <label>Fin du contrat (auto)</label>
+        <input type="text" id="ctEndDate" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Période couverte</label>
+        <input type="text" id="ctPeriod" readonly>
+      </div>
+
+<div class="form-group">
+  <label>Total passages (auto)</label>
+
+  <input type="text" id="ctTotalPassages" readonly>
+
+  <div id="ctRecapSummary" class="ct-recap-summary"></div>
+  <div id="ctWarning" class="ct-warning hidden"></div>
+</div>
+
+    </div>
+
+
+      <!-- ================= TARIFS ================= -->
+    <h3 class="section-title">5. Tarifs & calcul automatique</h3>
+
+    <div class="row">
+      <div class="form-group">
+        <label>Prix unitaire (auto)</label>
+        <input type="text" id="ctUnitPrice" readonly>
+      </div>
+
+      <div class="form-group">
+        <label>Montant total HT</label>
+        <input type="text" id="ctTotalHT" readonly>
+      </div>
+    </div>
+<div class="row">
+  <div class="form-group">
+  <label for="ctBillingMode">
+  Mode de facturation <span class="required-star">*</span>
+</label>
+
+<select id="ctBillingMode">
+  <option value="mensuel">Mensuel</option>
+  <option value="annuel_50_50">Annuel 50/50</option>
+  <option value="trimestriel">Trimestriel</option>
+  <option value="semestriel">Semestriel</option>
+  <option value="annuel">Annuel</option>
+</select>
+
+  </div>
+</div>
+
+<div class="row">
+  <div class="form-group">
+    <label>Options d’usage</label>
+    <div class="options-box">
+      <label class="option-item">
+        <input type="checkbox" id="ctAirbnb">
+        <span>Usage location saisonnière / Airbnb (majoration +20 %)</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="form-group">
+    <label>Options forfaitaires</label>
+
+    <div class="options-box">
+      <label class="option-item">
+        <input type="checkbox" id="ctIncludeOpening">
+        <span>Mise en service de la piscine avant la saison estivale</span>
+      </label>
+
+      <label class="option-item">
+        <input type="checkbox" id="ctIncludeWinter">
+        <span>Hivernage</span>
+      </label>
+    </div>
+
+  </div>
+</div>
+
+<div class="contract-summary">
+  <h4>Récapitulatif</h4>
+  <p><strong>Visites :</strong> <span id="ctRecapPassages">0</span></p>
+  <p><strong>Prix unitaire :</strong> <span id="ctRecapPrice">0 €</span></p>
+  <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
+</div>
+
+<!-- SIGNATURE CONTRAT SYNDIC -->
+
+<div
+  id="ctSignatureWrapper"
+  class="form-group no-print devis-signature-trigger"
+  style="display:none;"
+>
+  <label>
+    <input
+      type="radio"
+      id="approveContract"
+      name="approveContract"
+      onclick="openContractSignature()"
+    >
+    Bon pour accord – signer électroniquement
+  </label>
+</div>
+
+<div class="contract-tva">
+  <label>TVA</label>
+
+  <div class="tva-options">
+    <label>
+      <input
+        type="radio"
+        name="ctTva"
+        id="ctTva0"
+        value="0"
+        checked
+        onchange="onContractTvaRadioChange(0)"
+      >
+      0 %
+    </label>
+
+    <label>
+      <input
+        type="radio"
+        name="ctTva"
+        id="ctTva20"
+        value="20"
+        onchange="onContractTvaRadioChange(20)"
+      >
+      20 %
+    </label>
+  </div>
+</div>
+
+ <!-- ACTIONS BAS CONTRAT -->
+   <div class="actions no-print" style="margin-bottom:20px;">
+    <button class="btn btn-secondary" onclick="backToContracts()">← Retour</button>
+    <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
+    <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
+<button id="contractTransformButtonBottom" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+
+
+     <button class="btn btn-primary" onclick="createDevisFromCurrentContract()">🧾 Créer un devis</button>
+
+<button class="btn btn-primary" type="button" onclick="openRenewPopup(currentContractId)">
+  <span class="icon">🔁</span> Renouveler
+</button>
+<button class="btn btn-primary" onclick="openContractSchedulePopup()">
+  📅 Voir l’échéancier
+</button>
+
+<button class="btn btn-primary" type="button" onclick="openSendPopupContract()">📤 Envoyer au client</button>
+
+<button class="btn btn-danger" onclick="openResiliationPopup(currentContractId)">🔴 Résilier</button>
+<button class="btn btn-danger" type="button" onclick="markContractNoRenew(currentContractId)">
+  🚫 Ne pas renouveler
+</button>
+
+    <button class="btn btn-danger" onclick="deleteCurrentContract()">🗑️ Supprimer</button>
+  </div>
+
+
+  <!-- ================= SANTÉ DU DOCUMENT (CONTRAT) ================= -->
+  <div id="contractDocumentHealthCard" class="health-card no-print">
+      <h3 class="section-title">Santé du document</h3>
+
+    <table class="document-health-table">
+      <thead>
+        <tr>
+          <th>Catégorie</th>
+          <th>Statut</th>
+          <th>Détails</th>
+        </tr>
+      </thead>
+      <tbody id="contractDocumentHealthBody">
+        <tr><td colspan="3">Analyse en cours...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  </div> <!-- fin .card -->
+
+
+</section> <!-- fin #contractView -->
+
+
+
+  <!-- ================= POPUP CONFIRM CUSTOM ================= -->
+ 
+ <div id="confirmOverlay" class="confirm-overlay hidden">
+    <div class="confirm-box">
+
+      <div class="confirm-icon" id="confirmIcon">⚠️</div>
+      <h3 class="confirm-title" id="confirmTitle"></h3>
+      <p class="confirm-message" id="confirmMessage"></p>
+
+      <div class="confirm-buttons">
+        <button id="confirmCancel" class="btn btn-secondary" type="button">Annuler</button>
+        <button id="confirmOk" class="btn btn-danger" type="button">OK</button>
+      </div>
+    </div>
+  </div>
+
+
+<div id="renewPopup" class="popup hidden">
+  <h3>Renouvellement du contrat</h3>
+  <p>Souhaites-tu renouveler ce contrat pour une nouvelle période ?</p>
+
+  <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
+    <button class="btn btn-secondary" onclick="closeRenewPopup()">Annuler</button>
+    <button class="btn btn-primary" onclick="confirmRenewPopup()">Renouveler</button>
+  </div>
+</div>
+<div id="contractSchedulePopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Échéancier du contrat</h3>
+    <p id="contractScheduleTitle" class="schedule-contract-title"></p>
+    <p id="contractSchedulePeriod" class="schedule-contract-period"></p>
+
+    <div id="contractScheduleContent"></div>
+
+    <div class="popup-buttons">
+      <button class="btn btn-light" onclick="closeContractSchedulePopup()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ================== POPUP CHIFFRE D'AFFAIRES ================== -->
+<div id="caReportOverlay" class="ca-overlay hidden">
+  <div class="ca-box">
+    <div class="ca-header">
+      <h3>Chiffre d’affaires</h3>
+      <button type="button" class="btn btn-light ca-close" onclick="closeCAReport()">✕</button>
+    </div>
+
+    <!-- Filtres -->
+    <div class="ca-filters-row">
+      <div class="ca-filter">
+        <label for="caYearSelect">Année :</label>
+        <select id="caYearSelect" onchange="renderCAReport()"></select>
+      </div>
+
+      <div class="ca-filter">
+        <label class="ca-compare-label">
+          <input type="checkbox" id="caComparePrevYear" onchange="renderCAReport()">
+          Comparer avec N-1
+        </label>
+      </div>
+
+      <div class="ca-filter ca-export-group">
+        <button type="button" class="btn btn-secondary btn-small" onclick="exportCAURSSAFCSV()">
+          📤 Export URSSAF
+        </button>
+        <button type="button" class="btn btn-secondary btn-small" onclick="exportCAFullCSV()">
+          📊 Export Expert-comptable
+        </button>
+      </div>
+    </div>
+
+    <!-- Résumé haut niveau -->
+    <div class="ca-summary-grid">
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">CA total TTC</div>
+        <div class="ca-summary-value" id="caSummaryTotalTTC">–</div>
+        <div class="ca-summary-sub" id="caSummaryTotalHT">HT : –</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">CA payé TTC</div>
+        <div class="ca-summary-value" id="caSummaryPaidTTC">–</div>
+        <div class="ca-summary-sub" id="caSummaryPaidPct">– % des factures</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">CA impayé TTC</div>
+        <div class="ca-summary-value ca-badge-danger" id="caSummaryUnpaidTTC">–</div>
+        <div class="ca-summary-sub" id="caSummaryUnpaidCount">– factures impayées</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">TVA collectée</div>
+        <div class="ca-summary-value" id="caSummaryTVA">–</div>
+        <div class="ca-summary-sub" id="caSummaryTVARate">TVA moyenne : –</div>
+      </div>
+
+      <div class="ca-summary-card">
+        <div class="ca-summary-label">Mois en cours (TTC)</div>
+        <div class="ca-summary-value" id="caSummaryCurrentMonth">–</div>
+        <div class="ca-summary-sub" id="caSummaryCurrentMonthLabel">–</div>
+      </div>
+
+      <div class="ca-summary-card" id="caSummaryPrevYearCard">
+        <div class="ca-summary-label">Écart vs N-1</div>
+        <div class="ca-summary-value" id="caSummaryDelta">–</div>
+        <div class="ca-summary-sub" id="caSummaryDeltaPct">–</div>
+      </div>
+    </div>
+
+    <!-- Graphique -->
+    <div class="ca-chart-wrapper">
+      <h4>Évolution mensuelle du CA (TTC)</h4>
+      <div id="caChartBars" class="ca-chart-bars"></div>
+      <div class="ca-chart-legend">
+        <span class="ca-legend-current">■ Année sélectionnée</span>
+        <span class="ca-legend-prev" id="caLegendPrevYear">■ N-1</span>
+      </div>
+    </div>
+
+    <!-- Tableau mensuel détaillé -->
+    <div class="ca-table-wrapper">
+      <h4>Tableau mensuel détaillé</h4>
+      <table class="ca-table">
+        <thead>
+          <tr>
+            <th>Mois</th>
+            <th class="text-right">CA HT</th>
+            <th class="text-right">TVA</th>
+            <th class="text-right">CA TTC</th>
+            <th class="text-right">Payé</th>
+            <th class="text-right">Impayé</th>
+            <th class="text-right">% réglé</th>
+            <th class="text-right"># factures (payées / impayées)</th>
+          </tr>
+        </thead>
+        <tbody id="caTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- Synthèse TVA (utile comptable) -->
+    <div class="ca-tva-wrapper">
+      <h4>TVA – récapitulatif annuel</h4>
+      <table class="ca-table ca-table-small">
+        <thead>
+          <tr>
+            <th>Base HT</th>
+            <th>TVA collectée</th>
+            <th>CA TTC</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="text-right" id="caTVABaseHT">–</td>
+            <td class="text-right" id="caTVACollectee">–</td>
+            <td class="text-right" id="caTVACATTC">–</td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="ca-tva-note">
+        🔎 À transmettre à ton expert-comptable pour la déclaration de TVA et à l’URSSAF
+        pour justifier du chiffre d’affaires encaissé.
+      </p>
+    </div>
+
+    <div class="ca-footer">
+      <button type="button" class="btn btn-light" onclick="closeCAReport()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- POPUP ENVOI DOCUMENT AU CLIENT -->
+<div id="sendPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Envoyer au client</h3>
+
+    <p id="sendDocInfo" style="margin-bottom:8px; font-weight:600;"></p>
+
+    <label>Message proposé</label>
+    <textarea id="sendMessagePreview" rows="7"></textarea>
+
+    <div class="popup-buttons">
+      <button class="btn btn-primary btn-small" type="button" onclick="sendByEmail()">✉️ Envoyer par email</button>
+      <button class="btn btn-success btn-small" type="button" onclick="sendByWhatsApp()">💬 Envoyer par WhatsApp</button>
+      <button class="btn btn-secondary btn-small" type="button" onclick="closeSendPopup()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+  <!-- ================= POPUP RÉSILIATION CONTRAT ================= -->
+
+<div id="resiliationPopup" class="popup hidden">
+  <h3>Résiliation du contrat</h3>
+
+<label for="resiliationWho">Qui résilie ?</label>
+  <select id="resiliationWho">
+    <option value="client">Le client</option>
+    <option value="prestataire">AquaClim Prestige</option>
+  </select>
+
+  <label for="resiliationDate" style="margin-top:8px;">Date de réception du courrier recommandé</label>
+  <input
+    type="date"
+    id="resiliationDate"
+  />
+  <p class="resiliation-note">
+    Laisse vide pour utiliser la date d'aujourd'hui.
+  </p>
+
+  <label for="resiliationMotif" style="margin-top:8px;">Motif de résiliation</label>
+  <textarea
+    id="resiliationMotif"
+    placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
+    rows="3"
+  ></textarea>
+
+  <p class="resiliation-note">
+    La résiliation prendra effet après réception du courrier recommandé et émission de la facture de clôture.
+  </p>
+
+  <div class="popup-buttons">
+    <button type="button" class="btn btn-secondary" onclick="closeResiliationPopup()">Annuler</button>
+    <button type="button" class="btn btn-danger" onclick="confirmResiliationPopup()">
+      Confirmer la résiliation
+    </button>
+  </div>
+</div>
+  
+
+  <!-- ================= POPUP LISTE CLIENTS ================= -->
+
+  <div id="clientsPopup" class="popup-overlay hidden">
+    <div class="popup">
+
+      <h3>Liste des clients</h3>
+
+      <!-- 🔍 Barre de recherche -->
+      <input
+        type="text"
+        id="clientSearchInput"
+        placeholder="Rechercher un client..."
+        oninput="filterClientsList()"
+        style="width:100%; padding:8px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc;"
+      />
+
+      <!-- 📋 Liste clients -->
+      <div id="clientsListContainer" class="client-list-box"></div>
+<!-- Pagination -->
+<div id="clientsPagination" class="clients-pagination">
+  <button class="btn btn-secondary btn-small" type="button" onclick="prevClientsPage()">◀</button>
+  <span id="clientsPageInfo">Page 1 / 1</span>
+  <button class="btn btn-secondary btn-small" type="button" onclick="nextClientsPage()">▶</button>
+</div>
+      <!-- ✏️ Formulaire d’édition -->
+      <div id="editClientForm" class="hidden" style="margin-top:15px;">
+        <h4>Modifier le client</h4>
+
+             <label for="ctStartDate">
+ Nom <span class="required-star">*</span>
+</label>
+        <input type="text" id="editClientName">
+
+             <label for="ctStartDate">
+  Adresse <span class="required-star">*</span>
+</label>
+        <input type="text" id="editClientAddress">
+
+        <label>Téléphone</label>
+        <input type="text" id="editClientPhone">
+
+        <label>Email</label>
+        <input type="text" id="editClientEmail">
+<label>Notes privées (digicode, portail, clés…)</label>
+<textarea id="editClientPrivateNotes" rows="4"
+  placeholder="Ex: Digicode 1234 • Portail à droite • Clés sous le pot…"></textarea>
+
+
+        <div style="margin-top:10px; display:flex; gap:10px;">
+          <button class="btn btn-primary btn-small" onclick="saveEditedClient()">💾 Enregistrer</button>
+          <button class="btn btn-secondary btn-small" onclick="cancelEditClient()">Annuler</button>
+        </div>
+      </div>
+
+<!-- 📤 Export CSV + Fermer -->
+<div class="popup-buttons clients-footer">
+  <div class="clients-footer-left">
+    <button class="btn btn-primary btn-small btn-icon" type="button" onclick="openAddClientFromList()">
+  <span class="btn-icon-emoji">➕</span>
+  <span>Ajouter un client</span>
+</button>
+
+  </div>
+  <div class="clients-footer-right">
+    <button class="btn btn-primary btn-small" type="button" onclick="exportClientsCSV()">
+      📤 Export CSV
+    </button>
+    <button class="btn btn-secondary btn-small" type="button" onclick="closeClientsListPopup()">
+      Fermer
+    </button>
+  </div>
+</div>
+
+
+    </div> <!-- .popup -->
+</div> <!-- #clientsPopup -->
+
+</div> <!-- FIN container -->
+
+<!-- POPUP SIGNATURE (UNIQUE) -->
+<div id="signaturePopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>✍️ Signature client</h3>
+
+    <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+
+    <div class="popup-buttons" style="display:flex; gap:10px; justify-content:flex-end; margin-top:12px;">
+      <button type="button" class="btn btn-secondary" id="signatureClear">Effacer</button>
+      <button type="button" class="btn btn-danger" id="signatureClose">Fermer</button>
+      <button type="button" class="btn btn-primary" id="signatureValidate">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- PDF VIEWER (iPhone fix) -->
+<div id="pdfViewerOverlay" class="pdf-overlay hidden">
+  <div class="pdf-topbar no-print">
+    <button type="button" class="btn btn-secondary pdf-back-btn" onclick="closePdfViewer()">
+      ← Retour
+    </button>
+
+    <!-- ✅ BOUTON QUI SAUVE SUR IPHONE -->
+    <button
+      id="pdfViewerCloseBtn"
+      type="button"
+      class="btn btn-danger"
+      onclick="closePdfViewer()"
+      style="margin-left:auto;"
+    >
+      ✕ Fermer
+    </button>
+  </div>
+
+  <iframe id="pdfViewerFrame" class="pdf-frame" title="Aperçu PDF"></iframe>
+</div>
+<div id="toastContainer" class="toast-container"></div>
+
+
+<!-- Librairie SignaturePad -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+
+<!-- jsPDF pour génération des PDF -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+
+<!-- SortableJS-->
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+<!-- ✅ App JS EN DERNIER -->
+<script src="app.js"></script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
