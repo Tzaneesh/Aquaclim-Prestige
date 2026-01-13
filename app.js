@@ -9076,6 +9076,10 @@ function hideHealthCardsEverywhere() {
   document.getElementById("contractDocumentHealthCard")?.classList.add("hidden");
 }
 
+// ✅ expose global (module-safe / PWA-safe)
+window.hideHealthCardsEverywhere = hideHealthCardsEverywhere;
+
+
 function showHealthCardForCurrentView(view) {
   hideHealthCardsEverywhere();
   if (view === "doc") document.getElementById("documentHealthCard")?.classList.remove("hidden");
@@ -13375,7 +13379,10 @@ function hideAllSections() {
 ============================ */
 
 function showHome() {
-  hideHealthCardsEverywhere();
+  if (typeof window.hideHealthCardsEverywhere === "function") {
+    window.hideHealthCardsEverywhere();
+  }
+
   const tabHome = document.getElementById("tabHome");
   const tabDevis = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
@@ -13391,7 +13398,6 @@ function showHome() {
   const settingsView = document.getElementById("settingsView");
   settingsView && settingsView.classList.add("hidden");
 
-  // Onglets
   tabHome && tabHome.classList.add("active");
   tabDevis && tabDevis.classList.remove("active");
   tabContrats && tabContrats.classList.remove("active");
@@ -13399,14 +13405,13 @@ function showHome() {
   tabAttest && tabAttest.classList.remove("active");
   tabCA && tabCA.classList.remove("active");
 
-  // Vues
   homeView && homeView.classList.remove("hidden");
   listView && listView.classList.add("hidden");
   formView && formView.classList.add("hidden");
   contractView && contractView.classList.add("hidden");
   attestationView && attestationView.classList.add("hidden");
 
-  refreshHomeStats();
+  if (typeof refreshHomeStats === "function") refreshHomeStats();
 }
 
 function openFromHome(type) {
@@ -21106,6 +21111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
