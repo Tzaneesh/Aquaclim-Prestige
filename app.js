@@ -20934,6 +20934,134 @@ function pwaRefreshNow(){
   window.addEventListener("load", bind);
 })();
 
+// =====================================================
+// ✅ BRIDGE HTML (onclick/ oninput...) <-> type="module"
+// =====================================================
+(function exposeGlobals() {
+  const map = {
+    // navigation / home
+    showHome,
+    openFromHome,
+    changePlanningWeek,
+
+    // tabs / panels
+    openTarifsPanelAny,
+    openClientsListPopup,
+    showAttestations,
+    openCA,
+    openCAReport,
+
+    // home widgets
+    renderClientsFollowup,
+
+    // settings / backup
+    exportBackupJSON,
+    importBackupJSON,
+    saveCompanySettingsFromForm,
+    resetMicroTVAStatusUI,
+
+    // devis/factures
+    newDocument,
+    backToList,
+    saveDocument,
+    openPrintable,
+    duplicateCurrent,
+    transformToInvoice,
+    onGenerateRapportFromCurrent,
+    createContractFromDevis,
+    openSendPopup,
+    deleteCurrent,
+    onDocumentsSearchChange,
+    loadDocumentsList,
+    exportFacturesCSV,
+
+    // TVA / client type
+    onMainTvaRadioChange,
+    selectClientType,
+    onClientNameChange,
+
+    // clients
+    addCurrentClient,
+    deleteCurrentClient,
+    filterClientsList,
+    prevClientsPage,
+    nextClientsPage,
+    saveEditedClient,
+    cancelEditClient,
+    openAddClientFromList,
+    exportClientsCSV,
+    closeClientsListPopup,
+
+    // tarifs
+    closeTarifsPanel,
+    saveTarifsFromUI,
+    openAddPrestationPopup,
+    resetTarifs,
+    onPopupPricePartChange,
+    confirmPrestationPopup,
+    closePrestationPopup,
+    saveDescEditor,
+    closeDescEditor,
+
+    // contrats
+    newContract,
+    backToContracts,
+    saveContract,
+    openContractPDF,
+    transformContractToInvoice,
+    createDevisFromCurrentContract,
+    openRenewPopup,
+    openContractSchedulePopup,
+    openSendPopupContract,
+    openResiliationPopup,
+    markContractNoRenew,
+    deleteCurrentContract,
+    openContractSignature,
+    onContractTvaRadioChange,
+    loadContractsList,
+    closeRenewPopup,
+    confirmRenewPopup,
+    closeContractSchedulePopup,
+
+    // attestations / rapports
+    openClimAttestationGenerator,
+    openPiscineRapportGenerator,
+    onRapportClientNameChange,
+    rebuildRapportChecklist,
+    exportRapportWordCurrent,
+    transferRapportToClientCurrent,
+    saveRapportOnly,
+    closeRapportPopup,
+    onAttClientNameChange,
+    saveAttestationOnly,
+    closeAttestationPopup,
+
+    // planning popup
+    confirmManualPlanningPopup,
+    closeManualPlanningPopup,
+
+    // send popup
+    sendByEmail,
+    sendByWhatsApp,
+    closeSendPopup,
+
+    // resiliation
+    closeResiliationPopup,
+    confirmResiliationPopup,
+
+    // pdf/pwa
+    closePdfViewer,
+    pwaRefreshNow,
+  };
+
+  Object.entries(map).forEach(([name, fn]) => {
+    if (typeof fn === "function") window[name] = fn;
+  });
+
+  // ta TVA : tu l’as déjà fait, mais ça ne gêne pas
+  if (typeof setTVA === "function") window.setTVA = setTVA;
+})();
+
 /* ======================
    NET STATE
 ====================== */
@@ -21111,6 +21239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
