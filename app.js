@@ -18838,53 +18838,53 @@ ${terminationBillingBlockTop}
     </div>
   </div>
 
-  <!-- 4. Prestations incluses -->
+<!-- 4. Prestations incluses -->
 
-  <div class="section">
-    <div class="section-title">4. Prestations incluses</div>
-    <div class="block">
+<div class="section">
+  <div class="section-title">4. Prestations incluses</div>
+  <div class="block">
 
-      ${
-        isPiscine
-          ? `
-      <p class="label">4.1 Prestations standards (piscine chlore / sel)</p>
-      <ul>
-        <li>Contrôle et nettoyage : paniers skimmer, préfiltre pompe, ligne d’eau, fond et parois (si robot absent ou HS).</li>
-        <li>Vérification du système de filtration.</li>
-        <li>Nettoyage du filtre (sable, verre, cartouche) selon besoin.</li>
-        <li>Analyse de l’eau (pH / TAC / TH / chlore libre / redox).</li>
-        <li>Contrôle de la cellule d’électrolyse (piscine au sel le cas échéant).</li>
-        <li>Vérification des pompes, vannes, canalisations et joints.</li>
-        <li>Contrôle volet / bâche / barrière si présents.</li>
-        <li>Conseils d’usage et ajustements nécessaires.</li>
-      </ul>
-      `
-          : ""
-      }
+    ${
+      isPiscine
+        ? `
+    <p class="label">4.1 Prestations standards (piscine chlore / sel)</p>
+    <ul>
+      <li>Contrôle et nettoyage : paniers skimmer, préfiltre pompe, ligne d’eau, fond et parois (si robot absent ou HS).</li>
+      <li>Vérification du système de filtration.</li>
+      <li>Nettoyage du filtre (sable, verre, cartouche) selon besoin.</li>
+      <li>Analyse de l’eau (pH / TAC / TH / chlore libre / redox).</li>
+      <li>Contrôle de la cellule d’électrolyse (piscine au sel le cas échéant).</li>
+      <li>Vérification des pompes, vannes, canalisations et joints.</li>
+      <li>Contrôle volet / bâche / barrière si présents.</li>
+      <li>Conseils d’usage et ajustements nécessaires.</li>
+    </ul>
+    `
+        : ""
+    }
 
-      ${
-        isSpa
-          ? `
-      <p class="label" style="margin-top:4px;">4.1 Prestations Spa / Jacuzzi</p>
-      <ul>
-        <li>Vidange complète selon la fréquence définie.</li>
-        <li>Nettoyage de la cuve, des buses et des cartouches.</li>
-        <li>Désinfection air/eau et circuits.</li>
-        <li>Contrôle de la soufflerie et du chauffage.</li>
-        <li>Analyse de l’eau et dosage adapté.</li>
-      </ul>
-      `
-          : ""
-      }
+    ${
+      isSpa
+        ? `
+    <p class="label" style="margin-top:4px;">4.1 Prestations Spa / Jacuzzi</p>
+    <ul>
+      <li>Vidange complète selon la fréquence définie.</li>
+      <li>Nettoyage de la cuve, des buses et des cartouches.</li>
+      <li>Désinfection air/eau et circuits.</li>
+      <li>Contrôle de la soufflerie et du chauffage.</li>
+      <li>Analyse de l’eau et dosage adapté.</li>
+    </ul>
+    `
+        : ""
+    }
 
-      <p class="label" style="margin-top:4px;">4.2 Remise en service / hivernage</p>
-      <p>
-        Remise en service et hivernage (actif ou passif) peuvent être inclus
-        selon l’option choisie et feront l’objet d’une fiche ou d’un devis associé.
-      </p>
+    <p class="label" style="margin-top:4px;">4.2 Remise en service / hivernage</p>
+    <p>
+      Remise en service et hivernage (actif ou passif) peuvent être inclus
+      selon l’option choisie et feront l’objet d’une fiche ou d’un devis associé.
+    </p>
 
-    </div>
   </div>
+</div>
 
 
 <!-- 5. Clauses contractuelles & responsabilités -->
@@ -19012,13 +19012,15 @@ ${terminationBillingBlockTop}
         : `
     <p>
       Le contrat est conclu pour la période définie. Il peut être résilié à tout moment,
-      par le client ou par le prestataire, avec un préavis de <strong>30 jours calendaires</strong>.
+      par le client ou par le prestataire, avec un préavis de
+      <strong>30 jours calendaires</strong>.
       La résiliation doit être adressée exclusivement par courrier recommandé
       avec accusé de réception (LRAR).
     </p>
     <p>
-      Les prestations réalisées, ainsi que celles prévues durant la période de préavis,
+      Les prestations réalisées, ainsi que celles programmées durant la période de préavis,
       restent intégralement dues.
+      Les prestations non encore réalisées au-delà de cette période ne sont pas facturées.
     </p>
     `
     }
@@ -19072,7 +19074,7 @@ ${terminationBillingBlockTop}
 </div>
 
 
-  <!-- 6. Tarifs & paiement -->
+<!-- 6. Tarifs & paiement -->
 
   <div class="section">
     <div class="section-title">6. Tarifs & paiement</div>
@@ -21251,6 +21253,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
