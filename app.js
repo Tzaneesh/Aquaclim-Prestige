@@ -5916,11 +5916,11 @@ if (mode === "print" && !isIOS()) {
   doc.autoPrint();
 }
 
-const url = getPdfUrl(doc);
-if (isIOS() && isStandalonePWA()) {   openPdfViewer(html); // ← HTML DIRECT   return; }
-
-
-  }
+const url = getPdfUrl(doc); // ou doc.output('bloburl') selon ta fonction
+if (isIOS() && isStandalonePWA()) {
+  openPdfViewerFromUrl(url); // une fonction qui met un <iframe src="...">
+  return;
+}
 }
 
 function openRapportPreview(rapportId) {
@@ -6392,6 +6392,9 @@ function setTVA(rate, opts = {}) {
   if (typeof recomputeContract === "function") recomputeContract();
 }
 
+// ✅ Expose en global pour être sûr (utile si module / scope)
+if (typeof setTVA === "function") window.setTVA = setTVA;
+
 
 function updateButtonColors() {
   const type = document.getElementById("docType").value;
@@ -6410,6 +6413,7 @@ function updateButtonColors() {
   }
 }
 
+   
 function updateDocType() {
   const type = document.getElementById("docType").value;
   const validityGroup = document.getElementById("validityDateGroup");
@@ -20970,9 +20974,10 @@ window.addEventListener("offline", () => {
 function initApp() {
   loadCustomTemplates();
   loadCustomTexts();
-  applyCompanySettingsToUI();
+  if (typeof applyCompanySettingsToUI === "function") applyCompanySettingsToUI();
 
-  setTVA(0);
+  if (typeof window.setTVA === "function") window.setTVA(0);
+
   if (typeof refreshClientDatalist === "function") refreshClientDatalist();
   if (typeof loadYearFilter === "function") loadYearFilter();
   if (typeof switchListType === "function") switchListType("devis");
@@ -21017,22 +21022,13 @@ function initApp() {
   try { renderPlanningSidebar(); } catch(e){}
 }
 
-/* ======================
-   🚀 POINT D’ENTRÉE UNIQUE
-====================== */
-
 document.addEventListener("DOMContentLoaded", () => {
   if (document.body.dataset.domReadyBound === "1") return;
   document.body.dataset.domReadyBound = "1";
 
   updateOfflineBadge();
 
-  // 🔥 INIT PRINCIPAL
   initApp();
-
-  // ======================
-  // UI / EVENTS
-  // ======================
 
   document.getElementById("rapPhotosInput")
     ?.addEventListener("change", _onRapportPhotosChange);
@@ -21048,28 +21044,25 @@ document.addEventListener("DOMContentLoaded", () => {
     window.__tvaUiBound = true;
 
     document.getElementById("tva0")
-      ?.addEventListener("change", () => setTVA(0, { showAlert: true }));
+      ?.addEventListener("change", () => window.setTVA?.(0, { showAlert: true }));
 
     document.getElementById("tva20")
-      ?.addEventListener("change", () => setTVA(20, { showAlert: true }));
+      ?.addEventListener("change", () => window.setTVA?.(20, { showAlert: true }));
 
     document.getElementById("ctTva0")
-      ?.addEventListener("change", () => setTVA(0, { showAlert: true }));
+      ?.addEventListener("change", () => window.setTVA?.(0, { showAlert: true }));
 
     document.getElementById("ctTva20")
-      ?.addEventListener("change", () => setTVA(20, { showAlert: true }));
+      ?.addEventListener("change", () => window.setTVA?.(20, { showAlert: true }));
   }
 
-  /* ===== Double clic client ===== */
   document.getElementById("clientName")
-    ?.addEventListener("dblclick", (e) =>
-      openClientSheet(e.target.value)
-    );
+    ?.addEventListener("dblclick", (e) => openClientSheet(e.target.value));
 
   document.getElementById("ctClientName")
-    ?.addEventListener("dblclick", (e) =>
-      openClientSheet(e.target.value)
-    );
+    ?.addEventListener("dblclick", (e) => openClientSheet(e.target.value));
+});
+
 
   /* ===== Signature ===== */
   if (!window.__signaturePopupBound) {
@@ -21139,6 +21132,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
 
 
 
