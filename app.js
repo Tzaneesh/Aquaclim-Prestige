@@ -7639,39 +7639,53 @@ function saveDocument() {
     return Number.isFinite(n) ? n : 0;
   };
 
-  document.querySelectorAll(".prestation-line").forEach((line) => {
-    const kind = line?.dataset?.kind || "";
+ document.querySelectorAll(".prestation-line").forEach((line) => {
+  // helper: parse nombre FR "70,50" -> 70.5
+  const _num = (v) => {
+    const s = String(v ?? "").trim().replace(",", ".");
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  };
 
-    const desc =
-      line.querySelector(".prestation-desc")?.value?.trim() || "";
-    const qty = _num(line.querySelector(".prestation-qty")?.value);
-    const price = _num(line.querySelector(".prestation-price")?.value);
-    const unit = line.querySelector(".prestation-unit")?.value || "";
+  // 1) kind robuste : dataset.kind OU kind du template sélectionné
+  let kind = line.dataset.kind || "";
+  const templateSelect = line.querySelector(".prestation-template");
+  const tplIdx = templateSelect ? parseInt(templateSelect.value || "0", 10) : -1;
+  const tpl = (tplIdx >= 0 && PRESTATION_TEMPLATES[tplIdx]) ? PRESTATION_TEMPLATES[tplIdx] : null;
 
-    // ✅ prix d'achat seulement pour produits/fournitures
-    const isProduct = kind === "produits" || kind === "fournitures";
-    const purchase = isProduct
-      ? _num(line.querySelector(".prestation-purchase")?.value)
-      : 0;
+  if (!kind && tpl && tpl.kind) kind = tpl.kind;
 
-    if (isProduct) {
-      if (!purchase || purchase <= 0) missingPurchase = true;
-    }
+  // 2) champs de base
+  let desc = line.querySelector(".prestation-desc")?.value?.trim() || "";
+  const qty = _num(line.querySelector(".prestation-qty")?.value);
+  const price = _num(line.querySelector(".prestation-price")?.value);
+  const unit = line.querySelector(".prestation-unit")?.value || "";
 
-    if (desc) {
-      prestations.push({
-        desc,
-        qty,
-        price,
-        total: qty * price,
-        unit,
-        kind,
+  // 3) si desc vide, on met au minimum le label du modèle (évite "disparition")
+  if (!desc && tpl && tpl.label) desc = String(tpl.label).trim();
 
-        // ✅ stocké => ne reset plus à la réouverture
-        purchase,
-      });
-    }
-  });
+  // 4) prix d’achat (uniquement produits/fournitures)
+  const isProduct = (kind === "produits" || kind === "fournitures");
+  const purchase = isProduct ? _num(line.querySelector(".prestation-purchase")?.value) : 0;
+
+  if (isProduct) {
+    if (!purchase || purchase <= 0) missingPurchase = true;
+  }
+
+  // 5) on sauvegarde la ligne si on a au moins une desc
+  if (desc) {
+    prestations.push({
+      desc,
+      qty,
+      price,
+      total: qty * price,
+      unit,
+      kind,
+      purchase, // ✅ stocké => ne disparaît plus
+    });
+  }
+});
+
 
   if (missingPurchase) {
     showConfirmDialog({
@@ -21183,6 +21197,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
