@@ -3746,5 +3746,29 @@ body.is-dragging .visit-entry {
 }
 
 
+/* ===========================
+   FIX POPUP CLIENTS (PC ONLY)
+   - garde iPhone intact
+=========================== */
+@media (min-width: 900px) {
+  /* La popup doit pouvoir scroller si elle dépasse l'écran */
+  #clientsPopup .popup {
+    width: min(780px, 92vw);
+    max-height: 92vh;
+    overflow-y: auto;
+  }
+
+  /* Optionnel : éviter que la liste prenne trop de place */
+  #clientsPopup .client-list-box {
+    max-height: 45vh; /* au lieu de 400px, s'adapte à la hauteur écran */
+  }
+
+  /* Optionnel : un peu d'air en bas pour que les boutons ne soient jamais collés */
+  #clientsPopup .clients-footer {
+    margin-top: 12px;
+    padding-bottom: 6px;
+  }
+}
+
 
 
