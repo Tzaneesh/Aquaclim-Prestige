@@ -6821,6 +6821,8 @@ function applyTemplate(selectEl) {
   const qtyInput = line.querySelector(".prestation-qty");
   const priceInput = line.querySelector(".prestation-price");
   const unitInput = line.querySelector(".prestation-unit");
+  const purchaseInput = line.querySelector(".prestation-purchase");
+
 
   // Description détaillée pour PDF
   const detailHidden =
@@ -7435,10 +7437,13 @@ if (Number(doc.tvaRate || 0) === 0) {
     const priceInput = line.querySelector(".prestation-price");
     const unitInput = line.querySelector(".prestation-unit");
     const templateSelect = line.querySelector(".prestation-template");
+    const purchaseInput = line.querySelector(".prestation-purchase");
 
     if (descInput) descInput.value = p.desc;
     if (qtyInput) qtyInput.value = p.qty;
     if (priceInput) priceInput.value = p.price;
+    if (purchaseInput) purchaseInput.value = (p.purchase != null ? p.purchase : "");
+
     if (unitInput) unitInput.value = p.unit || "";
 
     // ==============================
@@ -7648,14 +7653,20 @@ function saveDocument() {
     const unit = line.querySelector(".prestation-unit")?.value || "";
 
     if (desc) {
-      prestations.push({
-        desc,
-        qty,
-        price,
-        total: qty * price,
-        unit,
-        kind,
-      });
+const purchase = parseFloat(line.querySelector(".prestation-purchase")?.value || "0") || 0;
+
+prestations.push({
+  desc,
+  qty,
+  price,
+  total: qty * price,
+  unit,
+  kind,
+
+  // ✅ on stocke le prix d'achat (uniquement utile pour produits/fournitures)
+  purchase: (kind === "produits" || kind === "fournitures") ? purchase : 0,
+});
+
     }
   });
 
@@ -21174,6 +21185,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
