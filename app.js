@@ -1328,6 +1328,14 @@ function _fmtDateFRSafe(iso) {
   return String(iso);
 }
 
+function withDeOrDApostrophe(word) {
+  if (!word) return "";
+  return /^[aeiouhàâéèêëîïôùûü]/i.test(word)
+    ? "d’" + word
+    : "de " + word;
+}
+
+
 function _getClientByName(name) {
   const n = _normName(name);
   if (!n) return null;
@@ -12145,20 +12153,17 @@ items.push(
     else if (doc.paymentMode === "virement") modePhrase = "par virement";
     else if (doc.paymentMode === "cheque") modePhrase = "par chèque";
 
-    reglementHtml = `
-      <div class="reglement-block">
-        <div class="reg-title">Règlement</div>
-        <p>Facture réglée ${modePhrase} le ${payDateStr}.</p>
+   reglementHtml = `
+  <div class="reglement-block">
+    <div class="reg-title">Règlement</div>
+    <p>Facture réglée ${modePhrase} le ${payDateStr}.</p>
+  </div>
 
-</div> <!-- FIN REGLEMENT-BLOCK -->
+  <div class="paid-stamp-big-wrapper">
+    <img src="${paidStampSrc}" alt="Facture payée" class="paid-stamp-big">
+  </div>
+`;
 
-<!-- 🟢 Tampon facturé payée sous le bloc -->
-<div class="paid-stamp-big-wrapper">
-  <img src="${paidStampSrc}" alt="Facture payée" class="paid-stamp-big">
-</div>
-
-      </div>
-    `;
   }
 
   let ribHtml = "";
@@ -12173,6 +12178,23 @@ items.push(
       </div>
     `;
   }
+
+const isSyndic =
+  doc.conditionsType === "agence" ||
+  doc.clientType === "syndic" ||
+  doc.client?.type === "syndic";
+
+const TERMS_PARTICULIER =
+  "Règlement à réception de facture.\n" +
+  "Aucun acompte demandé sauf mention contraire.\n" +
+  "Aucun escompte pour paiement anticipé.";
+
+const TERMS_SYNDIC =
+  "Paiement à 30 jours fin de mois.\n" +
+  "Aucun acompte demandé sauf mention contraire.\n" +
+  "Aucun escompte pour paiement anticipé.\n" +
+  "En cas de retard de paiement : pénalités de retard calculées sur la base de trois fois le taux d’intérêt légal, ainsi qu’une indemnité forfaitaire pour frais de recouvrement de 40 € (articles L441-10 et D441-5 du Code de commerce).";
+
 
   let notesHtml = "";
   if (isDevis) {
@@ -12208,12 +12230,12 @@ items.push(
     // ✅ Conditions devis = mêmes règles que factures (cohérence totale)
     const isSyndic = doc.conditionsType === "agence"; // chez toi "agence" = syndic/pro
 
-    const TERMS_DEVIS_PARTICULIER =
+    const TERMS_PARTICULIER =
       "Règlement à réception de facture.\n" +
       "Aucun acompte demandé sauf mention contraire.\n" +
       "Aucun escompte pour paiement anticipé.";
 
-    const TERMS_DEVIS_SYNDIC =
+    const TERMS_SYNDIC =
       "Paiement à 30 jours fin de mois.\n" +
       "Aucun acompte demandé sauf mention contraire.\n" +
       "Aucun escompte pour paiement anticipé.\n" +
@@ -12222,7 +12244,7 @@ items.push(
 
     const devisConditions =
       (billingLine ? "Mode de facturation : " + billingLine + "\n\n" : "") +
-      (isSyndic ? TERMS_DEVIS_SYNDIC : TERMS_DEVIS_PARTICULIER);
+      (isSyndic ? TERMS_SYNDIC : TERMS_PARTICULIER);
 
     notesHtml = `
   <div class="conditions-block">
@@ -12234,7 +12256,7 @@ items.push(
     let notesText = doc.notes || "";
 // ✅ Si aucune note enregistrée, on met les conditions par défaut
 if (!notesText || !String(notesText).trim()) {
-  notesText = isSyndic ? TERMS_DEVIS_SYNDIC : TERMS_DEVIS_PARTICULIER;
+  notesText = isSyndic ? TERMS_SYNDIC : TERMS_PARTICULIER;
 }
 
     if (doc.paid && notesText) {
@@ -13801,19 +13823,6 @@ function applyCompanySettingsToUI(settings) {
   });
 }
 
-
-function moveManualPlanningItemToDate(manualId, newDateISO) {
-  const idx = manualPlanningItems.findIndex((it) => it.id === manualId);
-  if (idx === -1) return;
-
-  manualPlanningItems[idx].date = newDateISO;
-}
-
-async function moveManualPlanningItemToDate(manualId, newDateISO) {
-  if (!db) return;
-  await db.collection("planningManual").doc(manualId).set({ date: newDateISO }, { merge: true });
-}
-
 function initPlanningDnD() {
   // ✅ Sortable pas chargé => pas de drag
   if (typeof Sortable === "undefined") {
@@ -14593,16 +14602,22 @@ async function deleteManualPlanningItem(id, dateStr) {
 
 async function moveManualPlanningItemToDate(manualId, newDateISO) {
   try {
+    // update local (si tu as un tableau en mémoire)
+    if (Array.isArray(manualPlanningItems)) {
+      const it = manualPlanningItems.find((x) => x.id === manualId);
+      if (it) it.date = newDateISO;
+    }
+
     if (!db) return;
     await db.collection("planningManual").doc(manualId).set(
       { date: newDateISO },
       { merge: true }
     );
-    // Pas besoin de render ici non plus: le onSnapshot le fera.
   } catch (e) {
     console.error("moveManualPlanningItemToDate error:", e);
   }
 }
+
 
 
 
@@ -20102,8 +20117,10 @@ function generateImmediateBilling(contract) {
     subject = `${serviceLabel} – 1er paiement 50 % (1/2) – saison ${globalPeriod}${suffixClient}`;
     lineDesc = `${serviceLabel} – 1er paiement (50 %) (1/2) pour la saison ${globalPeriod}`;
   } else if (mode === "mensuel") {
-    subject = `${serviceLabel} – échéance 1/${n} – mois de ${moisLabel}${suffixClient}`;
-    lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance 1/${n} sur la période ${globalPeriod}`;
+  subject = `${serviceLabel} – échéance 1/${n} – mois ${withDeOrDApostrophe(moisLabel)}${suffixClient}`;
+
+lineDesc = `${serviceLabel} – mois ${withDeOrDApostrophe(moisLabel)} – échéance 1/${n} sur la période ${globalPeriod}`;
+
   } else {
     subject = `${serviceLabel} – règlement initial du contrat${suffixClient}`;
     lineDesc = `${serviceLabel} – règlement initial du contrat d’entretien (${globalPeriod})`;
@@ -20265,8 +20282,8 @@ function createAutomaticInvoice(contract) {
     } else if (mode === "mensuel") {
       amountHT = totalHT / totalInstallments;
 
-      subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – mois de ${moisLabel}`;
-      lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${totalInstallments} sur la période ${globalPeriod}`;
+      subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – mois ${withDeOrDApostrophe(moisLabel)}`;
+      lineDesc = `${serviceLabel} – mois ${withDeOrDApostrophe(moisLabel)} – échéance ${numEcheance}/${totalInstallments} sur la période ${globalPeriod}`;
     } else {
       amountHT = totalHT;
 
