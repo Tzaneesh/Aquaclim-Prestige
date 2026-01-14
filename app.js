@@ -20159,6 +20159,237 @@ function generateImmediateBilling(contract) {
   };
 }
 
+function createAutomaticInvoice(contract) {
+  const pr = contract.pricing || {};
+  const c = contract.client || {};
+  const s = contract.site || {};
+
+  const clientType = pr.clientType || "particulier";
+  const mode = pr.billingMode || "annuel";
+
+  const totalHT = Number(pr.totalHT) || 0;
+  if (totalHT <= 0) return null;
+
+  const startISO = pr.startDate;
+  const duration = Number(pr.durationMonths || 0);
+  if (!startISO || !duration) return null;
+
+  const start = new Date(startISO + "T00:00:00");
+  if (isNaN(start.getTime())) return null;
+
+  // Date de fin de contrat (fin inclusive)
+  const contractEnd = new Date(start);
+  contractEnd.setMonth(contractEnd.getMonth() + duration);
+  contractEnd.setDate(contractEnd.getDate() - 1);
+
+  const totalInstallments = getNumberOfInstallments(pr);
+  if (!totalInstallments || totalInstallments < 1) return null;
+
+  const nextISO = pr.nextInvoiceDate;
+  if (!nextISO) return null;
+
+  // 🔒 Anti-doublon : facture déjà créée à cette date ?
+  const alreadyExists = getAllDocuments().some(
+    (d) =>
+      d.type === "facture" &&
+      d.contractId === contract.id &&
+      d.date === nextISO &&
+      Array.isArray(d.prestations) &&
+      d.prestations.some((p) => p && p.kind === "contrat_echeance"),
+  );
+  if (alreadyExists) return null;
+
+  const nextDate = new Date(nextISO + "T00:00:00");
+  if (isNaN(nextDate.getTime())) return null;
+
+  const number = getNextNumber("facture");
+  const todayISO = new Date().toISOString().slice(0, 10);
+
+  const tvaRate = Number(pr.tvaRate) || 0;
+
+  // Type de service
+  const poolType = pr.mainService || "";
+  let serviceLabel = "Entretien piscine";
+  if (
+    poolType === "spa" ||
+    poolType === "spa_jacuzzi" ||
+    poolType === "entretien_jacuzzi"
+  ) {
+    serviceLabel = "Entretien spa / jacuzzi";
+  }
+
+  const globalPeriod = formatContractGlobalPeriod(pr);
+  const moisLabel = monthYearFr(nextISO);
+
+  const originNote = buildOriginDevisNote(contract);
+
+  // 🔢 Numéro d’échéance = factures déjà existantes + 1
+  const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
+
+  let amountHT = 0;
+  let subject = "";
+  let lineDesc = "";
+
+  // ============================
+  // 🔴 PARTICULIER
+  // ============================
+  if (clientType === "particulier") {
+    if (mode === "annuel_50_50") {
+      // 2e paiement (solde)
+      amountHT = totalHT / 2;
+
+      subject = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}`;
+      lineDesc = `${serviceLabel} – 2e paiement (50 %) (2/2) – solde du contrat d’entretien pour la saison ${globalPeriod}`;
+    } else if (mode === "mensuel") {
+      amountHT = totalHT / totalInstallments;
+
+      subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – mois de ${moisLabel}`;
+      lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${totalInstallments} sur la période ${globalPeriod}`;
+    } else {
+      amountHT = totalHT;
+
+      subject = `${serviceLabel} – règlement du contrat – saison ${globalPeriod}`;
+      lineDesc = `${serviceLabel} – règlement du contrat d’entretien pour la saison ${globalPeriod}`;
+    }
+  }
+
+  // ============================
+  // 🔵 SYNDIC (post-payé)
+  // ============================
+  else {
+    amountHT = totalHT / totalInstallments;
+
+    let stepMonths = getBillingStepMonths(mode);
+    if (!stepMonths) stepMonths = duration;
+
+    // Reconstruire la période [periodStart, periodEnd] correspondant à nextISO
+    let periodStart = new Date(start);
+    let periodEnd = null;
+    let found = false;
+
+    for (let i = 1; i <= totalInstallments; i++) {
+      const endCandidate = new Date(start);
+      endCandidate.setMonth(endCandidate.getMonth() + stepMonths * i);
+      endCandidate.setDate(0);
+
+      const isoCandidate = endCandidate.toISOString().slice(0, 10);
+
+      if (isoCandidate === nextISO) {
+        periodEnd = endCandidate;
+        found = true;
+        break;
+      } else if (isoCandidate < nextISO) {
+        periodStart = new Date(endCandidate);
+        periodStart.setDate(periodStart.getDate() + 1);
+      }
+    }
+
+    if (!found || !periodEnd) {
+      const prevStart = new Date(nextDate);
+      prevStart.setDate(1);
+      const prevEnd = new Date(prevStart);
+      prevEnd.setMonth(prevStart.getMonth() + 1);
+      prevEnd.setDate(0);
+
+      periodStart = prevStart;
+      periodEnd = prevEnd;
+    }
+
+    if (periodEnd > contractEnd) periodEnd = new Date(contractEnd);
+
+    const startLabel = periodStart.toLocaleDateString("fr-FR");
+    const endLabel = periodEnd.toLocaleDateString("fr-FR");
+
+    subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}`;
+    lineDesc = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations réalisées du ${startLabel} au ${endLabel}`;
+  }
+
+  const tvaAmount = amountHT * (tvaRate / 100);
+  const totalTTC = amountHT + tvaAmount;
+
+  const notes = (
+    clientType === "syndic"
+      ? [
+          "Règlement à 30 jours fin de mois.",
+          "Aucun escompte pour paiement anticipé.",
+          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
+          "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
+          originNote,
+          "Les Conditions Générales de Vente sont disponibles sur demande.",
+        ]
+      : [
+          "Règlement à réception de facture.",
+          "Aucun escompte pour paiement anticipé.",
+          mode === "annuel_50_50"
+            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien (2/2)."
+            : mode === "mensuel"
+              ? `Cette facture correspond à l’échéance ${numEcheance}/${totalInstallments} du contrat d’entretien.`
+              : "Cette facture correspond au règlement du contrat d’entretien.",
+          originNote,
+          "Les Conditions Générales de Vente sont disponibles sur demande.",
+        ]
+  )
+    .filter(Boolean)
+    .join("\n");
+
+  const conditionsType = clientType === "syndic" ? "agence" : "particulier";
+
+  return {
+    id: generateId("FAC"),
+    type: "facture",
+    number,
+    date: nextISO,
+    validityDate: "",
+
+    subject,
+
+    contractId: contract.id || null,
+    contractReference: c.reference || "",
+
+    client: {
+      civility: c.civility || "",
+      name: c.name || "",
+      address: c.address || "",
+      phone: c.phone || "",
+      email: c.email || "",
+    },
+
+    siteCivility: s.civility || "",
+    siteName: s.name || "",
+    siteAddress: s.address || "",
+
+    prestations: [
+      {
+        desc: lineDesc,
+        detail: "",
+        qty: 1,
+        price: amountHT,
+        total: amountHT,
+        unit: "forfait",
+        dates: [],
+        kind: "contrat_echeance",
+      },
+    ],
+
+    tvaRate,
+    subtotal: amountHT,
+    discountRate: 0,
+    discountAmount: 0,
+    tvaAmount,
+    totalTTC,
+
+    notes,
+    paid: false,
+    paymentMode: "",
+    paymentDate: "",
+    status: "",
+    conditionsType,
+
+    createdAt: todayISO,
+    updatedAt: todayISO,
+  };
+}
+
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
@@ -20936,6 +21167,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
