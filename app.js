@@ -6821,8 +6821,6 @@ function applyTemplate(selectEl) {
   const qtyInput = line.querySelector(".prestation-qty");
   const priceInput = line.querySelector(".prestation-price");
   const unitInput = line.querySelector(".prestation-unit");
-  const purchaseInput = line.querySelector(".prestation-purchase");
-
 
   // Description détaillée pour PDF
   const detailHidden =
@@ -7555,7 +7553,6 @@ function loadDocument(id) {
   }
 }
 
-
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
 
 function saveDocument() {
@@ -7639,7 +7636,7 @@ function saveDocument() {
     return Number.isFinite(n) ? n : 0;
   };
 
- document.querySelectorAll(".prestation-line").forEach((line) => {
+document.querySelectorAll(".prestation-line").forEach((line) => {
   // helper: parse nombre FR "70,50" -> 70.5
   const _num = (v) => {
     const s = String(v ?? "").trim().replace(",", ".");
@@ -11908,14 +11905,11 @@ function openPrintable(id, previewOnly) {
   if (!doc) return;
 
   // ✅ Facture initiale d'un contrat : on ne veut PAS afficher les dates de passage
-const isContractInvoice =
-  doc.type === "facture" &&
-  !!doc.contractId &&
-  Array.isArray(doc.prestations) &&
-  doc.prestations.some((p) =>
-    p && (p.kind === "contrat_echeance_initiale" || p.kind === "contrat_echeance")
-  );
-
+  const isFirstContractInvoice =
+    doc.type === "facture" &&
+    !!doc.contractId &&
+    Array.isArray(doc.prestations) &&
+    doc.prestations.some((p) => p && p.kind === "contrat_echeance_initiale");
 
 
   const hasPiscine = doc.prestations.some((p) =>
@@ -11957,8 +11951,7 @@ const isContractInvoice =
   let prestationsHTML = "";
   doc.prestations.forEach((p) => {
     let extraHtml = "";
-      if (!isContractInvoice && p.dates && p.dates.length) {
-
+        if (!isFirstContractInvoice && p.dates && p.dates.length) {
 
       extraHtml += `<div class="sub-info">`;
       extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
@@ -12042,11 +12035,9 @@ const isContractInvoice =
     items.push(
       "L’entreprise est titulaire d’une assurance responsabilité civile professionnelle.",
     );
-
-    items.push(
+items.push(
   "Le présent devis est valable jusqu’à la date de validité indiquée. Passé ce délai, les prix sont susceptibles d’être révisés."
 );
-
 
     importantHtml = `
       <div class="important-block">
@@ -12211,7 +12202,8 @@ const isContractInvoice =
       "Paiement à 30 jours fin de mois.\n" +
       "Aucun acompte demandé sauf mention contraire.\n" +
       "Aucun escompte pour paiement anticipé.\n" +
-      "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).";
+      "En cas de retard de paiement : pénalités de retard calculées sur la base de trois fois le taux d’intérêt légal, ainsi qu’une indemnité forfaitaire pour frais de recouvrement de 40 € (articles L441-10 et D441-5 du Code de commerce).";
+
 
     const devisConditions =
       (billingLine ? "Mode de facturation : " + billingLine + "\n\n" : "") +
@@ -12225,6 +12217,11 @@ const isContractInvoice =
 `;
   } else {
     let notesText = doc.notes || "";
+// ✅ Si aucune note enregistrée, on met les conditions par défaut
+if (!notesText || !String(notesText).trim()) {
+  notesText = isSyndic ? TERMS_DEVIS_SYNDIC : TERMS_DEVIS_PARTICULIER;
+}
+
     if (doc.paid && notesText) {
       const removeLines = [
         "Paiement à 30 jours date de facture.",
@@ -12234,7 +12231,8 @@ const isContractInvoice =
         "Aucun escompte pour paiement anticipé.",
         "En cas de retard de paiement : pénalités au taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
         "Pénalités de retard : taux légal en vigueur et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
-        "En cas de retard de paiement : pénalités exigibles de plein droit et indemnité forfaitaire de 40 € pour frais de recouvrement (article L441-10 du Code de commerce).",
+        "En cas de retard de paiement : pénalités de retard calculées sur la base de trois fois le taux d’intérêt légal, ainsi qu’une indemnité forfaitaire pour frais de recouvrement de 40 € (articles L441-10 et D441-5 du Code de commerce).",
+
       ];
 
       removeLines.forEach((line) => {
@@ -18842,7 +18840,7 @@ ${terminationBillingBlockTop}
     </div>
   </div>
 
-<!-- 4. Prestations incluses -->
+  <!-- 4. Prestations incluses -->
 
 <div class="section">
   <div class="section-title">4. Prestations incluses</div>
@@ -19079,6 +19077,7 @@ ${terminationBillingBlockTop}
 
 
 <!-- 6. Tarifs & paiement -->
+
 
   <div class="section">
     <div class="section-title">6. Tarifs & paiement</div>
@@ -20390,6 +20389,73 @@ function createAutomaticInvoice(contract) {
   };
 }
 
+function createDevisFromCurrentContract() {
+  if (!currentContractId) {
+    showConfirmDialog({
+      title: "Aucun contrat",
+      message: "Enregistre d'abord le contrat avant de créer un devis.",
+      confirmLabel: "OK",
+      variant: "warning",
+      icon: "⚠️",
+    });
+    return;
+  }
+
+  const contract = getContract(currentContractId);
+  if (!contract) return;
+
+  const devis = generateDevisFromContract(contract);
+  if (!devis) return;
+
+  // Sauvegarde local
+  const docs = getAllDocuments();
+  docs.push(devis);
+  saveDocuments(docs);
+
+  // Firestore
+  if (typeof saveSingleDocumentToFirestore === "function") {
+    saveSingleDocumentToFirestore(devis);
+  }
+
+  // Lier devis → contrat
+  if (!contract.meta) contract.meta = {};
+  contract.meta.sourceDevisId = devis.id;
+  contract.meta.sourceDevisNumber = devis.number;
+
+  // Mise à jour contrat
+  const all = getAllContracts().map((c) =>
+    c.id === contract.id ? contract : c,
+  );
+  saveContracts(all);
+
+  if (typeof saveSingleContractToFirestore === "function") {
+    saveSingleContractToFirestore(contract);
+  }
+
+  // Ouvrir le devis
+  if (typeof switchListType === "function") switchListType("devis");
+  if (typeof loadDocumentsList === "function") loadDocumentsList();
+  if (typeof loadDocument === "function") loadDocument(devis.id);
+}
+
+// Combien de factures d'échéance existent déjà pour ce contrat ?
+function countContractInstallmentInvoices(contractId) {
+  const docs = getAllDocuments();
+
+  // 🔒 Sécurité : on ne compte QUE les factures déjà sauvegardées
+  return docs.filter((d) => {
+    if (d.type !== "facture") return false;
+    if (d.contractId !== contractId) return false;
+    if (!Array.isArray(d.prestations)) return false;
+
+    return d.prestations.some(
+      (p) =>
+        p.kind === "contrat_echeance" ||
+        p.kind === "contrat_echeance_initiale",
+    );
+  }).length;
+}
+
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
@@ -21167,16 +21233,6 @@ document.addEventListener("click", (e) => {
 });
 
 });
-
-
-
-
-
-
-
-
-
-
 
 
 
