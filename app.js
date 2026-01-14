@@ -20031,17 +20031,13 @@ function generateImmediateBilling(contract) {
   if (totalHT <= 0) return null;
 
   // 🏢 SYNDIC → jamais de facture immédiate
-  if (clientType === "syndic") {
-    return null;
-  }
+  if (clientType === "syndic") return null;
 
   const todayISO = new Date().toISOString().slice(0, 10);
   const startISO = pr.startDate || todayISO;
 
   // ⛔ Si le contrat commence dans le futur -> pas de facture immédiate
-  if (startISO > todayISO) {
-    return null;
-  }
+  if (startISO > todayISO) return null;
 
   // 📅 Date de la facture initiale = date exacte de début
   const invoiceDateISO = startISO;
@@ -20050,22 +20046,14 @@ function generateImmediateBilling(contract) {
 
   // 📌 Nombre d’échéances prévues
   let n = 1;
-  if (mode === "mensuel") {
-    n = getNumberOfInstallments(pr); // ex : 12 mois -> 12
-  } else if (mode === "annuel_50_50") {
-    n = 2;
-  }
+  if (mode === "mensuel") n = getNumberOfInstallments(pr); // ex : 12 mois -> 12
+  else if (mode === "annuel_50_50") n = 2;
   if (!n || n < 1) n = 1;
 
   // 💰 Montant de cette facture
-  let amountHT;
-  if (mode === "annuel_50_50") {
-    amountHT = totalHT / 2;
-  } else if (mode === "mensuel") {
-    amountHT = totalHT / n;
-  } else {
-    amountHT = totalHT;
-  }
+  let amountHT = totalHT;
+  if (mode === "annuel_50_50") amountHT = totalHT / 2;
+  else if (mode === "mensuel") amountHT = totalHT / n;
 
   const tvaRate = Number(pr.tvaRate) || 0;
   const tvaAmount = amountHT * (tvaRate / 100);
@@ -20078,15 +20066,15 @@ function generateImmediateBilling(contract) {
 
   // Type de service
   const poolType = pr.mainService || "";
-  let serviceLabel = poolType.includes("spa")
+  const serviceLabel = poolType.includes("spa")
     ? "Entretien spa / jacuzzi"
     : "Entretien piscine";
 
   const globalPeriod = formatContractGlobalPeriod(pr); // "mai 2026 à octobre 2026"
 
   // 🧾 Libellés
-  let subject;
-  let lineDesc;
+  let subject = "";
+  let lineDesc = "";
 
   if (mode === "annuel_50_50") {
     subject = `${serviceLabel} – 1er paiement 50 % (1/2) – saison ${globalPeriod}${suffixClient}`;
@@ -20095,23 +20083,14 @@ function generateImmediateBilling(contract) {
     subject = `${serviceLabel} – échéance 1/${n} – mois de ${moisLabel}${suffixClient}`;
     lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance 1/${n} sur la période ${globalPeriod}`;
   } else {
-    subject = `${serviceLabel} – acompte contrat${suffixClient}`;
-    lineDesc = `${serviceLabel} – acompte sur contrat d’entretien (${globalPeriod})`;
+    subject = `${serviceLabel} – règlement initial du contrat${suffixClient}`;
+    lineDesc = `${serviceLabel} – règlement initial du contrat d’entretien (${globalPeriod})`;
   }
 
   const originNote = buildOriginDevisNote(contract);
 
-  const notes = (
-    clientType === "syndic"
-      ? [
-          "Règlement à 30 jours fin de mois.",
-          "Aucun escompte pour paiement anticipé.",
-          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
-          "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
-          originNote, // ✅ devis d’origine
-          "Les Conditions Générales de Vente sont disponibles sur demande.",
-        ]
-: [
+  // ✅ Notes (PARTICULIER uniquement ici)
+  const notes = [
     "Règlement à réception de facture.",
     "Aucun escompte pour paiement anticipé.",
     mode === "annuel_50_50"
@@ -20119,11 +20098,9 @@ function generateImmediateBilling(contract) {
       : mode === "mensuel"
         ? `Cette facture correspond à l’échéance 1/${n} du contrat d’entretien.`
         : "Cette facture correspond au règlement initial du contrat d’entretien.",
-    originNote, // ✅ devis d’origine
+    originNote,
     "Les Conditions Générales de Vente sont disponibles sur demande.",
   ]
-
-  )
     .filter(Boolean)
     .join("\n");
 
@@ -20175,256 +20152,10 @@ function generateImmediateBilling(contract) {
     paid: false,
     paymentMode: "",
     paymentDate: "",
-
     status: "",
-    conditionsType: clientType === "syndic" ? "agence" : "particulier",
+    conditionsType: "particulier",
 
     createdAt: new Date().toISOString(),
-  };
-}
-
-function createAutomaticInvoice(contract) {
-  const pr = contract.pricing || {};
-  const c = contract.client || {};
-  const s = contract.site || {};
-
-  const clientType = pr.clientType || "particulier";
-  const mode = pr.billingMode || "annuel";
-
-  const totalHT = Number(pr.totalHT) || 0;
-  if (totalHT <= 0) return null;
-
-  const startISO = pr.startDate;
-  const duration = Number(pr.durationMonths || 0);
-  if (!startISO || !duration) return null;
-
-  const start = new Date(startISO + "T00:00:00");
-  if (isNaN(start.getTime())) return null;
-
-  // Date de fin de contrat (fin inclusive)
-  const contractEnd = new Date(start);
-  contractEnd.setMonth(contractEnd.getMonth() + duration);
-  contractEnd.setDate(contractEnd.getDate() - 1);
-
-  const n = getNumberOfInstallments(pr);
-  if (!n || n < 1) return null;
-
-  const nextISO = pr.nextInvoiceDate;
-  if (!nextISO) return null;
-
-  // 🔒 Anti-doublon : si une facture existe déjà pour ce contrat + cette date, on STOP
-  const alreadyExists = getAllDocuments().some(
-    (d) =>
-      d.type === "facture" &&
-      d.contractId === contract.id &&
-      d.date === nextISO &&
-      Array.isArray(d.prestations) &&
-      d.prestations.some((p) => p && p.kind === "contrat_echeance"),
-  );
-  if (alreadyExists) return null;
-
-  const nextDate = new Date(nextISO + "T00:00:00");
-  if (isNaN(nextDate.getTime())) return null;
-
-  const number = getNextNumber("facture");
-  const todayISO = new Date().toISOString().slice(0, 10);
-
-  const tvaRate = Number(pr.tvaRate) || 0;
-
-  // Type de service
-  const poolType = pr.mainService || "";
-  let serviceLabel = "Entretien piscine";
-  if (
-    poolType === "spa" ||
-    poolType === "spa_jacuzzi" ||
-    poolType === "entretien_jacuzzi"
-  ) {
-    serviceLabel = "Entretien spa / jacuzzi";
-  }
-
-  const globalPeriod = formatContractGlobalPeriod(pr);
-  const moisLabel = monthYearFr(nextISO);
-
-  // ✅ Pour afficher "Facture générée à partir du devis DEV-XXXX"
-  const originNote = buildOriginDevisNote(contract);
-
-  let amountHT = 0;
-  let subject = "";
-  let lineDesc = "";
-
-  // ============================
-  // 🔢 Numéro d’échéance (commun)
-  // ============================
-  // IMPORTANT :
-  // - compte toutes les factures d’échéance déjà sauvegardées (initiale + échéances)
-  // - donc la prochaine = +1
-  const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
-
-  // ============================
-  // 🔴 PARTICULIER (anticipé)
-  // ============================
-  if (clientType === "particulier") {
-    if (mode === "annuel_50_50") {
-      // ✅ 2e paiement (solde) : la 1ère moitié est générée par generateImmediateBilling()
-      amountHT = totalHT / 2;
-
-      subject = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}`;
-      lineDesc = `${serviceLabel} – 2e paiement (50 %) (2/2) – solde du contrat d’entretien pour la saison ${globalPeriod}`;
-    } else if (mode === "mensuel") {
-      // Mensuel anticipé
-      amountHT = totalHT / n;
-
-      subject = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}`;
-      lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
-    } else {
-      // Annuel (si jamais tu l’utilises en auto)
-      amountHT = totalHT;
-
-      subject = `${serviceLabel} – règlement du contrat – saison ${globalPeriod}`;
-      lineDesc = `${serviceLabel} – règlement du contrat d’entretien pour la saison ${globalPeriod}`;
-    }
-  }
-
-  // ============================
-  // 🔵 SYNDIC (post-payé)
-  // ============================
-  else {
-    // Montant fractionné
-    const totalInstallments = getNumberOfInstallments(pr);
-    amountHT = totalHT / totalInstallments;
-
-    let stepMonths = getBillingStepMonths(mode);
-    if (!stepMonths) stepMonths = duration;
-
-    // Reconstruire la période [periodStart, periodEnd] correspondant à nextISO
-    let periodStart = new Date(start);
-    let periodEnd = null;
-    let found = false;
-
-    for (let i = 1; i <= totalInstallments; i++) {
-      const endCandidate = new Date(start);
-      endCandidate.setMonth(endCandidate.getMonth() + stepMonths * i);
-      endCandidate.setDate(0); // dernier jour du mois précédent
-
-      const isoCandidate = endCandidate.toISOString().slice(0, 10);
-
-      if (isoCandidate === nextISO) {
-        periodEnd = endCandidate;
-        found = true;
-        break;
-      } else if (isoCandidate < nextISO) {
-        periodStart = new Date(endCandidate);
-        periodStart.setDate(periodStart.getDate() + 1);
-      }
-    }
-
-    // Fallback : mois précédent si calcul pas trouvé
-    if (!found || !periodEnd) {
-      const prevStart = new Date(nextDate);
-      prevStart.setDate(1);
-      const prevEnd = new Date(prevStart);
-      prevEnd.setMonth(prevStart.getMonth() + 1);
-      prevEnd.setDate(0);
-
-      periodStart = prevStart;
-      periodEnd = prevEnd;
-    }
-
-    if (periodEnd > contractEnd) {
-      periodEnd = new Date(contractEnd);
-    }
-
-    const startLabel = periodStart.toLocaleDateString("fr-FR");
-    const endLabel = periodEnd.toLocaleDateString("fr-FR");
-
-    subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}`;
-    lineDesc = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations réalisées du ${startLabel} au ${endLabel}`;
-  }
-
-  const tvaAmount = amountHT * (tvaRate / 100);
-  const totalTTC = amountHT + tvaAmount;
-
-  // ✅ Notes propres + cohérentes + originNote partout
-  const notes = (
-    clientType === "syndic"
-      ? [
-          "Règlement à 30 jours fin de mois.",
-          "Aucun escompte pour paiement anticipé.",
-          "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
-          "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
-          originNote,
-          "Les Conditions Générales de Vente sont disponibles sur demande.",
-        ]
-      : [
-          "Règlement à réception de facture.",
-          "Aucun escompte pour paiement anticipé.",
-          mode === "annuel_50_50"
-            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien (2/2)."
-            : mode === "mensuel"
-              ? `Cette facture correspond à l’échéance ${numEcheance}/${n} du contrat d’entretien.`
-              : "Cette facture correspond au règlement du contrat d’entretien.",
-          originNote,
-          "Les Conditions Générales de Vente sont disponibles sur demande.",
-        ]
-  )
-    .filter(Boolean)
-    .join("\n");
-
-  const conditionsType = clientType === "syndic" ? "agence" : "particulier";
-
-  return {
-    id: generateId("FAC"),
-    type: "facture",
-    number,
-    date: nextISO,
-    validityDate: "",
-
-    subject,
-
-    contractId: contract.id || null,
-    contractReference: c.reference || "",
-
-    client: {
-      civility: c.civility || "",
-      name: c.name || "",
-      address: c.address || "",
-      phone: c.phone || "",
-      email: c.email || "",
-    },
-
-    siteCivility: s.civility || "",
-    siteName: s.name || "",
-    siteAddress: s.address || "",
-
-    prestations: [
-      {
-        desc: lineDesc,
-        detail: "",
-        qty: 1,
-        price: amountHT,
-        total: amountHT,
-        unit: "forfait",
-        dates: [],
-        kind: "contrat_echeance",
-      },
-    ],
-
-    tvaRate,
-    subtotal: amountHT,
-    discountRate: 0,
-    discountAmount: 0,
-    tvaAmount,
-    totalTTC,
-
-    notes,
-    paid: false,
-    paymentMode: "",
-    paymentDate: "",
-    status: "",
-    conditionsType,
-
-    createdAt: todayISO,
-    updatedAt: todayISO,
   };
 }
 
@@ -21205,6 +20936,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
