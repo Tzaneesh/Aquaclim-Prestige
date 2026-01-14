@@ -11908,11 +11908,14 @@ function openPrintable(id, previewOnly) {
   if (!doc) return;
 
   // ✅ Facture initiale d'un contrat : on ne veut PAS afficher les dates de passage
-  const isFirstContractInvoice =
-    doc.type === "facture" &&
-    !!doc.contractId &&
-    Array.isArray(doc.prestations) &&
-    doc.prestations.some((p) => p && p.kind === "contrat_echeance_initiale");
+const isContractInvoice =
+  doc.type === "facture" &&
+  !!doc.contractId &&
+  Array.isArray(doc.prestations) &&
+  doc.prestations.some((p) =>
+    p && (p.kind === "contrat_echeance_initiale" || p.kind === "contrat_echeance")
+  );
+
 
 
   const hasPiscine = doc.prestations.some((p) =>
@@ -11954,7 +11957,8 @@ function openPrintable(id, previewOnly) {
   let prestationsHTML = "";
   doc.prestations.forEach((p) => {
     let extraHtml = "";
-        if (!isFirstContractInvoice && p.dates && p.dates.length) {
+      if (!isContractInvoice && p.dates && p.dates.length) {
+
 
       extraHtml += `<div class="sub-info">`;
       extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
@@ -20107,16 +20111,18 @@ function generateImmediateBilling(contract) {
           originNote, // ✅ devis d’origine
           "Les Conditions Générales de Vente sont disponibles sur demande.",
         ]
-      : [
-          "Règlement à réception de facture.",
-          "Aucun escompte pour paiement anticipé.",
-      mode === "annuel_50_50"
-  ? "Cette facture correspond au 1er paiement (50 %) du contrat d’entretien."
-  : "Cette facture correspond à une échéance du contrat d’entretien.",
+: [
+    "Règlement à réception de facture.",
+    "Aucun escompte pour paiement anticipé.",
+    mode === "annuel_50_50"
+      ? "Cette facture correspond au 1er paiement (50 %) du contrat d’entretien (1/2)."
+      : mode === "mensuel"
+        ? `Cette facture correspond à l’échéance 1/${n} du contrat d’entretien.`
+        : "Cette facture correspond au règlement initial du contrat d’entretien.",
+    originNote, // ✅ devis d’origine
+    "Les Conditions Générales de Vente sont disponibles sur demande.",
+  ]
 
-          originNote, // ✅ devis d’origine
-          "Les Conditions Générales de Vente sont disponibles sur demande.",
-        ]
   )
     .filter(Boolean)
     .join("\n");
@@ -20206,17 +20212,16 @@ function createAutomaticInvoice(contract) {
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
 
-// 🔒 Anti-doublon : si une facture existe déjà pour ce contrat + cette date, on STOP
-const alreadyExists = getAllDocuments().some((d) =>
-  d.type === "facture" &&
-  d.contractId === contract.id &&
-  d.date === nextISO &&
-  Array.isArray(d.prestations) &&
-  d.prestations.some((p) => p.kind === "contrat_echeance")
-);
-
-if (alreadyExists) return null;
-
+  // 🔒 Anti-doublon : si une facture existe déjà pour ce contrat + cette date, on STOP
+  const alreadyExists = getAllDocuments().some(
+    (d) =>
+      d.type === "facture" &&
+      d.contractId === contract.id &&
+      d.date === nextISO &&
+      Array.isArray(d.prestations) &&
+      d.prestations.some((p) => p && p.kind === "contrat_echeance"),
+  );
+  if (alreadyExists) return null;
 
   const nextDate = new Date(nextISO + "T00:00:00");
   if (isNaN(nextDate.getTime())) return null;
@@ -20240,33 +20245,43 @@ if (alreadyExists) return null;
   const globalPeriod = formatContractGlobalPeriod(pr);
   const moisLabel = monthYearFr(nextISO);
 
-  let amountHT;
+  // ✅ Pour afficher "Facture générée à partir du devis DEV-XXXX"
+  const originNote = buildOriginDevisNote(contract);
+
+  let amountHT = 0;
   let subject = "";
   let lineDesc = "";
 
   // ============================
-  // 🔴 PARTICULIER
+  // 🔢 Numéro d’échéance (commun)
+  // ============================
+  // IMPORTANT :
+  // - compte toutes les factures d’échéance déjà sauvegardées (initiale + échéances)
+  // - donc la prochaine = +1
+  const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
+
+  // ============================
+  // 🔴 PARTICULIER (anticipé)
   // ============================
   if (clientType === "particulier") {
     if (mode === "annuel_50_50") {
-      // 2e paiement (solde)
+      // ✅ 2e paiement (solde) : la 1ère moitié est générée par generateImmediateBilling()
       amountHT = totalHT / 2;
 
       subject = `${serviceLabel} – 2e paiement 50 % (2/2) – saison ${globalPeriod}`;
-
       lineDesc = `${serviceLabel} – 2e paiement (50 %) (2/2) – solde du contrat d’entretien pour la saison ${globalPeriod}`;
-    } else {
-      // Mensuel anticipé (échéance i/n)
-
-      // 💡 IMPORTANT :
-      // numéro d’échéance = nb de factures d’échéance déjà existantes + 1
-      const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
-
+    } else if (mode === "mensuel") {
+      // Mensuel anticipé
       amountHT = totalHT / n;
 
       subject = `${serviceLabel} – échéance ${numEcheance}/${n} – mois de ${moisLabel}`;
-
       lineDesc = `${serviceLabel} – mois de ${moisLabel} – échéance ${numEcheance}/${n} sur la période ${globalPeriod}`;
+    } else {
+      // Annuel (si jamais tu l’utilises en auto)
+      amountHT = totalHT;
+
+      subject = `${serviceLabel} – règlement du contrat – saison ${globalPeriod}`;
+      lineDesc = `${serviceLabel} – règlement du contrat d’entretien pour la saison ${globalPeriod}`;
     }
   }
 
@@ -20275,14 +20290,13 @@ if (alreadyExists) return null;
   // ============================
   else {
     // Montant fractionné
-    amountHT = totalHT / n;
+    const totalInstallments = getNumberOfInstallments(pr);
+    amountHT = totalHT / totalInstallments;
 
     let stepMonths = getBillingStepMonths(mode);
     if (!stepMonths) stepMonths = duration;
 
-    const totalInstallments = getNumberOfInstallments(pr);
-
-    // Reconstruire la période [startPeriod, endPeriod]
+    // Reconstruire la période [periodStart, periodEnd] correspondant à nextISO
     let periodStart = new Date(start);
     let periodEnd = null;
     let found = false;
@@ -20304,6 +20318,7 @@ if (alreadyExists) return null;
       }
     }
 
+    // Fallback : mois précédent si calcul pas trouvé
     if (!found || !periodEnd) {
       const prevStart = new Date(nextDate);
       prevStart.setDate(1);
@@ -20322,17 +20337,14 @@ if (alreadyExists) return null;
     const startLabel = periodStart.toLocaleDateString("fr-FR");
     const endLabel = periodEnd.toLocaleDateString("fr-FR");
 
-    // 🔢 Numéro d’échéance pour le SYNDIC (comme pour le particulier)
-    const numEcheance = countContractInstallmentInvoices(contract.id) + 1;
-
     subject = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations du ${startLabel} au ${endLabel}`;
-
     lineDesc = `${serviceLabel} – échéance ${numEcheance}/${totalInstallments} – prestations réalisées du ${startLabel} au ${endLabel}`;
   }
 
   const tvaAmount = amountHT * (tvaRate / 100);
   const totalTTC = amountHT + tvaAmount;
 
+  // ✅ Notes propres + cohérentes + originNote partout
   const notes = (
     clientType === "syndic"
       ? [
@@ -20340,17 +20352,23 @@ if (alreadyExists) return null;
           "Aucun escompte pour paiement anticipé.",
           "En cas de retard de paiement, des pénalités pourront être appliquées ainsi qu’une indemnité forfaitaire de 40 € pour frais de recouvrement (art. L441-10 du Code de commerce).",
           "Cette facture correspond à la facturation des prestations réalisées sur la période indiquée.",
+          originNote,
           "Les Conditions Générales de Vente sont disponibles sur demande.",
         ]
       : [
           "Règlement à réception de facture.",
           "Aucun escompte pour paiement anticipé.",
           mode === "annuel_50_50"
-            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
-            : "Cette facture correspond à une échéance du contrat d’entretien.",
+            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien (2/2)."
+            : mode === "mensuel"
+              ? `Cette facture correspond à l’échéance ${numEcheance}/${n} du contrat d’entretien.`
+              : "Cette facture correspond au règlement du contrat d’entretien.",
+          originNote,
           "Les Conditions Générales de Vente sont disponibles sur demande.",
         ]
-  ).join("\n");
+  )
+    .filter(Boolean)
+    .join("\n");
 
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
@@ -20408,73 +20426,6 @@ if (alreadyExists) return null;
     createdAt: todayISO,
     updatedAt: todayISO,
   };
-}
-
-function createDevisFromCurrentContract() {
-  if (!currentContractId) {
-    showConfirmDialog({
-      title: "Aucun contrat",
-      message: "Enregistre d'abord le contrat avant de créer un devis.",
-      confirmLabel: "OK",
-      variant: "warning",
-      icon: "⚠️",
-    });
-    return;
-  }
-
-  const contract = getContract(currentContractId);
-  if (!contract) return;
-
-  const devis = generateDevisFromContract(contract);
-  if (!devis) return;
-
-  // Sauvegarde local
-  const docs = getAllDocuments();
-  docs.push(devis);
-  saveDocuments(docs);
-
-  // Firestore
-  if (typeof saveSingleDocumentToFirestore === "function") {
-    saveSingleDocumentToFirestore(devis);
-  }
-
-  // Lier devis → contrat
-  if (!contract.meta) contract.meta = {};
-  contract.meta.sourceDevisId = devis.id;
-  contract.meta.sourceDevisNumber = devis.number;
-
-  // Mise à jour contrat
-  const all = getAllContracts().map((c) =>
-    c.id === contract.id ? contract : c,
-  );
-  saveContracts(all);
-
-  if (typeof saveSingleContractToFirestore === "function") {
-    saveSingleContractToFirestore(contract);
-  }
-
-  // Ouvrir le devis
-  if (typeof switchListType === "function") switchListType("devis");
-  if (typeof loadDocumentsList === "function") loadDocumentsList();
-  if (typeof loadDocument === "function") loadDocument(devis.id);
-}
-
-// Combien de factures d'échéance existent déjà pour ce contrat ?
-function countContractInstallmentInvoices(contractId) {
-  const docs = getAllDocuments();
-
-  // 🔒 Sécurité : on ne compte QUE les factures déjà sauvegardées
-  return docs.filter((d) => {
-    if (d.type !== "facture") return false;
-    if (d.contractId !== contractId) return false;
-    if (!Array.isArray(d.prestations)) return false;
-
-    return d.prestations.some(
-      (p) =>
-        p.kind === "contrat_echeance" ||
-        p.kind === "contrat_echeance_initiale",
-    );
-  }).length;
 }
 
 
@@ -21254,6 +21205,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
