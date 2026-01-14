@@ -20110,9 +20110,10 @@ function generateImmediateBilling(contract) {
       : [
           "Règlement à réception de facture.",
           "Aucun escompte pour paiement anticipé.",
-          mode === "annuel_50_50"
-            ? "Cette facture correspond au 2e paiement (50 %) du contrat d’entretien."
-            : "Cette facture correspond à une échéance du contrat d’entretien.",
+      mode === "annuel_50_50"
+  ? "Cette facture correspond au 1er paiement (50 %) du contrat d’entretien."
+  : "Cette facture correspond à une échéance du contrat d’entretien.",
+
           originNote, // ✅ devis d’origine
           "Les Conditions Générales de Vente sont disponibles sur demande.",
         ]
@@ -21253,6 +21254,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
