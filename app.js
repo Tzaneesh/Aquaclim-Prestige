@@ -12004,6 +12004,11 @@ function openPrintable(id, previewOnly) {
   if (isDevis) {
     const items = [];
 
+items.push(
+  "Le présent devis vaut ordre d’intervention dès acceptation écrite (signature, mention « Bon pour accord », email ou message).",
+);
+
+
     if (hasPiscine && !hasProduitsOuFournitures) {
       items.push(
         "Les produits de traitement piscine (chlore choc, sel, produits d’équilibrage, etc.) ne sont pas inclus, sauf mention contraire sur le devis, et seront facturés en supplément le cas échéant.",
@@ -12011,22 +12016,32 @@ function openPrintable(id, previewOnly) {
     }
 
     if (hasPiscine && hasClim) {
-      items.push(
-        "Les tarifs des pièces détachées de piscine et de climatisation (pompes, cellules, cartes électroniques, moteurs, etc.) sont susceptibles d’évoluer en fonction des tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord.",
-      );
+items.push(
+  "Les tarifs des pièces détachées (piscine et climatisation) peuvent évoluer selon les prix fournisseurs. Toute modification sera justifiée et fera l’objet d’un accord préalable écrit (email/SMS) avant commande et/ou installation.",
+);
+
     } else if (hasPiscine) {
-      items.push(
-        "Les tarifs des pièces détachées de piscine (pompes, cellules, roulements, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord.",
-      );
+items.push(
+  "Les tarifs des pièces détachées piscine peuvent évoluer selon les prix fournisseurs. Toute modification sera justifiée et fera l’objet d’un accord préalable écrit (email/SMS) avant commande et/ou installation.",
+);
+
     } else if (hasClim) {
-      items.push(
-        "Les tarifs des pièces détachées de climatisation (moteurs, ventilateurs, cartes électroniques, etc.) sont susceptibles d’évoluer selon les tarifs fournisseurs en vigueur. Le montant final pourra être ajusté après votre accord.",
-      );
+items.push(
+  "Les tarifs des pièces détachées climatisation peuvent évoluer selon les prix fournisseurs. Toute modification sera justifiée et fera l’objet d’un accord préalable écrit (email/SMS) avant commande et/ou installation.",
+);
+
     }
 
     items.push(
       "Les prix indiqués comprennent la main-d’œuvre et, le cas échéant, les frais de déplacement mentionnés au devis.",
     );
+
+if (hasPiscine) {
+  items.push(
+    "Le client garantit l’accès libre et sécurisé au bassin et au local technique. En cas d’accès impossible, le déplacement reste dû.",
+  );
+}
+
 
     items.push(
       "Toute prestation non mentionnée dans le présent devis fera l’objet d’un devis complémentaire ou d’un avenant écrit avant réalisation.",
@@ -18914,15 +18929,13 @@ ${terminationBillingBlockTop}
 
     <p class="label" style="margin-top:4px;">5.3 Déchets & conformité</p>
     <p>
-      Les déchets sont évacués conformément à la réglementation et aux normes AFNOR.
+      Les déchets sont évacués conformément à la réglementation applicable et aux filières de traitement en vigueur.
     </p>
 
     <p class="label" style="margin-top:4px;">5.4 Accès aux installations – déplacement dû</p>
     <p>
       Le client garantit l’accès au bassin et au local technique.
-      En cas d’accès impossible (portail fermé, clé absente, code erroné, chiens, bâche…),
-      <strong>le déplacement reste dû</strong>.
-      Le prestataire n’est pas tenu d’attendre plus de 10 minutes sur place.
+     En cas d’accès impossible (clé absente, code erroné, animaux, etc.), le déplacement reste dû. Le prestataire n’est pas tenu d’attendre au-delà de 10 minutes.
     </p>
 
     <p class="label" style="margin-top:4px;">5.5 Obligations du client</p>
@@ -18942,13 +18955,7 @@ ${terminationBillingBlockTop}
 
     <p class="label" style="margin-top:4px;">5.7 Absence d’obligation de résultat</p>
     <p>
-      Le prestataire n’est tenu à aucune obligation de résultat.
-      La qualité de l’eau et le bon fonctionnement de l’installation dépendent notamment
-      de facteurs indépendants de son intervention : conditions météorologiques, usage du bassin,
-      qualité de l’eau de remplissage, état et âge du matériel, réglages automatiques,
-      interventions de tiers ou décisions du client.
-      Aucun engagement de résultat permanent (eau cristalline, absence totale d’algues,
-      stabilité chimique continue) ne peut être garanti dans le cadre du présent contrat.
+Le prestataire est tenu à une obligation de moyens. La qualité de l’eau dépend de facteurs externes (météo, fréquentation, état du matériel, interventions de tiers…). Des interventions hors contrat peuvent être nécessaires.
     </p>
 
     <p class="label" style="margin-top:4px;">5.8 Limitation de responsabilité</p>
@@ -18960,6 +18967,7 @@ ${terminationBillingBlockTop}
       sur l’année contractuelle en cours.
       Sont exclus tous dommages indirects, pertes d’exploitation, pertes d’usage,
       préjudices commerciaux ou frais annexes.
+Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corporel.
     </p>
 
     <p class="label" style="margin-top:4px;">5.9 Installations non conformes</p>
@@ -19000,16 +19008,32 @@ ${terminationBillingBlockTop}
     ${
       pr.clientType === "syndic"
         ? `
-    <p>
-      Le présent contrat est conclu pour une durée ferme de 12 mois et renouvelable
-      par tacite reconduction sauf dénonciation par lettre recommandée avec accusé
-      de réception au moins <strong>3 mois avant l’échéance</strong>.
-    </p>
-    <p>
-      Toute résiliation en cours d’année, quelle qu’en soit la cause, entraîne
-      l’exigibilité de la totalité de la redevance annuelle, sans ristourne
-      pour la période non courue.
-    </p>
+<p>
+  Le présent contrat est conclu pour une durée ferme de 12 mois et renouvelable
+  par tacite reconduction, sauf dénonciation par lettre recommandée avec accusé
+  de réception adressée au moins <strong>3 mois avant l’échéance</strong>.
+</p>
+
+<p>
+  En cas de résiliation anticipée en cours d’année, quelle qu’en soit la cause,
+  restent dus :
+</p>
+
+<ul>
+  <li>les prestations déjà réalisées à la date de résiliation ;</li>
+  <li>les prestations planifiées durant la période de préavis ;</li>
+  <li>
+    une indemnité de résiliation correspondant à
+    <strong>20&nbsp;%</strong> du montant restant dû sur la période contractuelle,
+    à titre de frais de désorganisation et de réservation de planning.
+  </li>
+</ul>
+
+<p>
+  Cette indemnité est plafonnée au montant des sommes restant dues sur la période
+  contractuelle et ne constitue pas une pénalité.
+</p>
+
     `
         : `
     <p>
@@ -19056,8 +19080,7 @@ ${terminationBillingBlockTop}
 
     <p class="label" style="margin-top:4px;">5.17 Réclamations</p>
     <p>
-      Toute réclamation doit être formulée par écrit sous 48 h.
-      Passé ce délai, l’intervention est considérée conforme.
+     Toute réclamation doit être formulée par écrit dans un délai raisonnable, idéalement sous 48 h, afin de permettre une vérification rapide.
     </p>
 
     <p class="label" style="margin-top:4px;">5.18 Révision annuelle</p>
