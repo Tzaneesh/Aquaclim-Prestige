@@ -126,7 +126,7 @@ const PRESTATION_TEMPLATES = [
     kind: "piscine_chlore",
     title: "Entretien piscine chlore",
     priceParticulier: 80,
-    priceSyndic: 100,
+    priceSyndic: 120,
     descParticulier:
       "Analyse de l’eau, nettoyage bassin, contrôle filtration, rinçage et ajustement traitement.",
     descSyndic:
@@ -236,9 +236,9 @@ const PRESTATION_TEMPLATES = [
       "Démontage, extraction, remplacement roulement, remontage, test et rapport technicien.",
   },
 
-  // 11. Remplacement pompe piscine (MO)
+  // 11. Remplacement pompe piscine 
   {
-    label: "Remplacement pompe piscine (MO)",
+    label: "Remplacement pompe piscine ",
     kind: "remplacement_pompe_mo",
     title: "Remplacement pompe piscine",
     priceParticulier: 150,
@@ -248,9 +248,9 @@ const PRESTATION_TEMPLATES = [
       "Dépose/installation, raccordement, réglages et rapport technicien.",
   },
 
-  // 12. Remplacement cellule électrolyseur (MO)
+  // 12. Remplacement cellule électrolyseur
   {
-    label: "Remplacement cellule électrolyseur (MO)",
+    label: "Remplacement cellule électrolyseur",
     kind: "remplacement_cellule_mo",
     title: "Remplacement cellule électrolyseur",
     priceParticulier: 120,
@@ -265,8 +265,8 @@ const PRESTATION_TEMPLATES = [
     label: "Nettoyage local technique",
     kind: "nettoyage_local",
     title: "Nettoyage local technique",
-    priceParticulier: 30,
-    priceSyndic: 50,
+    priceParticulier: 50,
+    priceSyndic: 70,
     descParticulier:
       "Nettoyage local technique, dépoussiérage et contrôle humidité.",
     descSyndic:
