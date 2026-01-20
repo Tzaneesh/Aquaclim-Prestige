@@ -3769,5 +3769,63 @@ body.is-dragging .visit-entry {
   }
 }
 
+/* =======================
+   IMPRESSION / PDF
+   FIX iOS SAFARI
+======================= */
+@media print {
+
+  /* Reset global */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    width: 100%;
+  }
+
+  /* Zone imprimée */
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Supprime tout ce qui ne doit pas être imprimé */
+  .no-print,
+  .top-nav,
+  .btn,
+  button {
+    display: none !important;
+  }
+
+  /* Empêcher les coupures débiles */
+  .card,
+  .header,
+  .prestations-section,
+  .totals,
+  table,
+  tr,
+  td {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Forcer une seule page quand possible */
+  body {
+    page-break-after: avoid !important;
+  }
+
+  /* Réduction légère pour iPhone */
+  body {
+    zoom: 0.92;
+  }
+}
+
+
 
 
