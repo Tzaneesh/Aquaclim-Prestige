@@ -12409,22 +12409,22 @@ if (!notesText || !String(notesText).trim()) {
       font-size: 10.5px;
     }
 
-    .page {
-      display: flex;
-      flex-direction: column;
-      min-height: 100vh;
-      padding: 10mm 12mm 14mm 12mm;
-      box-sizing: border-box;
-    }
+.page{
+  /* stable pour iOS print */
+  display: block;
+  box-sizing: border-box;
+  padding: 10mm 12mm 14mm 12mm;
+}
 
-    .page-main {
-      flex: 1 0 auto;
-    }
+.page-main{
+  display:block;
+}
 
-    .page-footer {
-      flex-shrink: 0;
-      margin-top: 8mm;
-    }
+.page-footer{
+  display:block;
+  margin-top: 8mm;
+}
+
 
     .bottom-block {
       page-break-inside: avoid;
@@ -12853,18 +12853,25 @@ img.sig-client {
 
 
 
-    @media print {
-      @page {
-        margin: 0;
-      }
-      body {
-        margin: 0;
-        padding: 0;
-      }
-      .page {
-        min-height: 100vh;
-      }
-    }
+@media print{
+  @page{
+    size: A4;
+    margin: 0;
+  }
+
+  html, body{
+    margin:0 !important;
+    padding:0 !important;
+    background:#fff !important;
+  }
+
+  /* kill iOS vh + flex */
+  .page{
+    min-height: auto !important;
+    height: auto !important;
+    display: block !important;
+  }
+}
   </style>
 </head>
 <body>
@@ -21273,6 +21280,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
