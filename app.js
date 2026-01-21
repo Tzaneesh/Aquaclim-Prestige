@@ -12649,24 +12649,31 @@ const html = `<!DOCTYPE html>
     img.sig{ height:100px; width:auto; margin-top:3px; }
     img.sig-client{ height:100px; width:auto; margin-top:12px; }
 
+    /* Optionnel: atténue le “carré” si le tampon n’est pas transparent (pas magique) */
+    img.sig, img.sig-client{
+      background: transparent;
+      mix-blend-mode: multiply;
+    }
+
     /* ===== PRINT (iOS SAFE) ===== */
     @media print{
-      /* iOS Safari est plus stable avec des marges ici */
+      /* marges ici = plus stable iOS */
       @page{ size:A4; margin:10mm 12mm 14mm 12mm; }
 
-      /* on évite le padding dans la page en print */
+      /* SHRINK léger = évite souvent la 2e page sur iPhone */
+      body{ zoom:0.90; }
+
+      /* pas de padding en print (marges gérées par @page) */
       .page{ padding:0 !important; }
 
-      /* IMPORTANT: autoriser la coupure pour éviter pages blanches iOS */
+      /* IMPORTANT: le footer ne doit PAS être “avoid” sinon iOS pousse page 2 */
       .page-footer,
-      .bottom-block,
-      .important-block,
-      .conditions-block{
+      .bottom-block{
         page-break-inside:auto !important;
         break-inside:auto !important;
       }
 
-      /* par contre on garde "avoid" sur les blocs sensibles */
+      /* on garde avoid seulement sur les signatures / rib / gros tampon payé */
       .rib-block,
       .signatures,
       .signature-block,
@@ -12764,7 +12771,7 @@ const html = `<!DOCTYPE html>
       ${isPaidInvoice ? notesHtml : ""}
     </div>
 
-    <div class="page-footer bottom-block">
+    <div class="page-footer">
       ${
         isDevis
           ? signatureClientHTML
@@ -12784,12 +12791,16 @@ printWindow.document.open();
 printWindow.document.write(html);
 printWindow.document.close();
 
+/* Optionnel: titre vide (n’enlève pas "about:blank" mais évite un titre long) */
+try { printWindow.document.title = ""; } catch(e){}
+
 printWindow.onload = function () {
   printWindow.focus();
   if (!previewOnly) {
     printWindow.print();
   }
 };
+
   }
 
 // ================== CONTRATS PISCINE / SPA ==================
@@ -21074,6 +21085,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
