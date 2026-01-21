@@ -13133,6 +13133,7 @@ function showHome() {
   const tabFactures = document.getElementById("tabFactures");
   const tabAttest = document.getElementById("tabAttest");
   const tabCA = document.getElementById("tabCA");
+   const tabSettings = document.getElementById("tabSettings"); 
 
   const homeView = document.getElementById("homeView");
   const listView = document.getElementById("listView");
@@ -13149,6 +13150,7 @@ function showHome() {
   tabFactures && tabFactures.classList.remove("active");
   tabAttest && tabAttest.classList.remove("active");
   tabCA && tabCA.classList.remove("active");
+  tabSettings && tabSettings.classList.remove("active");
 
   // Vues
   homeView && homeView.classList.remove("hidden");
@@ -13168,11 +13170,13 @@ function openFromHome(type) {
   const tabFactures = document.getElementById("tabFactures");
   const tabAttest = document.getElementById("tabAttest");
   const tabCA = document.getElementById("tabCA");
+    const tabSettings = document.getElementById("tabSettings");
 
   // On quitte l’accueil et les attestations
   tabHome && tabHome.classList.remove("active");
   tabAttest && tabAttest.classList.remove("active");
   tabCA && tabCA.classList.remove("active");
+  tabSettings && tabSettings.classList.remove("active");
 
   if (type === "devis") {
     tabDevis && tabDevis.classList.add("active");
@@ -21085,6 +21089,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
