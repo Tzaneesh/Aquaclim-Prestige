@@ -12387,616 +12387,410 @@ if (!notesText || !String(notesText).trim()) {
   `;
   }
 
-  const printWindow = window.open("", "_blank");
+ const printWindow = window.open("", "_blank");
 
-  const html = `<!DOCTYPE html>
+const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${isDevis ? "Devis " : "Facture "}${doc.number}</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    *{margin:0;padding:0;box-sizing:border-box;}
 
-    body {
-      margin: 0;
-      padding: 0;
+    html, body{
+      margin:0;
+      padding:0;
+      background:#fff;
+      color:#333;
       font-family: Arial, sans-serif;
-      color: #333;
-      font-size: 10.5px;
+      font-size:10.5px;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
-.page{
-  /* stable pour iOS print */
-  display: block;
-  box-sizing: border-box;
-  padding: 10mm 12mm 14mm 12mm;
-}
-
-.page-main{
-  display:block;
-}
-
-.page-footer{
-  display:block;
-  margin-top: 8mm;
-}
-
-
-    .bottom-block {
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-  .ref-bar {
-    margin: 6px 0 10px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #cbd3e1;
-    background: #f5f7ff;
-    font-size: 11px;
-    display: flex;
-    justify-content: space-between;
-    gap: 10px;
-  }
+    /* ===== STRUCTURE PAGE (stable iOS) ===== */
+    .page{ display:block; }
+    .page-main{ display:block; }
+    .page-footer{ display:block; margin-top: 8mm; }
 
     /* ===== HEADER ===== */
-
-    .header {
-      text-align: center;
-      margin-bottom: 6px; /* un peu plus compact */
-      border-bottom: 1.5px solid #1a74d9;
-      padding-bottom: 7px;
+    .header{
+      text-align:center;
+      margin-bottom:6px;
+      border-bottom:1.5px solid #1a74d9;
+      padding-bottom:7px;
     }
+    img.logo{ height:55px; margin-bottom:4px; }
 
-    img.logo {
-      height: 55px;
-      margin-bottom: 4px;
+    .header h1{
+      color:#1a74d9;
+      font-size:21px;
+      margin-bottom:3px;
+      font-weight:700;
     }
-
-    .header h1 {
-      color: #1a74d9;
-      font-size: 21px;
-      margin-bottom: 3px;
-      font-weight: 700;
+    .header p{
+      color:#444;
+      font-size:10.5px;
+      line-height:1.25;
     }
-
-    .header p {
-      color: #444;
-      font-size: 10.5px;
-      line-height: 1.25;
-    }
-
-    .subtitle {
-      font-weight: 600;
-      font-size: 11px;
-    }
-
-    .contact {
-      font-size: 10.5px;
-      font-weight: 500;
-    }
-
-    .contact strong {
-      font-weight: 700;
-    }
+    .subtitle{ font-weight:600; font-size:11px; }
+    .contact{ font-size:10.5px; font-weight:500; }
+    .contact strong{ font-weight:700; }
 
     /* ===== TITRE DEVIS / FACTURE ===== */
-
-  .doc-header-center {
-  margin: 8px 0 12px 0;
-}
-
-/* Titre Devis / Facture premium */
-.doc-title-main {
-  display: block;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.18em;
-  font-weight: 600;
-  opacity: 0.9;
-}
-
-.doc-title-number {
-  display: block;
-  margin-top: 2px;
-  font-size: 21px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  color: inherit;
-}
-
-/* Objet */
-.doc-subject {
-  margin-top: 8px;
-  font-size: 12.5px;
-  font-weight: 700;
-}
-
-
-    /* ===== INFOS DATES (CADRE À DROITE) ===== */
-
-    .doc-info-block {
-      display: inline-block;
-      border: 1px solid #cbd3e1;
-      border-radius: 6px;
-      padding: 6px 8px;
-      font-size: 10px;
-      background: #f6f8fc;
-      margin-top: 4px;
+    .doc-header-center{ margin:8px 0 12px 0; }
+    .doc-title-main{
+      display:block;
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:0.18em;
+      font-weight:600;
+      opacity:0.9;
+    }
+    .doc-title-number{
+      display:block;
+      margin-top:2px;
+      font-size:21px;
+      font-weight:800;
+      letter-spacing:0.04em;
+      color:inherit;
+    }
+    .doc-subject{
+      margin-top:8px;
+      font-size:12.5px;
+      font-weight:700;
     }
 
-    .doc-info-row {
-      display: flex;
-      gap: 4px;
-      margin: 1px 0;
+    /* ===== INFOS DATES ===== */
+    .doc-info-block{
+      display:inline-block;
+      border:1px solid #cbd3e1;
+      border-radius:6px;
+      padding:6px 8px;
+      font-size:10px;
+      background:#f6f8fc;
+      margin-top:4px;
     }
-
-    .doc-info-label {
-      min-width: 95px;
-      font-weight: bold;
-    }
-
-    .doc-info-value {
-      flex: 1;
-    }
+    .doc-info-row{ display:flex; gap:4px; margin:1px 0; }
+    .doc-info-label{ min-width:95px; font-weight:bold; }
+    .doc-info-value{ flex:1; }
 
     /* ===== BLOC CLIENT / SITE ===== */
-
-    .client-block {
-      margin-bottom: 8px;
-      font-size: 10px;
-      border: 1px solid #dde4ee;
-      border-radius: 8px;
-      padding: 8px 10px;
-      background: #f5f7fb; /* léger fond gris/bleu */
+    .client-block{
+      margin-bottom:8px;
+      font-size:10px;
+      border:1px solid #dde4ee;
+      border-radius:8px;
+      padding:8px 10px;
+      background:#f5f7fb;
     }
-
-    .client-title {
-      font-weight: 700;
-      font-size: 10.5px;
-      margin-bottom: 4px;
-      text-transform: none;
-      letter-spacing: 0;
-      color: #1a74d9;
+    .client-title{
+      font-weight:700;
+      font-size:10.5px;
+      margin-bottom:4px;
+      color:#1a74d9;
     }
-
-    .client-line {
-      margin: 2px 0;
-    }
-
-    .client-inner-row {
-      display: flex;
-      gap: 18px;
-    }
-
-    .client-col {
-      flex: 1 1 auto;
-    }
-
-    .client-col.right {
-      flex: 0 0 auto;
-      margin-left: auto;
-    }
-
-    .site-block {
-      margin-bottom: 8px;
-      font-size: 10px;
-      border: 1px solid #000;
-      border-radius: 6px;
-      padding: 8px 10px;
-      background: #fff;
-    }
-
-    .site-title {
-      font-weight: bold;
-      font-size: 10px;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    .client-line{ margin:2px 0; }
+    .client-inner-row{ display:flex; gap:18px; }
+    .client-col{ flex:1 1 auto; }
+    .client-col.right{ flex:0 0 auto; margin-left:auto; }
 
     /* ===== TABLE PRESTATIONS ===== */
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 10px 0;
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin:10px 0;
     }
-
-    thead th {
-      background: #1a74d9;
-      color: #fff;
-      padding: 6px 6px;
-      text-align: left;
-      font-weight: 600;
-      font-size: 11px;
-      border-bottom: 2px solid #cbd3e1;
+    thead th{
+      background:#1a74d9;
+      color:#fff;
+      padding:6px 6px;
+      text-align:left;
+      font-weight:600;
+      font-size:11px;
+      border-bottom:2px solid #cbd3e1;
     }
-
-    tbody td {
-      padding: 4px 6px;
-      border-bottom: 1px solid #dde4ee;
-      font-size: 10px;
-      vertical-align: top;
+    tbody td{
+      padding:4px 6px;
+      border-bottom:1px solid #dde4ee;
+      font-size:10px;
+      vertical-align:top;
     }
+    tbody tr:nth-child(odd){ background:#f9fbff; }
+    tbody tr:nth-child(even){ background:#ffffff; }
 
-    /* zébrage léger */
-    tbody tr:nth-child(odd) {
-      background: #f9fbff;
-    }
+    th:first-child, td:first-child{ width:55%; }
 
-    tbody tr:nth-child(even) {
-      background: #ffffff;
-    }
+    .text-right{ text-align:right; }
+    .qty-col, .unit-col{ text-align:center; white-space:nowrap; }
+    .price-col, .total-col{ white-space:nowrap; text-align:right; }
 
-    th:first-child,
-    td:first-child {
-      width: 55%;
-    }
-
-    .text-right {
-      text-align: right;
-    }
-
-    .qty-col,
-    .unit-col {
-      text-align: center;
-      white-space: nowrap;
-    }
-
-    .price-col,
-    .total-col {
-      white-space: nowrap;
-      text-align: right;
-    }
-
-    .desc-main {
-      font-size: 11px;
-      font-weight: 600;
-      margin-bottom: 2px;
-    }
-
-    .desc-detail {
-      font-size: 10px;
-      color: #555;
-      margin-top: 2px;
-    }
-
-    .sub-info {
-      margin-top: 3px;
-      font-size: 9.5px;
-      color: #555;
-    }
-
-    .sub-info-line {
-      margin-top: 1px;
-    }
+    .desc-main{ font-size:11px; font-weight:600; margin-bottom:2px; }
+    .desc-detail{ font-size:10px; color:#555; margin-top:2px; }
+    .sub-info{ margin-top:3px; font-size:9.5px; color:#555; }
+    .sub-info-line{ margin-top:1px; }
 
     /* ===== TOTAUX ===== */
-
-    .totals {
-      margin-left: auto;
-      width: 230px;
-      margin-top: 6px;
-      border: 1px solid #cbd3e1;
-      border-radius: 8px;
-      padding: 8px 10px;
-      background: #f3f6fc;
+    .totals{
+      margin-left:auto;
+      width:230px;
+      margin-top:6px;
+      border:1px solid #cbd3e1;
+      border-radius:8px;
+      padding:8px 10px;
+      background:#f3f6fc;
     }
-
-    .totals table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 0;
+    .totals table{ width:100%; border-collapse:collapse; margin:0; }
+    .totals td{ padding:3px 0; font-size:10px; }
+    .totals .grand-total td{
+      padding-top:6px;
+      border-top:1px solid #cbd3e1;
+      font-weight:800;
+      font-size:11px;
+      background:#e3edff;
+      color:#0d3b66;
     }
-
-    .totals td {
-      padding: 3px 0;
-      font-size: 10px;
-    }
-
-    .totals .grand-total td {
-      padding-top: 6px;
-      border-top: 1px solid #cbd3e1;
-      font-weight: 800;
-      font-size: 11px;
-      background: #e3edff;
-      color: #0d3b66;
-    }
-
-    .tva-note {
-      margin-top: 4px;
-      font-size: 9px;
-      font-style: italic;
-      color: #555;
+    .tva-note{
+      margin-top:4px;
+      font-size:9px;
+      font-style:italic;
+      color:#555;
     }
 
     /* ===== BLOCS ANNEXES ===== */
-
-    .reglement-block {
-      margin-top: 6px;
-      font-size: 10px;
-      border: 1px solid #1b5e20;
-      padding: 8px;
-      border-radius: 6px;
-      background: #e8f5e9;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      -webkit-column-break-inside: avoid;
+    .reglement-block{
+      margin-top:6px;
+      font-size:10px;
+      border:1px solid #1b5e20;
+      padding:8px;
+      border-radius:6px;
+      background:#e8f5e9;
+    }
+    .reg-title{
+      font-weight:bold;
+      margin-bottom:3px;
+      color:#1b5e20;
+      font-size:10px;
     }
 
-.paid-stamp-big-wrapper {
-  text-align: center;
-  margin-top: 20px;
-  margin-bottom: 30px;
-  page-break-inside: avoid;
-}
-
-.paid-stamp-big {
-  height: 240px;
-  width: auto;
-  opacity: 0.95;
-}
-
-
-
-    .reg-title {
-      font-weight: bold;
-      margin-bottom: 3px;
-      color: #1b5e20;
-      font-size: 10px;
+    .paid-stamp-big-wrapper{
+      text-align:center;
+      margin-top:20px;
+      margin-bottom:30px;
+      page-break-inside:avoid;
+      break-inside:avoid;
+    }
+    .paid-stamp-big{
+      height:240px;
+      width:auto;
+      opacity:0.95;
     }
 
-    .rib-block {
-      margin-top: 6px;
-      font-size: 10px;
-      border: 1px solid #cbd3e1;
-      padding: 8px;
-      border-radius: 6px;
-      background: #ffffff;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      -webkit-column-break-inside: avoid;
+    .rib-block{
+      margin-top:6px;
+      font-size:10px;
+      border:1px solid #cbd3e1;
+      padding:8px;
+      border-radius:6px;
+      background:#ffffff;
+      page-break-inside:avoid;
+      break-inside:avoid;
     }
+    .rib-title{ font-weight:bold; margin-bottom:3px; font-size:10px; }
 
-    .rib-title {
-      font-weight: bold;
-      margin-bottom: 3px;
-      font-size: 10px;
+    .important-block{
+      margin-top:8px;
+      font-size:10px;
+      border:1px solid #1a74d9;
+      padding:8px;
+      border-radius:6px;
+      background:#f3f7ff;
     }
+    .important-title{
+      font-weight:bold;
+      margin-bottom:4px;
+      font-size:10px;
+      color:#1a74d9;
+    }
+    .important-block ul{ margin-left:14px; }
+    .important-block li{ margin-bottom:3px; }
 
-    .important-block {
-      margin-top: 8px;
-      font-size: 10px;
-      border: 1px solid #1a74d9;
-      padding: 8px;
-      border-radius: 6px;
-      background: #f3f7ff;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      -webkit-column-break-inside: avoid;
+    .conditions-block{
+      margin-top:6px;
+      font-size:10px;
+      border:1px solid #cbd3e1;
+      border-radius:6px;
+      padding:8px;
+      background:#ffffff;
     }
-
-    .important-title {
-      font-weight: bold;
-      margin-bottom: 4px;
-      font-size: 10px;
-      color: #1a74d9;
-    }
-
-    .important-block ul {
-      margin-left: 14px;
-    }
-
-    .important-block li {
-      margin-bottom: 3px;
-    }
-
-    .conditions-block {
-      margin-top: 6px;
-      font-size: 10px;
-      border: 1px solid #cbd3e1;
-      border-radius: 6px;
-      padding: 8px;
-      background: #ffffff;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      -webkit-column-break-inside: avoid;
-    }
-
-    .conditions-title {
-      font-weight: bold;
-      margin-bottom: 3px;
-      font-size: 10px;
-    }
+    .conditions-title{ font-weight:bold; margin-bottom:3px; font-size:10px; }
 
     /* ===== SIGNATURES ===== */
-
-    .signatures {
-      margin-top: 10px;
-      display: flex;
-      justify-content: space-between;
-      gap: 22px;
-      page-break-inside: avoid;
-      break-inside: avoid;
-      -webkit-column-break-inside: avoid;
+    .signatures{
+      margin-top:10px;
+      display:flex;
+      justify-content:space-between;
+      gap:22px;
+      page-break-inside:avoid;
+      break-inside:avoid;
     }
-
-    .signature-block {
-      flex: 1;
-      page-break-inside: avoid;
-      border-top: 1px solid #333;
-      padding-top: 4px;
-      font-size: 10px;
-      min-height: 55px;
+    .signature-block{
+      flex:1;
+      border-top:1px solid #333;
+      padding-top:4px;
+      font-size:10px;
+      min-height:55px;
+      page-break-inside:avoid;
+      break-inside:avoid;
     }
+    .signature-title{ font-weight:bold; margin-bottom:3px; }
 
-    .signature-title {
-      font-weight: bold;
-      margin-bottom: 3px;
+    img.sig{ height:100px; width:auto; margin-top:3px; }
+    img.sig-client{ height:100px; width:auto; margin-top:12px; }
+
+    /* ===== PRINT (iOS SAFE) ===== */
+    @media print{
+      /* iOS Safari est plus stable avec des marges ici */
+      @page{ size:A4; margin:10mm 12mm 14mm 12mm; }
+
+      /* on évite le padding dans la page en print */
+      .page{ padding:0 !important; }
+
+      /* IMPORTANT: autoriser la coupure pour éviter pages blanches iOS */
+      .page-footer,
+      .bottom-block,
+      .important-block,
+      .conditions-block{
+        page-break-inside:auto !important;
+        break-inside:auto !important;
+      }
+
+      /* par contre on garde "avoid" sur les blocs sensibles */
+      .rib-block,
+      .signatures,
+      .signature-block,
+      .paid-stamp-big-wrapper{
+        page-break-inside:avoid !important;
+        break-inside:avoid !important;
+      }
     }
-
-img.sig {
-  height: 100px;
-  width: auto;
-  margin-top: 3px;
-}
-
-img.sig-client {
-  height: 100px;
-  width: auto;
-  margin-top: 12px;  /* tu peux mettre 14–15 si tu veux plus bas */
-}
-
-
-
-@media print{
-  @page{
-    size: A4;
-    margin: 0;
-  }
-
-  html, body{
-    margin:0 !important;
-    padding:0 !important;
-    background:#fff !important;
-  }
-
-  /* kill iOS vh + flex */
-  .page{
-    min-height: auto !important;
-    height: auto !important;
-    display: block !important;
-  }
-}
   </style>
 </head>
+
 <body>
-<div class="page">
-  <div class="page-main">
-    <div class="header">
-      <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
-         <h1>${getCompanySettings().companyName}</h1>
-      <p class="subtitle">${getCompanySettings().subtitle}</p>
-     <p class="contact">
-  ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
-  Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
-  SIRET : <strong>${getCompanySettings().siret}</strong><br>
-  ${
-    (!isDevis && Number(doc.tvaRate || 0) > 0 && getCompanySettings().vatNumber)
-      ? `N° TVA : <strong>${getCompanySettings().vatNumber}</strong><br>`
-      : ""
-  }
-</p>
-
-    </div>
-
-<div class="doc-header-center">
-  <h2 style="color:${titleColor};">
-    <span class="doc-title-main">
-      ${isDevis ? "DEVIS" : "FACTURE"}
-    </span>
-    <span class="doc-title-number">
-      N° ${doc.number}
-    </span>
-  </h2>
-
-  ${topDatesHtml}
-  ${doc.subject ? `<div class="doc-subject">Objet : ${doc.subject}</div>` : ``}
-</div>
-
-
-    <div class="client-block">
-      <div class="client-inner-row">
-        <!-- COLONNE GAUCHE -->
-        <div class="client-col">
-          <div class="client-title">Client</div>
-         ${
-           doc.client?.name || doc.client?.civility
-             ? `<p class="client-line">${[doc.client?.civility, doc.client?.name].filter(Boolean).join(" ")}</p>`
-             : ""
-         }
-
-          ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
-          ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
-          ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
-        </div>
-
-        <!-- COLONNE DROITE (Lieu d’intervention) -->
-        ${
-          doc.siteName || doc.siteAddress
-            ? `
-        <div class="client-col right">
-          <div class="client-title">Lieu d’intervention</div>
-         ${
-           doc.siteCivility || doc.siteName
-             ? `<p class="client-line">${[doc.siteCivility, doc.siteName].filter(Boolean).join(" ")}</p>`
-             : ""
-         }
-
-          ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
-        </div>`
-            : ""
-        }
+  <div class="page">
+    <div class="page-main">
+      <div class="header">
+        <img src="${logoSrc}" class="logo" alt="AquaClim Prestige">
+        <h1>${getCompanySettings().companyName}</h1>
+        <p class="subtitle">${getCompanySettings().subtitle}</p>
+        <p class="contact">
+          ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
+          Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
+          SIRET : <strong>${getCompanySettings().siret}</strong><br>
+          ${
+            (!isDevis && Number(doc.tvaRate || 0) > 0 && getCompanySettings().vatNumber)
+              ? `N° TVA : <strong>${getCompanySettings().vatNumber}</strong><br>`
+              : ""
+          }
+        </p>
       </div>
-    </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>Description</th>
-          <th class="qty-col">Quantité</th>
-          <th class="unit-col">Unité</th>
-          <th class="price-col text-right">Prix HT</th>
-          <th class="total-col text-right">Total HT</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${prestationsHTML}
-      </tbody>
-    </table>
+      <div class="doc-header-center">
+        <h2 style="color:${titleColor};">
+          <span class="doc-title-main">${isDevis ? "DEVIS" : "FACTURE"}</span>
+          <span class="doc-title-number">N° ${doc.number}</span>
+        </h2>
 
-    <div class="totals">
+        ${topDatesHtml}
+        ${doc.subject ? `<div class="doc-subject">Objet : ${doc.subject}</div>` : ``}
+      </div>
+
+      <div class="client-block">
+        <div class="client-inner-row">
+          <div class="client-col">
+            <div class="client-title">Client</div>
+            ${
+              doc.client?.name || doc.client?.civility
+                ? `<p class="client-line">${[doc.client?.civility, doc.client?.name].filter(Boolean).join(" ")}</p>`
+                : ""
+            }
+            ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
+            ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
+            ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
+          </div>
+
+          ${
+            doc.siteName || doc.siteAddress
+              ? `
+          <div class="client-col right">
+            <div class="client-title">Lieu d’intervention</div>
+            ${
+              doc.siteCivility || doc.siteName
+                ? `<p class="client-line">${[doc.siteCivility, doc.siteName].filter(Boolean).join(" ")}</p>`
+                : ""
+            }
+            ${doc.siteAddress ? `<p class="client-line">Adresse : ${doc.siteAddress}</p>` : ""}
+          </div>`
+              : ""
+          }
+        </div>
+      </div>
+
       <table>
-        ${totalsRows}
+        <thead>
+          <tr>
+            <th>Description</th>
+            <th class="qty-col">Quantité</th>
+            <th class="unit-col">Unité</th>
+            <th class="price-col text-right">Prix HT</th>
+            <th class="total-col text-right">Total HT</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${prestationsHTML}
+        </tbody>
       </table>
-      ${tvaNoteHtml}
+
+      <div class="totals">
+        <table>
+          ${totalsRows}
+        </table>
+        ${tvaNoteHtml}
+      </div>
+
+      ${isPaidInvoice ? reglementHtml : ""}
+      ${isPaidInvoice ? notesHtml : ""}
     </div>
 
-    ${isPaidInvoice ? reglementHtml : ""}
-    ${isPaidInvoice ? notesHtml : ""}
-
-  </div>
-
-  <div class="page-footer bottom-block">
-    ${
-      isDevis
-        ? signatureClientHTML
-        : isUnpaidInvoice
-          ? `
+    <div class="page-footer bottom-block">
+      ${
+        isDevis
+          ? signatureClientHTML
+          : isUnpaidInvoice
+            ? `
               ${ribHtml}
               ${notesHtml}
             `
-          : ``
-    }
+            : ``
+      }
+    </div>
   </div>
-</div>
 </body>
 </html>`;
 
-  printWindow.document.write(html);
-  printWindow.document.close();
+printWindow.document.open();
+printWindow.document.write(html);
+printWindow.document.close();
 
-  printWindow.onload = function () {
-    printWindow.focus();
-    if (!previewOnly) {
-      printWindow.print();
-    }
-  };
-}
+printWindow.onload = function () {
+  printWindow.focus();
+  if (!previewOnly) {
+    printWindow.print();
+  }
+};
+
 
 // ================== CONTRATS PISCINE / SPA ==================
 
@@ -21280,6 +21074,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
