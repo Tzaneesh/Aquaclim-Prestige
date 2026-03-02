@@ -3843,6 +3843,32 @@ body.modal-open {
   overscroll-behavior: contain; /* évite que le scroll "passe" à la page derrière */
 }
 
+.planning-actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin-top:10px;
+}
+.planning-actions .btn{
+  border-radius:999px;
+  padding:10px 14px;
+  line-height:1;
+  font-weight:700;
+  border:1px solid rgba(0,0,0,.10);
+  box-shadow:0 6px 16px rgba(0,0,0,.08);
+}
+.planning-actions .btn.btn-small{ font-size:14px; }
+.btn-danger{
+  background:#d72626;
+  color:#fff;
+  border-color:rgba(0,0,0,.12);
+}
+@media (max-width:520px){
+  .planning-actions .btn{
+    width:100%;
+  }
+}
 
 
 
