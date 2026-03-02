@@ -14195,7 +14195,6 @@ function openPlanningDayDetails(dateStr) {
         const service = item.service || item.label || "Intervention";
 
         // ✅ on permet l'édition seulement pour les manuels "normaux"
-        // (si tu veux autoriser aussi ceux avec sourceId -> remplace par: const canEdit = true;)
         const canEdit = !item.sourceId;
 
         html += `
@@ -14206,45 +14205,46 @@ function openPlanningDayDetails(dateStr) {
             ${notesHtml}
             ${phoneHtml}
 
-            ${
-              canEdit
-                ? `<button class="btn btn-small btn-secondary"
-                    onclick="openEditManualPlanningItem('${item.id}', '${dateStr}')">
-                    ✏️ Modifier
-                  </button>`
-                : ""
-            }
-
-            <button class="btn btn-small btn-secondary"
-              onclick="${
-                item.sourceId
-                  ? `openDevisAcceptedActionPopup('${item.sourceId}')`
-                  : `showConfirmDialog({
-                      title:'Replanifier',
-                      message:'Pour déplacer un passage manuel : glisse-dépose la carte sur un autre jour ✅',
-                      confirmLabel:'OK',
-                      cancelLabel:'',
-                      variant:'info',
-                      icon:'ℹ️'
-                    })`
-              }">
-              🔁 Replanifier / changer
-            </button>
-
-            <button class="btn btn-small btn-secondary"
-              onclick="toggleManualPlanningDone('${item.id}', '${dateStr}')">
+            <div class="planning-actions">
               ${
-                manualPlanningItems.find((x) => x.id === item.id)?.isDone
-                  ? "↩ Annuler fait"
-                  : "✅ Fait"
+                canEdit
+                  ? `<button class="btn btn-small btn-secondary"
+                      onclick="openEditManualPlanningItem('${item.id}', '${dateStr}')">
+                      ✏️ Modifier
+                    </button>`
+                  : ""
               }
-            </button>
 
-            <button class="delete-manual-btn"
-              onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
-              🗑️ Supprimer
-            </button>
+              <button class="btn btn-small btn-secondary"
+                onclick="${
+                  item.sourceId
+                    ? `openDevisAcceptedActionPopup('${item.sourceId}')`
+                    : `showConfirmDialog({
+                        title:'Replanifier',
+                        message:'Pour déplacer un passage manuel : glisse-dépose la carte sur un autre jour ✅',
+                        confirmLabel:'OK',
+                        cancelLabel:'',
+                        variant:'info',
+                        icon:'ℹ️'
+                      })`
+                }">
+                🔁 Replanifier
+              </button>
 
+              <button class="btn btn-small btn-secondary"
+                onclick="toggleManualPlanningDone('${item.id}', '${dateStr}')">
+                ${
+                  manualPlanningItems.find((x) => x.id === item.id)?.isDone
+                    ? "↩ Annuler"
+                    : "✅ Fait"
+                }
+              </button>
+
+              <button class="btn btn-small btn-danger"
+                onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
+                🗑️ Supprimer
+              </button>
+            </div>
           </div>
         `;
       }
@@ -14254,7 +14254,6 @@ function openPlanningDayDetails(dateStr) {
   detailsEl.innerHTML = html;
   detailsEl.classList.remove("hidden");
 }
-
 function openEditManualPlanningItem(manualId, dateStr) {
   const it = (manualPlanningItems || []).find(x => x.id === manualId);
   if (!it) return;
@@ -21179,6 +21178,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
