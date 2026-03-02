@@ -286,7 +286,7 @@ const PRESTATION_TEMPLATES = [
 
   // 15. Dépannage climatisation
   {
-    label: "Dépannage climatisation (horaire)",
+    label: "Dépannage climatisation",
     kind: "depannage_clim",
     title: "Diagnostic et dépannage climatisation",
     priceParticulier: 120,
@@ -299,7 +299,7 @@ const PRESTATION_TEMPLATES = [
 
   // 16. Dépannage piscine
   {
-    label: "Dépannage piscine (horaire)",
+    label: "Dépannage piscine",
     kind: "depannage_piscine",
     title: "Diagnostic et dépannage piscine",
     priceParticulier: 120,
@@ -21089,6 +21089,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
