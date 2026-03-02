@@ -589,6 +589,21 @@
     <label>Prestation</label>
     <select id="planningPopupPrestation"></select>
 
+    <div style="margin-top:10px;">
+  <label for="planningPopupPrestationCustom" style="display:block;margin-bottom:4px;">
+    Prestation (texte libre)
+  </label>
+  <input
+    id="planningPopupPrestationCustom"
+    type="text"
+    placeholder="Ex: Entretien + ajout pH-"
+    style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;"
+  />
+  <div style="font-size:12px;opacity:.75;margin-top:4px;">
+    (Si tu écris ici, ça remplacera la prestation du menu.)
+  </div>
+</div>
+
     <label>Nom du client</label>
     <input type="text" id="planningPopupClient">
 
@@ -1999,6 +2014,7 @@
 <script src="app.js"></script>
 </body>
 </html>
+
 
 
 
