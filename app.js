@@ -14254,6 +14254,7 @@ function openPlanningDayDetails(dateStr) {
   detailsEl.innerHTML = html;
   detailsEl.classList.remove("hidden");
 }
+
 function openEditManualPlanningItem(manualId, dateStr) {
   const it = (manualPlanningItems || []).find(x => x.id === manualId);
   if (!it) return;
@@ -21178,6 +21179,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
