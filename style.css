@@ -3825,6 +3825,23 @@ body.is-dragging .visit-entry {
     zoom: 0.92;
   }
 }
+/* ===== FIX SCROLL MOBILE (iOS/Android) : bloque le body quand une popup est ouverte ===== */
+body.modal-open {
+  overflow: hidden;
+  position: fixed;   /* important iOS */
+  width: 100%;
+}
+
+/* La popup doit scroller si elle dépasse l'écran */
+.popup {
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.popup-overlay {
+  overscroll-behavior: contain; /* évite que le scroll "passe" à la page derrière */
+}
 
 
 
