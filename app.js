@@ -943,6 +943,7 @@ let unsubDocs = null;
 let unsubContracts = null;
 let unsubClients = null;
 let manualPlanningItems = [];
+let editingManualPlanningId = null;
 let contractPlanningOverrides = [];
 
 // ================== OFFLINE / SYNC QUEUE ==================
@@ -14235,12 +14236,35 @@ function openPlanningDayDetails(dateStr) {
   detailsEl.classList.remove("hidden");
 }
 
-function openManualPlanningPopup(dateStr, ev) {
+function openEditManualPlanningItem(manualId, dateStr) {
+  const it = (manualPlanningItems || []).find(x => x.id === manualId);
+  if (!it) return;
+
+  openManualPlanningPopup(dateStr, null, manualId);
+}
+
+
+function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   if (ev) ev.stopPropagation();
   manualPopupDate = dateStr;
 
   const overlay = document.getElementById("planningPopup");
   if (!overlay) return;
+
+  // ✅ mode édition
+  editingManualPlanningId = manualIdToEdit || null;
+
+  // ✅ titre + bouton primaire (Ajouter / Enregistrer)
+  const titleEl = overlay.querySelector("h3");
+  const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
+  if (titleEl) {
+    titleEl.textContent = editingManualPlanningId
+      ? "Modifier une intervention"
+      : "Ajouter une intervention";
+  }
+  if (primaryBtn) {
+    primaryBtn.textContent = editingManualPlanningId ? "Enregistrer" : "Ajouter";
+  }
 
   const frDate = new Date(dateStr + "T00:00:00").toLocaleDateString("fr-FR", {
     weekday: "long",
@@ -14250,19 +14274,17 @@ function openManualPlanningPopup(dateStr, ev) {
   });
 
   const dateLabel = document.getElementById("planningPopupDate");
-  if (dateLabel) {
-    dateLabel.textContent = "Pour le " + frDate;
-  }
+  if (dateLabel) dateLabel.textContent = "Pour le " + frDate;
 
-  // on reset les champs existants UNIQUEMENT
+  // champs
   const select = document.getElementById("planningPopupPrestation");
-  if (select) select.value = "";
-
   const clientInput = document.getElementById("planningPopupClient");
   const addrInput = document.getElementById("planningPopupAddress");
   const phoneInput = document.getElementById("planningPopupPhone");
   const notesInput = document.getElementById("planningPopupNotes");
 
+  // ✅ reset
+  if (select) select.value = "";
   if (clientInput) clientInput.value = "";
   if (addrInput) addrInput.value = "";
   if (phoneInput) phoneInput.value = "";
@@ -14271,12 +14293,33 @@ function openManualPlanningPopup(dateStr, ev) {
   // remplit la liste déroulante
   loadPlanningPrestations();
 
-  // on affiche
-  overlay.classList.remove("hidden");
+  // ✅ pré-remplissage si édition
+  if (editingManualPlanningId) {
+    const it = (manualPlanningItems || []).find(
+      (x) => x.id === editingManualPlanningId
+    );
 
+    if (it) {
+      if (select) select.value = it.prestation || "";
+      if (clientInput) clientInput.value = it.clientName || "";
+      if (addrInput) addrInput.value = it.address || "";
+      if (phoneInput) phoneInput.value = it.phone || "";
+      if (notesInput) notesInput.value = it.notes || "";
+    }
+
+    // ⚠️ important : le select est rempli via DOM,
+    // donc on refait un set juste après le rendu (fiabilise sur certains téléphones)
+    setTimeout(() => {
+      const select2 = document.getElementById("planningPopupPrestation");
+      if (select2 && it) select2.value = it.prestation || "";
+    }, 0);
+  }
+
+  // affiche
+  overlay.classList.remove("hidden");
   const popup = overlay.querySelector(".popup");
   if (popup) {
-    void popup.offsetWidth; // déclenche l’anim
+    void popup.offsetWidth;
     popup.classList.add("show");
   }
 }
@@ -14286,11 +14329,18 @@ function closeManualPlanningPopup() {
   if (!overlay) return;
 
   const popup = overlay.querySelector(".popup");
-  if (popup) {
-    popup.classList.remove("show");
-  }
+  if (popup) popup.classList.remove("show");
 
   overlay.classList.add("hidden");
+
+  // ✅ reset mode édition
+  editingManualPlanningId = null;
+
+  // remet le titre/bouton par défaut
+  const titleEl = overlay.querySelector("h3");
+  const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
+  if (titleEl) titleEl.textContent = "Ajouter une intervention";
+  if (primaryBtn) primaryBtn.textContent = "Ajouter";
 }
 
 async function confirmManualPlanningPopup() {
@@ -14314,12 +14364,13 @@ async function confirmManualPlanningPopup() {
     return;
   }
 
+  const id = editingManualPlanningId || Date.now().toString(36);
+
   // Label qui s’affiche dans la case du planning
   const label = prestation || client;
 
-  // ✅ item planning
-  const item = {
-    id: Date.now().toString(36),
+  const payload = {
+    id,
     date: manualPopupDate,
     label,
     prestation,
@@ -14327,18 +14378,22 @@ async function confirmManualPlanningPopup() {
     address,
     phone,
     notes,
-    createdAt: Date.now(),
+    updatedAt: Date.now(),
   };
 
+  // si création -> createdAt
+  if (!editingManualPlanningId) payload.createdAt = Date.now();
+
   try {
-    // ✅ Firestore = source de vérité
     if (!db) throw new Error("Firestore db non initialisé");
-    await db.collection("planningManual").doc(item.id).set(item);
 
-    // ✅ Ferme la popup
-    overlay.classList.add("hidden");
+    // ✅ merge = modif sans tout écraser
+    await db.collection("planningManual").doc(id).set(payload, { merge: true });
 
-    // ✅ Optionnel: reset champs
+    // ✅ Ferme la popup proprement
+    closeManualPlanningPopup();
+
+    // ✅ Optionnel: reset champs (pas obligatoire, mais propre)
     const elPresta = document.getElementById("planningPopupPrestation");
     const elClient = document.getElementById("planningPopupClient");
     const elAddress = document.getElementById("planningPopupAddress");
@@ -14350,14 +14405,15 @@ async function confirmManualPlanningPopup() {
     if (elPhone) elPhone.value = "";
     if (elNotes) elNotes.value = "";
 
-    // ✅ Pas besoin de manualPlanningItems.push()
-    // Ton onSnapshot(planningManual) va récupérer et rafraîchir automatiquement.
+    // ✅ ton onSnapshot(planningManual) refresh automatiquement
   } catch (e) {
-    console.error("Erreur ajout planning manuel:", e);
+    console.error("Erreur enregistrement planning manuel:", e);
     alert("Impossible d’enregistrer l’intervention (vérifie ta connexion).");
+  } finally {
+    // sécurité : reset
+    editingManualPlanningId = null;
   }
 }
-
 
 function loadPlanningPrestations() {
   const select = document.getElementById("planningPopupPrestation");
@@ -21089,6 +21145,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
