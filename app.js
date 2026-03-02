@@ -14270,10 +14270,10 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   const overlay = document.getElementById("planningPopup");
   if (!overlay) return;
 
-  // ✅ mode édition
+  // mode édition (si tu l'utilises)
   editingManualPlanningId = manualIdToEdit || null;
 
-  // ✅ titre + bouton primaire (Ajouter / Enregistrer)
+  // titre + bouton
   const titleEl = overlay.querySelector("h3");
   const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
   if (titleEl) {
@@ -14295,15 +14295,16 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   const dateLabel = document.getElementById("planningPopupDate");
   if (dateLabel) dateLabel.textContent = "Pour le " + frDate;
 
-  // champs
+  // reset champs
   const select = document.getElementById("planningPopupPrestation");
+  const custom = document.getElementById("planningPopupPrestationCustom");
   const clientInput = document.getElementById("planningPopupClient");
   const addrInput = document.getElementById("planningPopupAddress");
   const phoneInput = document.getElementById("planningPopupPhone");
   const notesInput = document.getElementById("planningPopupNotes");
 
-  // ✅ reset
   if (select) select.value = "";
+  if (custom) custom.value = "";
   if (clientInput) clientInput.value = "";
   if (addrInput) addrInput.value = "";
   if (phoneInput) phoneInput.value = "";
@@ -14312,26 +14313,29 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   // remplit la liste déroulante
   loadPlanningPrestations();
 
-  // ✅ pré-remplissage si édition
+  // pré-remplissage si édition
   if (editingManualPlanningId) {
-    const it = (manualPlanningItems || []).find(
-      (x) => x.id === editingManualPlanningId
-    );
-
+    const it = (manualPlanningItems || []).find((x) => x.id === editingManualPlanningId);
     if (it) {
+      // si tu avais stocké customPrestation, on le remet
+      if (custom) custom.value = it.customPrestation || "";
       if (select) select.value = it.prestation || "";
+
       if (clientInput) clientInput.value = it.clientName || "";
       if (addrInput) addrInput.value = it.address || "";
       if (phoneInput) phoneInput.value = it.phone || "";
       if (notesInput) notesInput.value = it.notes || "";
     }
+  }
 
-    // ⚠️ important : le select est rempli via DOM,
-    // donc on refait un set juste après le rendu (fiabilise sur certains téléphones)
-    setTimeout(() => {
-      const select2 = document.getElementById("planningPopupPrestation");
-      if (select2 && it) select2.value = it.prestation || "";
-    }, 0);
+  // ✅ bonus simple : si tu tapes du texte libre -> on vide le select
+  if (custom && select) {
+    custom.oninput = () => {
+      if (custom.value.trim()) select.value = "";
+    };
+    select.onchange = () => {
+      if (select.value) custom.value = "";
+    };
   }
 
   // affiche
@@ -14366,8 +14370,15 @@ async function confirmManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay || !manualPopupDate) return;
 
-  const prestation =
+  const prestationSelect =
     document.getElementById("planningPopupPrestation")?.value || "";
+
+  const prestationCustom =
+    document.getElementById("planningPopupPrestationCustom")?.value.trim() || "";
+
+  // ✅ priorité au texte libre
+  const prestation = prestationCustom || prestationSelect;
+
   const client =
     document.getElementById("planningPopupClient")?.value.trim() || "";
   const address =
@@ -14383,16 +14394,19 @@ async function confirmManualPlanningPopup() {
     return;
   }
 
+  // ✅ id fixe en édition, nouveau en création
   const id = editingManualPlanningId || Date.now().toString(36);
 
   // Label qui s’affiche dans la case du planning
   const label = prestation || client;
 
+  // ✅ payload Firestore
   const payload = {
-    id,
+    id, // ✅ IMPORTANT : on utilise l'id calculé
     date: manualPopupDate,
     label,
     prestation,
+    customPrestation: prestationCustom,
     clientName: client,
     address,
     phone,
@@ -14400,7 +14414,7 @@ async function confirmManualPlanningPopup() {
     updatedAt: Date.now(),
   };
 
-  // si création -> createdAt
+  // ✅ createdAt seulement si création
   if (!editingManualPlanningId) payload.createdAt = Date.now();
 
   try {
@@ -14412,19 +14426,20 @@ async function confirmManualPlanningPopup() {
     // ✅ Ferme la popup proprement
     closeManualPlanningPopup();
 
-    // ✅ Optionnel: reset champs (pas obligatoire, mais propre)
+    // ✅ reset champs
     const elPresta = document.getElementById("planningPopupPrestation");
+    const elPrestaCustom = document.getElementById("planningPopupPrestationCustom");
     const elClient = document.getElementById("planningPopupClient");
     const elAddress = document.getElementById("planningPopupAddress");
     const elPhone = document.getElementById("planningPopupPhone");
     const elNotes = document.getElementById("planningPopupNotes");
     if (elPresta) elPresta.value = "";
+    if (elPrestaCustom) elPrestaCustom.value = "";
     if (elClient) elClient.value = "";
     if (elAddress) elAddress.value = "";
     if (elPhone) elPhone.value = "";
     if (elNotes) elNotes.value = "";
 
-    // ✅ ton onSnapshot(planningManual) refresh automatiquement
   } catch (e) {
     console.error("Erreur enregistrement planning manuel:", e);
     alert("Impossible d’enregistrer l’intervention (vérifie ta connexion).");
@@ -21164,6 +21179,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
