@@ -14119,7 +14119,9 @@ function openPlanningDayDetails(dateStr) {
   document.querySelectorAll(".day-column").forEach((col) => {
     col.classList.remove("is-selected");
   });
-  const selectedCol = document.querySelector(`.day-column[data-date="${dateStr}"]`);
+  const selectedCol = document.querySelector(
+    `.day-column[data-date="${dateStr}"]`
+  );
   if (selectedCol) selectedCol.classList.add("is-selected");
 
   const day = currentPlanningData.find((d) => d.date === dateStr);
@@ -14144,7 +14146,6 @@ function openPlanningDayDetails(dateStr) {
     html += `<div class="visit-empty">Aucun passage prévu.</div>`;
   } else {
     day.items.forEach((item) => {
-
       // 🔒 notes privées depuis la fiche client
       const c = item.clientName ? _getClientByName(item.clientName) : null;
       const notes = (c?.privateNotes || "").trim();
@@ -14157,7 +14158,9 @@ function openPlanningDayDetails(dateStr) {
 
       const addressHtml = item.address
         ? `<a
-             href="https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${encodeURIComponent(item.address)}"
+             href="https://www.google.com/maps/dir/?api=1&origin=My+Location&destination=${encodeURIComponent(
+               item.address
+             )}"
              target="_blank"
              style="text-decoration:none;color:#1f6fe5;font-weight:700;"
              title="Ouvrir l’itinéraire Google Maps"
@@ -14191,6 +14194,10 @@ function openPlanningDayDetails(dateStr) {
       if (item.type === "manual") {
         const service = item.service || item.label || "Intervention";
 
+        // ✅ on permet l'édition seulement pour les manuels "normaux"
+        // (si tu veux autoriser aussi ceux avec sourceId -> remplace par: const canEdit = true;)
+        const canEdit = !item.sourceId;
+
         html += `
           <div class="planning-details-entry">
             <strong>${escapeHtml(service)}</strong><br>
@@ -14199,32 +14206,44 @@ function openPlanningDayDetails(dateStr) {
             ${notesHtml}
             ${phoneHtml}
 
-<button class="btn btn-small btn-secondary"
-  onclick="${
-    item.sourceId
-      ? `openDevisAcceptedActionPopup('${item.sourceId}')`
-      : `showConfirmDialog({
-          title:'Replanifier',
-          message:'Pour déplacer un passage manuel : glisse-dépose la carte sur un autre jour ✅',
-          confirmLabel:'OK',
-          cancelLabel:'',
-          variant:'info',
-          icon:'ℹ️'
-        })`
-  }">
-  🔁 Replanifier / changer
-</button>
+            ${
+              canEdit
+                ? `<button class="btn btn-small btn-secondary"
+                    onclick="openEditManualPlanningItem('${item.id}', '${dateStr}')">
+                    ✏️ Modifier
+                  </button>`
+                : ""
+            }
 
+            <button class="btn btn-small btn-secondary"
+              onclick="${
+                item.sourceId
+                  ? `openDevisAcceptedActionPopup('${item.sourceId}')`
+                  : `showConfirmDialog({
+                      title:'Replanifier',
+                      message:'Pour déplacer un passage manuel : glisse-dépose la carte sur un autre jour ✅',
+                      confirmLabel:'OK',
+                      cancelLabel:'',
+                      variant:'info',
+                      icon:'ℹ️'
+                    })`
+              }">
+              🔁 Replanifier / changer
+            </button>
 
-    <button class="btn btn-small btn-secondary"
-  onclick="toggleManualPlanningDone('${item.id}', '${dateStr}')">
-  ${manualPlanningItems.find(x=>x.id===item.id)?.isDone ? "↩ Annuler fait" : "✅ Fait"}
-</button>
+            <button class="btn btn-small btn-secondary"
+              onclick="toggleManualPlanningDone('${item.id}', '${dateStr}')">
+              ${
+                manualPlanningItems.find((x) => x.id === item.id)?.isDone
+                  ? "↩ Annuler fait"
+                  : "✅ Fait"
+              }
+            </button>
 
-<button class="delete-manual-btn"
-  onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
-  🗑️ Supprimer
-</button>
+            <button class="delete-manual-btn"
+              onclick="deleteManualPlanningItem('${item.id}', '${dateStr}')">
+              🗑️ Supprimer
+            </button>
 
           </div>
         `;
@@ -21145,6 +21164,7 @@ document.addEventListener("click", (e) => {
 });
 
 });
+
 
 
 
