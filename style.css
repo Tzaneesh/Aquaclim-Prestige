@@ -3886,5 +3886,15 @@ body.modal-open {
   }
 }
 
+.planning-card .visit-title {
+  font-weight: 800;
+  color: #111827;
+  line-height: 1.25;
+}
 
+.planning-card .visit-pool {
+  margin-top: 3px;
+  font-size: 11px;
+  color: #64748b;
+}
 
