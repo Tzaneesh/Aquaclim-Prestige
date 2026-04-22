@@ -13833,6 +13833,17 @@ function getVisitsPerWeekForDate(contract, refDate) {
   return visits;
 }
 
+function getPlanningColorClass(service) {
+  const s = (service || "").toLowerCase();
+
+  if (s.includes("clim")) return "planning-kind-clim";
+  if (s.includes("jacuzzi") || s.includes("spa")) return "planning-kind-jacuzzi";
+  if (s.includes("dépannage") || s.includes("depannage")) return "planning-kind-depannage";
+  if (s.includes("piscine")) return "planning-kind-piscine";
+
+  return "planning-kind-default";
+}
+
 function renderPlanningWeek() {
   const grid = document.getElementById("planningGrid");
   const labelEl = document.getElementById("planningWeekLabel");
