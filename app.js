@@ -14473,6 +14473,8 @@ async function confirmManualPlanningPopup() {
     document.getElementById("planningPopupAddress")?.value.trim() || "";
   const phone =
     document.getElementById("planningPopupPhone")?.value.trim() || "";
+  const time =
+    document.getElementById("planningPopupTime")?.value || "";
   const email =
     document.getElementById("planningPopupEmail")?.value.trim() || "";
   const privateNotes =
@@ -14502,6 +14504,7 @@ async function confirmManualPlanningPopup() {
       const payload = {
         id: editingManualPlanningId,
         date: manualPopupDate,
+        time,
         label,
         prestation,
         customPrestation: prestationCustom,
@@ -14525,11 +14528,13 @@ async function confirmManualPlanningPopup() {
           : [manualPopupDate];
 
       for (const dateISO of dates) {
-        const id = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+        const id =
+          Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
 
         const payload = {
           id,
           date: dateISO,
+          time,
           label,
           prestation,
           customPrestation: prestationCustom,
@@ -14543,7 +14548,9 @@ async function confirmManualPlanningPopup() {
           updatedAt: Date.now(),
         };
 
-        await db.collection("planningManual").doc(id).set(payload, { merge: true });
+        await db.collection("planningManual").doc(id).set(payload, {
+          merge: true,
+        });
       }
     }
 
@@ -14554,6 +14561,7 @@ async function confirmManualPlanningPopup() {
     const elClient = document.getElementById("planningPopupClient");
     const elAddress = document.getElementById("planningPopupAddress");
     const elPhone = document.getElementById("planningPopupPhone");
+    const elTime = document.getElementById("planningPopupTime");
     const elEmail = document.getElementById("planningPopupEmail");
     const elPrivateNotes = document.getElementById("planningPopupPrivateNotes");
     const elNotes = document.getElementById("planningPopupNotes");
@@ -14565,6 +14573,7 @@ async function confirmManualPlanningPopup() {
     if (elClient) elClient.value = "";
     if (elAddress) elAddress.value = "";
     if (elPhone) elPhone.value = "";
+    if (elTime) elTime.value = "";
     if (elEmail) elEmail.value = "";
     if (elPrivateNotes) elPrivateNotes.value = "";
     if (elNotes) elNotes.value = "";
@@ -14578,7 +14587,6 @@ async function confirmManualPlanningPopup() {
     editingManualPlanningId = null;
   }
 }
-
 function loadPlanningPrestations() {
   const select = document.getElementById("planningPopupPrestation");
   if (!select) return;
