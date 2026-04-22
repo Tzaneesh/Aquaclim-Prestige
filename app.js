@@ -14307,10 +14307,8 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   const overlay = document.getElementById("planningPopup");
   if (!overlay) return;
 
-  // mode édition (si tu l'utilises)
   editingManualPlanningId = manualIdToEdit || null;
 
-  // titre + bouton
   const titleEl = overlay.querySelector("h3");
   const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
   if (titleEl) {
@@ -14333,49 +14331,49 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   if (dateLabel) dateLabel.textContent = "Pour le " + frDate;
 
   // reset champs
-const select = document.getElementById("planningPopupPrestation");
-const custom = document.getElementById("planningPopupPrestationCustom");
-const clientInput = document.getElementById("planningPopupClient");
-const addrInput = document.getElementById("planningPopupAddress");
-const phoneInput = document.getElementById("planningPopupPhone");
-const emailInput = document.getElementById("planningPopupEmail");
-const privateNotesInput = document.getElementById("planningPopupPrivateNotes");
-const notesInput = document.getElementById("planningPopupNotes");
-const repeatPerMonthInput = document.getElementById("planningPopupRepeatPerMonth");
-const repeatMonthsInput = document.getElementById("planningPopupRepeatMonths");
+  const select = document.getElementById("planningPopupPrestation");
+  const custom = document.getElementById("planningPopupPrestationCustom");
+  const clientInput = document.getElementById("planningPopupClient");
+  const addrInput = document.getElementById("planningPopupAddress");
+  const phoneInput = document.getElementById("planningPopupPhone");
+  const emailInput = document.getElementById("planningPopupEmail");
+  const timeInput = document.getElementById("planningPopupTime");
+  const privateNotesInput = document.getElementById("planningPopupPrivateNotes");
+  const notesInput = document.getElementById("planningPopupNotes");
+  const repeatPerMonthInput = document.getElementById("planningPopupRepeatPerMonth");
+  const repeatMonthsInput = document.getElementById("planningPopupRepeatMonths");
 
-if (select) select.value = "";
-if (custom) custom.value = "";
-if (clientInput) clientInput.value = "";
-if (addrInput) addrInput.value = "";
-if (phoneInput) phoneInput.value = "";
-if (emailInput) emailInput.value = "";
-if (privateNotesInput) privateNotesInput.value = "";
-if (notesInput) notesInput.value = "";
-if (repeatPerMonthInput) repeatPerMonthInput.value = "0";
-if (repeatMonthsInput) repeatMonthsInput.value = "6";
+  if (select) select.value = "";
+  if (custom) custom.value = "";
+  if (clientInput) clientInput.value = "";
+  if (addrInput) addrInput.value = "";
+  if (phoneInput) phoneInput.value = "";
+  if (emailInput) emailInput.value = "";
+  if (timeInput) timeInput.value = "";
+  if (privateNotesInput) privateNotesInput.value = "";
+  if (notesInput) notesInput.value = "";
+  if (repeatPerMonthInput) repeatPerMonthInput.value = "0";
+  if (repeatMonthsInput) repeatMonthsInput.value = "6";
 
-  // remplit la liste déroulante
   loadPlanningPrestations();
 
   // pré-remplissage si édition
   if (editingManualPlanningId) {
     const it = (manualPlanningItems || []).find((x) => x.id === editingManualPlanningId);
     if (it) {
-      // si tu avais stocké customPrestation, on le remet
       if (custom) custom.value = it.customPrestation || "";
       if (select) select.value = it.prestation || "";
 
       if (clientInput) clientInput.value = it.clientName || "";
       if (addrInput) addrInput.value = it.address || "";
       if (phoneInput) phoneInput.value = it.phone || "";
-      if (notesInput) notesInput.value = it.notes || "";
       if (emailInput) emailInput.value = it.email || "";
-if (privateNotesInput) privateNotesInput.value = it.privateNotes || "";
+      if (timeInput) timeInput.value = it.time || "";
+      if (privateNotesInput) privateNotesInput.value = it.privateNotes || "";
+      if (notesInput) notesInput.value = it.notes || "";
     }
   }
 
-  // ✅ bonus simple : si tu tapes du texte libre -> on vide le select
   if (custom && select) {
     custom.oninput = () => {
       if (custom.value.trim()) select.value = "";
@@ -14385,7 +14383,6 @@ if (privateNotesInput) privateNotesInput.value = it.privateNotes || "";
     };
   }
 
-  // affiche
   overlay.classList.remove("hidden");
   const popup = overlay.querySelector(".popup");
   if (popup) {
@@ -14393,7 +14390,6 @@ if (privateNotesInput) privateNotesInput.value = it.privateNotes || "";
     popup.classList.add("show");
   }
 }
-
 function closeManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay) return;
