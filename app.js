@@ -2096,9 +2096,13 @@ function onPlanningPopupClientChange() {
 
   const addr = document.getElementById("planningPopupAddress");
   const phone = document.getElementById("planningPopupPhone");
+  const email = document.getElementById("planningPopupEmail");
+  const privateNotes = document.getElementById("planningPopupPrivateNotes");
 
   if (addr) addr.value = client.address || "";
   if (phone) phone.value = client.phone || "";
+  if (email) email.value = client.email || "";
+  if (privateNotes) privateNotes.value = client.privateNotes || "";
 }
 
 // --- Attestation clim : remplir adresse depuis la liste de clients ---
