@@ -13983,7 +13983,7 @@ if (visits === 1) {
       const info = currentPlanningData[dayIndexFinal];
 
       const div = document.createElement("div");
-      div.className = "visit-entry visit-contract";
+      div.className = "visit-entry visit-contract " + getPlanningColorClass(serviceLabel);
       div.dataset.contractId = contract.id;
       div.dataset.originalDate = originalDateISO;
 
@@ -14024,7 +14024,7 @@ if (visits === 1) {
     const clientName = item.clientName || "";
 
     const div = document.createElement("div");
-    div.className = "visit-entry visit-manual";
+    div.className = "visit-entry visit-manual " + getPlanningColorClass(service);
 if (item.isDone) div.classList.add("is-done");
 
     div.dataset.manualId = item.id;
@@ -14316,19 +14316,27 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
   if (dateLabel) dateLabel.textContent = "Pour le " + frDate;
 
   // reset champs
-  const select = document.getElementById("planningPopupPrestation");
-  const custom = document.getElementById("planningPopupPrestationCustom");
-  const clientInput = document.getElementById("planningPopupClient");
-  const addrInput = document.getElementById("planningPopupAddress");
-  const phoneInput = document.getElementById("planningPopupPhone");
-  const notesInput = document.getElementById("planningPopupNotes");
+const select = document.getElementById("planningPopupPrestation");
+const custom = document.getElementById("planningPopupPrestationCustom");
+const clientInput = document.getElementById("planningPopupClient");
+const addrInput = document.getElementById("planningPopupAddress");
+const phoneInput = document.getElementById("planningPopupPhone");
+const emailInput = document.getElementById("planningPopupEmail");
+const privateNotesInput = document.getElementById("planningPopupPrivateNotes");
+const notesInput = document.getElementById("planningPopupNotes");
+const repeatPerMonthInput = document.getElementById("planningPopupRepeatPerMonth");
+const repeatMonthsInput = document.getElementById("planningPopupRepeatMonths");
 
-  if (select) select.value = "";
-  if (custom) custom.value = "";
-  if (clientInput) clientInput.value = "";
-  if (addrInput) addrInput.value = "";
-  if (phoneInput) phoneInput.value = "";
-  if (notesInput) notesInput.value = "";
+if (select) select.value = "";
+if (custom) custom.value = "";
+if (clientInput) clientInput.value = "";
+if (addrInput) addrInput.value = "";
+if (phoneInput) phoneInput.value = "";
+if (emailInput) emailInput.value = "";
+if (privateNotesInput) privateNotesInput.value = "";
+if (notesInput) notesInput.value = "";
+if (repeatPerMonthInput) repeatPerMonthInput.value = "0";
+if (repeatMonthsInput) repeatMonthsInput.value = "6";
 
   // remplit la liste déroulante
   loadPlanningPrestations();
@@ -14345,6 +14353,8 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
       if (addrInput) addrInput.value = it.address || "";
       if (phoneInput) phoneInput.value = it.phone || "";
       if (notesInput) notesInput.value = it.notes || "";
+      if (emailInput) emailInput.value = it.email || "";
+if (privateNotesInput) privateNotesInput.value = it.privateNotes || "";
     }
   }
 
@@ -14386,6 +14396,48 @@ function closeManualPlanningPopup() {
   if (primaryBtn) primaryBtn.textContent = "Ajouter";
 }
 
+function getPlanningColorClass(service) {
+  const s = (service || "").toLowerCase();
+
+  if (s.includes("clim")) return "planning-kind-clim";
+  if (s.includes("jacuzzi") || s.includes("spa")) return "planning-kind-jacuzzi";
+  if (s.includes("dépannage") || s.includes("depannage")) return "planning-kind-depannage";
+  if (s.includes("piscine")) return "planning-kind-piscine";
+
+  return "planning-kind-default";
+}
+
+function addMonthsSafe(dateISO, monthsToAdd) {
+  const d = new Date(dateISO + "T00:00:00");
+  d.setMonth(d.getMonth() + monthsToAdd);
+  return d.toISOString().slice(0, 10);
+}
+
+function makeMonthlyDates(baseDateISO, visitsPerMonth, monthsCount) {
+  const dates = [];
+
+  const templates = {
+    1: [0],
+    2: [0, 14],
+    3: [0, 10, 20],
+    4: [0, 7, 14, 21],
+  };
+
+  const offsets = templates[Number(visitsPerMonth)] || [0];
+
+  for (let m = 0; m < Number(monthsCount || 1); m++) {
+    const monthBase = addMonthsSafe(baseDateISO, m);
+
+    offsets.forEach((dayOffset) => {
+      const d = new Date(monthBase + "T00:00:00");
+      d.setDate(d.getDate() + dayOffset);
+      dates.push(d.toISOString().slice(0, 10));
+    });
+  }
+
+  return dates;
+}
+
 async function confirmManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay || !manualPopupDate) return;
@@ -14396,7 +14448,6 @@ async function confirmManualPlanningPopup() {
   const prestationCustom =
     document.getElementById("planningPopupPrestationCustom")?.value.trim() || "";
 
-  // ✅ priorité au texte libre
   const prestation = prestationCustom || prestationSelect;
 
   const client =
@@ -14405,66 +14456,108 @@ async function confirmManualPlanningPopup() {
     document.getElementById("planningPopupAddress")?.value.trim() || "";
   const phone =
     document.getElementById("planningPopupPhone")?.value.trim() || "";
+  const email =
+    document.getElementById("planningPopupEmail")?.value.trim() || "";
+  const privateNotes =
+    document.getElementById("planningPopupPrivateNotes")?.value.trim() || "";
   const notes =
     document.getElementById("planningPopupNotes")?.value.trim() || "";
 
-  // On doit avoir au moins une presta ou un client
+  const repeatPerMonth = Number(
+    document.getElementById("planningPopupRepeatPerMonth")?.value || 0
+  );
+  const repeatMonths = Number(
+    document.getElementById("planningPopupRepeatMonths")?.value || 1
+  );
+
   if (!prestation && !client) {
     alert("Merci de renseigner au moins une prestation ou un nom de client 🙂");
     return;
   }
 
-  // ✅ id fixe en édition, nouveau en création
-  const id = editingManualPlanningId || Date.now().toString(36);
-
-  // Label qui s’affiche dans la case du planning
   const label = prestation || client;
-
-  // ✅ payload Firestore
-  const payload = {
-    id, // ✅ IMPORTANT : on utilise l'id calculé
-    date: manualPopupDate,
-    label,
-    prestation,
-    customPrestation: prestationCustom,
-    clientName: client,
-    address,
-    phone,
-    notes,
-    updatedAt: Date.now(),
-  };
-
-  // ✅ createdAt seulement si création
-  if (!editingManualPlanningId) payload.createdAt = Date.now();
 
   try {
     if (!db) throw new Error("Firestore db non initialisé");
 
-    // ✅ merge = modif sans tout écraser
-    await db.collection("planningManual").doc(id).set(payload, { merge: true });
+    // ✅ MODE ÉDITION = on modifie seulement UNE intervention
+    if (editingManualPlanningId) {
+      const payload = {
+        id: editingManualPlanningId,
+        date: manualPopupDate,
+        label,
+        prestation,
+        customPrestation: prestationCustom,
+        clientName: client,
+        address,
+        phone,
+        email,
+        privateNotes,
+        notes,
+        updatedAt: Date.now(),
+      };
 
-    // ✅ Ferme la popup proprement
+      await db.collection("planningManual").doc(editingManualPlanningId).set(payload, {
+        merge: true,
+      });
+    } else {
+      // ✅ MODE CRÉATION
+      const dates =
+        repeatPerMonth > 0
+          ? makeMonthlyDates(manualPopupDate, repeatPerMonth, repeatMonths)
+          : [manualPopupDate];
+
+      for (const dateISO of dates) {
+        const id = Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
+
+        const payload = {
+          id,
+          date: dateISO,
+          label,
+          prestation,
+          customPrestation: prestationCustom,
+          clientName: client,
+          address,
+          phone,
+          email,
+          privateNotes,
+          notes,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        await db.collection("planningManual").doc(id).set(payload, { merge: true });
+      }
+    }
+
     closeManualPlanningPopup();
 
-    // ✅ reset champs
     const elPresta = document.getElementById("planningPopupPrestation");
     const elPrestaCustom = document.getElementById("planningPopupPrestationCustom");
     const elClient = document.getElementById("planningPopupClient");
     const elAddress = document.getElementById("planningPopupAddress");
     const elPhone = document.getElementById("planningPopupPhone");
+    const elEmail = document.getElementById("planningPopupEmail");
+    const elPrivateNotes = document.getElementById("planningPopupPrivateNotes");
     const elNotes = document.getElementById("planningPopupNotes");
+    const elRepeatPerMonth = document.getElementById("planningPopupRepeatPerMonth");
+    const elRepeatMonths = document.getElementById("planningPopupRepeatMonths");
+
     if (elPresta) elPresta.value = "";
     if (elPrestaCustom) elPrestaCustom.value = "";
     if (elClient) elClient.value = "";
     if (elAddress) elAddress.value = "";
     if (elPhone) elPhone.value = "";
+    if (elEmail) elEmail.value = "";
+    if (elPrivateNotes) elPrivateNotes.value = "";
     if (elNotes) elNotes.value = "";
+    if (elRepeatPerMonth) elRepeatPerMonth.value = "0";
+    if (elRepeatMonths) elRepeatMonths.value = "6";
 
   } catch (e) {
     console.error("Erreur enregistrement planning manuel:", e);
     alert("Impossible d’enregistrer l’intervention (vérifie ta connexion).");
   } finally {
-    // sécurité : reset
     editingManualPlanningId = null;
   }
 }
