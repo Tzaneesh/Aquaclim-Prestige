@@ -2080,6 +2080,27 @@ function onClientNameChange() {
   }
 }
 
+function onPlanningPopupClientChange() {
+  const input = document.getElementById("planningPopupClient");
+  if (!input) return;
+
+  const value = (input.value || "").trim().toLowerCase();
+  if (!value) return;
+
+  const clients = getClients();
+  const client = clients.find(
+    (c) => (c.name || "").trim().toLowerCase() === value
+  );
+
+  if (!client) return;
+
+  const addr = document.getElementById("planningPopupAddress");
+  const phone = document.getElementById("planningPopupPhone");
+
+  if (addr) addr.value = client.address || "";
+  if (phone) phone.value = client.phone || "";
+}
+
 // --- Attestation clim : remplir adresse depuis la liste de clients ---
 
 function onAttClientNameChange() {
@@ -10718,30 +10739,6 @@ function createInvoiceFromDevis(devis) {
 
   return invoice;
 }
-
-function onPlanningClientChange() {
-  const input = document.getElementById("planningClientName");
-  if (!input) return;
-
-  const value = (input.value || "").trim().toLowerCase();
-  if (!value) return;
-
-  const clients = getClients();
-  const client = clients.find(
-    (c) => (c.name || "").trim().toLowerCase() === value
-  );
-  if (!client) return;
-
-  // 🔥 AUTO FILL
-  const addr = document.getElementById("planningAddress");
-  const phone = document.getElementById("planningPhone");
-  const email = document.getElementById("planningEmail");
-
-  if (addr) addr.value = client.address || "";
-  if (phone) phone.value = client.phone || "";
-  if (email) email.value = client.email || "";
-}
-
 function setPaymentMode(id, mode) {
   const docs = getAllDocuments();
   const doc = docs.find((d) => d.id === id);
