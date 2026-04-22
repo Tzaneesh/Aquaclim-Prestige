@@ -14230,6 +14230,9 @@ function openPlanningDayDetails(dateStr) {
 
       if (item.type === "manual") {
         const service = item.service || item.label || "Intervention";
+        const timeHtml = item.time
+          ? `⏰ ${escapeHtml(item.time)}<br>`
+          : "";
 
         // ✅ on permet l'édition seulement pour les manuels "normaux"
         const canEdit = !item.sourceId;
@@ -14237,6 +14240,7 @@ function openPlanningDayDetails(dateStr) {
         html += `
           <div class="planning-details-entry">
             <strong>${escapeHtml(service)}</strong><br>
+            ${timeHtml}
             ${item.clientName ? escapeHtml(item.clientName) + "<br>" : ""}
             ${addressHtml}
             ${notesHtml}
@@ -14407,17 +14411,6 @@ function closeManualPlanningPopup() {
   const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
   if (titleEl) titleEl.textContent = "Ajouter une intervention";
   if (primaryBtn) primaryBtn.textContent = "Ajouter";
-}
-
-function getPlanningColorClass(service) {
-  const s = (service || "").toLowerCase();
-
-  if (s.includes("clim")) return "planning-kind-clim";
-  if (s.includes("jacuzzi") || s.includes("spa")) return "planning-kind-jacuzzi";
-  if (s.includes("dépannage") || s.includes("depannage")) return "planning-kind-depannage";
-  if (s.includes("piscine")) return "planning-kind-piscine";
-
-  return "planning-kind-default";
 }
 
 function addMonthsSafe(dateISO, monthsToAdd) {
