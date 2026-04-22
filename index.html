@@ -590,29 +590,29 @@
     <select id="planningPopupPrestation"></select>
 
     <div style="margin-top:10px;">
-  <label for="planningPopupPrestationCustom" style="display:block;margin-bottom:4px;">
-    Prestation (texte libre)
-  </label>
-  <input
-    id="planningPopupPrestationCustom"
-    type="text"
-    placeholder="Ex: Entretien + ajout pH-"
-    style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;"
-  />
-  <div style="font-size:12px;opacity:.75;margin-top:4px;">
-    (Si tu écris ici, ça remplacera la prestation du menu.)
-  </div>
-</div>
+      <label for="planningPopupPrestationCustom" style="display:block;margin-bottom:4px;">
+        Prestation (texte libre)
+      </label>
+      <input
+        id="planningPopupPrestationCustom"
+        type="text"
+        placeholder="Ex: Entretien + ajout pH-"
+        style="width:100%;padding:10px;border-radius:10px;border:1px solid #ddd;"
+      />
+      <div style="font-size:12px;opacity:.75;margin-top:4px;">
+        (Si tu écris ici, ça remplacera la prestation du menu.)
+      </div>
+    </div>
 
-   <label>Nom du client</label>
-<input
-  type="text"
-  id="planningPopupClient"
-  list="clientsList"
-  autocomplete="off"
-  onchange="onPlanningPopupClientChange()"
-  onblur="onPlanningPopupClientChange()"
->
+    <label>Nom du client</label>
+    <input
+      type="text"
+      id="planningPopupClient"
+      list="clientsList"
+      autocomplete="off"
+      onchange="onPlanningPopupClientChange()"
+      onblur="onPlanningPopupClientChange()"
+    >
 
     <label>Adresse</label>
     <input type="text" id="planningPopupAddress">
@@ -620,8 +620,44 @@
     <label>Téléphone</label>
     <input type="text" id="planningPopupPhone">
 
+    <label>Email</label>
+    <input type="text" id="planningPopupEmail">
+
+    <label>Notes privées client</label>
+    <textarea
+      id="planningPopupPrivateNotes"
+      placeholder="Digicode, portail, clés, accès..."
+      rows="3"
+    ></textarea>
+
     <label>Notes</label>
     <textarea id="planningPopupNotes" placeholder="Notes supplémentaires..."></textarea>
+
+    <hr style="margin:12px 0;">
+
+    <label>Récurrence</label>
+    <select id="planningPopupRepeatPerMonth">
+      <option value="0">Aucune</option>
+      <option value="1">1 passage / mois</option>
+      <option value="2">2 passages / mois</option>
+      <option value="3">3 passages / mois</option>
+      <option value="4">4 passages / mois</option>
+    </select>
+
+    <label>Durée</label>
+    <select id="planningPopupRepeatMonths">
+      <option value="1">1 mois</option>
+      <option value="2">2 mois</option>
+      <option value="3">3 mois</option>
+      <option value="4">4 mois</option>
+      <option value="5">5 mois</option>
+      <option value="6" selected>6 mois</option>
+      <option value="12">12 mois</option>
+    </select>
+
+    <div style="font-size:12px;opacity:.75;margin-top:6px;">
+      Si tu choisis une récurrence, l’application créera automatiquement les passages futurs.
+    </div>
 
     <div class="popup-buttons">
       <button class="btn btn-primary" onclick="confirmManualPlanningPopup()">Ajouter</button>
