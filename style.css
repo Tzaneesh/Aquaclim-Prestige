@@ -3696,13 +3696,29 @@ body.is-dragging .visit-entry {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.10);
 }
 
-.planning-card .visit-entry:not(.visit-manual) {
-  border-left: 4px solid #16a34a; /* contrat = vert */
+.planning-card .visit-entry.planning-kind-piscine {
+  border-left: 5px solid #2196f3;
+  background: #eaf4ff;
 }
 
-.planning-card .visit-entry.visit-manual {
-  border-left: 4px solid #2563eb; /* manuel = bleu */
-  background: #f8fafc;
+.planning-card .visit-entry.planning-kind-clim {
+  border-left: 5px solid #4caf50;
+  background: #edf9ee;
+}
+
+.planning-card .visit-entry.planning-kind-depannage {
+  border-left: 5px solid #f44336;
+  background: #fff0f0;
+}
+
+.planning-card .visit-entry.planning-kind-jacuzzi {
+  border-left: 5px solid #9c27b0;
+  background: #f8effc;
+}
+
+.planning-card .visit-entry.planning-kind-default {
+  border-left: 5px solid #9e9e9e;
+  background: #f5f5f5;
 }
 
 .planning-card .visit-pool {
@@ -3870,29 +3886,5 @@ body.modal-open {
   }
 }
 
-.planning-kind-piscine {
-  border-left: 5px solid #2196f3;
-  background: #eaf4ff;
-}
-
-.planning-kind-clim {
-  border-left: 5px solid #4caf50;
-  background: #edf9ee;
-}
-
-.planning-kind-depannage {
-  border-left: 5px solid #f44336;
-  background: #fff0f0;
-}
-
-.planning-kind-jacuzzi {
-  border-left: 5px solid #9c27b0;
-  background: #f8effc;
-}
-
-.planning-kind-default {
-  border-left: 5px solid #9e9e9e;
-  background: #f5f5f5;
-}
 
 
