@@ -604,8 +604,15 @@
   </div>
 </div>
 
-    <label>Nom du client</label>
-    <input type="text" id="planningPopupClient">
+   <label>Nom du client</label>
+<input
+  type="text"
+  id="planningPopupClient"
+  list="clientsList"
+  autocomplete="off"
+  onchange="onPlanningPopupClientChange()"
+  onblur="onPlanningPopupClientChange()"
+>
 
     <label>Adresse</label>
     <input type="text" id="planningPopupAddress">
