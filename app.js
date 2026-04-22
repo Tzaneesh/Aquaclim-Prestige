@@ -13903,7 +13903,6 @@ function renderPlanningWeek() {
               class="planning-add-btn"
               data-date="${dateStr}">+</button>`;
 
-    // ✅ bouton + (ajout manuel)
     const addBtn = header.querySelector(".planning-add-btn");
     if (addBtn) {
       addBtn.addEventListener("click", (e) => {
@@ -13919,7 +13918,6 @@ function renderPlanningWeek() {
     col.appendChild(list);
     grid.appendChild(col);
 
-    // ✅ click colonne = détails du jour (sauf sur +)
     col.addEventListener("click", function (e) {
       if (e.target.closest(".planning-add-btn")) return;
       openPlanningDayDetails(this.dataset.date);
@@ -13930,7 +13928,7 @@ function renderPlanningWeek() {
   }
 
   // ===========================
-  // 2) Prestations CONTRAT (déplaçables via overrides)
+  // 2) Prestations CONTRAT
   // ===========================
   const contracts =
     typeof getAllContracts === "function" ? getAllContracts() : [];
@@ -13959,31 +13957,25 @@ function renderPlanningWeek() {
     const serviceLabel = getServiceLabelForContract(contract);
 
     for (let i = 0; i < visits; i++) {
-      // date originale "prévue" pour cette visite (répartition dans la semaine)
-   // 👉 jour du contrat (lundi, mardi, etc.)
-const startISO = contract?.pricing?.startDate;
-const d = startISO ? new Date(startISO + "T00:00:00") : null;
+      const startISO = contract?.pricing?.startDate;
+      const d = startISO ? new Date(startISO + "T00:00:00") : null;
 
-// convertit getDay() (dim=0) → lun=0
-const preferredIndex =
-  d && !isNaN(d) ? (d.getDay() + 6) % 7 : 3; // 3 = jeudi secours
+      const preferredIndex =
+        d && !isNaN(d) ? (d.getDay() + 6) % 7 : 3;
 
-let dayIndexOriginal;
+      let dayIndexOriginal;
 
-// ✅ 1 passage = même jour que le contrat
-if (visits === 1) {
-  dayIndexOriginal = preferredIndex;
-} else {
-  // ✅ plusieurs passages = logique existante
-  dayIndexOriginal = Math.min(
-    6,
-    Math.floor(((i + 0.5) * 7) / visits),
-  );
-}
+      if (visits === 1) {
+        dayIndexOriginal = preferredIndex;
+      } else {
+        dayIndexOriginal = Math.min(
+          6,
+          Math.floor(((i + 0.5) * 7) / visits),
+        );
+      }
 
       const originalDateISO = dayColumns[dayIndexOriginal].dateStr;
 
-      // ✅ override éventuel (si déplacée)
       const finalDateISO = getOverriddenContractDate(
         contract.id,
         originalDateISO,
@@ -13998,17 +13990,20 @@ if (visits === 1) {
       const info = currentPlanningData[dayIndexFinal];
 
       const div = document.createElement("div");
-      div.className = "visit-entry visit-contract " + getPlanningColorClass(serviceLabel);
+      div.className =
+        "visit-entry visit-contract " + getPlanningColorClass(serviceLabel);
       div.dataset.contractId = contract.id;
       div.dataset.originalDate = originalDateISO;
 
-      div.innerHTML =
-        "<strong>" +
-        escapeHtml(serviceLabel) +
-        "</strong>" +
-        "<br><span class='visit-pool'>" +
-        escapeHtml(clientName) +
-        "</span>";
+      const title = document.createElement("div");
+      title.className = "visit-title";
+      title.textContent = serviceLabel;
+      div.appendChild(title);
+
+      const sub = document.createElement("div");
+      sub.className = "visit-pool";
+      sub.textContent = clientName;
+      div.appendChild(sub);
 
       column.list.appendChild(div);
 
@@ -14026,7 +14021,7 @@ if (visits === 1) {
   });
 
   // ===========================
-  // 3) Ajouts MANUELS (déplaçables)
+  // 3) Ajouts MANUELS
   // ===========================
   manualPlanningItems.forEach((item) => {
     const index = currentPlanningData.findIndex((d) => d.date === item.date);
@@ -14037,35 +14032,44 @@ if (visits === 1) {
 
     const service = item.service || item.label || "Intervention";
     const clientName = item.clientName || "";
+    const time = item.time || "";
 
     const div = document.createElement("div");
-    div.className = "visit-entry visit-manual " + getPlanningColorClass(service);
-if (item.isDone) div.classList.add("is-done");
+    div.className =
+      "visit-entry visit-manual " + getPlanningColorClass(service);
+    if (item.isDone) div.classList.add("is-done");
 
     div.dataset.manualId = item.id;
 
-    div.innerHTML =
-      "<strong>" +
-      escapeHtml(service) +
-      "</strong>" +
-      (clientName
-        ? "<br><span class='visit-pool'>" + escapeHtml(clientName) + "</span>"
-        : "");
+    const title = document.createElement("div");
+    title.className = "visit-title";
+    title.textContent =
+      (time ? time + " • " : "") + service;
+    div.appendChild(title);
+
+    if (clientName) {
+      const sub = document.createElement("div");
+      sub.className = "visit-pool";
+      sub.textContent = clientName;
+      div.appendChild(sub);
+    }
 
     column.list.appendChild(div);
 
-info.items.push({
-  id: item.id,
-  type: "manual",
-  service,
-  clientName,
-  address: item.address || "",
-  phone: item.phone || "",
-  notes: item.notes || "",
-  sourceId: item.sourceId || "",       // ✅ AJOUT
-  sourceType: item.sourceType || "",   // ✅ (optionnel mais utile)
-});
-
+    info.items.push({
+      id: item.id,
+      type: "manual",
+      service,
+      clientName,
+      address: item.address || "",
+      phone: item.phone || "",
+      email: item.email || "",
+      privateNotes: item.privateNotes || "",
+      notes: item.notes || "",
+      time: item.time || "",
+      sourceId: item.sourceId || "",
+      sourceType: item.sourceType || "",
+    });
   });
 
   // ===========================
@@ -14080,10 +14084,8 @@ info.items.push({
     }
   });
 
-  // ✅ IMPORTANT : activer drag&drop après rendu
   initPlanningDnD();
 }
-
 function openPlanningTour(dateStr) {
   const day = currentPlanningData.find((d) => d.date === dateStr);
   const items = (day && day.items) ? day.items : [];
