@@ -6704,15 +6704,16 @@ function addDetailLine() {
       <input type="hidden" class="prestation-price" value="0">
       <span class="prestation-total" style="display:none;">0,00 €</span>
     </div>
-
-    <button
-       type="button"
-  class="btn btn-danger btn-small date-remove-btn no-print"
-      onclick="removePrestation(${prestationCount})"
-      title="Supprimer cette ligne"
-    >
-      ✖
-    </button>
+   <div class="form-group no-print prestation-remove-wrapper">
+      <button
+        type="button"
+        class="btn btn-danger btn-small date-remove-btn no-print"
+        onclick="removePrestation(${prestationCount})"
+        title="Supprimer cette ligne"
+      >
+        ✖
+      </button>
+    </div>
   `;
 
   container.appendChild(line);
