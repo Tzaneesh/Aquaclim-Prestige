@@ -6651,15 +6651,15 @@ function addPrestation() {
         readonly
       />
     </div>
-    <div class="form-group no-print prestation-remove-wrapper">
-<button
-  type="button"
-  class="btn-remove-detail no-print"
-  onclick="removePrestation(${prestationCount})"
-  title="Supprimer cette ligne"
->
-  ✕
-</button>
+   <div class="form-group no-print prestation-remove-wrapper">
+      <button
+        type="button"
+        class="btn btn-danger btn-small date-remove-btn no-print"
+        onclick="removePrestation(${prestationCount})"
+        title="Supprimer cette prestation"
+      >
+        ✖
+      </button>
     </div>
   `;
 
@@ -6706,8 +6706,8 @@ function addDetailLine() {
     </div>
 
     <button
-        type="button"
-        class="btn btn-danger btn-small date-remove-btn no-print"
+       type="button"
+  class="btn btn-danger btn-small date-remove-btn no-print"
       onclick="removePrestation(${prestationCount})"
       title="Supprimer cette ligne"
     >
