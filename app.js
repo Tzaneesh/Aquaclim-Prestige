@@ -12038,55 +12038,67 @@ function openPrintable(id, previewOnly) {
 
   // Lignes prestations
   let prestationsHTML = "";
-  doc.prestations.forEach((p) => {
-    let extraHtml = "";
-        if (!isFirstContractInvoice && p.dates && p.dates.length) {
+doc.prestations.forEach((p) => {
+  const isDetail = p.isDetail || p.kind === "detail_line";
 
-      extraHtml += `<div class="sub-info">`;
-      extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
-      p.dates.forEach((dv) => {
-        extraHtml += `<div class="sub-info-line">${dv}</div>`;
-      });
-      extraHtml += `</div>`;
-    }
-
-    const detailHtml = p.detail
-      ? `<div class="desc-detail">${p.detail}</div>`
-      : "";
-
-    const qtyText = p.qty;
-    let unitText = p.unit || "";
-    if (!unitText) {
-      if (
-        p.kind === "depannage_clim" ||
-        p.kind === "depannage_piscine" ||
-        p.kind === "depannage_jacuzzi"
-      ) {
-        unitText = "heure";
-      } else if (p.kind === "produits" || p.kind === "fournitures") {
-        unitText = "unité";
-      } else {
-        unitText = "forfait";
-      }
-    }
-
-    const priceText = formatEuroFR(p.price);
-    const totalText = formatEuroFR(p.total);
-
+  if (isDetail) {
     prestationsHTML += `
-      <tr>
-        <td>
-          <div class="desc-main">${p.desc}</div>
-          ${detailHtml}
-          ${extraHtml}
+      <tr class="detail-row">
+        <td colspan="5">
+          <div class="detail-line">• ${p.desc || ""}</div>
         </td>
-        <td class="qty-col">${qtyText}</td>
-        <td class="unit-col">${unitText}</td>
-        <td class="price-col text-right">${priceText}</td>
-        <td class="total-col text-right"><strong>${totalText}</strong></td>
       </tr>
     `;
-  });
+    return;
+  }
+
+  let extraHtml = "";
+  if (!isFirstContractInvoice && p.dates && p.dates.length) {
+    extraHtml += `<div class="sub-info">`;
+    extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
+    p.dates.forEach((dv) => {
+      extraHtml += `<div class="sub-info-line">${dv}</div>`;
+    });
+    extraHtml += `</div>`;
+  }
+
+  const detailHtml = p.detail
+    ? `<div class="desc-detail">${p.detail}</div>`
+    : "";
+
+  const qtyText = p.qty;
+  let unitText = p.unit || "";
+  if (!unitText) {
+    if (
+      p.kind === "depannage_clim" ||
+      p.kind === "depannage_piscine" ||
+      p.kind === "depannage_jacuzzi"
+    ) {
+      unitText = "heure";
+    } else if (p.kind === "produits" || p.kind === "fournitures") {
+      unitText = "unité";
+    } else {
+      unitText = "forfait";
+    }
+  }
+
+  const priceText = formatEuroFR(p.price);
+  const totalText = formatEuroFR(p.total);
+
+  prestationsHTML += `
+    <tr>
+      <td>
+        <div class="desc-main">${p.desc}</div>
+        ${detailHtml}
+        ${extraHtml}
+      </td>
+      <td class="qty-col">${qtyText}</td>
+      <td class="unit-col">${unitText}</td>
+      <td class="price-col text-right">${priceText}</td>
+      <td class="total-col text-right"><strong>${totalText}</strong></td>
+    </tr>
+  `;
+});
 
   // Informations importantes devis
   let importantHtml = "";
