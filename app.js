@@ -6699,10 +6699,6 @@ function addDetailLine() {
         placeholder="Ex : Récupération et traitement des fluides frigorigènes"
         onchange="calculateTotals()"
       />
-      <div style="font-size:12px; color:#777; margin-top:4px;">
-        Cette ligne apparaîtra dans le devis sans prix.
-      </div>
-
       <input type="hidden" class="prestation-qty" value="0">
       <input type="hidden" class="prestation-unit" value="">
       <input type="hidden" class="prestation-price" value="0">
@@ -6710,8 +6706,8 @@ function addDetailLine() {
     </div>
 
     <button
-      type="button"
-      class="btn btn-danger btn-small no-print"
+        type="button"
+        class="btn btn-danger btn-small date-remove-btn no-print"
       onclick="removePrestation(${prestationCount})"
       title="Supprimer cette ligne"
     >
