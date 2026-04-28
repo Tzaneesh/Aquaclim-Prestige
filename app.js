@@ -7827,10 +7827,21 @@ document.querySelectorAll(".prestation-line").forEach((line) => {
     ? "agence"
     : "particulier";
 
-  // === Totaux ===
-  const subtotal = prestations.reduce((s, p) => s + (Number(p.total) || 0), 0);
-  const tvaAmount = subtotal * (tvaRate / 100);
-  const totalTTC = subtotal + tvaAmount;
+// === Totaux ===
+const subtotal = prestations.reduce((s, p) => s + (Number(p.total) || 0), 0);
+
+const discountEnabled =
+  document.getElementById("discountEnabled")?.checked || false;
+
+const discountRate = discountEnabled
+  ? _num(document.getElementById("discountPercentInput")?.value)
+  : 0;
+
+const discountAmount = subtotal * (discountRate / 100);
+const subtotalAfterDiscount = subtotal - discountAmount;
+
+const tvaAmount = subtotalAfterDiscount * (tvaRate / 100);
+const totalTTC = subtotalAfterDiscount + tvaAmount;
 
   // ✅ Paiement (factures)
   const payMode =
@@ -7854,13 +7865,16 @@ document.querySelectorAll(".prestation-line").forEach((line) => {
       email: clientEmail,
     },
 
-    prestations,
-    subtotal,
-    tvaRate,
-    tvaAmount,
-    totalTTC,
-    notes,
-    conditionsType,
+  prestations,
+subtotal,
+discountRate,
+discountAmount,
+subtotalAfterDiscount,
+tvaRate,
+tvaAmount,
+totalTTC,
+notes,
+conditionsType,
 
     paymentMode:
       docType === "facture"
