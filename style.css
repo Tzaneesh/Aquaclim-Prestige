@@ -3940,3 +3940,12 @@ body.modal-open {
   display:flex;
   justify-content:flex-start; /* 👈 force à gauche */
 }
+
+#discountPercentInput {
+  width: 75px !important;
+  min-width: 75px !important;
+  height: 44px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+  text-align: center;
+}
