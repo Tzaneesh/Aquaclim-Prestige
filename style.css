@@ -3905,6 +3905,15 @@ body.modal-open {
 
 .detail-line{
   font-size:10px;
-  color:#444;
-  line-height:1.35;
+  color:#555;              /* un peu plus doux */
+  line-height:1.4;
+  font-weight:400;         /* PAS gras */
+}
+
+.desc-main{
+  font-weight:700;
+}
+
+.detail-row td{
+  padding-left:22px;   /* léger décalage = structure visuelle */
 }
