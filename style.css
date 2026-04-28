@@ -3917,3 +3917,26 @@ body.modal-open {
 .detail-row td{
   padding-left:22px;   /* léger décalage = structure visuelle */
 }
+
+.btn-remove-detail{
+  width:24px;
+  height:24px;
+  border-radius:6px;
+  border:1px solid #d0d7e2;
+  background:#fff;
+  color:#777;
+  font-size:13px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  padding:0;
+  margin-top:28px;
+}
+
+.btn-remove-detail:hover{
+  background:#ffecec;
+  border-color:#e5533d;
+  color:#d72626;
+}
