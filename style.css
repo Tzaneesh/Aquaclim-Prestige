@@ -3897,4 +3897,14 @@ body.modal-open {
   font-size: 11px;
   color: #64748b;
 }
+.detail-row td{
+  background:#ffffff !important;
+  border-bottom:1px solid #eef2f7;
+  padding:2px 6px 3px 18px;
+}
 
+.detail-line{
+  font-size:10px;
+  color:#444;
+  line-height:1.35;
+}
