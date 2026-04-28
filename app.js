@@ -12039,7 +12039,14 @@ function openPrintable(id, previewOnly) {
   // Lignes prestations
   let prestationsHTML = "";
 doc.prestations.forEach((p) => {
-  const isDetail = p.isDetail || p.kind === "detail_line";
+ const isDetail =
+  p.isDetail === true ||
+  p.kind === "detail_line" ||
+  (
+    Number(p.qty || 0) === 0 &&
+    Number(p.price || 0) === 0 &&
+    Number(p.total || 0) === 0
+  );
 
   if (isDetail) {
     prestationsHTML += `
