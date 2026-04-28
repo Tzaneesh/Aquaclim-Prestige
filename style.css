@@ -3935,3 +3935,8 @@ body.modal-open {
   text-decoration:underline;
   color:#a31515;
 }
+
+.prestation-remove-wrapper{
+  display:flex;
+  justify-content:flex-start; /* 👈 force à gauche */
+}
