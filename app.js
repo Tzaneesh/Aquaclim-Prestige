@@ -12073,7 +12073,7 @@ doc.prestations.forEach((p) => {
     prestationsHTML += `
       <tr class="detail-row">
         <td colspan="5">
-          <div class="detail-line">• ${p.desc || ""}</div>
+          <div class="detail-line">${p.desc || ""}</div>
         </td>
       </tr>
     `;
