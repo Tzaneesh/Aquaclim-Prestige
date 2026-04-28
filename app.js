@@ -7499,13 +7499,34 @@ function loadDocument(id) {
   const prestationsContainer = document.getElementById("prestationsContainer");
   prestationsContainer.innerHTML = "";
 
-  doc.prestations.forEach((p) => {
-    addPrestation();
+doc.prestations.forEach((p) => {
+  const isDetail =
+    p.isDetail === true ||
+    p.kind === "detail_line";
+
+  if (isDetail) {
+    addDetailLine();
+
     const lines = document.querySelectorAll(".prestation-line");
     const line = lines[lines.length - 1];
 
-    line.dataset.kind = p.kind || "";
-    line.dataset.detail = p.detail || "";
+    line.classList.add("prestation-detail-line");
+    line.dataset.kind = "detail_line";
+    line.dataset.isDetail = "1";
+    line.dataset.detail = "";
+
+    const descInput = line.querySelector(".prestation-desc");
+    if (descInput) descInput.value = p.desc || "";
+
+    return;
+  }
+
+  addPrestation();
+  const lines = document.querySelectorAll(".prestation-line");
+  const line = lines[lines.length - 1];
+
+  line.dataset.kind = p.kind || "";
+  line.dataset.detail = p.detail || "";
 
     if ((p.kind || "") === "indemnite_40") {
       line.dataset.autoPrice = "0";
