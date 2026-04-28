@@ -6674,6 +6674,54 @@ function addPrestation() {
   calculateTotals();
 }
 
+
+function addDetailLine() {
+  prestationCount++;
+
+  const container = document.getElementById("prestationsContainer");
+  if (!container) return;
+
+  const line = document.createElement("div");
+  line.className = "prestation-line prestation-detail-line";
+  line.id = "prestation-" + prestationCount;
+  line.dataset.kind = "detail_line";
+  line.dataset.isDetail = "1";
+  line.dataset.detail = "";
+  line.dataset.basePrice = "0";
+  line.dataset.autoPrice = "0";
+
+  line.innerHTML = `
+    <div class="form-group" style="grid-column: 1 / -1;">
+      <label>Ligne détail incluse</label>
+      <input
+        type="text"
+        class="prestation-desc"
+        placeholder="Ex : Récupération et traitement des fluides frigorigènes"
+        onchange="calculateTotals()"
+      />
+      <div style="font-size:12px; color:#777; margin-top:4px;">
+        Cette ligne apparaîtra dans le devis sans prix.
+      </div>
+
+      <input type="hidden" class="prestation-qty" value="0">
+      <input type="hidden" class="prestation-unit" value="">
+      <input type="hidden" class="prestation-price" value="0">
+      <span class="prestation-total" style="display:none;">0,00 €</span>
+    </div>
+
+    <button
+      type="button"
+      class="btn btn-danger btn-small no-print"
+      onclick="removePrestation(${prestationCount})"
+      title="Supprimer cette ligne"
+    >
+      ✖
+    </button>
+  `;
+
+  container.appendChild(line);
+}
+
 function _ensureIndemnite40InFormUI() {
   const container = document.getElementById("prestationsContainer");
   if (!container) return;
@@ -7671,48 +7719,56 @@ function saveDocument() {
   };
 
 document.querySelectorAll(".prestation-line").forEach((line) => {
-  // helper: parse nombre FR "70,50" -> 70.5
-  const _num = (v) => {
-    const s = String(v ?? "").trim().replace(",", ".");
-    const n = parseFloat(s);
-    return Number.isFinite(n) ? n : 0;
-  };
+  // 1) Est-ce que c'est une ligne détail ?
+  const isDetail =
+    line.dataset.isDetail === "1" ||
+    line.dataset.kind === "detail_line";
 
-  // 1) kind robuste : dataset.kind OU kind du template sélectionné
+  // 2) kind robuste : dataset.kind OU kind du template sélectionné
   let kind = line.dataset.kind || "";
   const templateSelect = line.querySelector(".prestation-template");
   const tplIdx = templateSelect ? parseInt(templateSelect.value || "0", 10) : -1;
-  const tpl = (tplIdx >= 0 && PRESTATION_TEMPLATES[tplIdx]) ? PRESTATION_TEMPLATES[tplIdx] : null;
+  const tpl =
+    tplIdx >= 0 && PRESTATION_TEMPLATES[tplIdx]
+      ? PRESTATION_TEMPLATES[tplIdx]
+      : null;
 
   if (!kind && tpl && tpl.kind) kind = tpl.kind;
+  if (isDetail) kind = "detail_line";
 
-  // 2) champs de base
+  // 3) champs de base
   let desc = line.querySelector(".prestation-desc")?.value?.trim() || "";
-  const qty = _num(line.querySelector(".prestation-qty")?.value);
-  const price = _num(line.querySelector(".prestation-price")?.value);
-  const unit = line.querySelector(".prestation-unit")?.value || "";
 
-  // 3) si desc vide, on met au minimum le label du modèle (évite "disparition")
-  if (!desc && tpl && tpl.label) desc = String(tpl.label).trim();
+  const qty = isDetail ? 0 : _num(line.querySelector(".prestation-qty")?.value);
+  const price = isDetail ? 0 : _num(line.querySelector(".prestation-price")?.value);
+  const unit = isDetail ? "" : (line.querySelector(".prestation-unit")?.value || "");
 
-  // 4) prix d’achat (uniquement produits/fournitures)
-  const isProduct = (kind === "produits" || kind === "fournitures");
-  const purchase = isProduct ? _num(line.querySelector(".prestation-purchase")?.value) : 0;
+  // 4) si desc vide, on met au minimum le label du modèle
+  if (!desc && tpl && tpl.label && !isDetail) {
+    desc = String(tpl.label).trim();
+  }
+
+  // 5) prix d’achat uniquement produits/fournitures
+  const isProduct = !isDetail && (kind === "produits" || kind === "fournitures");
+  const purchase = isProduct
+    ? _num(line.querySelector(".prestation-purchase")?.value)
+    : 0;
 
   if (isProduct) {
     if (!purchase || purchase <= 0) missingPurchase = true;
   }
 
-  // 5) on sauvegarde la ligne si on a au moins une desc
+  // 6) sauvegarde
   if (desc) {
     prestations.push({
       desc,
       qty,
       price,
-      total: qty * price,
+      total: isDetail ? 0 : qty * price,
       unit,
       kind,
-      purchase, // ✅ stocké => ne disparaît plus
+      isDetail,
+      purchase,
     });
   }
 });
