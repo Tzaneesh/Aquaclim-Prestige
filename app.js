@@ -3235,7 +3235,8 @@ function deleteClientFromList(index) {
     cancelLabel: "Annuler",
     variant: "danger",
     icon: "🗑️",
-    onConfirm: () => {
+   onConfirm: async () => {
+await deleteClientFromFirestore(c);
       clients.splice(index, 1);
       saveClients(clients);
       refreshClientDatalist();
