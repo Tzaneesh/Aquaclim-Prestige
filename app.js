@@ -2086,7 +2086,7 @@ function onClientNameChange() {
   if (email) email.value = client.email || "";
 
   const civ = document.getElementById("clientCivility");
-  if (civ && !civ.value && client.civility) {
+  if (civ && client.civility) {
     civ.value = client.civility;
   }
 }
@@ -2167,6 +2167,80 @@ function savePlanningClientToList() {
 
 // --- Attestation clim : remplir adresse depuis la liste de clients ---
 
+const ATT_DEFAULT_OPS = [
+  "Nettoyage des filtres intérieurs",
+  "Nettoyage des batteries (évaporateur + condenseur)",
+  "Application d'un traitement antibactérien",
+  "Nettoyage des turbines",
+  "Vérification des écoulements et du bac à condensats",
+  "Contrôle des connexions électriques",
+  "Contrôle du soufflage et test de fonctionnement",
+];
+
+function getNextAttNumber() {
+  const year = new Date().getFullYear();
+  const atts = getAllAttestations ? getAllAttestations() : [];
+  const used = atts
+    .map(a => { const m = (a.numero || "").match(/ATT-(\d{4})-(\d+)/); return m && +m[1] === year ? +m[2] : 0; })
+    .filter(n => n > 0)
+    .sort((a, b) => a - b);
+  let next = 1;
+  for (const n of used) { if (n === next) next++; else if (n > next) break; }
+  return `ATT-${year}-${String(next).padStart(3, "0")}`;
+}
+
+function initAttOps(checkedOps) {
+  const container = document.getElementById("attOpsList");
+  if (!container) return;
+  const ops = checkedOps ? checkedOps.map(o => ({ label: o.label, checked: o.checked }))
+                         : ATT_DEFAULT_OPS.map(l => ({ label: l, checked: true }));
+  container.innerHTML = ops.map((op, i) => `
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;">
+      <input type="checkbox" data-att-op="${i}" ${op.checked ? "checked" : ""}
+             style="width:16px;height:16px;accent-color:#1a74d9;cursor:pointer;">
+      <span>${op.label}</span>
+      ${i >= ATT_DEFAULT_OPS.length ? `<button type="button" onclick="removeAttOp(this)" style="margin-left:auto;background:none;border:none;color:#dc2626;cursor:pointer;font-size:15px;">✕</button>` : ""}
+    </label>`).join("");
+}
+
+function addAttCustomOp() {
+  const input = document.getElementById("attCustomOp");
+  const val = (input?.value || "").trim();
+  if (!val) return;
+  const container = document.getElementById("attOpsList");
+  if (!container) return;
+  const idx = container.querySelectorAll("[data-att-op]").length;
+  const div = document.createElement("label");
+  div.style.cssText = "display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;";
+  div.innerHTML = `<input type="checkbox" data-att-op="${idx}" checked style="width:16px;height:16px;accent-color:#1a74d9;cursor:pointer;">
+    <span>${val}</span>
+    <button type="button" onclick="removeAttOp(this)" style="margin-left:auto;background:none;border:none;color:#dc2626;cursor:pointer;font-size:15px;">✕</button>`;
+  container.appendChild(div);
+  if (input) input.value = "";
+}
+
+function removeAttOp(btn) {
+  btn.closest("label").remove();
+}
+
+function getAttOps() {
+  const container = document.getElementById("attOpsList");
+  if (!container) return ATT_DEFAULT_OPS.map(l => ({ label: l, checked: true }));
+  return Array.from(container.querySelectorAll("label")).map(lbl => ({
+    label: lbl.querySelector("span")?.textContent || "",
+    checked: lbl.querySelector("input[type=checkbox]")?.checked || false,
+  }));
+}
+
+function onAttDateChange() {
+  const dateEl = document.getElementById("attDate");
+  const nextEl = document.getElementById("attNextService");
+  if (!dateEl?.value || !nextEl) return;
+  const d = new Date(dateEl.value + "T00:00:00");
+  d.setFullYear(d.getFullYear() + 1);
+  nextEl.value = d.toISOString().split("T")[0];
+}
+
 function onAttClientNameChange() {
   const input = document.getElementById("attClientName");
   if (!input) return;
@@ -2175,15 +2249,17 @@ function onAttClientNameChange() {
   if (!value) return;
 
   const clients = getClients ? getClients() : [];
-  const client = clients.find(
-    (c) => (c.name || "").trim().toLowerCase() === value,
-  );
+  const client = clients.find(c => (c.name || "").trim().toLowerCase() === value);
   if (!client) return;
 
   const addr = document.getElementById("attClientAddress");
-  if (addr) {
-    addr.value = client.address || "";
-  }
+  if (addr && !addr.value) addr.value = client.address || "";
+
+  const eq = client.equipment || {};
+  const brand = document.getElementById("attEquipBrand");
+  const model = document.getElementById("attEquipModel");
+  if (brand && !brand.value) brand.value = eq.climBrand || "";
+  if (model && !model.value) model.value = eq.climModel || "";
 }
 
 // --- Rapport d'intervention : remplir nom + adresse ---
@@ -2198,6 +2274,31 @@ function fillRapportClientFromObject(client) {
   if (addrEl) addrEl.value = client.address || "";
 }
 
+function getNextRapNumber() {
+  const year = new Date().getFullYear();
+  const raps = getAllRapports ? getAllRapports() : [];
+  const used = raps
+    .map(r => { const m = (r.numero || "").match(/RAP-(\d{4})-(\d+)/); return m && +m[1] === year ? +m[2] : 0; })
+    .filter(n => n > 0).sort((a, b) => a - b);
+  let next = 1;
+  for (const n of used) { if (n === next) next++; else if (n > next) break; }
+  return `RAP-${year}-${String(next).padStart(3, "0")}`;
+}
+
+function onRapDateChange() {
+  const dateEl = document.getElementById("rapDate");
+  const nextEl = document.getElementById("rapNextService");
+  const typeId  = document.getElementById("rapportType")?.value || "";
+  if (!dateEl?.value || !nextEl) return;
+  if (typeId.startsWith("depannage")) return;
+  // En création : n'écrase pas si déjà rempli manuellement
+  // En édition : recalcule toujours pour refléter la nouvelle date
+  if (nextEl.value && !currentRapportId) return;
+  const d = new Date(dateEl.value + "T00:00:00");
+  d.setFullYear(d.getFullYear() + 1);
+  nextEl.value = d.toISOString().split("T")[0];
+}
+
 function onRapportClientNameChange() {
   const input = document.getElementById("rapClientName");
   if (!input) return;
@@ -2206,16 +2307,21 @@ function onRapportClientNameChange() {
   if (!value) return;
 
   const clients = getClients ? getClients() : [];
-  const client = clients.find(
-    (c) => (c.name || "").trim().toLowerCase() === value,
-  );
+  const client = clients.find(c => (c.name || "").trim().toLowerCase() === value);
   if (!client) return;
 
   fillRapportClientFromObject(client);
+
+  const eq = client.equipment || {};
+  const brand = document.getElementById("rapEquipBrand");
+  const model = document.getElementById("rapEquipModel");
+  if (brand && !brand.value) brand.value = eq.climBrand || "";
+  if (model && !model.value) model.value = eq.climModel || "";
 }
 
 let currentAttestationId = null;
 let currentRapportId = null;
+let currentRapportSource = null;
 let currentRapportPhotosTemp = []; // [{name,type,dataUrl}]
 let currentRapportAttachmentsTemp = []; // [{name,type,dataUrl}]
 
@@ -2309,6 +2415,39 @@ function fillCompanySettingsForm() {
   setVal("confBankName", s.bankName);
   setVal("confIban", s.iban);
   setVal("confBic", s.bic);
+  loadSignaturePreview();
+}
+
+function saveSignatureImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    localStorage.setItem("companySignature", e.target.result);
+    loadSignaturePreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeSignatureImage() {
+  localStorage.removeItem("companySignature");
+  const inp = document.getElementById("signatureUpload");
+  if (inp) inp.value = "";
+  loadSignaturePreview();
+}
+
+function loadSignaturePreview() {
+  const sig = localStorage.getItem("companySignature");
+  const wrap = document.getElementById("signaturePreviewWrap");
+  const img  = document.getElementById("signaturePreview");
+  if (!wrap || !img) return;
+  if (sig) {
+    img.src = sig;
+    wrap.style.display = "flex";
+  } else {
+    img.src = "";
+    wrap.style.display = "none";
+  }
 }
 
 async function saveCompanySettingsFromForm() {
@@ -2377,29 +2516,26 @@ function openClimAttestationGenerator() {
   const overlay = document.getElementById("attestationPopup");
   if (!overlay) return;
 
-  // 👉 on est en création, pas en édition
   currentAttestationId = null;
 
-  // on vide / remet les champs
-  const name = document.getElementById("attClientName");
-  const addr = document.getElementById("attClientAddress");
-  const date = document.getElementById("attDate");
-  const units = document.getElementById("attUnits");
-  const notes = document.getElementById("attNotes");
+  const s = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+  s("attClientName", "");
+  s("attClientAddress", "");
+  s("attEquipBrand", "");
+  s("attEquipModel", "");
+  s("attDate", "");
+  s("attNextService", "");
+  s("attUnits", 1);
+  s("attNotes", "");
 
-  if (name) name.value = "";
-  if (addr) addr.value = "";
-  if (date) date.value = "";
-  if (units) units.value = 1;
-  if (notes) notes.value = "";
+  const numEl = document.getElementById("attNumeroDisplay");
+  if (numEl) numEl.textContent = "N° " + getNextAttNumber();
+
+  initAttOps();
 
   overlay.classList.remove("hidden");
-
   const popup = overlay.querySelector(".popup");
-  if (popup) {
-    void popup.offsetWidth; // petit reflow pour l’animation
-    popup.classList.add("show");
-  }
+  if (popup) { void popup.offsetWidth; popup.classList.add("show"); }
 }
 
 function openAttestationPopupForEdit(attId) {
@@ -2409,17 +2545,20 @@ function openAttestationPopupForEdit(attId) {
 
   currentAttestationId = rec.id;
 
-  const name = document.getElementById("attClientName");
-  const addr = document.getElementById("attClientAddress");
-  const date = document.getElementById("attDate");
-  const units = document.getElementById("attUnits");
-  const notes = document.getElementById("attNotes");
+  const s = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ""; };
+  s("attClientName", rec.clientName);
+  s("attClientAddress", rec.clientAddress);
+  s("attEquipBrand", rec.equipBrand);
+  s("attEquipModel", rec.equipModel);
+  s("attDate", rec.date);
+  s("attNextService", rec.nextService);
+  s("attUnits", rec.units != null ? rec.units : 1);
+  s("attNotes", rec.notes);
 
-  if (name) name.value = rec.clientName || "";
-  if (addr) addr.value = rec.clientAddress || "";
-  if (date) date.value = rec.date || "";
-  if (units) units.value = rec.units != null ? rec.units : 1;
-  if (notes) notes.value = rec.notes || "";
+  const numEl = document.getElementById("attNumeroDisplay");
+  if (numEl) numEl.textContent = rec.numero ? "N° " + rec.numero : "";
+
+  initAttOps(rec.ops || null);
 
   const overlay = document.getElementById("attestationPopup");
   if (!overlay) return;
@@ -2440,65 +2579,61 @@ function closeAttestationPopup() {
   if (popup) popup.classList.remove("show");
 
   overlay.classList.add("hidden");
+  currentAttestationId = null;
+  currentAttestationSource = null;
+
+  // Vider tous les champs pour la prochaine ouverture
+  ["attClientName","attClientAddress","attEquipBrand","attEquipModel",
+   "attDate","attNextService","attNotes"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const unitsEl = document.getElementById("attUnits");
+  if (unitsEl) unitsEl.value = "1";
+  initAttOps(null);
+  const numEl = document.getElementById("attNumeroDisplay");
+  if (numEl) numEl.textContent = "";
 }
 
 function saveAttestationFromForm() {
-  const name = document.getElementById("attClientName")?.value || "";
-  const addr = document.getElementById("attClientAddress")?.value || "";
-  const date = document.getElementById("attDate")?.value || "";
-  const units = document.getElementById("attUnits")?.value || "1";
-  const notes = document.getElementById("attNotes")?.value || "";
+  const g = id => document.getElementById(id)?.value || "";
+  const name        = g("attClientName");
+  const addr        = g("attClientAddress");
+  const equipBrand  = g("attEquipBrand");
+  const equipModel  = g("attEquipModel");
+  const date        = g("attDate");
+  const nextService = g("attNextService");
+  const units       = g("attUnits") || "1";
+  const notes       = g("attNotes");
+  const ops         = getAttOps();
 
   const list = getAllAttestations();
   let record;
+  const base = {
+    clientName: name, clientAddress: addr,
+    equipBrand, equipModel,
+    date, nextService,
+    units: Number(units) || 1,
+    notes, ops,
+  };
 
   if (currentAttestationId) {
-    // ✏️ MODE ÉDITION
-    const idx = list.findIndex((a) => a.id === currentAttestationId);
+    const idx = list.findIndex(a => a.id === currentAttestationId);
     if (idx !== -1) {
-      record = {
-        ...list[idx],
-        clientName: name,
-        clientAddress: addr,
-        date,
-        units: Number(units) || 1,
-        notes,
-      };
+      record = { ...list[idx], ...base };
       list[idx] = record;
     } else {
-      // sécurité : si pas trouvé, on recrée
-      record = {
-        id: generateId("ATT"),
-        type: "attestation_clim",
-        clientName: name,
-        clientAddress: addr,
-        date,
-        units: Number(units) || 1,
-        notes,
+      record = { id: generateId("ATT"), numero: getNextAttNumber(), type: "attestation_clim", ...base,
         createdAt: new Date().toISOString(),
-        sourceDocId:
-          (currentAttestationSource && currentAttestationSource.id) || null,
-        sourceDocNumber:
-          (currentAttestationSource && currentAttestationSource.number) || null,
-      };
+        sourceDocId: currentAttestationSource?.id || null,
+        sourceDocNumber: currentAttestationSource?.number || null };
       list.push(record);
     }
   } else {
-    // ➕ MODE CRÉATION
-    record = {
-      id: generateId("ATT"),
-      type: "attestation_clim",
-      clientName: name,
-      clientAddress: addr,
-      date,
-      units: Number(units) || 1,
-      notes,
+    record = { id: generateId("ATT"), numero: getNextAttNumber(), type: "attestation_clim", ...base,
       createdAt: new Date().toISOString(),
-      sourceDocId:
-        (currentAttestationSource && currentAttestationSource.id) || null,
-      sourceDocNumber:
-        (currentAttestationSource && currentAttestationSource.number) || null,
-    };
+      sourceDocId: currentAttestationSource?.id || null,
+      sourceDocNumber: currentAttestationSource?.number || null };
     list.push(record);
   }
 
@@ -2645,18 +2780,11 @@ function createRapportFromDevis(devis) {
   const sectionsData = [];
   if (tpl) {
     tpl.sections.forEach((section) => {
-      const items = section.items.filter((item) => {
-        // si aucune info → on coche tout
-        if (checkedSet.size === 0) return true;
-        return checkedSet.has(item);
-      });
-
-      if (items.length) {
-        sectionsData.push({
-          title: section.title,
-          items,
-        });
-      }
+      const items = section.items.map((item) => ({
+        text: item,
+        checked: checkedSet.size === 0 ? true : checkedSet.has(item),
+      }));
+      sectionsData.push({ title: section.title, items });
     });
   }
 
@@ -2665,17 +2793,18 @@ function createRapportFromDevis(devis) {
 
   const rapport = {
     id,
+    numero: typeof getNextRapNumber === "function" ? getNextRapNumber() : null,
     typeId,
     typeLabel: tpl ? tpl.label : "",
     clientName: devis.client?.name || "",
     clientAddress: devis.client?.address || "",
+    equipBrand: devis.client?.equipment?.climBrand || "",
+    equipModel: devis.client?.equipment?.climModel || "",
     date: new Date().toISOString().slice(0, 10),
+    nextService: "",
     notes: "",
     sections: sectionsData,
-    analysis: {
-      ph: null,
-      chlore: null,
-    },
+    analysis: { ph: null, chlore: null },
     autoGenerated: true,
     createdAt: new Date().toISOString(),
     sourceDocId: devis.id || null,
@@ -2799,10 +2928,15 @@ function openPiscineRapportGenerator(docId = null) {
   if (ph) ph.value = "";
   if (chl) chl.value = "";
 
+  const s = (id) => { const el = document.getElementById(id); if (el) el.value = ""; };
+  s("rapEquipBrand"); s("rapEquipModel"); s("rapNextService");
+
+  const numEl = document.getElementById("rapNumeroDisplay");
+  if (numEl) numEl.textContent = "N° " + getNextRapNumber();
+
   const checklist = document.getElementById("rapportChecklist");
   if (checklist) checklist.innerHTML = "";
 
-  // 🔹 cacher l’analyse tant qu’on n’a pas choisi "entretien_piscine"
   updateRapportAnalyseVisibility("");
 
   const overlay = document.getElementById("rapportPopup");
@@ -2824,13 +2958,26 @@ function closeRapportPopup() {
   if (popup) popup.classList.remove("show");
 
   overlay.classList.add("hidden");
-  currentRapportId = null; // 🧹
+  currentRapportId = null;
+  currentRapportSource = null;
+
+  // Vider tous les champs pour la prochaine ouverture
+  ["rapClientName","rapClientAddress","rapEquipBrand","rapEquipModel",
+   "rapDate","rapNextService","rapNotes","rapPH","rapChlore"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const typeEl = document.getElementById("rapportType");
+  if (typeEl) typeEl.value = "";
+  const checklistEl = document.getElementById("rapportChecklist");
+  if (checklistEl) checklistEl.innerHTML = "";
+  const numEl = document.getElementById("rapNumeroDisplay");
+  if (numEl) numEl.textContent = "";
+  updateRapportAnalyseVisibility("");
 }
 
-function rebuildRapportChecklist() {
+function rebuildRapportChecklist(savedSections) {
   const type = document.getElementById("rapportType").value;
-
-  // gère affichage bloc analyse
   updateRapportAnalyseVisibility(type);
 
   const tpl = RAPPORT_TEMPLATES.find((t) => t.id === type);
@@ -2840,17 +2987,25 @@ function rebuildRapportChecklist() {
   box.innerHTML = "";
   if (!tpl) return;
 
-  // 🔎 si on édite un rapport existant, on récupère ses items cochés
-  let checkedSet = null;
-  if (currentRapportId) {
-    const list = getAllRapports();
-    const rec = list.find((r) => r.id === currentRapportId);
-    if (rec && Array.isArray(rec.sections)) {
-      checkedSet = new Set();
-      rec.sections.forEach((sec) => {
-        (sec.items || []).forEach((text) => checkedSet.add(text));
+  // Build a map of saved item states: text → checked (bool)
+  let savedStateMap = null;
+  const src = savedSections || (() => {
+    if (!currentRapportId) return null;
+    const rec = (getAllRapports ? getAllRapports() : []).find(r => r.id === currentRapportId);
+    return rec?.sections || null;
+  })();
+
+  if (src) {
+    savedStateMap = {};
+    src.forEach(sec => {
+      (sec.items || []).forEach(item => {
+        if (typeof item === "object") {
+          savedStateMap[item.text] = item.checked !== false;
+        } else {
+          savedStateMap[item] = true; // anciens rapports : tout coché
+        }
       });
-    }
+    });
   }
 
   tpl.sections.forEach((section) => {
@@ -2862,17 +3017,11 @@ function rebuildRapportChecklist() {
     div.appendChild(h);
 
     section.items.forEach((item) => {
-      const isChecked =
-        !checkedSet || checkedSet.size === 0
-          ? true // nouveau rapport → tout coché
-          : checkedSet.has(item);
-
+      const isChecked = savedStateMap ? (savedStateMap[item] !== false) : true;
       const row = document.createElement("label");
       row.className = "rapport-item";
-      row.innerHTML = `
-        <input type="checkbox" ${isChecked ? "checked" : ""} data-text="${item}">
-        <span class="rapport-item-text">${item}</span>
-      `;
+      row.innerHTML = `<input type="checkbox" ${isChecked ? "checked" : ""} data-text="${item}">
+        <span class="rapport-item-text">${item}</span>`;
       div.appendChild(row);
     });
 
@@ -2896,6 +3045,15 @@ function updateRapportAnalyseVisibility(typeId) {
     if (ph) ph.value = "";
     if (chl) chl.value = "";
   }
+
+  // Masquer + vider "Prochain entretien" pour les dépannages
+  const nextWrap = document.getElementById("rapNextServiceWrap");
+  const nextEl   = document.getElementById("rapNextService");
+  if (nextWrap) {
+    const isDepannage = typeId.startsWith("depannage");
+    nextWrap.style.display = isDepannage ? "none" : "block";
+    if (isDepannage && nextEl) nextEl.value = "";
+  }
 }
 
 function openCA() {
@@ -2918,7 +3076,7 @@ function fillContractClientFromObject(client) {
   const phone = document.getElementById("ctClientPhone");
   const email = document.getElementById("ctClientEmail");
 
-  if (civ && !civ.value && client.civility) {
+  if (civ && client.civility) {
     civ.value = client.civility;
   }
   if (name) name.value = client.name || "";
@@ -5133,107 +5291,47 @@ function saveRapportFromForm() {
   const phValue = phInput ? phInput.value.trim() : "";
   const chloreValue = chloreInput ? chloreInput.value.trim() : "";
 
-  // Items cochés
+  // Tous les items avec état coché/non coché
   const sectionsData = [];
-  document
-    .querySelectorAll("#rapportChecklist .rapport-section")
-    .forEach((sectionEl) => {
-      const title = sectionEl.querySelector("h4")?.textContent || "";
-      const items = [];
-      sectionEl.querySelectorAll("input[type='checkbox']").forEach((cb) => {
-        if (cb.checked) items.push(cb.dataset.text || "");
-      });
-      if (items.length) sectionsData.push({ title, items });
+  document.querySelectorAll("#rapportChecklist .rapport-section").forEach((sectionEl) => {
+    const title = sectionEl.querySelector("h4")?.textContent || "";
+    const items = [];
+    sectionEl.querySelectorAll("input[type='checkbox']").forEach((cb) => {
+      items.push({ text: cb.dataset.text || "", checked: cb.checked });
     });
+    if (items.length) sectionsData.push({ title, items });
+  });
+
+  const equipBrand  = document.getElementById("rapEquipBrand")?.value.trim() || "";
+  const equipModel  = document.getElementById("rapEquipModel")?.value.trim() || "";
+  const nextService = document.getElementById("rapNextService")?.value || "";
 
   const list = getAllRapports();
   let record;
 
+  const photos = Array.isArray(currentRapportPhotosTemp) ? currentRapportPhotosTemp : [];
+  const attachments = Array.isArray(currentRapportAttachmentsTemp) ? currentRapportAttachmentsTemp : [];
+  const analysis = { ph: phValue || null, chlore: chloreValue || null };
+  const baseFields = { typeId, typeLabel: tpl ? tpl.label : "", clientName: name, clientAddress: addr,
+    equipBrand, equipModel, date, nextService, notes, sections: sectionsData, photos, attachments, analysis };
+
   if (currentRapportId) {
-    // ✏️ on met à jour
     const idx = list.findIndex((r) => r.id === currentRapportId);
     if (idx !== -1) {
-      record = {
-        ...list[idx],
-        typeId,
-        typeLabel: tpl ? tpl.label : "",
-        clientName: name,
-        clientAddress: addr,
-        date,
-        notes,
-        sections: sectionsData,
-        photos: Array.isArray(currentRapportPhotosTemp)
-          ? currentRapportPhotosTemp
-          : [],
-        attachments: Array.isArray(currentRapportAttachmentsTemp)
-          ? currentRapportAttachmentsTemp
-          : [],
-        analysis: {
-          ph: phValue || null,
-          chlore: chloreValue || null,
-        },
-      };
+      record = { ...list[idx], ...baseFields };
       list[idx] = record;
     } else {
-      // fallback création
-      record = {
-        id: generateId("RAP"),
-        typeId,
-        typeLabel: tpl ? tpl.label : "",
-        clientName: name,
-        clientAddress: addr,
-        date,
-        notes,
-        sections: sectionsData,
-        photos: Array.isArray(currentRapportPhotosTemp)
-          ? currentRapportPhotosTemp
-          : [],
-
-        attachments: Array.isArray(currentRapportAttachmentsTemp)
-          ? currentRapportAttachmentsTemp
-          : [],
-
-        analysis: {
-          ph: phValue || null,
-          chlore: chloreValue || null,
-        },
+      record = { id: generateId("RAP"), numero: getNextRapNumber(), ...baseFields,
         createdAt: new Date().toISOString(),
-        sourceDocId:
-          (currentAttestationSource && currentAttestationSource.id) || null,
-        sourceDocNumber:
-          (currentAttestationSource && currentAttestationSource.number) || null,
-      };
+        sourceDocId: currentRapportSource?.id || null,
+        sourceDocNumber: currentRapportSource?.number || null };
       list.push(record);
     }
   } else {
-    // ➕ création
-    record = {
-      id: generateId("RAP"),
-      typeId,
-      typeLabel: tpl ? tpl.label : "",
-      clientName: name,
-      clientAddress: addr,
-      date,
-      notes,
-      sections: sectionsData,
-      photos: Array.isArray(currentRapportPhotosTemp)
-        ? currentRapportPhotosTemp
-        : [],
-
-      attachments: Array.isArray(currentRapportAttachmentsTemp)
-        ? currentRapportAttachmentsTemp
-        : [],
-
-      analysis: {
-        ph: phValue || null,
-        chlore: chloreValue || null,
-      },
+    record = { id: generateId("RAP"), numero: getNextRapNumber(), ...baseFields,
       createdAt: new Date().toISOString(),
-      sourceDocId:
-        (currentAttestationSource && currentAttestationSource.id) || null,
-      sourceDocNumber:
-        (currentAttestationSource && currentAttestationSource.number) || null,
-    };
+      sourceDocId: currentRapportSource?.id || null,
+      sourceDocNumber: currentRapportSource?.number || null };
     list.push(record);
   }
 
@@ -5716,13 +5814,19 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setFontSize(10);
   doc.text("Entretien & Dépannage – Climatisation & Piscine", 12, 22);
 
-  // Cartouche titre à droite
+  // Cartouche titre + numéro à droite
   doc.setFillColor(255, 255, 255);
-  doc.roundedRect(130, 8, 70, 14, 2, 2, "F");
+  doc.roundedRect(128, 6, 72, 18, 2, 2, "F");
   doc.setTextColor(25, 118, 210);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.text("RAPPORT TECHNIQUE", 133, 17);
+  doc.setFontSize(10);
+  doc.text("RAPPORT TECHNIQUE", 164, 14, { align: "center" });
+  if (record.numero) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8.5);
+    doc.setTextColor(80, 80, 80);
+    doc.text("N° " + record.numero, 164, 21, { align: "center" });
+  }
 
   // ========= INFOS SOCIÉTÉ =========
   doc.setTextColor(60, 60, 60);
@@ -5790,16 +5894,15 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   yy += 5;
 
   doc.setFont("helvetica", "normal");
-  if (frDate) {
-    doc.text("Date : " + frDate, 114, yy);
-    yy += 4;
-  }
-  if (record.typeLabel) {
-    doc.text("Type : " + record.typeLabel, 114, yy);
-    yy += 4;
+  if (frDate) { doc.text("Date : " + frDate, 114, yy); yy += 4; }
+  if (record.typeLabel) { doc.text("Type : " + record.typeLabel, 114, yy); yy += 4; }
+  if (record.equipBrand || record.equipModel) {
+    const equip = [record.equipBrand, record.equipModel].filter(Boolean).join(" – ");
+    const eLines = doc.splitTextToSize("Équip. : " + equip, 82);
+    eLines.forEach(l => { doc.text(l, 114, yy); yy += 4; });
   }
 
-  y += 38;
+  y += 42;
 
   // ========= BLOC ANALYSE DE L’EAU (SI PRÉSENT) =========
   if (record.analysis && (record.analysis.ph || record.analysis.chlore)) {
@@ -5863,26 +5966,27 @@ function generatePDFRapportFromRecord(record, mode = "print") {
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
 
-    (sec.items || []).forEach((txtRaw) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
+    (sec.items || []).forEach((itemRaw) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+
+      const isObj    = typeof itemRaw === "object";
+      const txtRaw   = isObj ? itemRaw.text : itemRaw;
+      const checked  = isObj ? itemRaw.checked !== false : true;
+      const clean    = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
+
+      if (checked) {
+        doc.setTextColor(50, 50, 50);
+        doc.setFillColor(25, 118, 210);
+        doc.circle(14, y - 1.5, 1, "F");
+      } else {
+        doc.setTextColor(160, 160, 160);
+        doc.setDrawColor(160, 160, 160);
+        doc.circle(14, y - 1.5, 1);
       }
 
-      // 🔧 on enlève les éventuelles puces déjà présentes dans le texte ("• ", "-", etc.)
-      const clean = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
-
-      // pastille bleue
-      doc.setFillColor(25, 118, 210);
-      doc.circle(14, y - 1.5, 1, "F");
-
       const wrapped = doc.splitTextToSize(clean, 178);
-      wrapped.forEach((line) => {
-        doc.text(line, 18, y);
-        y += 5;
-      });
+      wrapped.forEach((line) => { doc.text(line, 18, y); y += 5; });
       y += 1;
     });
 
@@ -5972,15 +6076,48 @@ function generatePDFRapportFromRecord(record, mode = "print") {
     if (col !== 0) y += imgH + 6;
   }
 
+  // ========= PROCHAIN ENTRETIEN =========
+  const isDepannage = (record.typeId || "").startsWith("depannage");
+  if (record.nextService && !isDepannage) {
+    y += 8;
+    if (y > 258) { doc.addPage(); y = 20; }
+    const frNext = record.nextService.split("-").reverse().join("/");
+    doc.setFillColor(232, 245, 255);
+    doc.setDrawColor(25, 118, 210);
+    doc.roundedRect(12, y - 5, 186, 14, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(25, 118, 210);
+    doc.text("Prochain entretien recommandé : " + frNext, 105, y + 3, { align: "center" });
+    y += 16;
+  }
+
+  // ========= ZONE SIGNATURE =========
+  if (y < 248) y = 248;
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(12, y, 80, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Signature du technicien", 12, y + 4);
+
+  const rapSig = localStorage.getItem("companySignature");
+  if (rapSig) {
+    try { doc.addImage(rapSig, "PNG", 12, y - 14, 50, 14); } catch(e) {}
+  }
+
+  const dateSign = record.date ? record.date.split("-").reverse().join("/") : new Date().toLocaleDateString("fr-FR");
+  doc.text("Fait le " + dateSign, 12, y + 9);
+
   // ========= PIED =========
+  const co = typeof getCompanySettings === "function" ? getCompanySettings() : {};
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   doc.setTextColor(140, 140, 140);
   doc.text(
-    "AquaClim Prestige – SIRET XXXXXXXXXXXXX – Entretien & Dépannage climatisation / piscine",
-    105,
-    287,
-    { align: "center" },
+    `${co.legalName || "AquaClim Prestige"} – SIRET ${co.siret || "XXXXXXXXXXXXX"} – Entretien & Dépannage climatisation / piscine`,
+    105, 287, { align: "center" }
   );
 
   const fileName =
@@ -6071,16 +6208,21 @@ function openRapportPopupForEdit(rapportId) {
 
   currentRapportId = rec.id;
 
-  document.getElementById("rapClientName").value = rec.clientName || "";
-  document.getElementById("rapClientAddress").value = rec.clientAddress || "";
-  document.getElementById("rapDate").value = rec.date || "";
-  document.getElementById("rapNotes").value = rec.notes || "";
-  document.getElementById("rapportType").value = rec.typeId || "";
+  const s = (id, v) => { const el = document.getElementById(id); if (el) el.value = v ?? ""; };
+  s("rapClientName",  rec.clientName);
+  s("rapClientAddress", rec.clientAddress);
+  s("rapEquipBrand",  rec.equipBrand);
+  s("rapEquipModel",  rec.equipModel);
+  s("rapDate",        rec.date);
+  s("rapNextService", rec.nextService);
+  s("rapNotes",       rec.notes);
+  s("rapportType",    rec.typeId);
 
-  // 🔹 on affiche/cache l’analyse selon le type du rapport
+  const numEl = document.getElementById("rapNumeroDisplay");
+  if (numEl) numEl.textContent = rec.numero ? "N° " + rec.numero : "";
+
   updateRapportAnalyseVisibility(rec.typeId || "");
-
-  rebuildRapportChecklist();
+  rebuildRapportChecklist(rec.sections);
 
   if (rec.analysis) {
     const phEl = document.getElementById("rapPH");
@@ -9929,43 +10071,28 @@ function loadAttestationsList() {
     return;
   }
 
-  list.forEach((att) => {
+  const rows = list.map((att) => {
     const frDate = att.date ? att.date.split("-").reverse().join("/") : "";
-    const source = att.sourceDocNumber ? `Facture ${att.sourceDocNumber}` : "";
-    const units = att.units != null ? att.units : "";
-
-    tbody.innerHTML += `
-      <tr>
-        <td>${frDate}</td>
-        <td>${att.clientName || ""}</td>
-        <td>${att.clientAddress || ""}</td>
-        <td>${units}</td>
-        <td>${source}</td>
-        <td class="col-actions">
-          <button
-            class="btn btn-small btn-primary"
-            onclick="openAttestationPopupForEdit('${att.id}')">
-            Ouvrir
-          </button>
-          <button
-            class="btn btn-small btn-secondary"
-            onclick="openAttestationPreview('${att.id}')">
-            Aperçu
-          </button>
-          <button
-            class="btn btn-small btn-success"
-            onclick="printAttestation('${att.id}')">
-            Imprimer
-          </button>
-          <button
-            class="btn btn-danger btn-small"
-            onclick="deleteAttestation('${att.id}')">
-            Supprimer
-          </button>
-        </td>
-      </tr>
-    `;
+    const units  = att.units != null ? att.units : "";
+    const numero = escapeHtml(att.numero || "–");
+    const name   = escapeHtml(att.clientName || "");
+    const addr   = escapeHtml(att.clientAddress || "");
+    const id     = escapeHtml(att.id);
+    return `<tr>
+      <td><strong>${numero}</strong></td>
+      <td>${frDate}</td>
+      <td>${name}</td>
+      <td>${addr}</td>
+      <td>${units}</td>
+      <td class="col-actions">
+        <button class="btn btn-small btn-primary" onclick="openAttestationPopupForEdit('${id}')">Ouvrir</button>
+        <button class="btn btn-small btn-secondary" onclick="openAttestationPreview('${id}')">Aperçu</button>
+        <button class="btn btn-small btn-success" onclick="printAttestation('${id}')">Imprimer</button>
+        <button class="btn btn-danger btn-small" onclick="deleteAttestation('${id}')">Supprimer</button>
+      </td>
+    </tr>`;
   });
+  tbody.innerHTML = rows.join("");
 }
 
 function deleteAttestation(attId) {
@@ -10039,6 +10166,25 @@ function openAttestationForInvoice(doc) {
 }
 
 // Utilisé par Aperçu / Imprimer
+function _pdfDrawCheckbox(doc, x, y, checked) {
+  const size = 3.5;
+  const top = y - size + 0.5;
+  if (checked) {
+    doc.setFillColor(25, 118, 210);
+    doc.setDrawColor(25, 118, 210);
+    doc.rect(x, top, size, size, "FD");
+    doc.setDrawColor(255, 255, 255);
+    doc.setLineWidth(0.55);
+    doc.line(x + 0.6, top + size / 2, x + size / 2, top + size - 0.7);
+    doc.line(x + size / 2, top + size - 0.7, x + size - 0.5, top + 0.6);
+  } else {
+    doc.setDrawColor(170, 170, 170);
+    doc.setLineWidth(0.35);
+    doc.rect(x, top, size, size);
+  }
+  doc.setLineWidth(0.2);
+}
+
 function generatePDFAttestationFromRecord(record, mode = "print") {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert("Librairie jsPDF manquante pour générer le PDF.");
@@ -10067,15 +10213,12 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   doc.setFontSize(10);
   doc.text("Entretien & Dépannage – Climatisation & Piscine", margin, 24);
 
-  // Petit badge "ATTESTATION D'ENTRETIEN / CLIMATISATION" en haut à droite
-
+  // Badge "ATTESTATION D'ENTRETIEN / CLIMATISATION" en haut à droite
   const pageWidth = doc.internal.pageSize.getWidth();
-
-  const pillW = 90; // <<< beaucoup plus petit
+  const pillW = 90;
   const pillH = 16;
-  const pillRight = 10; // marge à droite
-  const pillY = 16;
-
+  const pillRight = 10;
+  const pillY = 7;
   const pillX = pageWidth - pillRight - pillW;
 
   doc.setFillColor(255, 255, 255);
@@ -10083,14 +10226,18 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   doc.roundedRect(pillX, pillY, pillW, pillH, 6, 6, "FD");
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(7); // plus petit pour tenir dans un petit badge
+  doc.setFontSize(7);
   doc.setTextColor(blue.r, blue.g, blue.b);
-
-  // texte sur 2 lignes, centré dans le petit badge
-  doc.text("ATTESTATION D'ENTRETIEN", pillX + pillW / 2, pillY + 6, {
-    align: "center",
-  });
+  doc.text("ATTESTATION D'ENTRETIEN", pillX + pillW / 2, pillY + 6, { align: "center" });
   doc.text("CLIMATISATION", pillX + pillW / 2, pillY + 12, { align: "center" });
+
+  // Numéro d'attestation sous le badge
+  if (record.numero) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    doc.setTextColor(255, 255, 255);
+    doc.text("N° " + record.numero, pillX + pillW / 2, pillY + 22, { align: "center" });
+  }
 
   /* ================= COORDONNÉES ================= */
 
@@ -10164,10 +10311,12 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
     doc.text("Date : " + frDate, card2X + 5, interY);
     interY += 5;
   }
-
-  const unitsText =
-    "Unités entretenues : " + (record.units != null ? record.units : 1);
-  doc.text(unitsText, card2X + 5, interY);
+  doc.text("Unités entretenues : " + (record.units != null ? record.units : 1), card2X + 5, interY);
+  interY += 5;
+  if (record.equipBrand || record.equipModel) {
+    const equip = [record.equipBrand, record.equipModel].filter(Boolean).join(" – ");
+    doc.text("Équipement : " + equip, card2X + 5, interY);
+  }
 
   y = cardY + cardH + 12;
 
@@ -10183,25 +10332,35 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
 
-  const ops = [
-    "Nettoyage des filtres intérieurs",
-    "Nettoyage des batteries (évaporateur + condenseur)",
-    "Application d’un traitement antibactérien",
-    "Nettoyage des turbines",
-    "Vérification des écoulements et du bac à condensats",
-    "Contrôle des connexions électriques",
-    "Contrôle du soufflage et test de fonctionnement",
-  ];
+  const ops = (record.ops && record.ops.length)
+    ? record.ops
+    : ATT_DEFAULT_OPS.map(l => ({ label: l, checked: true }));
 
-  ops.forEach((line) => {
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
-    const txt = "• " + line;
-    doc.text(txt, margin, y);
+  const doneOps  = ops.filter(o => o.checked);
+  const skipped  = ops.filter(o => !o.checked);
+
+  doneOps.forEach((op) => {
+    if (y > 270) { doc.addPage(); y = 20; }
+    doc.setTextColor(0, 0, 0);
+    _pdfDrawCheckbox(doc, margin, y, true);
+    doc.text(op.label, margin + 6, y);
     y += 5;
   });
+
+  if (skipped.length) {
+    y += 2;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(8.5);
+    doc.setTextColor(130, 130, 130);
+    skipped.forEach(op => {
+      if (y > 275) { doc.addPage(); y = 20; }
+      _pdfDrawCheckbox(doc, margin, y, false);
+      doc.text(op.label + " (non effectué)", margin + 6, y);
+      y += 4.5;
+    });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+  }
 
   /* ================= REMARQUES ================= */
 
@@ -10225,12 +10384,55 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
     y += wrapped.length * 4;
   }
 
-  /* ================= FORMULE FINALE ================= */
+  /* ================= PROCHAIN ENTRETIEN ================= */
 
-  if (y < 260) y = 260;
+  const attNextSvc = record.nextService || (() => {
+    if (!record.date) return "";
+    const d = new Date(record.date + "T00:00:00");
+    d.setFullYear(d.getFullYear() + 1);
+    return d.toISOString().split("T")[0];
+  })();
+
+  if (attNextSvc) {
+    y += 10;
+    if (y > 265) { doc.addPage(); y = 20; }
+    const frNext = attNextSvc.split("-").reverse().join("/");
+    doc.setFillColor(232, 245, 255);
+    doc.setDrawColor(26, 116, 217);
+    doc.roundedRect(margin, y - 5, 210 - 2 * margin, 14, 3, 3, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(blue.r, blue.g, blue.b);
+    doc.text("Prochain entretien recommande : " + frNext, margin + 4, y + 4);
+    y += 16;
+  }
+
+  /* ================= SIGNATURE + FORMULE FINALE ================= */
+
+  if (y < 250) y = 250;
+
+  // Zone signature technicien
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(margin, y, margin + 60, y);
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text("Fait pour servir et valoir ce que de droit.", margin, y);
+  doc.setFontSize(8.5);
+  doc.setTextColor(100, 100, 100);
+  doc.text("Signature du technicien", margin, y + 4);
+
+  const attSig = localStorage.getItem("companySignature");
+  if (attSig) {
+    try { doc.addImage(attSig, "PNG", margin, y - 14, 50, 14); } catch(e) {}
+  }
+
+  const dateSign = record.date ? record.date.split("-").reverse().join("/") : new Date().toLocaleDateString("fr-FR");
+  doc.text("Fait le " + dateSign + " – " + (company.legalName || "AquaClim Prestige"), margin, y + 10);
+
+  if (y < 280) y = 280;
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(8);
+  doc.setTextColor(130, 130, 130);
+  doc.text("Entretien effectué conformément aux préconisations du fabricant. Fait pour servir et valoir ce que de droit.", margin, y);
 
   const fileName =
     "attestation-clim-" +
@@ -10987,6 +11189,46 @@ function createInvoiceFromDevis(devis) {
 
   return invoice;
 }
+function transformToInvoice() {
+  if (!currentDocumentId) return;
+
+  const docs = getAllDocuments();
+  const devis = docs.find(d => d.id === currentDocumentId && d.type === "devis");
+  if (!devis) return;
+
+  // Garde anti-doublon : une facture existe déjà pour ce devis
+  const existing = docs.find(d => d.type === "facture" && d.sourceDevisId === devis.id);
+  if (existing) {
+    showConfirmDialog({
+      title: "Facture déjà créée",
+      message: `Une facture (${existing.number}) a déjà été générée à partir de ce devis. Voulez-vous l'ouvrir ?`,
+      confirmLabel: "Ouvrir la facture",
+      cancelLabel: "Annuler",
+      variant: "info",
+      icon: "ℹ️",
+      onConfirm: () => loadDocument(existing.id),
+    });
+    return;
+  }
+
+  showConfirmDialog({
+    title: "Transformer en facture",
+    message: `Voulez-vous transformer le devis ${devis.number} en facture ?\nLe devis sera clôturé.`,
+    confirmLabel: "Transformer",
+    cancelLabel: "Annuler",
+    variant: "success",
+    icon: "🔁",
+    onConfirm: () => {
+      const invoice = createInvoiceFromDevis(devis);
+      if (!invoice) return;
+      setDevisStatus(devis.id, "cloture");
+      if (typeof refreshHomeStats === "function") refreshHomeStats();
+      if (typeof loadDocumentsList === "function") loadDocumentsList();
+      loadDocument(invoice.id);
+    },
+  });
+}
+
 function setPaymentMode(id, mode) {
   const docs = getAllDocuments();
   const doc = docs.find((d) => d.id === id);
@@ -14709,6 +14951,18 @@ function closeManualPlanningPopup() {
   const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
   if (titleEl) titleEl.textContent = "Ajouter une intervention";
   if (primaryBtn) primaryBtn.textContent = "Ajouter";
+
+  // Vider tous les champs
+  ["planningPopupClient","planningPopupAddress","planningPopupPhone",
+   "planningPopupEmail","planningPopupPrivateNotes","planningPopupNotes",
+   "planningPopupPrestationCustom","planningPopupTime"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  const prestEl = document.getElementById("planningPopupPrestation");
+  if (prestEl) prestEl.value = "";
+  const repeatEl = document.getElementById("planningPopupRepeatPerMonth");
+  if (repeatEl) repeatEl.value = "0";
 }
 
 // ================== FACTURER DEPUIS LE PLANNING ==================
@@ -22148,12 +22402,12 @@ function filterClientStatsTable() {
 function filterClientsByName(name) {
   openFromHome("facture");
   setTimeout(() => {
-    const searchEl = document.getElementById("searchInput") || document.getElementById("listSearch");
+    const searchEl = document.getElementById("docSearchInput");
     if (searchEl) {
       searchEl.value = name;
       searchEl.dispatchEvent(new Event("input"));
     }
-  }, 300);
+  }, 350);
 }
 
 // ──────────────────────────────────────────────────────────

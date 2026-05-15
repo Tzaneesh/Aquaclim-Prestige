@@ -315,11 +315,11 @@
     <table class="table">
       <thead>
         <tr>
+          <th>N°</th>
           <th>Date</th>
           <th>Client</th>
           <th>Adresse</th>
           <th>Unités</th>
-          <th>Source</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -443,6 +443,27 @@
       </div>
     </div>
 
+    <hr style="margin:18px 0;">
+    <h3 class="section-title">Signature du technicien</h3>
+    <p style="margin-bottom:10px;color:#666;font-size:14px;">
+      Importez une image de votre signature pour qu'elle apparaisse automatiquement dans les PDF (attestations, rapports).
+    </p>
+    <div class="form-group">
+      <label for="signatureUpload">Image de signature (PNG, JPG…)</label>
+      <input type="file" id="signatureUpload" accept="image/*" onchange="saveSignatureImage(this)"
+             style="margin-top:4px;">
+    </div>
+    <div id="signaturePreviewWrap" style="display:none;align-items:center;gap:12px;margin-top:8px;">
+      <img id="signaturePreview" style="max-height:60px;max-width:180px;border:1px solid #ddd;border-radius:4px;padding:4px;">
+      <button type="button" class="btn btn-secondary btn-small" onclick="removeSignatureImage()">Supprimer</button>
+    </div>
+
+    <div class="actions no-print" style="margin-top:20px;">
+      <button class="btn btn-primary" type="button" onclick="saveCompanySettingsFromForm()">
+        💾 Enregistrer les paramètres
+      </button>
+    </div>
+
 <div class="card">
   <h3>🛟 Sauvegarde / restauration</h3>
 
@@ -460,11 +481,6 @@
   </button>
 </div>
 
-    <div class="actions no-print" style="margin-top:20px;">
-      <button class="btn btn-primary" type="button" onclick="saveCompanySettingsFromForm()">
-        💾 Enregistrer les paramètres
-      </button>
-    </div>
   </div>
 
   <!-- 📝 Modèles de messages -->
@@ -499,33 +515,44 @@
 
 
 <div id="rapportPopup" class="popup-overlay hidden">
-  <div class="popup">
-    <h2>📝 Rapport d’intervention</h2>
+  <div class="popup" style="max-width:620px;width:95%;max-height:92vh;overflow-y:auto;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+      <h2 style="flex:1;margin:0;">📝 Rapport d’intervention</h2>
+      <span style="font-size:12px;color:#6b7280;" id="rapNumeroDisplay"></span>
+    </div>
 
     <div class="rapport-header-grid">
       <div>
         <label>Nom du client</label>
-        <input
-  type="text"
-  id="rapClientName"
-  list="clientsList"
-  autocomplete="off"
-  onchange="onRapportClientNameChange()"
-  onblur="onRapportClientNameChange()"
-/>
-
+        <input type="text" id="rapClientName" list="clientsList" autocomplete="off"
+               onchange="onRapportClientNameChange()" onblur="onRapportClientNameChange()"/>
       </div>
-
       <div>
         <label>Date d’intervention</label>
-        <input type="date" id="rapDate">
+        <input type="date" id="rapDate" onchange="onRapDateChange()">
       </div>
     </div>
 
     <label>Adresse</label>
     <input type="text" id="rapClientAddress">
 
-    <label>Type de rapport</label>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <label>Marque équipement</label>
+        <input type="text" id="rapEquipBrand" placeholder="Ex: Daikin">
+      </div>
+      <div>
+        <label>Modèle</label>
+        <input type="text" id="rapEquipModel" placeholder="Ex: Perfera 2.5kW">
+      </div>
+    </div>
+
+    <div id="rapNextServiceWrap" style="margin-top:10px;">
+      <label>Prochain entretien recommandé</label>
+      <input type="date" id="rapNextService">
+    </div>
+
+    <label style="margin-top:10px;">Type de rapport</label>
     <select id="rapportType" onchange="rebuildRapportChecklist()">
       <option value="">— Choisir —</option>
     </select>
@@ -623,37 +650,64 @@
 </div>
 
 <div id="attestationPopup" class="popup-overlay hidden">
-  <div class="popup">
-    <h2>Attestation d’entretien clim</h2>
+  <div class="popup" style="max-width:560px;width:95%;max-height:90vh;overflow-y:auto;">
+    <h2 style="margin-bottom:4px;">Attestation d’entretien clim</h2>
+    <div style="font-size:12px;color:#6b7280;margin-bottom:14px;" id="attNumeroDisplay"></div>
 
     <label>Nom du client</label>
-    <input
-  type="text"
-  id="attClientName"
-  list="clientsList"
-  autocomplete="off"
-  onchange="onAttClientNameChange()"
-  onblur="onAttClientNameChange()"
-/>
-
+    <input type="text" id="attClientName" list="clientsList" autocomplete="off"
+           onchange="onAttClientNameChange()" onblur="onAttClientNameChange()"/>
 
     <label>Adresse</label>
     <input type="text" id="attClientAddress">
 
-    <label>Date d’intervention</label>
-    <input type="date" id="attDate">
+    <!-- Équipement -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <label>Marque</label>
+        <input type="text" id="attEquipBrand" placeholder="Ex: Daikin">
+      </div>
+      <div>
+        <label>Modèle</label>
+        <input type="text" id="attEquipModel" placeholder="Ex: Perfera 2.5kW">
+      </div>
+    </div>
 
-    <label>Nombre d’unités clim entretenues</label>
-    <input type="number" id="attUnits" min="1" value="1">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <label>Date d’intervention</label>
+        <input type="date" id="attDate" onchange="onAttDateChange()">
+      </div>
+      <div>
+        <label>Nombre d’unités entretenues</label>
+        <input type="number" id="attUnits" min="1" value="1">
+      </div>
+    </div>
 
-    <label>Remarques (optionnel)</label>
+    <div style="margin-top:10px;">
+      <label>Prochain entretien recommandé</label>
+      <input type="date" id="attNextService">
+    </div>
+
+    <!-- Opérations effectuées -->
+    <div style="margin-top:14px;">
+      <label style="font-weight:600;margin-bottom:8px;display:block;">✅ Opérations effectuées</label>
+      <div id="attOpsList" style="display:flex;flex-direction:column;gap:6px;"></div>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <input type="text" id="attCustomOp" placeholder="Ajouter une opération…"
+               style="flex:1;padding:6px 10px;border-radius:8px;border:1px solid #d1d5db;font-size:13px;"
+               onkeydown="if(event.key===’Enter’){event.preventDefault();addAttCustomOp();}">
+        <button type="button" class="btn btn-secondary btn-small" onclick="addAttCustomOp()">+ Ajouter</button>
+      </div>
+    </div>
+
+    <label style="margin-top:14px;">Remarques (optionnel)</label>
     <textarea id="attNotes" rows="3"></textarea>
 
-<div class="popup-buttons">
-  <button class="btn btn-success" onclick="saveAttestationOnly()">Enregistrer</button>
-  <button class="btn btn-secondary" onclick="closeAttestationPopup()">Fermer</button>
-</div>
-
+    <div class="popup-buttons">
+      <button class="btn btn-success" onclick="saveAttestationOnly()">💾 Enregistrer</button>
+      <button class="btn btn-secondary" onclick="closeAttestationPopup()">Fermer</button>
+    </div>
   </div>
 </div>
 
