@@ -3939,23 +3939,33 @@ function renderCAReport() {
 /* ===== Ouverture / fermeture ===== */
 
 function openCAReport() {
+  // Masque toutes les autres vues
+  ["homeView","devisView","factureView","contractView",
+   "attestationView","settingsView"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
+
+  // Onglets : active CA
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  const tabCA = document.getElementById("tabCA");
+  if (tabCA) tabCA.classList.add("active");
+
   const overlay = document.getElementById("caReportOverlay");
   if (!overlay) return;
+  overlay.classList.remove("hidden");
 
   initCAYearSelect();
   renderCAReport();
 
-  overlay.classList.remove("hidden");
+  // Scroll haut de page
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 function closeCAReport() {
   const overlay = document.getElementById("caReportOverlay");
-  if (!overlay) return;
-  overlay.classList.add("hidden");
-
-  // Désactive le bouton CA
-  const tabCA = document.getElementById("tabCA");
-  if (tabCA) tabCA.classList.remove("active");
+  if (overlay) overlay.classList.add("hidden");
+  showHome();
 }
 
 /* ===== Exports CSV ===== */
@@ -5547,39 +5557,56 @@ function openPdfViewer(url) {
   const ios = isIOS();
   const pwa = isStandalonePWA();
 
-  // ✅ PC / Android => comportement inchangé : nouvel onglet
+  // PC / Android => nouvel onglet
   if (!ios) {
     window.open(url, "_blank");
     return;
   }
 
-  // ✅ Safari iPhone (pas PWA) => nouvel onglet
+  // Safari iPhone (pas PWA) => nouvel onglet
   if (ios && !pwa) {
     window.open(url, "_blank");
     return;
   }
 
-  // ✅ PWA iOS => overlay / iframe ONLY (JAMAIS window.open)
-  const overlay = document.getElementById("pdfViewerOverlay");
-  const frame = document.getElementById("pdfViewerFrame");
+  // ── iOS PWA ──────────────────────────────────────────────
+  // On utilise le share sheet natif iOS via un lien <a download>.
+  // Quick Look s'ouvre, l'utilisateur peut imprimer/partager/enregistrer,
+  // et quand il ferme → il revient directement dans l'app (pas besoin de tuer).
+  _openPdfIOSPWA(url);
+}
 
-  if (!overlay || !frame) {
-    alert("Aperçu PDF indisponible (viewer manquant). Ouvre depuis Safari.");
-    return;
+function _openPdfIOSPWA(url) {
+  // Convertit data URI → Blob URL si nécessaire (download ne marche qu'avec blob)
+  let blobUrl = url;
+  let created = false;
+
+  if (url.startsWith("data:")) {
+    try {
+      const [header, b64] = url.split(",");
+      const mime = (header.match(/:(.*?);/) || [])[1] || "application/pdf";
+      const bin  = atob(b64);
+      const arr  = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+      blobUrl = URL.createObjectURL(new Blob([arr], { type: mime }));
+      created = true;
+    } catch (e) {
+      // fallback : on essaie quand même avec le data URI
+      blobUrl = url;
+    }
   }
 
-  lastAppViewBeforePDF = getCurrentAppView();
+  const a = document.createElement("a");
+  a.href     = blobUrl;
+  a.download = "document.pdf";
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
 
-  frame.src = "about:blank";
   setTimeout(() => {
-    frame.src = url;
-    overlay.classList.remove("hidden");
-    overlay.scrollTop = 0;
-  }, 30);
-
-  try {
-    history.pushState({ pdfOpen: true }, "", location.href);
-  } catch (e) {}
+    document.body.removeChild(a);
+    if (created) URL.revokeObjectURL(blobUrl);
+  }, 3000);
 }
 
 function openExternalLink(url) {
@@ -13388,6 +13415,8 @@ function hideAllSections() {
 
 function showHome() {
   hideHealthCardsEverywhere();
+  const caOverlay = document.getElementById("caReportOverlay");
+  if (caOverlay) caOverlay.classList.add("hidden");
   const tabHome = document.getElementById("tabHome");
   const tabDevis = document.getElementById("tabDevis");
   const tabContrats = document.getElementById("tabContrats");
@@ -14430,15 +14459,22 @@ function openPlanningDayDetails(dateStr) {
     html += `<div class="visit-empty">Aucun passage prévu.</div>`;
   } else {
     day.items.forEach((item) => {
-      // 🔒 notes privées depuis la fiche client
+      // Notes : item (planning popup) + fiche client
       const c = item.clientName ? _getClientByName(item.clientName) : null;
-      const notes = (c?.privateNotes || "").trim();
-      const notesHtml = notes
-        ? `<div style="margin-top:6px; padding:6px 8px; border-radius:10px; background:#fff8e5; border:1px solid #f3d08a;">
-             <strong>🔒 Notes privées</strong><br>
-             <span style="white-space:pre-line;">${escapeHtml(notes)}</span>
-           </div>`
-        : "";
+      const privateNotesItem   = (item.privateNotes || "").trim();
+      const notesItem          = (item.notes || "").trim();
+      const privateNotesClient = (c?.privateNotes || "").trim();
+      const techNotes          = (c?.equipment?.notes || "").trim();
+
+      // Évite de répéter si les notes planning == notes fiche client
+      const showClientPrivate = privateNotesClient && privateNotesClient !== privateNotesItem;
+
+      const notesHtml = [
+        privateNotesItem  ? `<div style="margin-top:6px;padding:6px 8px;border-radius:10px;background:#fff8e5;border:1px solid #f3d08a;"><strong>🔒 Notes privées</strong><br><span style="white-space:pre-line;">${escapeHtml(privateNotesItem)}</span></div>` : "",
+        notesItem         ? `<div style="margin-top:6px;padding:6px 8px;border-radius:10px;background:#f0f4ff;border:1px solid #c7d7fa;"><strong>📝 Notes</strong><br><span style="white-space:pre-line;">${escapeHtml(notesItem)}</span></div>` : "",
+        showClientPrivate ? `<div style="margin-top:6px;padding:6px 8px;border-radius:10px;background:#fff8e5;border:1px solid #f3d08a;"><strong>🔒 Notes fiche client</strong><br><span style="white-space:pre-line;">${escapeHtml(privateNotesClient)}</span></div>` : "",
+        techNotes         ? `<div style="margin-top:6px;padding:6px 8px;border-radius:10px;background:#f0fff4;border:1px solid #a7e0bb;"><strong>🔧 Notes techniques</strong><br><span style="white-space:pre-line;">${escapeHtml(techNotes)}</span></div>` : "",
+      ].join("");
 
       const addressHtml = item.address
         ? `<a
@@ -21326,10 +21362,7 @@ function isStandalonePWA() {
 
 // doc = instance jsPDF
 function getPdfUrl(doc) {
-  // ✅ SEULEMENT PWA iOS => datauristring (évite Quick Look)
-  if (isIOS() && isStandalonePWA()) return doc.output("datauristring");
-
-  // ✅ Partout ailleurs => bloburl (Safari iOS + PC + Android)
+  // Blob URL partout — on n'utilise plus l'iframe pour iOS PWA
   return doc.output("bloburl");
 }
 
@@ -21992,6 +22025,135 @@ function computeDashboardExtended() {
       el("dashAvgDelay").textContent = "–";
     }
   }
+}
+
+// ──────────────────────────────────────────────────────────
+// STATS CLIENTS
+// ──────────────────────────────────────────────────────────
+
+let _clientStatsData = [];
+let _clientStatsSortKey = "ca";
+let _clientStatsSortAsc = false;
+
+function openClientStatsPopup() {
+  _buildClientStatsData();
+  _renderClientStatsTable();
+  const popup = document.getElementById("clientStatsPopup");
+  if (popup) popup.classList.remove("hidden");
+  const search = document.getElementById("clientStatsSearch");
+  if (search) search.value = "";
+}
+
+function closeClientStatsPopup() {
+  const popup = document.getElementById("clientStatsPopup");
+  if (popup) popup.classList.add("hidden");
+}
+
+function _buildClientStatsData() {
+  const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
+  const map = {};
+
+  const ensure = name => {
+    if (!map[name]) map[name] = { name, ca: 0, paid: 0, unpaid: 0, factures: 0, devis: 0, devisAccepted: 0, lastDate: "" };
+  };
+
+  docs.forEach(d => {
+    const name = String(d.client?.name || d.clientName || d.client || "").trim();
+    if (!name) return;
+    ensure(name);
+    const entry = map[name];
+    const ttc = Number(d.totalTTC || 0);
+    const date = d.date || "";
+
+    if (d.type === "facture") {
+      entry.factures++;
+      entry.ca += ttc;
+      if (d.paid) entry.paid += ttc;
+      else entry.unpaid += ttc;
+    } else if (d.type === "devis") {
+      entry.devis++;
+      if (d.status === "accepte") entry.devisAccepted++;
+    }
+
+    if (date && date > entry.lastDate) entry.lastDate = date;
+  });
+
+  _clientStatsData = Object.values(map);
+}
+
+function _renderClientStatsTable(filter = "") {
+  const tbody = document.getElementById("clientStatsTbody");
+  const footer = document.getElementById("clientStatsFooter");
+  if (!tbody) return;
+
+  const search = filter || (document.getElementById("clientStatsSearch")?.value || "");
+  const lc = search.toLowerCase();
+
+  let rows = _clientStatsData.filter(r => !lc || r.name.toLowerCase().includes(lc));
+
+  rows.sort((a, b) => {
+    let va, vb;
+    switch (_clientStatsSortKey) {
+      case "name":    va = a.name; vb = b.name; break;
+      case "ca":      va = a.ca;   vb = b.ca;   break;
+      case "factures":va = a.factures; vb = b.factures; break;
+      case "devis":   va = a.devis; vb = b.devis; break;
+      case "conv":    va = a.devis > 0 ? a.devisAccepted / a.devis : -1;
+                      vb = b.devis > 0 ? b.devisAccepted / b.devis : -1; break;
+      case "unpaid":  va = a.unpaid; vb = b.unpaid; break;
+      case "last":    va = a.lastDate; vb = b.lastDate; break;
+      default:        va = a.ca; vb = b.ca;
+    }
+    if (va < vb) return _clientStatsSortAsc ? -1 : 1;
+    if (va > vb) return _clientStatsSortAsc ? 1 : -1;
+    return 0;
+  });
+
+  const fmt = n => n > 0 ? `${n.toFixed(2).replace(".", ",")} €` : "–";
+  const fmtDate = s => s ? s.split("-").reverse().join("/") : "–";
+
+  tbody.innerHTML = rows.map(r => {
+    const conv = r.devis > 0 ? Math.round((r.devisAccepted / r.devis) * 100) : null;
+    const convClass = conv === null ? "conv-bad" : conv >= 70 ? "conv-good" : conv >= 40 ? "conv-mid" : "conv-bad";
+    const convTxt = conv !== null ? `${conv}%` : "–";
+    const unpaidClass = r.unpaid > 0 ? "unpaid-cell" : "";
+    return `<tr>
+      <td class="name-cell" onclick="closeClientStatsPopup(); filterClientsByName('${r.name.replace(/'/g,"\\'")}');">${r.name}</td>
+      <td>${fmt(r.ca)}</td>
+      <td style="text-align:center;">${r.factures || "–"}</td>
+      <td style="text-align:center;">${r.devis || "–"}</td>
+      <td class="${convClass}" style="text-align:center;">${convTxt}</td>
+      <td class="${unpaidClass}">${fmt(r.unpaid)}</td>
+      <td>${fmtDate(r.lastDate)}</td>
+    </tr>`;
+  }).join("");
+
+  if (footer) footer.textContent = `${rows.length} client${rows.length > 1 ? "s" : ""} · cliquer sur un nom pour ouvrir sa fiche`;
+}
+
+function sortClientStats(key) {
+  if (_clientStatsSortKey === key) {
+    _clientStatsSortAsc = !_clientStatsSortAsc;
+  } else {
+    _clientStatsSortKey = key;
+    _clientStatsSortAsc = false;
+  }
+  _renderClientStatsTable();
+}
+
+function filterClientStatsTable() {
+  _renderClientStatsTable();
+}
+
+function filterClientsByName(name) {
+  openFromHome("facture");
+  setTimeout(() => {
+    const searchEl = document.getElementById("searchInput") || document.getElementById("listSearch");
+    if (searchEl) {
+      searchEl.value = name;
+      searchEl.dispatchEvent(new Event("input"));
+    }
+  }, 300);
 }
 
 // ──────────────────────────────────────────────────────────
