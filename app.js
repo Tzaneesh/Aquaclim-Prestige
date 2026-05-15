@@ -1123,6 +1123,11 @@ db.collection("config").doc("companySettings").onSnapshot((doc) => {
   if (typeof refreshMicroTVAState === "function") {
     refreshMicroTVAState(false);
   }
+
+  // Modèles de messages : chargement des défauts si vide
+  if (typeof initDefaultMsgTemplates === "function") {
+    initDefaultMsgTemplates();
+  }
 });
 
 
@@ -1677,12 +1682,12 @@ const privateNotes = client?.privateNotes || "";
   </button>
 
   <button class="btn btn-success btn-small" type="button"
-     onclick="createDocForClient('facture', decodeURIComponent('${encodeURIComponent(n)}'))"
+     onclick="createDocForClient('facture', decodeURIComponent('${encodeURIComponent(n)}'))">
     ➕ Créer facture
   </button>
 
   <button class="btn btn-secondary btn-small" type="button"
-       onclick="openPlanningForClient(decodeURIComponent('${encodeURIComponent(n)}'))"
+       onclick="openPlanningForClient(decodeURIComponent('${encodeURIComponent(n)}'))">
     🗓️ Ouvrir planning client
   </button>
 </div>
@@ -2029,25 +2034,31 @@ function exportBackupJSON() {
 function importBackupJSON(file) {
   if (!file) return;
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    try {
-      const data = JSON.parse(String(reader.result || "{}"));
-      if (!data || !data.localStorage) throw new Error("Format invalide");
-
-      // ⚠️ on remplace le localStorage par le backup
-      localStorage.clear();
-      Object.keys(data.localStorage).forEach((k) => {
-        localStorage.setItem(k, data.localStorage[k]);
-      });
-
-      // ✅ reload app
-      location.reload();
-    } catch (e) {
-      alert("Import impossible : fichier backup invalide.");
-    }
-  };
-  reader.readAsText(file);
+  showConfirmDialog({
+    title: "Restaurer un backup",
+    message: "⚠️ Cette action va effacer toutes les données actuelles et les remplacer par le backup. Es-tu sûr ?",
+    confirmLabel: "Oui, restaurer",
+    cancelLabel: "Annuler",
+    variant: "warning",
+    icon: "⚠️",
+    onConfirm: () => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const data = JSON.parse(String(reader.result || "{}"));
+          if (!data || !data.localStorage) throw new Error("Format invalide");
+          localStorage.clear();
+          Object.keys(data.localStorage).forEach((k) => {
+            localStorage.setItem(k, data.localStorage[k]);
+          });
+          location.reload();
+        } catch (e) {
+          alert("Import impossible : fichier backup invalide.");
+        }
+      };
+      reader.readAsText(file);
+    },
+  });
 }
 
 
@@ -2082,17 +2093,27 @@ function onClientNameChange() {
 
 function onPlanningPopupClientChange() {
   const input = document.getElementById("planningPopupClient");
+  const addBtn = document.getElementById("planningAddClientBtn");
   if (!input) return;
 
   const value = (input.value || "").trim().toLowerCase();
-  if (!value) return;
+
+  if (!value) {
+    if (addBtn) addBtn.style.display = "none";
+    return;
+  }
 
   const clients = getClients();
   const client = clients.find(
     (c) => (c.name || "").trim().toLowerCase() === value
   );
 
-  if (!client) return;
+  if (!client) {
+    if (addBtn) addBtn.style.display = "inline-flex";
+    return;
+  }
+
+  if (addBtn) addBtn.style.display = "none";
 
   const addr = document.getElementById("planningPopupAddress");
   const phone = document.getElementById("planningPopupPhone");
@@ -2103,6 +2124,45 @@ function onPlanningPopupClientChange() {
   if (phone) phone.value = client.phone || "";
   if (email) email.value = client.email || "";
   if (privateNotes) privateNotes.value = client.privateNotes || "";
+}
+
+function savePlanningClientToList() {
+  const name = (document.getElementById("planningPopupClient")?.value || "").trim();
+  const address = (document.getElementById("planningPopupAddress")?.value || "").trim();
+  const phone = (document.getElementById("planningPopupPhone")?.value || "").trim();
+  const email = (document.getElementById("planningPopupEmail")?.value || "").trim();
+  const privateNotes = (document.getElementById("planningPopupPrivateNotes")?.value || "").trim();
+
+  if (!name) {
+    showToast("Merci de saisir un nom de client.", "warning");
+    return;
+  }
+
+  const clients = getClients();
+  const existingIndex = clients.findIndex(
+    (c) => (c.name || "").toLowerCase() === name.toLowerCase()
+  );
+
+  let clientObj;
+  if (existingIndex === -1) {
+    const tmp = { name, address, phone, email, privateNotes };
+    const id = getClientDocId(tmp);
+    clientObj = { ...tmp, id };
+    clients.push(clientObj);
+  } else {
+    clientObj = { ...clients[existingIndex], name, address, phone, email, privateNotes };
+    clients[existingIndex] = clientObj;
+  }
+
+  saveClients(clients);
+  refreshClientDatalist();
+  if (typeof _fillClientSelectIOS === "function") _fillClientSelectIOS();
+  if (typeof saveSingleClientToFirestore === "function") saveSingleClientToFirestore(clientObj);
+
+  const addBtn = document.getElementById("planningAddClientBtn");
+  if (addBtn) addBtn.style.display = "none";
+
+  showToast(`Client "${name}" enregistré ✅`, "success");
 }
 
 // --- Attestation clim : remplir adresse depuis la liste de clients ---
@@ -3289,6 +3349,16 @@ function editClient(index) {
   document.getElementById("editClientEmail").value = c.email;
 document.getElementById("editClientPrivateNotes").value = c.privateNotes || "";
 
+  const eq = c.equipment || {};
+  const s = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ""; };
+  s("editEquipClimBrand",  eq.climBrand);
+  s("editEquipClimModel",  eq.climModel);
+  s("editEquipClimUnits",  eq.climUnits);
+  s("editEquipPoolType",   eq.poolType);
+  s("editEquipPoolVolume", eq.poolVolume);
+  s("editEquipPoolFilter", eq.poolFilter);
+  s("editEquipPoolElec",   eq.poolElec);
+  s("editEquipNotes",      eq.notes);
 
   document.getElementById("editClientForm").classList.remove("hidden");
 }
@@ -3299,6 +3369,12 @@ function openAddClientFromList() {
   document.getElementById("editClientPhone").value = "";
   document.getElementById("editClientEmail").value = "";
 document.getElementById("editClientPrivateNotes").value = "";
+
+  ["editEquipClimBrand","editEquipClimModel","editEquipClimUnits",
+   "editEquipPoolType","editEquipPoolVolume","editEquipPoolFilter",
+   "editEquipPoolElec","editEquipNotes"].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = "";
+  });
 
 
   editingClientIndex = null; // mode création
@@ -3319,6 +3395,18 @@ function saveEditedClient() {
   const phone = document.getElementById("editClientPhone").value.trim();
   const email = document.getElementById("editClientEmail").value.trim();
   const privateNotes = document.getElementById("editClientPrivateNotes").value.trim();
+
+  const g = (id) => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
+  const equipment = {
+    climBrand:  g("editEquipClimBrand"),
+    climModel:  g("editEquipClimModel"),
+    climUnits:  g("editEquipClimUnits"),
+    poolType:   g("editEquipPoolType"),
+    poolVolume: g("editEquipPoolVolume"),
+    poolFilter: g("editEquipPoolFilter"),
+    poolElec:   g("editEquipPoolElec"),
+    notes:      g("editEquipNotes"),
+  };
 
   if (!name) {
     showConfirmDialog({
@@ -3344,6 +3432,7 @@ function saveEditedClient() {
       phone,
       email,
       privateNotes,
+      equipment,
     };
     clients.push(clientObj);
     title = "Client ajouté";
@@ -3358,6 +3447,7 @@ function saveEditedClient() {
       phone,
       email,
       privateNotes,
+      equipment,
     };
     // sécurité : si old n’avait pas d’id
     if (!clientObj.id) clientObj.id = getClientDocId({ name, address });
@@ -4472,6 +4562,8 @@ function openSendPopup() {
 
   if (txtArea) txtArea.value = body;
 
+  if (typeof refreshSendTemplateSelect === "function") refreshSendTemplateSelect();
+
   if (overlay) {
     overlay.classList.remove("hidden");
     const popup = overlay.querySelector(".popup");
@@ -4522,6 +4614,8 @@ ${company.companyName || "AquaClim Prestige"}`;
 
   if (info) info.textContent = `Contrat – ${clientName}`;
   if (textarea) textarea.value = body;
+
+  if (typeof refreshSendTemplateSelect === "function") refreshSendTemplateSelect();
 
   if (popup) {
     popup.classList.remove("hidden");
@@ -5142,8 +5236,40 @@ function saveRapportFromForm() {
 }
 
 function saveRapportOnly() {
+  // Capture les valeurs avant fermeture
+  const rapName     = document.getElementById("rapClientName")?.value.trim()    || "";
+  const rapAddr     = document.getElementById("rapClientAddress")?.value.trim() || "";
+  const rapDate     = document.getElementById("rapDate")?.value                  || "";
+  const rapTypeId   = document.getElementById("rapportType")?.value              || "";
+  const rapTpl      = RAPPORT_TEMPLATES.find(t => t.id === rapTypeId);
+  const rapTypeLabel = rapTpl ? rapTpl.label : "Intervention";
+
   saveRapportFromForm();
   closeRapportPopup();
+
+  // Proposer de créer une facture
+  if (rapName) {
+    showConfirmDialog({
+      title: "Créer une facture ?",
+      message: `Intervention enregistrée pour ${rapName}.\nVoulez-vous générer la facture correspondante ?`,
+      confirmLabel: "💶 Créer la facture",
+      cancelLabel: "Non merci",
+      variant: "info",
+      icon: "📋",
+      onConfirm: () => {
+        openFromHome("facture");
+        newDocument("facture");
+        setTimeout(() => {
+          const elName = document.getElementById("clientName");
+          const elAddr = document.getElementById("clientAddress");
+          const elSubj = document.getElementById("docSubject");
+          if (elName) { elName.value = rapName; elName.dispatchEvent(new Event("change")); }
+          if (elAddr) elAddr.value = rapAddr;
+          if (elSubj) elSubj.value = `${rapTypeLabel}${rapDate ? " – " + rapDate.split("-").reverse().join("/") : ""}`;
+        }, 350);
+      }
+    });
+  }
 }
 
 function loadRapportsList() {
@@ -6921,6 +7047,23 @@ function applyTemplate(selectEl) {
       template.kind === "fournitures"
     ) {
       unitVal = "unité";
+    } else if (
+      template.kind === "entretien_clim" ||
+      template.kind === "piscine_chlore" ||
+      template.kind === "piscine_sel" ||
+      template.kind === "entretien_jacuzzi" ||
+      template.kind === "hivernage_piscine" ||
+      template.kind === "remise_service_piscine" ||
+      template.kind === "vidange_jacuzzi" ||
+      template.kind === "traitement_choc" ||
+      template.kind === "changement_sable" ||
+      template.kind === "remplacement_roulement" ||
+      template.kind === "remplacement_pompe_mo" ||
+      template.kind === "remplacement_cellule_mo" ||
+      template.kind === "nettoyage_local" ||
+      template.kind === "deplacement"
+    ) {
+      unitVal = "unité";
     } else {
       unitVal = "forfait";
     }
@@ -7066,27 +7209,27 @@ function calculateTotals() {
           base = clientType === "syndic" ? 120 : 100;
         }
 
-        // 💰 Nouvelle grille : 1 = 100 %, 2 = 85 %, 3+ = 70 %
+        // 💰 Grille dégressive : 1 clim = 100€, 2 clims = 90€/u, 3+ = 80€/u
         if (clientType === "particulier") {
           if (n === 1) {
-            price = base; // 1 clim → 100 %
+            price = base;          // 100 €
           } else if (n === 2) {
-            price = base * 0.85; // 2 clims → 85 %
+            price = base * 0.9;    // 90 € par clim
           } else {
-            price = base * 0.7; // 3+ clims → 70 %
+            price = base * 0.8;    // 80 € par clim
           }
         } else {
-          // Grille syndic
+          // Grille syndic (proportionnelle)
           if (n === 1) {
             price = base;
           } else if (n === 2) {
-            price = base * 0.85;
+            price = base * 0.9;
           } else {
-            price = base * 0.75;
+            price = base * 0.8;
           }
         }
 
-        // 🔥 Arrondi au multiple de 5 € supérieur
+        // Arrondi au multiple de 5 € supérieur
         price = Math.ceil(price / 5) * 5;
 
         priceInput.value = price.toFixed(2);
@@ -7543,13 +7686,11 @@ doc.prestations.forEach((p) => {
     if (priceInput) priceInput.value = p.price;
     if (unitInput) unitInput.value = p.unit || "";
 
-    // ==============================
+   // ==============================
     // 🎯 Choix du "modèle" (template)
     // ==============================
     let effectiveKind = p.kind || "";
-
     let hasTemplateForKind = PRESTATION_TEMPLATES.some((t) => t.kind === effectiveKind);
-
     if (!hasTemplateForKind && doc.type === "facture" && doc.contractId) {
       const linkedContract = getContract(doc.contractId);
       const inferredKind = getTemplateKindForContract(linkedContract);
@@ -7558,34 +7699,20 @@ doc.prestations.forEach((p) => {
         hasTemplateForKind = PRESTATION_TEMPLATES.some((t) => t.kind === effectiveKind);
       }
     }
-
     if (templateSelect) {
       const idx = PRESTATION_TEMPLATES.findIndex((t) => t.kind === effectiveKind);
       templateSelect.value = idx >= 0 ? String(idx) : "0";
     }
 
-    const template = PRESTATION_TEMPLATES.find((t) => t.kind === effectiveKind);
-    if (template) {
-      const custom = getCustomPrices();
-      const clientType = document.getElementById("clientSyndic")?.checked ? "syndic" : "particulier";
-      const key = template.kind + "_" + clientType;
-
-      let base =
-        custom[key] != null
-          ? custom[key]
-          : clientType === "syndic"
-            ? template.priceSyndic || 0
-            : template.priceParticulier || 0;
-
-      line.dataset.basePrice = Number(base || 0).toFixed(2);
-    }
+    // ✅ CORRECTIF : basePrice = prix réellement sauvegardé, pas le prix du template
+    // (évite que rouvrir une facture remette le prix par défaut du modèle)
+    line.dataset.basePrice = Number(p.price || 0).toFixed(2);
 
     // ✅ IMPORTANT : on remet le purchase APRÈS tous les updates (visibility/layout)
     const purchaseInput = line.querySelector(".prestation-purchase");
     if (purchaseInput) {
       purchaseInput.value = _fmtPurchase(p.purchase);
     }
-
     // ⚙️ Dates…
     const datesContainer = line.querySelector(".prestation-dates");
     if (datesContainer) {
@@ -7594,28 +7721,22 @@ doc.prestations.forEach((p) => {
       dates.forEach((dv) => {
         const row = document.createElement("div");
         row.className = "prestation-date-row";
-
         const inp = document.createElement("input");
         inp.type = "date";
         inp.className = "prestation-date";
         inp.value = dv || "";
-
         row.appendChild(inp);
-
         const btn = document.createElement("button");
         btn.type = "button";
         btn.className = "prestation-date-remove";
         btn.textContent = "✕";
         btn.addEventListener("click", () => removePassageDate(btn));
-
         row.appendChild(btn);
         datesContainer.appendChild(row);
       });
     }
   });
-
   calculateTotals();
-
   // ✅ On resauvegarde si on a nettoyé un doc ancien
   try {
     const docsAll = getAllDocuments();
@@ -7628,24 +7749,19 @@ doc.prestations.forEach((p) => {
       }
     }
   } catch (e) {}
-
   document.getElementById("formTitle").textContent =
     (doc.type === "devis" ? "Devis " : "Facture ") + doc.number;
-
   try {
     renderHistory(doc);
   } catch (e) {
     console.error("Erreur renderHistory:", e);
   }
-
   // 🔘 Empêcher le bouton "Bon pour accord" d'être coché si aucune signature n'existe
   const sigRadio = document.getElementById("signatureRadio");
   if (sigRadio) sigRadio.checked = !!doc.signature;
-
   if (typeof refreshDocumentHealthUI === "function") {
     refreshDocumentHealthUI(doc);
   }
-
   // 🔒 verrouille automatiquement la ligne indemnité si présente
   if (typeof _lockIndemnite40Line === "function") {
     document.querySelectorAll(".prestation-line").forEach(_lockIndemnite40Line);
@@ -7775,7 +7891,7 @@ document.querySelectorAll(".prestation-line").forEach((line) => {
     if (!purchase || purchase <= 0) missingPurchase = true;
   }
 
-  // 6) sauvegarde
+// 6) sauvegarde
   if (desc) {
     prestations.push({
       desc,
@@ -7786,6 +7902,7 @@ document.querySelectorAll(".prestation-line").forEach((line) => {
       kind,
       isDetail,
       purchase,
+      detail: line.dataset.detail || "",   // ✅ AJOUT : description longue pour le PDF
     });
   }
 });
@@ -7850,7 +7967,7 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
   const paymentDateInput = document.getElementById("paymentDate");
   const paymentDate = paymentDateInput ? (paymentDateInput.value || "") : "";
 
-  const doc = {
+ const doc = {
     id: currentDocumentId || Date.now().toString(),
     type: docType,
     number: docNumber,
@@ -7866,16 +7983,21 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
       email: clientEmail,
     },
 
-  prestations,
-subtotal,
-discountRate,
-discountAmount,
-subtotalAfterDiscount,
-tvaRate,
-tvaAmount,
-totalTTC,
-notes,
-conditionsType,
+    // ✅ Adresse du chantier (syndic) — était perdue à chaque save
+    siteCivility: document.getElementById("siteCivility")?.value || existing?.siteCivility || "",
+    siteName: document.getElementById("siteName")?.value || existing?.siteName || "",
+    siteAddress: document.getElementById("siteAddress")?.value || existing?.siteAddress || "",
+
+    prestations,
+    subtotal,
+    discountRate,
+    discountAmount,
+    subtotalAfterDiscount,
+    tvaRate,
+    tvaAmount,
+    totalTTC,
+    notes,
+    conditionsType,
 
     paymentMode:
       docType === "facture"
@@ -7895,6 +8017,12 @@ conditionsType,
                new Date().toISOString().slice(0, 10))
             : "")
         : (existing?.paymentDate || ""),
+
+    // ✅ BUGS 4 — Ces champs existaient sur le doc mais étaient écrasés à chaque save
+    signature: existing?.signature || null,           // signature du client sur devis
+    signatureDate: existing?.signatureDate || null,   // date de la signature
+    contractId: existing?.contractId || null,         // lien vers un contrat
+    history: existing?.history || [],                 // historique des modifications
 
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
@@ -8169,10 +8297,9 @@ function computeCA() {
 // TVA MICRO-ENTREPRISE – SURVEILLANCE SEUIL
 // =====================================
 
-// Seuils légaux prestations de services (micro, franchise en base TVA)
-// Source officielle : 37 500 € (seuil de base) / 41 250 € (seuil majoré)
-const MICRO_TVA_THRESHOLD_BASE = 37500; // déclenche l'obligation de TVA
-const MICRO_TVA_THRESHOLD_TOLERANCE = 41250; // pour info, non utilisé ici
+// Seuils légaux prestations de services (art. 293 B CGI) — valables 2023-2025
+const MICRO_TVA_THRESHOLD_BASE      = 36800; // seuil de base
+const MICRO_TVA_THRESHOLD_TOLERANCE = 39100; // seuil majoré (dépassement = TVA immédiate)
 const MICRO_TVA_THRESHOLD_TTC = MICRO_TVA_THRESHOLD_BASE;
 
 const MICRO_TVA_STATUS_KEY = "micro_tva_status";
@@ -8366,10 +8493,10 @@ function computeCurrentYearCAForMicro() {
   const now = new Date();
   const currentYear = now.getFullYear();
 
-  let totalTTC = 0;
+  let totalHT = 0;
 
   docs.forEach((f) => {
-    // 🔎 Micro-entreprise = on compte le CA ENCAISSÉ seulement !
+    // Micro-entreprise = CA ENCAISSÉ uniquement (comptabilité de trésorerie)
     if (!f.paid) return;
 
     // Date de paiement si présente, sinon date facture
@@ -8377,11 +8504,12 @@ function computeCurrentYearCAForMicro() {
     const d = new Date(refDate + "T00:00:00");
     if (isNaN(d.getTime()) || d.getFullYear() !== currentYear) return;
 
-    const val = Number(f.totalTTC || 0);
-    if (!isNaN(val)) totalTTC += val;
+    // Seuil TVA comparé au CA HT (art. 293 B CGI)
+    const val = Number(f.subtotal || f.totalTTC || 0);
+    if (!isNaN(val)) totalHT += val;
   });
 
-  return { year: currentYear, caTTC: totalTTC };
+  return { year: currentYear, caTTC: totalHT };
 }
 
 function computeYearCAForMicro(year) {
@@ -8389,41 +8517,43 @@ function computeYearCAForMicro(year) {
     (d) => d.type === "facture" && (d.date || d.paymentDate)
   );
 
-  let totalTTC = 0;
+  let totalHT = 0;
 
   docs.forEach((f) => {
     if (!f.paid) return;
 
-    // ✅ CA encaissé = date de paiement si dispo, sinon date facture (fallback)
-    const refDate = (f.paymentDate || f.date || "").slice(0, 10); // "YYYY-MM-DD"
+    const refDate = (f.paymentDate || f.date || "").slice(0, 10);
     if (!refDate) return;
 
     const d = new Date(refDate + "T00:00:00");
     if (isNaN(d.getTime()) || d.getFullYear() !== year) return;
 
-    const val = Number(f.totalTTC || 0);
-    if (!isNaN(val)) totalTTC += val;
+    // Seuil TVA = CA HT encaissé
+    const val = Number(f.subtotal || f.totalTTC || 0);
+    if (!isNaN(val)) totalHT += val;
   });
 
-  return totalTTC;
+  return totalHT;
 }
 
 function canReturnToFranchiseTVA() {
   const now = new Date();
   const y = now.getFullYear();
 
-  const caThisYear = computeYearCAForMicro(y);
-  const caLastYear = computeYearCAForMicro(y - 1);
+  // Retour franchise possible au 01/01/N si CA N-1 ET CA N-2 sont tous deux < seuil de base
+  // (art. 293 B CGI : la franchise se réapplique l'année suivante si les 2 années précédentes
+  //  sont sous le seuil de base)
+  const caLastYear     = computeYearCAForMicro(y - 1);
+  const caTwoYearsAgo  = computeYearCAForMicro(y - 2);
 
-  // ✅ règle simplifiée (celle que tu veux) : 2 années sous le seuil de base
   const under2Years =
-    caThisYear < MICRO_TVA_THRESHOLD_BASE &&
-    caLastYear < MICRO_TVA_THRESHOLD_BASE;
+    caLastYear    < MICRO_TVA_THRESHOLD_BASE &&
+    caTwoYearsAgo < MICRO_TVA_THRESHOLD_BASE;
 
   return {
     ok: under2Years,
-    caThisYear,
-    caLastYear,
+    caThisYear: caLastYear,   // renommé pour l'affichage dans le dialog
+    caLastYear: caTwoYearsAgo,
     year: y,
   };
 }
@@ -13657,6 +13787,8 @@ if (rowContrats) {
 if (typeof renderPlanningWeek === "function") {
   renderPlanningWeek();
 }
+
+if (typeof computeDashboardExtended === "function") computeDashboardExtended();
 }
 
 async function saveDocumentToFirestore(docObj) {
@@ -13870,6 +14002,15 @@ function getServiceLabelForContract(contract) {
 function changePlanningWeek(delta) {
   planningWeekOffset = (planningWeekOffset || 0) + delta;
   renderPlanningWeek();
+  const todayBtn = document.getElementById("planningTodayBtn");
+  if (todayBtn) todayBtn.style.display = planningWeekOffset !== 0 ? "inline-flex" : "none";
+}
+
+function goToPlanningToday() {
+  planningWeekOffset = 0;
+  renderPlanningWeek();
+  const todayBtn = document.getElementById("planningTodayBtn");
+  if (todayBtn) todayBtn.style.display = "none";
 }
 
 
@@ -14330,6 +14471,12 @@ function openPlanningDayDetails(dateStr) {
                 ? `<span class="visit-pool">${escapeHtml(item.serviceLabel)}</span>`
                 : ""
             }
+            <div class="planning-actions">
+              <button class="btn btn-small btn-success"
+                onclick="createFactureFromContractItem('${item.contractId}')">
+                💶 Facturer
+              </button>
+            </div>
           </div>
         `;
       }
@@ -14385,6 +14532,11 @@ function openPlanningDayDetails(dateStr) {
                     ? "↩ Annuler"
                     : "✅ Fait"
                 }
+              </button>
+
+              <button class="btn btn-small btn-success"
+                onclick="createFactureFromPlanningItem('${item.id}')">
+                💶 Facturer
               </button>
 
               <button class="btn btn-small btn-danger"
@@ -14509,14 +14661,68 @@ function closeManualPlanningPopup() {
 
   overlay.classList.add("hidden");
 
-  // ✅ reset mode édition
+  // reset mode édition
   editingManualPlanningId = null;
+
+  // cache le bouton "Enregistrer comme client"
+  const addClientBtn = document.getElementById("planningAddClientBtn");
+  if (addClientBtn) addClientBtn.style.display = "none";
 
   // remet le titre/bouton par défaut
   const titleEl = overlay.querySelector("h3");
   const primaryBtn = overlay.querySelector(".popup-buttons .btn.btn-primary");
   if (titleEl) titleEl.textContent = "Ajouter une intervention";
   if (primaryBtn) primaryBtn.textContent = "Ajouter";
+}
+
+// ================== FACTURER DEPUIS LE PLANNING ==================
+
+function createFactureFromPlanningItem(manualId) {
+  const item = (manualPlanningItems || []).find((x) => x.id === manualId);
+  if (!item) return;
+
+  openFromHome("facture");
+  newDocument("facture");
+
+  const nameEl = document.getElementById("clientName");
+  const addrEl = document.getElementById("clientAddress");
+  const phoneEl = document.getElementById("clientPhone");
+  const emailEl = document.getElementById("clientEmail");
+  const subjectEl = document.getElementById("docSubject");
+
+  if (nameEl) nameEl.value = item.clientName || "";
+  if (addrEl) addrEl.value = item.address || "";
+  if (phoneEl) phoneEl.value = item.phone || "";
+  if (emailEl) emailEl.value = item.email || "";
+  if (subjectEl) subjectEl.value = item.prestation || item.label || "";
+
+  showToast("Facture pré-remplie depuis le planning ✅", "success");
+}
+
+function createFactureFromContractItem(contractId) {
+  const contract = (typeof getAllContracts === "function" ? getAllContracts() : [])
+    .find((c) => c.id === contractId);
+  if (!contract) return;
+
+  openFromHome("facture");
+  newDocument("facture");
+
+  const client = contract.client || {};
+  const nameEl = document.getElementById("clientName");
+  const addrEl = document.getElementById("clientAddress");
+  const phoneEl = document.getElementById("clientPhone");
+  const emailEl = document.getElementById("clientEmail");
+  const subjectEl = document.getElementById("docSubject");
+
+  if (nameEl) nameEl.value = client.name || "";
+  if (addrEl) addrEl.value = client.address || "";
+  if (phoneEl) phoneEl.value = client.phone || "";
+  if (emailEl) emailEl.value = client.email || "";
+  if (subjectEl) subjectEl.value = typeof getServiceLabelForContract === "function"
+    ? getServiceLabelForContract(contract)
+    : "";
+
+  showToast("Facture pré-remplie depuis le contrat ✅", "success");
 }
 
 function addMonthsSafe(dateISO, monthsToAdd) {
@@ -14650,6 +14856,29 @@ async function confirmManualPlanningPopup() {
     }
 
     closeManualPlanningPopup();
+
+    // Proposer confirmation WhatsApp si le client a un téléphone
+    if (phone && !editingManualPlanningId) {
+      const dateObj = new Date(manualPopupDate + "T00:00:00");
+      const JOURS_FR = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+      const MOIS_FR  = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+      const dateFr = `${JOURS_FR[dateObj.getDay()]} ${dateObj.getDate()} ${MOIS_FR[dateObj.getMonth()]}`;
+      const heureStr = time ? ` à ${time}` : "";
+      const company = (typeof getCompanySettings === "function" ? getCompanySettings() : null) || {};
+      const msgRdv = `Bonjour ${client || ""},\n\nNous vous confirmons votre rendez-vous le ${dateFr}${heureStr}${prestation ? " pour : " + prestation : ""}.\n\nCordialement,\n${company.companyName || "AquaClim Prestige"}`;
+      showConfirmDialog({
+        title: "Confirmation RDV",
+        message: `Envoyer la confirmation par WhatsApp à ${client || phone} ?`,
+        confirmLabel: "💬 WhatsApp",
+        cancelLabel: "Non merci",
+        variant: "info",
+        icon: "📅",
+        onConfirm: () => {
+          const cleanPhone = phone.replace(/\D/g, "").replace(/^0/, "33");
+          window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(msgRdv)}`, "_blank");
+        }
+      });
+    }
 
     const elPresta = document.getElementById("planningPopupPrestation");
     const elPrestaCustom = document.getElementById("planningPopupPrestationCustom");
@@ -20713,21 +20942,6 @@ function checkScheduledInvoices() {
 }
 
 
-function getCurrentAppView() {
-  const views = [
-    "homeView",
-    "listView",
-    "formView",
-    "contractView",
-    "attestationView",
-  ];
-
-  return views.find((id) => {
-    const el = document.getElementById(id);
-    return el && !el.classList.contains("hidden");
-  });
-}
-
 /* ======================
    SIGNATURE ELECTRONIQUE
 ====================== */
@@ -21091,13 +21305,9 @@ function fillYearMenu() {
 
 function autoFillDates() {
   document.querySelectorAll("input[type='date']").forEach((input) => {
-    // ✅ Ne jamais auto-remplir les "dates de passage"
     if (input.classList.contains("prestation-date")) return;
-
-    // (optionnel) si tu veux aussi éviter d’auto-remplir d’autres champs précis :
-    // if (input.id === "validityDate") return;
-    // if (input.id === "paymentDate") return;
-
+    if (input.id === "validityDate") return;   // ✅ ne pas auto-remplir la validité
+    if (input.id === "paymentDate") return;    // ✅ ne pas auto-remplir la date de paiement
     if (!input.value) input.value = todayISO();
   });
 }
@@ -21453,3 +21663,519 @@ document.addEventListener("click", (e) => {
 
 
 
+
+// ═══════════════════════════════════════════════════════════
+// NOUVELLES FONCTIONNALITÉS
+// ═══════════════════════════════════════════════════════════
+
+// ──────────────────────────────────────────────────────────
+// PWA iOS – reprise après retour depuis Safari
+// ──────────────────────────────────────────────────────────
+// Quand window.open() a été appelé et que l'utilisateur revient
+// dans la PWA via le geste de retour iOS, la page redevient visible.
+// On s'assure que l'overlay PDF est fermé pour ne pas rester bloqué.
+window.addEventListener("pageshow", function(e) {
+  if (!isStandalonePWA()) return;
+  const overlay = document.getElementById("pdfViewerOverlay");
+  if (overlay && !overlay.classList.contains("hidden")) {
+    // Ne rien faire : l'utilisateur est dans le viewer, c'est normal
+    return;
+  }
+  // Si la page revient depuis le cache bfcache (retour iOS depuis Safari)
+  if (e.persisted) {
+    // Rien à faire, l'app reprend normalement
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// MODE SOMBRE
+// ──────────────────────────────────────────────────────────
+function toggleDarkMode() {
+  const isDark = document.body.classList.toggle("dark-mode");
+  localStorage.setItem("darkMode", isDark ? "1" : "0");
+  const btn = document.getElementById("darkModeBtn");
+  if (btn) btn.textContent = isDark ? "☀️" : "🌙";
+}
+
+(function initDarkMode() {
+  if (localStorage.getItem("darkMode") === "1") {
+    document.body.classList.add("dark-mode");
+    const btn = document.getElementById("darkModeBtn");
+    if (btn) btn.textContent = "☀️";
+  }
+})();
+
+// ──────────────────────────────────────────────────────────
+// RACCOURCIS CLAVIER
+// ──────────────────────────────────────────────────────────
+document.addEventListener("keydown", function(e) {
+  // Escape : ferme toute popup overlay visible
+  if (e.key === "Escape") {
+    const openOverlay = Array.from(document.querySelectorAll(".popup-overlay:not(.hidden)")).pop();
+    if (openOverlay) {
+      openOverlay.classList.add("hidden");
+      e.preventDefault();
+      return;
+    }
+  }
+
+  // Ctrl+S : sauvegarde contextuelle
+  if (e.ctrlKey && e.key === "s") {
+    e.preventDefault();
+    const view = typeof getCurrentAppView === "function" ? getCurrentAppView() : "";
+    if (view === "devisView" || view === "factureView") {
+      if (typeof saveDocument === "function") saveDocument();
+    } else if (view === "contractView") {
+      if (typeof saveContractToLocal === "function") saveContractToLocal();
+    } else if (view === "settingsView") {
+      if (typeof saveCompanySettingsFromForm === "function") saveCompanySettingsFromForm();
+    }
+    return;
+  }
+
+  // Ctrl+N : nouveau document contextuel
+  if (e.ctrlKey && e.key === "n") {
+    e.preventDefault();
+    const view = typeof getCurrentAppView === "function" ? getCurrentAppView() : "";
+    if (view === "devisView") {
+      if (typeof newDocument === "function") newDocument("devis");
+    } else if (view === "factureView") {
+      if (typeof newDocument === "function") newDocument("facture");
+    } else if (view === "contractView") {
+      if (typeof newContract === "function") newContract();
+    }
+    return;
+  }
+});
+
+// ──────────────────────────────────────────────────────────
+// RECHERCHE GLOBALE
+// ──────────────────────────────────────────────────────────
+function openGlobalSearch() {
+  const overlay = document.getElementById("globalSearchPopup");
+  if (!overlay) return;
+  overlay.classList.remove("hidden");
+  const input = document.getElementById("globalSearchInput");
+  if (input) { input.value = ""; input.focus(); }
+  const results = document.getElementById("globalSearchResults");
+  if (results) results.innerHTML = "";
+}
+
+function closeGlobalSearch() {
+  const overlay = document.getElementById("globalSearchPopup");
+  if (overlay) overlay.classList.add("hidden");
+}
+
+function onGlobalSearchInput() {
+  const input = document.getElementById("globalSearchInput");
+  const results = document.getElementById("globalSearchResults");
+  if (!input || !results) return;
+
+  const q = input.value.trim().toLowerCase();
+  if (q.length < 2) { results.innerHTML = ""; return; }
+
+  const hits = [];
+
+  // Devis & factures
+  const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
+  docs.forEach(d => {
+    const num = (d.number || "").toLowerCase();
+    const name = (d.client?.name || "").toLowerCase();
+    const subj = (d.subject || "").toLowerCase();
+    if (num.includes(q) || name.includes(q) || subj.includes(q)) {
+      const typeLabel = d.type === "devis" ? "Devis" : "Facture";
+      hits.push({ type: typeLabel, label: `${d.number || d.id} – ${d.client?.name || ""}`, sub: d.subject || "", action: () => { closeGlobalSearch(); openFromHome(d.type); if (typeof loadDocument === "function") loadDocument(d.id); } });
+    }
+  });
+
+  // Clients
+  const clients = typeof getClients === "function" ? getClients() : [];
+  clients.forEach(c => {
+    const n = (c.name || "").toLowerCase();
+    const a = (c.address || "").toLowerCase();
+    const p = (c.phone || "").toLowerCase();
+    if (n.includes(q) || a.includes(q) || p.includes(q)) {
+      hits.push({ type: "Client", label: c.name || "", sub: c.address || "", action: () => { closeGlobalSearch(); openClientsListPopup(); setTimeout(() => { const si = document.getElementById("clientSearchInput"); if (si) { si.value = c.name; si.dispatchEvent(new Event("input")); } }, 200); } });
+    }
+  });
+
+  // Contrats
+  const contracts = typeof getAllContracts === "function" ? getAllContracts() : [];
+  contracts.forEach(c => {
+    const name = (c.client?.name || c.pricing?.clientName || "").toLowerCase();
+    const num  = (c.number || "").toLowerCase();
+    if (name.includes(q) || num.includes(q)) {
+      hits.push({ type: "Contrat", label: `${c.number || c.id} – ${c.client?.name || c.pricing?.clientName || ""}`, sub: "", action: () => { closeGlobalSearch(); openFromHome("contrat"); if (typeof loadContract === "function") loadContract(c.id); } });
+    }
+  });
+
+  // Planning manuel
+  const planning = typeof manualPlanningItems !== "undefined" ? manualPlanningItems : [];
+  planning.forEach(p => {
+    const lbl = (p.label || p.clientName || "").toLowerCase();
+    const cl  = (p.clientName || "").toLowerCase();
+    if (lbl.includes(q) || cl.includes(q)) {
+      hits.push({ type: "Planning", label: `${p.date || ""} – ${p.label || p.clientName || ""}`, sub: p.address || "", action: () => { closeGlobalSearch(); } });
+    }
+  });
+
+  if (hits.length === 0) {
+    results.innerHTML = '<div class="search-empty">Aucun résultat pour "' + escapeHtml(q) + '"</div>';
+    return;
+  }
+
+  results.innerHTML = hits.slice(0, 20).map((h, i) =>
+    `<div class="search-result-item" onclick="_globalSearchGo(${i})">
+      <span class="search-result-type">${escapeHtml(h.type)}</span>
+      <span class="search-result-label">${escapeHtml(h.label)}</span>
+      ${h.sub ? `<span class="search-result-sub">${escapeHtml(h.sub)}</span>` : ""}
+    </div>`
+  ).join("");
+
+  window._globalSearchHits = hits;
+}
+
+function _globalSearchGo(i) {
+  const hits = window._globalSearchHits || [];
+  if (hits[i] && typeof hits[i].action === "function") hits[i].action();
+}
+
+// ──────────────────────────────────────────────────────────
+// RÉCAP PLANNING WHATSAPP
+// ──────────────────────────────────────────────────────────
+function sendPlanningRecapWhatsApp() {
+  const days = (currentPlanningData || []).filter(d => d.items && d.items.length > 0);
+
+  if (days.length === 0) {
+    showConfirmDialog({
+      title: "Planning vide",
+      message: "Aucune intervention cette semaine.",
+      confirmLabel: "OK", cancelLabel: "", variant: "info", icon: "📅"
+    });
+    return;
+  }
+
+  const JOURS = ["Dim","Lun","Mar","Mer","Jeu","Ven","Sam"];
+  const MOIS  = ["jan","fév","mars","avr","mai","juin","juil","aoû","sep","oct","nov","déc"];
+  const label = document.getElementById("planningWeekLabel")?.textContent || "";
+  const company = (typeof getCompanySettings === "function" ? getCompanySettings() : null) || {};
+
+  let msg = `📅 Planning – ${label}\n${company.companyName || "AquaClim Prestige"}\n`;
+  msg += "─".repeat(28) + "\n\n";
+
+  days.forEach(day => {
+    const d = new Date(day.date + "T00:00:00");
+    msg += `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}\n`;
+    day.items.forEach(it => {
+      const heure  = it.time ? `${it.time} ` : "";
+      const client = it.clientName || it.label || "";
+      const presta = it.label && it.label !== client ? ` (${it.label})` : "";
+      const addr   = it.address ? ` – ${it.address}` : "";
+      msg += `  • ${heure}${client}${presta}${addr}\n`;
+    });
+    msg += "\n";
+  });
+
+  // Envoi vers son propre numéro (paramètres entreprise) ou choix
+  const ownPhone = (company.phone || "").replace(/\D/g, "").replace(/^0/, "33");
+  const url = ownPhone
+    ? `https://wa.me/${ownPhone}?text=${encodeURIComponent(msg)}`
+    : `https://wa.me/?text=${encodeURIComponent(msg)}`;
+
+  window.open(url, "_blank");
+}
+
+// ──────────────────────────────────────────────────────────
+// IMPRESSION DU PLANNING SEMAINE
+// ──────────────────────────────────────────────────────────
+function printPlanningWeek() {
+  const grid = document.getElementById("planningGrid");
+  const label = document.getElementById("planningWeekLabel");
+  if (!grid) return;
+
+  const title = label ? label.textContent : "";
+  const html = `<!DOCTYPE html><html lang="fr"><head>
+    <meta charset="UTF-8"><title>Planning – ${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      h2 { margin-bottom: 16px; }
+      .planning-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+      .day-column { border: 1px solid #ccc; border-radius: 6px; padding: 8px; min-height: 80px; }
+      .day-column-header { font-weight: bold; margin-bottom: 6px; font-size: 0.85rem; background:#f0f0f0; padding:4px; border-radius:4px; }
+      .planning-item { font-size: 0.78rem; margin-bottom: 4px; padding: 3px 5px; background:#e8f4ff; border-radius:3px; }
+      .planning-add-btn { display:none; }
+      @media print { body { padding: 10px; } }
+    </style>
+  </head><body>
+    <h2>📅 Planning – ${title}</h2>
+    ${grid.outerHTML}
+    <script>window.onload = function(){ window.print(); }<\/script>
+  </body></html>`;
+
+  // iOS PWA : on ne peut pas faire window.open → on affiche dans l'overlay iframe
+  if (isIOS() && isStandalonePWA()) {
+    const overlay = document.getElementById("pdfViewerOverlay");
+    const frame   = document.getElementById("pdfViewerFrame");
+    if (overlay && frame) {
+      const blob = new Blob([html], { type: "text/html" });
+      const url  = URL.createObjectURL(blob);
+      frame.src  = url;
+      overlay.classList.remove("hidden");
+    }
+    return;
+  }
+
+  // PC / Android : fenêtre classique
+  const win = window.open("", "_blank", "width=900,height=700");
+  if (!win) return;
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+}
+
+// ──────────────────────────────────────────────────────────
+// TABLEAU DE BORD ENRICHI
+// ──────────────────────────────────────────────────────────
+function computeDashboardExtended() {
+  const el = id => document.getElementById(id);
+  if (!el("dashConvRate")) return;
+
+  const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
+  const devis = docs.filter(d => d.type === "devis");
+  const factures = docs.filter(d => d.type === "facture");
+
+  // Taux de conversion
+  const accepted = devis.filter(d => d.status === "accepte").length;
+  const convRate = devis.length > 0 ? Math.round((accepted / devis.length) * 100) : 0;
+  if (el("dashConvRate")) el("dashConvRate").textContent = devis.length > 0 ? `${convRate}%` : "–";
+
+  // Meilleur client (par montant facturé)
+  const clientTotals = {};
+  factures.forEach(f => {
+    const name = f.client?.name || "Inconnu";
+    clientTotals[name] = (clientTotals[name] || 0) + Number(f.totalTTC || 0);
+  });
+  const topEntry = Object.entries(clientTotals).sort((a, b) => b[1] - a[1])[0];
+  if (el("dashTopClient")) el("dashTopClient").textContent = topEntry ? topEntry[0] : "–";
+
+  // Mois le plus actif (par nb de factures)
+  const MOIS_COURT = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+  const monthCounts = {};
+  factures.forEach(f => {
+    if (!f.date) return;
+    const d = new Date(f.date + "T00:00:00");
+    if (isNaN(d.getTime())) return;
+    const key = `${d.getFullYear()}-${d.getMonth()}`;
+    monthCounts[key] = (monthCounts[key] || 0) + 1;
+  });
+  const topMonth = Object.entries(monthCounts).sort((a, b) => b[1] - a[1])[0];
+  if (el("dashBusiestMonth")) {
+    if (topMonth) {
+      const [year, month] = topMonth[0].split("-");
+      el("dashBusiestMonth").textContent = `${MOIS_COURT[+month]} ${year}`;
+    } else {
+      el("dashBusiestMonth").textContent = "–";
+    }
+  }
+
+  // Délai moyen acceptation devis
+  const delays = devis.filter(d => d.status === "accepte" && d.date && d.acceptedAt).map(d => {
+    const created = new Date(d.date + "T00:00:00");
+    const accepted = new Date(d.acceptedAt);
+    return Math.round((accepted - created) / 86400000);
+  }).filter(n => !isNaN(n) && n >= 0);
+  if (el("dashAvgDelay")) {
+    if (delays.length > 0) {
+      const avg = Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
+      el("dashAvgDelay").textContent = `${avg} jour${avg > 1 ? "s" : ""}`;
+    } else {
+      el("dashAvgDelay").textContent = "–";
+    }
+  }
+}
+
+// ──────────────────────────────────────────────────────────
+// MODÈLES DE MESSAGES
+// ──────────────────────────────────────────────────────────
+const DEFAULT_MSG_TEMPLATES = [
+  {
+    name: "Envoi devis",
+    body: `Bonjour {{client}},
+
+Veuillez trouver ci-joint votre devis {{numero}} d'un montant de {{montant}}.
+
+Ce devis est valable 30 jours. N'hésitez pas à me contacter pour toute question ou ajustement.
+
+Cordialement,
+Loïc – AquaClim Prestige
+06 03 53 77 73`
+  },
+  {
+    name: "Envoi facture",
+    body: `Bonjour {{client}},
+
+Veuillez trouver ci-joint votre facture {{numero}} d'un montant de {{montant}}, suite à notre intervention du {{date}}.
+
+Règlement par virement à réception. Le RIB est disponible sur la facture.
+
+Cordialement,
+Loïc – AquaClim Prestige
+06 03 53 77 73`
+  },
+  {
+    name: "Confirmation RDV",
+    body: `Bonjour {{client}},
+
+Je vous confirme notre rendez-vous pour votre intervention. Je vous contacterai la veille pour confirmer l'heure d'arrivée.
+
+N'hésitez pas à me contacter si vous avez besoin de modifier le créneau.
+
+Cordialement,
+Loïc – AquaClim Prestige
+06 03 53 77 73`
+  },
+  {
+    name: "Suivi devis (sans réponse)",
+    body: `Bonjour {{client}},
+
+Je me permets de vous recontacter au sujet du devis {{numero}} envoyé le {{date}}.
+
+Avez-vous eu l'occasion d'en prendre connaissance ? Je reste disponible pour répondre à vos questions ou adapter la proposition.
+
+Cordialement,
+Loïc – AquaClim Prestige
+06 03 53 77 73`
+  },
+  {
+    name: "Rapport d'intervention",
+    body: `Bonjour {{client}},
+
+Suite à notre intervention du {{date}}, veuillez trouver ci-joint le rapport d'intervention.
+
+Tout est en ordre. N'hésitez pas à me contacter si vous avez la moindre question.
+
+Cordialement,
+Loïc – AquaClim Prestige
+06 03 53 77 73`
+  },
+  {
+    name: "Devis accepté – planification",
+    body: `Bonjour {{client}},
+
+Merci pour votre accord sur le devis {{numero}}.
+
+Je vais planifier votre intervention dans les prochains jours et vous contacterai pour convenir d'une date.
+
+Cordialement,
+Loïc – AquaClim Prestige
+06 03 53 77 73`
+  },
+];
+
+function getMsgTemplates() {
+  try {
+    const stored = JSON.parse(localStorage.getItem("msgTemplates") || "[]");
+    // Si aucun modèle enregistré → on charge les modèles par défaut
+    if (!Array.isArray(stored) || stored.length === 0) {
+      return DEFAULT_MSG_TEMPLATES;
+    }
+    return stored;
+  } catch { return DEFAULT_MSG_TEMPLATES; }
+}
+
+function saveMsgTemplates(list) {
+  localStorage.setItem("msgTemplates", JSON.stringify(list));
+}
+
+function initDefaultMsgTemplates() {
+  const stored = localStorage.getItem("msgTemplates");
+  if (!stored || JSON.parse(stored).length === 0) {
+    saveMsgTemplates(DEFAULT_MSG_TEMPLATES);
+  }
+}
+
+function renderMsgTemplates() {
+  const container = document.getElementById("msgTemplatesList");
+  if (!container) return;
+  const list = getMsgTemplates();
+  if (list.length === 0) {
+    container.innerHTML = '<p style="color:#888; font-style:italic;">Aucun modèle enregistré.</p>';
+    return;
+  }
+  container.innerHTML = list.map((t, i) => `
+    <div style="border:1px solid #ddd; border-radius:6px; padding:10px 12px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+      <div style="flex:1;">
+        <strong>${escapeHtml(t.name)}</strong>
+        <pre style="margin:6px 0 0; font-size:0.82rem; white-space:pre-wrap; font-family:inherit; color:#555;">${escapeHtml(t.body)}</pre>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <button class="btn btn-danger btn-small" onclick="deleteMsgTemplate(${i})">🗑️</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+function addMsgTemplate() {
+  const name = (document.getElementById("newTemplateName")?.value || "").trim();
+  const body = (document.getElementById("newTemplateBody")?.value || "").trim();
+  if (!name || !body) {
+    alert("Merci de renseigner le nom et le contenu du modèle.");
+    return;
+  }
+  const list = getMsgTemplates();
+  list.push({ name, body });
+  saveMsgTemplates(list);
+  document.getElementById("newTemplateName").value = "";
+  document.getElementById("newTemplateBody").value = "";
+  renderMsgTemplates();
+  refreshSendTemplateSelect();
+  if (typeof _toast === "function") _toast("Modèle ajouté", `"${name}" enregistré.`);
+}
+
+function deleteMsgTemplate(i) {
+  const list = getMsgTemplates();
+  list.splice(i, 1);
+  saveMsgTemplates(list);
+  renderMsgTemplates();
+  refreshSendTemplateSelect();
+}
+
+function refreshSendTemplateSelect() {
+  const sel = document.getElementById("sendTemplateSelect");
+  if (!sel) return;
+  const list = getMsgTemplates();
+  sel.innerHTML = '<option value="">— Utiliser un modèle de message —</option>' +
+    list.map((t, i) => `<option value="${i}">${escapeHtml(t.name)}</option>`).join("");
+}
+
+function applyMsgTemplate() {
+  const sel = document.getElementById("sendTemplateSelect");
+  const textarea = document.getElementById("sendMessagePreview");
+  if (!sel || !textarea) return;
+  const idx = parseInt(sel.value, 10);
+  if (isNaN(idx)) return;
+  const list = getMsgTemplates();
+  const tpl = list[idx];
+  if (!tpl) return;
+
+  const doc = typeof currentSendDoc !== "undefined" ? currentSendDoc : null;
+  let msg = tpl.body;
+  if (doc) {
+    msg = msg
+      .replace(/\{\{client\}\}/g, doc.client?.name || "")
+      .replace(/\{\{montant\}\}/g, doc.totalTTC ? (Number(doc.totalTTC).toFixed(2) + " €") : "")
+      .replace(/\{\{numero\}\}/g, doc.number || doc.id || "")
+      .replace(/\{\{date\}\}/g, doc.date || "");
+  }
+  textarea.value = msg;
+}
+
+// Init modèles au chargement des paramètres
+const _origShowSettings = typeof showSettings === "function" ? showSettings : null;
+if (_origShowSettings) {
+  window.showSettings = function() {
+    _origShowSettings();
+    renderMsgTemplates();
+    refreshSendTemplateSelect();
+  };
+}

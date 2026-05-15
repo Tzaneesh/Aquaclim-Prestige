@@ -64,6 +64,26 @@ body {
     flex-wrap: wrap;
 }
 
+.header-clock {
+    margin-left: auto;
+    text-align: right;
+    line-height: 1.3;
+}
+
+.header-clock-time {
+    font-size: 28px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: #fff;
+}
+
+.header-clock-date {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    text-transform: capitalize;
+}
+
 .header-logo {
     height: 90px;
     width: auto;
@@ -222,10 +242,6 @@ body {
 }
 
 
-.btn-danger:hover:not(:disabled) {
-    background: #c82333;
-}
-/* Déclinaison danger (utilisée pour les suppressions) */
 .btn-danger {
     background-color: #d9534f;
     color: white;
@@ -236,8 +252,8 @@ body {
     transition: 0.2s;
 }
 
-.btn-danger:hover {
-    background-color: #c9302c;
+.btn-danger:hover:not(:disabled) {
+    background-color: #c82333;
 }
 
 .btn-danger:active {
@@ -980,16 +996,11 @@ textarea {
 }
 
 #contractView .card {
-    margin: 0 auto !important;   /* Force le bloc interne à se centrer */
-}
-
-
-#contractView .card {
     background: #fff;
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-    margin-bottom: 25px;
+    margin: 0 auto 25px auto;
 }
 
 /* Titre des sections du contrat */
@@ -1119,48 +1130,45 @@ textarea {
     border: 1px solid #dce4ff;
 }
 
-/* ---- OPTIONS FORFAITAIRES – STYLE PROPRE ---- */
-/* --- STYLE PROPRE ET FORCÉ POUR LES OPTIONS FORFAITAIRES --- */
-
 /* --- OPTIONS COMPACTES --- */
 
 .options-box {
-    display: flex !important;
-    gap: 12px !important;
-    margin-top: 8px !important;
+    display: flex;
+    gap: 12px;
+    margin-top: 8px;
 }
 
 .option-item {
-    display: flex !important;
-    align-items: center !important;
-    gap: 8px !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 
-    background: #f8faff !important;
-    border: 1px solid #d8e2ff !important;
-    padding: 8px 12px !important;
-    border-radius: 10px !important;
+    background: #f8faff;
+    border: 1px solid #d8e2ff;
+    padding: 8px 12px;
+    border-radius: 10px;
 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.03) !important;
-    cursor: pointer !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+    cursor: pointer;
 
-    transition: 0.15s ease !important;
+    transition: 0.15s ease;
 }
 
 .option-item:hover {
-    background: #eef3ff !important;
-    border-color: #c2d1ff !important;
+    background: #eef3ff;
+    border-color: #c2d1ff;
 }
 
 .option-item input[type="checkbox"] {
-    width: 16px !important;
-    height: 16px !important;
-    accent-color: #4a68ff !important;
+    width: 16px;
+    height: 16px;
+    accent-color: #4a68ff;
 }
 
 .option-item span {
-    font-size: 13px !important;
-    color: #334 !important;
-    font-weight: 500 !important;
+    font-size: 13px;
+    color: #334;
+    font-weight: 500;
 }
 
 
@@ -1234,13 +1242,6 @@ textarea {
 }
 
 /* Boutons dans les popups : ne pas prendre 100% de la largeur */
-.popup-buttons {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    flex-wrap: wrap; /* au cas où ça passe sur 2 lignes sur petit écran */
-}
-
 .popup-buttons .btn {
     width: auto !important;   /* annule le width:100% du mobile */
     flex: 0 0 auto;           /* garde la taille du contenu */
@@ -3441,8 +3442,32 @@ textarea {
   align-items:center;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px;
-  background: rgba(255,255,255,0.08);
+  padding: 12px 16px;
+  background: #1a2a40;
+  /* iOS PWA : évite que la barre soit cachée sous la notch/status bar */
+  padding-top: max(12px, env(safe-area-inset-top));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  flex-shrink: 0;
+}
+
+/* Bouton retour plus grand sur mobile */
+.pdf-back-btn {
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  padding: 10px 18px !important;
+  background: #2563eb !important;
+  color: #fff !important;
+  border-radius: 10px !important;
+}
+
+#pdfViewerCloseBtn {
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 15px !important;
+  padding: 10px 18px !important;
 }
 
 .pdf-title{
@@ -3948,4 +3973,284 @@ body.modal-open {
   font-size: 18px !important;
   font-weight: 700 !important;
   text-align: center;
+}
+
+
+/* =========================================================
+   MODE SOMBRE – complet
+========================================================= */
+body.dark-mode {
+  background: #0f0f1a;
+  color: #e1e1e1;
+}
+
+/* Conteneur principal */
+body.dark-mode .container { background: transparent; }
+
+/* En-tête */
+body.dark-mode .header { background: linear-gradient(135deg, #0d2a5e 0%, #1a1a2e 100%); }
+body.dark-mode .header h1 { color: #e1e1e1; }
+body.dark-mode .header .contact,
+body.dark-mode .header .subtitle { color: #b0b8d0; }
+body.dark-mode .header-clock-time { color: #e1e1e1; }
+body.dark-mode .header-clock-date { color: #8899bb; }
+
+/* Navigation */
+body.dark-mode .top-nav { background: #14142a; border-color: #2a2a45; }
+body.dark-mode .tab-btn { background: #252540; color: #c0c0d0; border-color: #3a3a5c; }
+body.dark-mode .tab-btn:hover { background: #2e2e52; color: #e1e1e1; }
+body.dark-mode .tab-btn.active { background: #1a74d9; color: #fff; border-color: #1a74d9; }
+
+/* Cartes génériques */
+body.dark-mode .card,
+body.dark-mode .health-card,
+body.dark-mode .followup-card,
+body.dark-mode .planning-card,
+body.dark-mode .history-card {
+  background: #1a1a2e;
+  border-color: #2a2a45;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+
+/* Dashboard – cartes statistiques */
+body.dark-mode .dash-card {
+  background: #1a1a2e;
+  border: 1px solid #2a2a45;
+}
+body.dark-mode .dash-card:hover { border-color: #3a4a7c; }
+body.dark-mode .dash-header { color: #e1e1e1 !important; }
+body.dark-mode .dash-stats p { color: #9ab0cc !important; }
+body.dark-mode .dash-stats p:first-child { color: #d0ddf0 !important; }
+body.dark-mode .dash-card-ca h3 { color: #e1e1e1; }
+body.dark-mode .dash-card-ca p { color: #9ab0cc; }
+body.dark-mode #dashCATotal { color: #e1e1e1 !important; font-weight: 700; }
+body.dark-mode .dash-sub { color: #9ab0cc !important; }
+body.dark-mode .dash-btn { background: #1a74d9; color: #fff; }
+body.dark-mode .dash-btn:hover { background: #1557b0; }
+body.dark-mode #dashFactures .dash-btn { background: #2E7D32 !important; }
+body.dark-mode .dash-card-header { color: #e1e1e1; }
+
+/* Titres */
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4 { color: #e1e1e1; }
+body.dark-mode .section-title { color: #5b9ee1; }
+body.dark-mode .dashboard-title { color: #5b9ee1; }
+
+/* Labels & textes */
+body.dark-mode label { color: #9ab0cc; }
+body.dark-mode p { color: #b0bcd0; }
+
+/* Inputs */
+body.dark-mode input[type="text"],
+body.dark-mode input[type="email"],
+body.dark-mode input[type="tel"],
+body.dark-mode input[type="number"],
+body.dark-mode input[type="date"],
+body.dark-mode input[type="time"],
+body.dark-mode textarea,
+body.dark-mode select {
+  background: #252540;
+  color: #e1e1e1;
+  border-color: #3a3a5c;
+}
+body.dark-mode input::placeholder,
+body.dark-mode textarea::placeholder { color: #5a6a88; }
+body.dark-mode input[readonly] { background: #1e1e35; color: #7788a8; }
+
+/* Popup */
+body.dark-mode .popup-overlay { background: rgba(0,0,0,0.75); }
+body.dark-mode .popup {
+  background: #1a1a2e;
+  color: #e1e1e1;
+  border: 1px solid #2a2a45;
+}
+body.dark-mode .popup h3 { color: #e1e1e1; }
+
+/* Tables */
+body.dark-mode .documents-table th {
+  background: #252540;
+  color: #9ab0cc;
+  border-bottom-color: #3a3a5c;
+}
+body.dark-mode .documents-table td {
+  border-bottom-color: #2a2a45;
+  color: #d0ddf0;
+}
+body.dark-mode .documents-table tbody tr,
+body.dark-mode .documents-table tbody tr:nth-child(odd),
+body.dark-mode .documents-table tbody tr:nth-child(even) {
+  background: #1a1a2e !important;
+}
+body.dark-mode .documents-table tr:hover,
+body.dark-mode .documents-table tbody tr:hover {
+  background: #252540 !important;
+}
+body.dark-mode .health-table th { background: #252540; color: #9ab0cc; }
+body.dark-mode .health-table td { color: #d0ddf0; border-bottom-color: #2a2a45; }
+
+/* Ligne de prestation */
+body.dark-mode .prestation-line { background: #252540; border-color: #3a3a5c; }
+body.dark-mode .prestation-line label { color: #7788aa; }
+body.dark-mode .totals { background: #1e1e35; border-color: #3a3a5c; color: #e1e1e1; }
+body.dark-mode .totals td { color: #d0ddf0; }
+
+/* Clients */
+body.dark-mode .client-item { border-bottom-color: #2a2a45; color: #d0ddf0; }
+body.dark-mode .client-list-box { background: #141428; border-color: #3a3a5c; }
+
+/* Planning */
+body.dark-mode .planning-details-entry { background: #252540; border-color: #3a3a5c; }
+body.dark-mode .day-column { background: #1a1a2e !important; border-color: #2a2a45; }
+body.dark-mode .day-column.is-today { background: #1a2a40 !important; border-color: #2a5080; }
+body.dark-mode .day-column.is-weekend { background: #161625 !important; }
+body.dark-mode .day-column.is-selected { border-color: #1a74d9; box-shadow: 0 0 0 2px rgba(26,116,217,0.35); }
+body.dark-mode .day-column:hover { box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+body.dark-mode .day-column-header { background: #252540; color: #9ab0cc; border-color: #2a2a45; }
+body.dark-mode .day-column.is-today .day-column-header { background: #1e3a60; color: #7ab4e0; }
+body.dark-mode .planning-item { background: #1e3a60; color: #c0d8f5; }
+body.dark-mode .planning-sidebar { background: #14142a !important; border-color: #2a2a45; color: #d0ddf0; }
+body.dark-mode .planning-sidebar h3 { color: #e1e1e1; }
+body.dark-mode .planning-details { border-top-color: #2a2a45; }
+body.dark-mode .planning-details h3 { color: #e1e1e1; }
+
+/* Badges & états */
+body.dark-mode .offline-badge { background: #252540; color: #9ab0cc; }
+body.dark-mode .health-ok { color: #4caf7d; }
+body.dark-mode .health-warn { color: #f0a040; }
+body.dark-mode .health-bad { color: #e05050; }
+
+/* Séparateurs */
+body.dark-mode hr { border-color: #2a2a45; }
+
+/* Boutons secondaires */
+body.dark-mode .btn-secondary { background: #252540; color: #d0ddf0; border-color: #3a3a5c; }
+body.dark-mode .btn-secondary:hover { background: #2e2e55; }
+
+/* =========================================================
+   RECHERCHE GLOBALE
+========================================================= */
+.search-result-item {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.search-result-item:hover {
+  background: #f0f4ff;
+}
+.search-result-type {
+  font-size: 11px;
+  font-weight: 600;
+  color: #1a74d9;
+  margin-bottom: 2px;
+}
+.search-result-label {
+  font-weight: 600;
+  font-size: 14px;
+  color: #333;
+}
+.search-result-sub {
+  font-size: 12px;
+  color: #777;
+  margin-top: 2px;
+}
+.search-empty {
+  text-align: center;
+  color: #aaa;
+  padding: 20px;
+  font-size: 14px;
+}
+#globalSearchResults {
+  max-height: 400px;
+  overflow-y: auto;
+  border: 1px solid #e1e8ed;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+body.dark-mode .search-result-item { border-bottom-color: #2a2a45; }
+body.dark-mode .search-result-item:hover { background: #252540; }
+body.dark-mode .search-result-label { color: #e1e1e1; }
+body.dark-mode .search-result-sub { color: #7788a8; }
+body.dark-mode .search-result-type { color: #5b9ee1; }
+body.dark-mode #globalSearchResults { border-color: #3a3a5c; background: #1a1a2e; }
+
+/* =========================================================
+   FICHE TECHNIQUE CLIENT
+========================================================= */
+.equip-section {
+  margin-top: 14px;
+  padding: 12px;
+  background: #f0f4ff;
+  border-radius: 10px;
+  border: 1px solid #d4e0f5;
+}
+.equip-title {
+  color: #1a74d9;
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.equip-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.equip-grid input,
+.equip-grid select,
+.equip-grid textarea {
+  margin-bottom: 6px;
+}
+.equip-grid label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  display: block;
+}
+body.dark-mode .equip-section { background: #1e1e35; border-color: #3a3a5c; }
+body.dark-mode .equip-title { color: #5b9ee1; }
+body.dark-mode .equip-grid label { color: #7788a8; }
+
+/* =========================================================
+   DASHBOARD STATS ENRICHI
+========================================================= */
+.dash-extended-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+.dash-extended-item {
+  background: #f0f4ff;
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.dash-extended-label {
+  font-size: 11px;
+  color: #666;
+  font-weight: 600;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.dash-extended-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a74d9;
+}
+body.dark-mode .dash-extended-item { background: #252540; border: 1px solid #3a3a5c; }
+body.dark-mode .dash-extended-label { color: #7788a8; }
+body.dark-mode .dash-extended-value { color: #5b9ee1; }
+
+/* =========================================================
+   TEMPLATES MESSAGES
+========================================================= */
+#newTemplateName,
+#newTemplateBody {
+  margin-bottom: 8px;
 }

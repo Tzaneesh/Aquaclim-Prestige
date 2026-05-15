@@ -37,6 +37,16 @@
 </p>
 
       </div>
+
+      <div class="header-clock no-print" id="headerClock">
+        <div class="header-clock-time" id="headerClockTime">00:00:00</div>
+        <div class="header-clock-date" id="headerClockDate">–</div>
+      </div>
+      <button id="darkModeBtn" class="btn btn-secondary btn-small no-print" type="button"
+              onclick="toggleDarkMode()" title="Mode sombre / clair"
+              style="margin-left:12px; font-size:1.3rem; padding:6px 10px; line-height:1;">
+        🌙
+      </button>
     </div>
   </header>
 
@@ -53,6 +63,7 @@
   <button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
   <button id="tabCA" class="btn tab-btn tab-btn-ca" onclick="openCA()">📊 CA</button>
   <button id="tabSettings" class="btn tab-btn" onclick="showSettings()">⚙️ Paramètres</button>
+  <button class="btn tab-btn" type="button" onclick="openGlobalSearch()">🔍 Recherche</button>
 </div>
 
 <div id="offlineBadge" class="offline-badge" style="display:none;">
@@ -124,6 +135,31 @@
           Voir le CA détaillé
         </button>
       </div> <!-- fin .dash-card-ca -->
+
+      <!-- 📈 Stats avancées -->
+      <div class="dash-card" id="dashStatsCard">
+        <div class="dash-header">📈 Statistiques</div>
+        <div id="dashExtended">
+          <div class="dash-extended-grid">
+            <div class="dash-extended-item">
+              <div class="dash-extended-label">Taux conversion devis</div>
+              <div class="dash-extended-value" id="dashConvRate">–</div>
+            </div>
+            <div class="dash-extended-item">
+              <div class="dash-extended-label">Meilleur client</div>
+              <div class="dash-extended-value" id="dashTopClient">–</div>
+            </div>
+            <div class="dash-extended-item">
+              <div class="dash-extended-label">Mois le + actif</div>
+              <div class="dash-extended-value" id="dashBusiestMonth">–</div>
+            </div>
+            <div class="dash-extended-item">
+              <div class="dash-extended-label">Délai moyen acceptation</div>
+              <div class="dash-extended-value" id="dashAvgDelay">–</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div> <!-- fin .dashboard-grid -->
 
@@ -219,6 +255,21 @@
     <button type="button" class="btn btn-secondary btn-small"
             onclick="changePlanningWeek(1)">
       Semaine suivante →
+    </button>
+
+    <button type="button" class="btn btn-primary btn-small"
+            id="planningTodayBtn"
+            onclick="goToPlanningToday()"
+            style="display:none;">
+      📅 Aujourd'hui
+    </button>
+    <button type="button" class="btn btn-secondary btn-small no-print"
+            onclick="printPlanningWeek()">
+      🖨️ Imprimer
+    </button>
+    <button type="button" class="btn btn-success btn-small no-print"
+            onclick="sendPlanningRecapWhatsApp()">
+      💬 Récap WhatsApp
     </button>
   </div>
 
@@ -409,9 +460,32 @@
       <button class="btn btn-primary" type="button" onclick="saveCompanySettingsFromForm()">
         💾 Enregistrer les paramètres
       </button>
-     <button class="btn btn-danger" type="button" onclick="resetMicroTVAStatusUI()">
-  🧹 Réinitialiser TVA micro (test)
-</button>
+    </div>
+  </div>
+
+  <!-- 📝 Modèles de messages -->
+  <div class="card">
+    <h2 class="section-title">📝 Modèles de messages</h2>
+    <p style="margin-bottom:14px; color:#666;">
+      Créez des modèles réutilisables pour vos messages WhatsApp / email client.
+    </p>
+
+    <div id="msgTemplatesList" style="margin-bottom:16px;"></div>
+
+    <div style="border:1px solid #ddd; border-radius:8px; padding:14px;">
+      <h4 style="margin-bottom:10px;">➕ Nouveau modèle</h4>
+      <div class="form-group">
+        <label for="newTemplateName">Nom du modèle</label>
+        <input type="text" id="newTemplateName" placeholder="Ex: Relance devis, Confirmation RDV…">
+      </div>
+      <div class="form-group">
+        <label for="newTemplateBody">Contenu du message</label>
+        <textarea id="newTemplateBody" rows="5"
+          placeholder="Utilisez {{client}}, {{montant}}, {{numero}}, {{date}} comme variables…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-small" type="button" onclick="addMsgTemplate()">
+        💾 Ajouter le modèle
+      </button>
     </div>
   </div>
 </section>
@@ -613,6 +687,16 @@
       onchange="onPlanningPopupClientChange()"
       onblur="onPlanningPopupClientChange()"
     >
+    <button
+      id="planningAddClientBtn"
+      type="button"
+      class="btn btn-primary btn-small btn-icon"
+      style="display:none; margin:6px 0 10px;"
+      onclick="savePlanningClientToList()"
+    >
+      <span class="btn-icon-emoji">➕</span>
+      <span>Enregistrer comme client</span>
+    </button>
 
     <label>Adresse</label>
     <input type="text" id="planningPopupAddress">
@@ -1468,9 +1552,8 @@
   <label>Passages hiver (nov → avr)</label>
   <select id="ctPassHiver">
     <option value="0">0 – Sur demande</option>
-    <option value="1" selected>1 passage / mois</option>
+    <option value="1">1 passage / mois</option>
     <option value="2">2 passages / mois</option>
-    <option value="3">3 passages / mois</option>
     <option value="4">4 passages / mois</option>
   </select>
 </div>
@@ -1481,10 +1564,11 @@
     <option value="0">0 – Sur demande</option>
     <option value="1">1 passage / mois</option>
     <option value="2" selected>2 passages / mois</option>
-    <option value="3">3 passages / mois</option>
     <option value="4">4 passages / mois</option>
   </select>
-</div>    </div>
+</div>
+
+    </div>
 
     <div class="row">
       <div class="form-group">
@@ -1716,13 +1800,15 @@
   </div>
 
 
-<div id="renewPopup" class="popup hidden">
-  <h3>Renouvellement du contrat</h3>
-  <p>Souhaites-tu renouveler ce contrat pour une nouvelle période ?</p>
+<div id="renewPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Renouvellement du contrat</h3>
+    <p>Souhaites-tu renouveler ce contrat pour une nouvelle période ?</p>
 
-  <div style="margin-top:15px; display:flex; gap:10px; justify-content:flex-end;">
-    <button class="btn btn-secondary" onclick="closeRenewPopup()">Annuler</button>
-    <button class="btn btn-primary" onclick="confirmRenewPopup()">Renouveler</button>
+    <div class="popup-buttons" style="margin-top:15px;">
+      <button class="btn btn-secondary" onclick="closeRenewPopup()">Annuler</button>
+      <button class="btn btn-primary" onclick="confirmRenewPopup()">Renouveler</button>
+    </div>
   </div>
 </div>
 <div id="contractSchedulePopup" class="popup-overlay hidden">
@@ -1880,6 +1966,13 @@
 
     <p id="sendDocInfo" style="margin-bottom:8px; font-weight:600;"></p>
 
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:10px;">
+      <select id="sendTemplateSelect" style="flex:1;">
+        <option value="">— Utiliser un modèle de message —</option>
+      </select>
+      <button class="btn btn-secondary btn-small" type="button" onclick="applyMsgTemplate()">Appliquer</button>
+    </div>
+
     <label>Message proposé</label>
     <textarea id="sendMessagePreview" rows="7"></textarea>
 
@@ -1896,40 +1989,42 @@
 
   <!-- ================= POPUP RÉSILIATION CONTRAT ================= -->
 
-<div id="resiliationPopup" class="popup hidden">
-  <h3>Résiliation du contrat</h3>
+<div id="resiliationPopup" class="popup-overlay hidden">
+  <div class="popup">
+    <h3>Résiliation du contrat</h3>
 
-<label for="resiliationWho">Qui résilie ?</label>
-  <select id="resiliationWho">
-    <option value="client">Le client</option>
-    <option value="prestataire">AquaClim Prestige</option>
-  </select>
+    <label for="resiliationWho">Qui résilie ?</label>
+    <select id="resiliationWho">
+      <option value="client">Le client</option>
+      <option value="prestataire">AquaClim Prestige</option>
+    </select>
 
-  <label for="resiliationDate" style="margin-top:8px;">Date de réception du courrier recommandé</label>
-  <input
-    type="date"
-    id="resiliationDate"
-  />
-  <p class="resiliation-note">
-    Laisse vide pour utiliser la date d'aujourd'hui.
-  </p>
+    <label for="resiliationDate" style="margin-top:8px;">Date de réception du courrier recommandé</label>
+    <input
+      type="date"
+      id="resiliationDate"
+    />
+    <p class="resiliation-note">
+      Laisse vide pour utiliser la date d'aujourd'hui.
+    </p>
 
-  <label for="resiliationMotif" style="margin-top:8px;">Motif de résiliation</label>
-  <textarea
-    id="resiliationMotif"
-    placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
-    rows="3"
-  ></textarea>
+    <label for="resiliationMotif" style="margin-top:8px;">Motif de résiliation</label>
+    <textarea
+      id="resiliationMotif"
+      placeholder="Ex : Vente du bien, départ, changement de prestataire, impayés répétés…"
+      rows="3"
+    ></textarea>
 
-  <p class="resiliation-note">
-    La résiliation prendra effet après réception du courrier recommandé et émission de la facture de clôture.
-  </p>
+    <p class="resiliation-note">
+      La résiliation prendra effet après réception du courrier recommandé et émission de la facture de clôture.
+    </p>
 
-  <div class="popup-buttons">
-    <button type="button" class="btn btn-secondary" onclick="closeResiliationPopup()">Annuler</button>
-    <button type="button" class="btn btn-danger" onclick="confirmResiliationPopup()">
-      Confirmer la résiliation
-    </button>
+    <div class="popup-buttons">
+      <button type="button" class="btn btn-secondary" onclick="closeResiliationPopup()">Annuler</button>
+      <button type="button" class="btn btn-danger" onclick="confirmResiliationPopup()">
+        Confirmer la résiliation
+      </button>
+    </div>
   </div>
 </div>
   
@@ -1962,12 +2057,12 @@
       <div id="editClientForm" class="hidden" style="margin-top:15px;">
         <h4>Modifier le client</h4>
 
-             <label for="ctStartDate">
+             <label for="editClientName">
  Nom <span class="required-star">*</span>
 </label>
         <input type="text" id="editClientName">
 
-             <label for="ctStartDate">
+             <label for="editClientAddress">
   Adresse <span class="required-star">*</span>
 </label>
         <input type="text" id="editClientAddress">
@@ -1981,6 +2076,52 @@
 <textarea id="editClientPrivateNotes" rows="4"
   placeholder="Ex: Digicode 1234 • Portail à droite • Clés sous le pot…"></textarea>
 
+        <!-- Fiche technique équipements -->
+        <div class="equip-section">
+          <div class="equip-title">❄️ Climatisation</div>
+          <div class="equip-grid">
+            <div class="form-group">
+              <label>Marque</label>
+              <input type="text" id="editEquipClimBrand" placeholder="Ex: Daikin">
+            </div>
+            <div class="form-group">
+              <label>Modèle</label>
+              <input type="text" id="editEquipClimModel" placeholder="Ex: Perfera 2.5kW">
+            </div>
+            <div class="form-group">
+              <label>Nb unités</label>
+              <input type="number" id="editEquipClimUnits" min="0" placeholder="1">
+            </div>
+          </div>
+        </div>
+
+        <div class="equip-section">
+          <div class="equip-title">🏊 Piscine</div>
+          <div class="equip-grid">
+            <div class="form-group">
+              <label>Type</label>
+              <input type="text" id="editEquipPoolType" placeholder="Ex: Coque polyester">
+            </div>
+            <div class="form-group">
+              <label>Volume (m³)</label>
+              <input type="number" id="editEquipPoolVolume" step="0.5" placeholder="Ex: 30">
+            </div>
+            <div class="form-group">
+              <label>Filtration</label>
+              <input type="text" id="editEquipPoolFilter" placeholder="Ex: Sable, cartouche">
+            </div>
+            <div class="form-group">
+              <label>Électrolyseur</label>
+              <input type="text" id="editEquipPoolElec" placeholder="Ex: Astral 30g/h">
+            </div>
+          </div>
+        </div>
+
+        <div class="equip-section">
+          <div class="equip-title">🔧 Notes techniques</div>
+          <textarea id="editEquipNotes" rows="3"
+            placeholder="Spécificités techniques, références pièces, observations…"></textarea>
+        </div>
 
         <div style="margin-top:10px; display:flex; gap:10px;">
           <button class="btn btn-primary btn-small" onclick="saveEditedClient()">💾 Enregistrer</button>
@@ -2012,6 +2153,21 @@
 </div> <!-- #clientsPopup -->
 
 </div> <!-- FIN container -->
+
+<!-- POPUP RECHERCHE GLOBALE -->
+<div id="globalSearchPopup" class="popup-overlay hidden">
+  <div class="popup" style="max-width:620px; width:95%;">
+    <h3>🔍 Recherche globale</h3>
+    <input type="text" id="globalSearchInput"
+           placeholder="Rechercher un client, devis, facture, contrat…"
+           oninput="onGlobalSearchInput()"
+           style="margin-bottom:12px;">
+    <div id="globalSearchResults"></div>
+    <div class="popup-buttons" style="margin-top:14px;">
+      <button class="btn btn-secondary btn-small" type="button" onclick="closeGlobalSearch()">Fermer</button>
+    </div>
+  </div>
+</div>
 
 <!-- POPUP SIGNATURE (UNIQUE) -->
 <div id="signaturePopup" class="popup-overlay hidden">
@@ -2051,6 +2207,27 @@
 </div>
 <div id="toastContainer" class="toast-container"></div>
 
+
+<script>
+(function () {
+  const JOURS = ["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+  const MOIS  = ["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+
+  function tickClock() {
+    var now = new Date();
+    var h = String(now.getHours()).padStart(2, "0");
+    var m = String(now.getMinutes()).padStart(2, "0");
+    var s = String(now.getSeconds()).padStart(2, "0");
+    var timeEl = document.getElementById("headerClockTime");
+    var dateEl = document.getElementById("headerClockDate");
+    if (timeEl) timeEl.textContent = h + ":" + m + ":" + s;
+    if (dateEl) dateEl.textContent = JOURS[now.getDay()] + " " + now.getDate() + " " + MOIS[now.getMonth()] + " " + now.getFullYear();
+  }
+
+  tickClock();
+  setInterval(tickClock, 1000);
+})();
+</script>
 
 <!-- Librairie SignaturePad -->
 <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
