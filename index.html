@@ -547,8 +547,7 @@
       </div>
     </div>
 
-    <div id="rapNextServiceWrap" style="margin-top:10px;">
-      <label>Prochain entretien recommandé</label>
+    <div id="rapNextServiceWrap" style="display:none;">
       <input type="date" id="rapNextService">
     </div>
 
@@ -838,13 +837,13 @@
         <button class="btn btn-danger" onclick="resetTarifs()">🧹 Réinitialiser</button>
       </div>
 
-      <table class="documents-table">
+      <table class="tarifs-table">
         <thead>
           <tr>
-            <th>Prestation</th>
-            <th>Prix Particulier</th>
-            <th>Prix Syndic</th>
-            <th>Actions</th>
+            <th class="tarifs-th-label">Prestation</th>
+            <th class="tarifs-th-price">👤 Particulier</th>
+            <th class="tarifs-th-price">🏢 Syndic / Agence</th>
+            <th class="tarifs-th-action"></th>
           </tr>
         </thead>
         <tbody id="tarifsTableBody"></tbody>
@@ -2134,14 +2133,11 @@
         style="width:100%; padding:8px; margin-bottom:12px; border-radius:6px; border:1px solid #ccc;"
       />
 
-      <!-- 📋 Liste clients -->
+      <!-- 📋 Compteur + Liste clients -->
+      <div id="clientsCount" class="client-count-badge"></div>
       <div id="clientsListContainer" class="client-list-box"></div>
-<!-- Pagination -->
-<div id="clientsPagination" class="clients-pagination">
-  <button class="btn btn-secondary btn-small" type="button" onclick="prevClientsPage()">◀</button>
-  <span id="clientsPageInfo">Page 1 / 1</span>
-  <button class="btn btn-secondary btn-small" type="button" onclick="nextClientsPage()">▶</button>
-</div>
+      <!-- Pagination numérotée -->
+      <div id="clientsPagination" class="clients-pagination"></div>
       <!-- ✏️ Formulaire d’édition -->
       <div id="editClientForm" class="hidden" style="margin-top:15px;">
         <h4>Modifier le client</h4>

@@ -436,20 +436,15 @@ const RAPPORT_TEMPLATES = [
   },
 
   {
-    id: "entretien_piscine",
-    label: "Entretien piscine – visite",
+    id: "piscine_chlore",
+    label: "Entretien piscine – chlore",
     showAnalysis: true,
     sections: [
-      {
-        title: "Type de traitement",
-        items: ["Piscine au chlore", "Piscine au sel"],
-      },
       {
         title: "Préfiltration & skimmers",
         items: [
           "Nettoyage du panier de skimmer",
           "Nettoyage du panier de pompe",
-          "Nettoyage du filtre de skimmer",
           "Contrôle du niveau d’eau",
         ],
       },
@@ -460,7 +455,7 @@ const RAPPORT_TEMPLATES = [
           "Épuisette fond",
           "Brossage des parois",
           "Brossage ligne d’eau",
-          "Passage aspirateur manuel / robot",
+          "Passage aspirateur / robot",
         ],
       },
       {
@@ -470,19 +465,81 @@ const RAPPORT_TEMPLATES = [
           "Contre-lavage du filtre (si sable)",
           "Rinçage filtre",
           "Nettoyage filtre cartouche (si applicable)",
-          "Contrôle absence de fuites hydraulique",
+          "Contrôle absence de fuites hydrauliques",
         ],
       },
       {
-        title: "Traitement & analyse",
+        title: "Analyse & traitement (eau chlorée)",
         items: [
           "Mesure du pH",
-          "Mesure du chlore libre / redox",
+          "Mesure du chlore libre",
+          "Mesure du stabilisant",
+          "Mesure du TAC",
           "Correction du pH si nécessaire",
-          "Correction du désinfectant si nécessaire",
-          "Contrôle du stabilisant (si chlore)",
-          "Contrôle du TAC",
-          "Réglage électrolyseur (si piscine au sel)",
+          "Ajout désinfectant si nécessaire",
+        ],
+      },
+      {
+        title: "Local technique & sécurité",
+        items: [
+          "Contrôle visuel local technique",
+          "Contrôle coffret électrique",
+          "Contrôle programmation filtration",
+          "Contrôle général de sécurité",
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "piscine_sel",
+    label: "Entretien piscine – sel",
+    showAnalysis: true,
+    sections: [
+      {
+        title: "Préfiltration & skimmers",
+        items: [
+          "Nettoyage du panier de skimmer",
+          "Nettoyage du panier de pompe",
+          "Contrôle du niveau d’eau",
+        ],
+      },
+      {
+        title: "Nettoyage du bassin",
+        items: [
+          "Épuisette surface",
+          "Épuisette fond",
+          "Brossage des parois",
+          "Brossage ligne d’eau",
+          "Passage aspirateur / robot",
+        ],
+      },
+      {
+        title: "Filtration",
+        items: [
+          "Contrôle pression manomètre",
+          "Contre-lavage du filtre",
+          "Rinçage filtre",
+          "Contrôle absence de fuites hydrauliques",
+        ],
+      },
+      {
+        title: "Électrolyseur & salinité",
+        items: [
+          "Contrôle état de la cellule",
+          "Nettoyage cellule si nécessaire",
+          "Contrôle taux de salinité",
+          "Contrôle production de chlore (redox)",
+          "Réglage production si nécessaire",
+        ],
+      },
+      {
+        title: "Analyse & traitement",
+        items: [
+          "Mesure du pH",
+          "Mesure du redox / chlore",
+          "Mesure du TAC",
+          "Correction du pH si nécessaire",
         ],
       },
       {
@@ -2328,24 +2385,16 @@ let currentRapportAttachmentsTemp = []; // [{name,type,dataUrl}]
 /* ================== ATTESTATIONS & RAPPORTS ================== */
 
 function showAttestations() {
-  // ===== Onglets =====
-  document
-    .querySelectorAll(".tab-btn")
-    .forEach((b) => b.classList.remove("active"));
+  _hideAllMainViews();
+
+  // Onglets
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   const tabAttest = document.getElementById("tabAttest");
   if (tabAttest) tabAttest.classList.add("active");
 
-  // ===== Vues =====
-  const viewsToHide = ["homeView", "listView", "formView", "contractView"];
-  viewsToHide.forEach((id) => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add("hidden");
-  });
-
+  // Afficher attestationView
   const attestationView = document.getElementById("attestationView");
   if (attestationView) attestationView.classList.remove("hidden");
-  const settingsView = document.getElementById("settingsView");
-  settingsView && settingsView.classList.add("hidden");
 
   // ===== Listes attestations + rapports =====
   if (typeof loadAttestationsList === "function") {
@@ -2359,38 +2408,16 @@ function showAttestations() {
 // ================== VUE PARAMÈTRES ==================
 
 function showSettings() {
-  // onglets
-  const tabHome = document.getElementById("tabHome");
-  const tabDevis = document.getElementById("tabDevis");
-  const tabContrats = document.getElementById("tabContrats");
-  const tabFactures = document.getElementById("tabFactures");
-  const tabAttest = document.getElementById("tabAttest");
-  const tabCA = document.getElementById("tabCA");
+  _hideAllMainViews();
+
+  // Onglets
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   const tabSettings = document.getElementById("tabSettings");
+  if (tabSettings) tabSettings.classList.add("active");
 
-  tabHome && tabHome.classList.remove("active");
-  tabDevis && tabDevis.classList.remove("active");
-  tabContrats && tabContrats.classList.remove("active");
-  tabFactures && tabFactures.classList.remove("active");
-  tabAttest && tabAttest.classList.remove("active");
-  tabCA && tabCA.classList.remove("active");
-  tabSettings && tabSettings.classList.add("active");
-
-  // vues
-  const views = [
-    "homeView",
-    "listView",
-    "formView",
-    "contractView",
-    "attestationView",
-    "settingsView",
-  ];
-  views.forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (id === "settingsView") el.classList.remove("hidden");
-    else el.classList.add("hidden");
-  });
+  // Afficher settingsView
+  const settingsView = document.getElementById("settingsView");
+  if (settingsView) settingsView.classList.remove("hidden");
 
   // remplissage du formulaire
   fillCompanySettingsForm();
@@ -2690,9 +2717,10 @@ function detectRapportTypeFromDevis(devis) {
   if (text.includes('"kind":"depannage_clim"')) return "depannage_clim";
 
 
-  if (text.includes("entretien piscine")) return "entretien_piscine";
-  if (text.includes("piscine sel")) return "entretien_piscine";
-  if (text.includes("chlore")) return "entretien_piscine";
+  if (text.includes('"kind":"piscine_sel"')) return "piscine_sel";
+  if (text.includes('"kind":"piscine_chlore"')) return "piscine_chlore";
+  if (text.includes("piscine sel") || text.includes("sel")) return "piscine_sel";
+  if (text.includes("piscine chlore") || text.includes("chlore")) return "piscine_chlore";
   if (text.includes("traitement choc")) return "traitement_choc";
   if (text.includes("diagnostic filtration")) return "diagnostic_filtration";
 
@@ -3033,8 +3061,8 @@ function updateRapportAnalyseVisibility(typeId) {
   const bloc = document.getElementById("rapportAnalyse");
   if (!bloc) return;
 
-  // On montre l'analyse uniquement pour "entretien_piscine"
-  const show = typeId === "entretien_piscine";
+  // On montre l'analyse pour les entretiens piscine (chlore ou sel)
+  const show = typeId === "piscine_chlore" || typeId === "piscine_sel" || typeId === "traitement_choc";
 
   bloc.style.display = show ? "block" : "none";
 
@@ -3376,54 +3404,115 @@ function filterClientsList() {
   renderClientsList();
 }
 
+// ── Palette avatar ──────────────────────────────────────────
+const _CLIENT_AVATAR_COLORS = [
+  "#1976d2","#388e3c","#f57c00","#7b1fa2",
+  "#c62828","#00838f","#558b2f","#5d4037"
+];
+function _clientAvatarColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) & 0xffff;
+  return _CLIENT_AVATAR_COLORS[h % _CLIENT_AVATAR_COLORS.length];
+}
+function _clientInitials(name) {
+  const p = (name || "?").trim().split(/\s+/);
+  if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
+  return (p[0][0] + p[p.length - 1][0]).toUpperCase();
+}
+
 function renderClientsList() {
   const container = document.getElementById("clientsListContainer");
-  const pageInfoEl = document.getElementById("clientsPageInfo");
+  const countEl   = document.getElementById("clientsCount");
   if (!container) return;
 
   container.innerHTML = "";
 
-  const total = clientsPopupList.length;
+  const total    = clientsPopupList.length;
+  const allTotal = getClients().length;
+
+  if (countEl) {
+    if (total === allTotal) {
+      countEl.textContent = `${total} client${total > 1 ? "s" : ""}`;
+    } else {
+      countEl.textContent = `${total} résultat${total > 1 ? "s" : ""} sur ${allTotal}`;
+    }
+  }
+
   if (total === 0) {
-    container.innerHTML = "<p>Aucun client trouvé.</p>";
-    if (pageInfoEl) pageInfoEl.textContent = "Page 0 / 0";
+    container.innerHTML = `<div class="client-empty">Aucun client trouvé.</div>`;
+    _renderClientsPagination(0, 0);
     return;
   }
 
   const totalPages = Math.max(1, Math.ceil(total / CLIENTS_PER_PAGE));
   if (currentClientPage > totalPages) currentClientPage = totalPages;
 
-  const start = (currentClientPage - 1) * CLIENTS_PER_PAGE;
+  const start     = (currentClientPage - 1) * CLIENTS_PER_PAGE;
   const pageItems = clientsPopupList.slice(start, start + CLIENTS_PER_PAGE);
 
   pageItems.forEach(({ client, index }) => {
-    const item = document.createElement("div");
-    item.className = "client-item";
-    item.innerHTML = `
-  <strong>${client.name}</strong><br>
-  ${client.address || ""}<br>
-  Tel : ${client.phone || "—"}<br>
-  Mail : ${client.email || "—"}<br>
-  <div style="margin-top:6px; display:flex; gap:10px;">
-    <button class="modify-btn" onclick="editClient(${index})">✏️ Modifier</button>
-    <button class="delete-btn" onclick="deleteClientFromList(${index})">🗑️ Supprimer</button>
-  </div>
-`;
+    const initials = _clientInitials(client.name || "?");
+    const color    = _clientAvatarColor(client.name || "");
 
-    item.style.cursor = "pointer";
+    const addrHtml  = client.address
+      ? `<div class="client-card-addr"><span class="client-card-icon">📍</span>${client.address}</div>`
+      : "";
+    const phoneHtml = client.phone
+      ? `<span class="client-card-info"><span class="client-card-icon">📞</span>${client.phone}</span>`
+      : "";
+    const emailHtml = client.email
+      ? `<span class="client-card-info"><span class="client-card-icon">✉️</span>${client.email}</span>`
+      : "";
+    const metaHtml  = (phoneHtml || emailHtml)
+      ? `<div class="client-card-meta">${phoneHtml}${emailHtml}</div>`
+      : "";
+
+    const item = document.createElement("div");
+    item.className = "client-card";
     item.title = "Ouvrir la fiche client";
+    item.innerHTML = `
+      <div class="client-card-avatar" style="background:${color}">${initials}</div>
+      <div class="client-card-body">
+        <div class="client-card-name">${client.name || ""}</div>
+        ${addrHtml}${metaHtml}
+      </div>
+      <div class="client-card-actions">
+        <button class="client-action-btn client-action-edit"   title="Modifier"   onclick="editClient(${index})">✏️</button>
+        <button class="client-action-btn client-action-delete" title="Supprimer"  onclick="deleteClientFromList(${index})">🗑️</button>
+      </div>
+    `;
 
     item.addEventListener("click", (e) => {
-      if (e.target.closest("button")) return; // ne pas ouvrir si clic sur un bouton
+      if (e.target.closest("button")) return;
       openClientSheet(client.name);
     });
 
     container.appendChild(item);
   });
 
-  if (pageInfoEl) {
-    pageInfoEl.textContent = `Page ${currentClientPage} / ${totalPages}`;
+  _renderClientsPagination(currentClientPage, totalPages);
+}
+
+function _renderClientsPagination(current, total) {
+  const pag = document.getElementById("clientsPagination");
+  if (!pag) return;
+  if (total <= 1) { pag.innerHTML = ""; return; }
+
+  let startP = Math.max(1, current - 2);
+  let endP   = Math.min(total, startP + 4);
+  if (endP - startP < 4) startP = Math.max(1, endP - 4);
+
+  let html = `<button class="clients-pag-btn" onclick="prevClientsPage()" ${current === 1 ? "disabled" : ""}>◀</button>`;
+  for (let p = startP; p <= endP; p++) {
+    html += `<button class="clients-pag-btn${p === current ? " active" : ""}" onclick="goToClientPage(${p})">${p}</button>`;
   }
+  html += `<button class="clients-pag-btn" onclick="nextClientsPage()" ${current === total ? "disabled" : ""}>▶</button>`;
+  pag.innerHTML = html;
+}
+
+function goToClientPage(p) {
+  currentClientPage = p;
+  renderClientsList();
 }
 function prevClientsPage() {
   if (currentClientPage > 1) {
@@ -4097,18 +4186,14 @@ function renderCAReport() {
 /* ===== Ouverture / fermeture ===== */
 
 function openCAReport() {
-  // Masque toutes les autres vues
-  ["homeView","devisView","factureView","contractView",
-   "attestationView","settingsView"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add("hidden");
-  });
+  _hideAllMainViews();
 
-  // Onglets : active CA
+  // Onglets
   document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
   const tabCA = document.getElementById("tabCA");
   if (tabCA) tabCA.classList.add("active");
 
+  // Afficher la vue CA
   const overlay = document.getElementById("caReportOverlay");
   if (!overlay) return;
   overlay.classList.remove("hidden");
@@ -4116,7 +4201,6 @@ function openCAReport() {
   initCAYearSelect();
   renderCAReport();
 
-  // Scroll haut de page
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -4983,12 +5067,14 @@ function autoCreateClimAttestationForInvoice(doc) {
 
   const record = {
     id: generateId("ATT"),
+    numero: getNextAttNumber(),
     type: "attestation_clim",
     clientName: name,
     clientAddress: addr,
     date,
     units,
     notes: "",
+    ops: null,
     createdAt: new Date().toISOString(),
     sourceDocId: doc.id || null,
     sourceDocNumber: doc.number || null,
@@ -5800,332 +5886,315 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   }
 
   const doc = new window.jspdf.jsPDF();
+  const blue   = [25, 118, 210];
+  const blueL  = [232, 244, 255];
+  const grey   = [100, 100, 100];
+  const dark   = [30,  30,  30];
+  const M      = 14;          // marge gauche/droite
+  const W      = 210 - M*2;  // largeur utile
+  const PAGE_B = 274;         // bas de page utilisable (mm)
+  const PAGE_T = 18;          // haut de page après saut
+  const company = getCompanySettings();
 
-  // ========= BANDEAU HAUT =========
-  doc.setFillColor(25, 118, 210);
-  doc.rect(0, 0, 210, 28, "F");
+  /* ====================================================
+     HEADER
+  ==================================================== */
+  doc.setFillColor(...blue);
+  doc.rect(0, 0, 210, 26, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.text("AquaClim Prestige", 12, 16);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  doc.text("Entretien & Dépannage – Climatisation & Piscine", 12, 22);
-
-  // Cartouche titre + numéro à droite
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(128, 6, 72, 18, 2, 2, "F");
-  doc.setTextColor(25, 118, 210);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.text("RAPPORT TECHNIQUE", 164, 14, { align: "center" });
-  if (record.numero) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8.5);
-    doc.setTextColor(80, 80, 80);
-    doc.text("N° " + record.numero, 164, 21, { align: "center" });
-  }
-
-  // ========= INFOS SOCIÉTÉ =========
-  doc.setTextColor(60, 60, 60);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  let y = 34;
-  const company = getCompanySettings();
-  doc.text(`${company.legalName} – ${company.address}`, 12, y);
-  y += 5;
-  doc.text(`Tél : ${company.phone} – Email : ${company.email}`, 12, y);
-  // ========= TITRE DOCUMENT =========
-  y += 10;
-  const title = record.typeLabel || "Rapport d’intervention";
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(14);
-  doc.setTextColor(25, 118, 210);
-  doc.text(title, 12, y);
-  y += 6;
-
-  doc.setDrawColor(220);
-  doc.line(12, y, 198, y);
-  y += 8;
-
-  // ========= ENCAR CLIENT / INTERVENTION =========
-  const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
-
-  // Bloc client
-  doc.setFillColor(248, 249, 252);
-  doc.roundedRect(12, y, 90, 30, 2, 2, "F");
-  doc.setDrawColor(225, 228, 234);
-  doc.roundedRect(12, y, 90, 30, 2, 2);
-
-  let yy = y + 7;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(33, 33, 33);
-  doc.text("Client", 16, yy);
-  yy += 5;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  if (record.clientName) {
-    doc.text(record.clientName, 16, yy);
-    yy += 4;
-  }
-  if (record.clientAddress) {
-    const addrLines = doc.splitTextToSize(record.clientAddress, 80);
-    addrLines.forEach((line) => {
-      doc.text(line, 16, yy);
-      yy += 4;
-    });
-  }
-
-  // Bloc intervention
-  doc.setFillColor(248, 249, 252);
-  doc.roundedRect(110, y, 88, 30, 2, 2, "F");
-  doc.setDrawColor(225, 228, 234);
-  doc.roundedRect(110, y, 88, 30, 2, 2);
-
-  yy = y + 7;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  doc.setTextColor(33, 33, 33);
-  doc.text("Intervention", 114, yy);
-  yy += 5;
-
-  doc.setFont("helvetica", "normal");
-  if (frDate) { doc.text("Date : " + frDate, 114, yy); yy += 4; }
-  if (record.typeLabel) { doc.text("Type : " + record.typeLabel, 114, yy); yy += 4; }
-  if (record.equipBrand || record.equipModel) {
-    const equip = [record.equipBrand, record.equipModel].filter(Boolean).join(" – ");
-    const eLines = doc.splitTextToSize("Équip. : " + equip, 82);
-    eLines.forEach(l => { doc.text(l, 114, yy); yy += 4; });
-  }
-
-  y += 42;
-
-  // ========= BLOC ANALYSE DE L’EAU (SI PRÉSENT) =========
-  if (record.analysis && (record.analysis.ph || record.analysis.chlore)) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(25, 118, 210);
-    doc.text("Analyse de l’eau", 12, y);
-    y += 5;
-    doc.setDrawColor(230);
-    doc.line(12, y, 198, y);
-    y += 5;
-
-    doc.setFillColor(249, 250, 252);
-    doc.roundedRect(12, y, 186, 20, 2, 2, "F");
-    doc.setDrawColor(230);
-    doc.roundedRect(12, y, 186, 20, 2, 2);
-
-    let ax = 16;
-    let ay = y + 7;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-
-    if (record.analysis.ph) {
-      doc.text(`pH mesuré : ${record.analysis.ph}`, ax, ay);
-      ay += 5;
-      doc.setTextColor(120, 120, 120);
-      doc.text("Plage recommandée : 7,2 – 7,6", ax, ay);
-      doc.setTextColor(50, 50, 50);
-    }
-
-    if (record.analysis.chlore) {
-      let ax2 = 110;
-      let ay2 = y + 7;
-      doc.setTextColor(50, 50, 50);
-      doc.text(`Chlore libre : ${record.analysis.chlore} mg/L`, ax2, ay2);
-      ay2 += 5;
-      doc.setTextColor(120, 120, 120);
-      doc.text("Plage recommandée : 1,0 – 3,0 mg/L", ax2, ay2);
-      doc.setTextColor(50, 50, 50);
-    }
-
-    y += 26;
-  }
-
-  // ========= CHECKLIST / SECTIONS =========
-  (record.sections || []).forEach((sec) => {
-    if (y > 260) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(25, 118, 210);
-    doc.text(sec.title || "", 12, y);
-    y += 5;
-    doc.setDrawColor(230);
-    doc.line(12, y, 198, y);
-    y += 5;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-
-    (sec.items || []).forEach((itemRaw) => {
-      if (y > 270) { doc.addPage(); y = 20; }
-
-      const isObj    = typeof itemRaw === "object";
-      const txtRaw   = isObj ? itemRaw.text : itemRaw;
-      const checked  = isObj ? itemRaw.checked !== false : true;
-      const clean    = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
-
-      if (checked) {
-        doc.setTextColor(50, 50, 50);
-        doc.setFillColor(25, 118, 210);
-        doc.circle(14, y - 1.5, 1, "F");
-      } else {
-        doc.setTextColor(160, 160, 160);
-        doc.setDrawColor(160, 160, 160);
-        doc.circle(14, y - 1.5, 1);
-      }
-
-      const wrapped = doc.splitTextToSize(clean, 178);
-      wrapped.forEach((line) => { doc.text(line, 18, y); y += 5; });
-      y += 1;
-    });
-
-    y += 3;
-  });
-
-  // ========= REMARQUES =========
-  if (record.notes) {
-    if (y > 260) {
-      doc.addPage();
-      y = 20;
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(25, 118, 210);
-    doc.text("Remarques / anomalies", 12, y);
-    y += 5;
-    doc.setDrawColor(230);
-    doc.line(12, y, 198, y);
-    y += 5;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-
-    const wrapped = doc.splitTextToSize(record.notes, 180);
-    wrapped.forEach((line) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-      doc.text(line, 14, y);
-      y += 5;
-    });
-  }
-  // ========= PHOTOS =========
-  const photos = Array.isArray(record.photos) ? record.photos : [];
-  if (photos.length) {
-    // ✅ Anti-titre orphelin : si titre + 1ère ligne de photos ne tient pas, on saute page AVANT "Photos"
-    const imgH = 58; // (garde la même valeur que plus bas)
-    const titleH = 6; // hauteur du titre "Photos"
-    const rowGap = 6; // marge après une ligne de photos
-    const pageBottom = 275; // ta limite actuelle (tu l'utilises plus bas)
-    const topY = 20;
-
-    const minBlock = titleH + imgH + rowGap; // titre + au moins 1 photo dessous
-
-    if (y + minBlock > pageBottom) {
-      doc.addPage();
-      y = topY;
-    }
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(25, 118, 210);
-    doc.text("Photos", 12, y);
-    y += 6;
-
-    const pageW = 210;
-    const marginX = 12;
-    const gap = 6;
-    const colW = (pageW - marginX * 2 - gap) / 2;
-
-    let col = 0;
-
-    for (const p of photos) {
-      if (!p || !p.dataUrl) continue;
-
-      if (y + imgH > 275) {
-        doc.addPage();
-        y = 20;
-        col = 0;
-      }
-
-      const x = marginX + (col === 0 ? 0 : colW + gap);
-      try {
-        doc.addImage(p.dataUrl, "JPEG", x, y, colW, imgH, undefined, "FAST");
-      } catch (e) {
-        console.error("addImage photo rapport error:", e);
-      }
-
-      col = (col + 1) % 2;
-      if (col === 0) y += imgH + 6;
-    }
-
-    if (col !== 0) y += imgH + 6;
-  }
-
-  // ========= PROCHAIN ENTRETIEN =========
-  const isDepannage = (record.typeId || "").startsWith("depannage");
-  if (record.nextService && !isDepannage) {
-    y += 8;
-    if (y > 258) { doc.addPage(); y = 20; }
-    const frNext = record.nextService.split("-").reverse().join("/");
-    doc.setFillColor(232, 245, 255);
-    doc.setDrawColor(25, 118, 210);
-    doc.roundedRect(12, y - 5, 186, 14, 3, 3, "FD");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(25, 118, 210);
-    doc.text("Prochain entretien recommandé : " + frNext, 105, y + 3, { align: "center" });
-    y += 16;
-  }
-
-  // ========= ZONE SIGNATURE =========
-  if (y < 248) y = 248;
-  doc.setDrawColor(200, 200, 200);
-  doc.setLineWidth(0.3);
-  doc.line(12, y, 80, y);
+  doc.setFontSize(15);
+  doc.text("AquaClim Prestige", M, 13);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
-  doc.setTextColor(100, 100, 100);
-  doc.text("Signature du technicien", 12, y + 4);
+  doc.text("Entretien & Depannage – Climatisation & Piscine", M, 20);
+
+  // Badge titre document
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(132, 4, 64, 18, 2, 2, "F");
+  doc.setTextColor(...blue);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("RAPPORT TECHNIQUE", 164, 11, { align: "center" });
+  if (record.numero) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(80, 80, 80);
+    doc.text("N\xB0 " + record.numero, 164, 18, { align: "center" });
+  }
+
+  /* ====================================================
+     COORDONNÉES SOCIÉTÉ
+  ==================================================== */
+  let y = 32;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...grey);
+  doc.text(company.legalName + " – " + company.address, M, y);
+  y += 4.5;
+  doc.text("Tel : " + company.phone + " – " + company.email, M, y);
+  y += 7;
+
+  /* ====================================================
+     TITRE DU RAPPORT
+  ==================================================== */
+  const title = record.typeLabel || "Rapport d'intervention";
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.setTextColor(...blue);
+  doc.text(title, M, y);
+  y += 5;
+  doc.setDrawColor(220, 230, 245);
+  doc.setLineWidth(0.4);
+  doc.line(M, y, 210 - M, y);
+  y += 7;
+
+  /* ====================================================
+     CARTES CLIENT / INTERVENTION
+  ==================================================== */
+  const cardH = 28;
+  const cardW = (W - 8) / 2;
+
+  // Carte Client
+  doc.setFillColor(247, 250, 253);
+  doc.setDrawColor(220, 230, 245);
+  doc.roundedRect(M, y, cardW, cardH, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...blue);
+  doc.text("CLIENT", M + 4, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...dark);
+  let cy = y + 12;
+  if (record.clientName) {
+    doc.setFont("helvetica", "bold");
+    const cLines = doc.splitTextToSize(record.clientName, cardW - 8);
+    doc.text(cLines, M + 4, cy);
+    cy += cLines.length * 4.5;
+    doc.setFont("helvetica", "normal");
+  }
+  if (record.clientAddress) {
+    doc.setFontSize(8.5);
+    doc.setTextColor(...grey);
+    const aLines = doc.splitTextToSize(record.clientAddress, cardW - 8);
+    doc.text(aLines, M + 4, cy);
+  }
+
+  // Carte Intervention
+  const c2x = M + cardW + 8;
+  doc.setFillColor(247, 250, 253);
+  doc.setDrawColor(220, 230, 245);
+  doc.roundedRect(c2x, y, cardW, cardH, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.setTextColor(...blue);
+  doc.text("INTERVENTION", c2x + 4, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(...dark);
+  let iy = y + 12;
+  const frDate = record.date ? record.date.split("-").reverse().join("/") : "";
+  if (frDate) {
+    doc.text("Date : " + frDate, c2x + 4, iy);
+    iy += 4.5;
+  }
+  if (record.equipBrand || record.equipModel) {
+    const equip = [record.equipBrand, record.equipModel].filter(Boolean).join(" – ");
+    doc.setFontSize(8.5);
+    const eLines = doc.splitTextToSize("Equip. : " + equip, cardW - 8);
+    doc.text(eLines, c2x + 4, iy);
+  }
+
+  y += cardH + 8;
+
+  /* ====================================================
+     BLOC ANALYSE EAU (piscine)
+  ==================================================== */
+  const showAnalysis = record.analysis && (record.analysis.ph || record.analysis.chlore);
+  if (showAnalysis) {
+    doc.setFillColor(...blueL);
+    doc.setDrawColor(...blue);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(M, y, W, 13, 2, 2, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8.5);
+    doc.setTextColor(...blue);
+    doc.text("Analyse de l'eau", M + 4, y + 5.5);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...dark);
+    let ax = M + 40;
+    if (record.analysis.ph) {
+      doc.text("pH : " + record.analysis.ph, ax, y + 5.5);
+      doc.setTextColor(...grey);
+      doc.setFontSize(7.5);
+      doc.text("(ref 7,2-7,6)", ax + 14, y + 5.5);
+      doc.setTextColor(...dark);
+      doc.setFontSize(8.5);
+      ax += 50;
+    }
+    if (record.analysis.chlore) {
+      doc.text("Chlore : " + record.analysis.chlore + " mg/L", ax, y + 5.5);
+      doc.setTextColor(...grey);
+      doc.setFontSize(7.5);
+      doc.text("(ref 1,0-3,0)", ax + 28, y + 5.5);
+    }
+    y += 18;
+  }
+
+  /* ====================================================
+     SECTIONS CHECKLIST
+  ==================================================== */
+  const ITEM_H  = 5.0;   // hauteur par ligne d'item
+  const SEC_H   = 15;    // hauteur barre section (8) + espace avant 1er item (7)
+
+  (record.sections || []).forEach((sec) => {
+    const items = sec.items || [];
+
+    // Hauteur estimée de la section entière (header + tous les items)
+    const secTotalH = SEC_H + items.length * ITEM_H;
+    // Hauteur minimale pour ne pas laisser le header seul en bas
+    // (header + au moins 2 items, ou la section entière si elle est petite)
+    const minH = SEC_H + Math.min(items.length, 2) * ITEM_H;
+
+    if (y + minH > PAGE_B) {
+      // Pas assez de place même pour le header + 2 items → saut de page
+      doc.addPage();
+      y = PAGE_T;
+    } else if (y + secTotalH <= PAGE_B) {
+      // La section entière tient : ne rien faire
+    }
+    // Sinon : la section est longue, on la laisse se couper entre items
+
+    // Barre de section — bleu foncé + texte blanc
+    doc.setFillColor(...blue);
+    doc.setDrawColor(...blue);
+    doc.roundedRect(M, y, W, 8, 1.5, 1.5, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text(sec.title || "", M + 4, y + 5.5);
+    y += SEC_H;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+
+    items.forEach((itemRaw, idx) => {
+      // Saut de page entre items : on garde au moins 1 item suivant sur la même page
+      const isLast = idx === items.length - 1;
+      const spaceNeeded = isLast ? ITEM_H : ITEM_H * 2;
+      if (y + spaceNeeded > PAGE_B) { doc.addPage(); y = PAGE_T; }
+
+      const isObj   = typeof itemRaw === "object";
+      const txtRaw  = isObj ? itemRaw.text : itemRaw;
+      const checked = isObj ? itemRaw.checked !== false : true;
+      const clean   = (txtRaw || "").replace(/^[•●\-–]\s*/, "");
+
+      _pdfDrawCheckbox(doc, M + 1, y, checked);
+      if (checked) { doc.setTextColor(...dark); } else { doc.setTextColor(160, 160, 160); }
+
+      const wrapped = doc.splitTextToSize(clean, W - 12);
+      doc.text(wrapped, M + 8, y);
+      y += wrapped.length * ITEM_H;
+    });
+
+    y += 3; // espace inter-sections
+  });
+
+  /* ====================================================
+     REMARQUES
+  ==================================================== */
+  if (record.notes && record.notes.trim()) {
+    if (y > 255) { doc.addPage(); y = 18; }
+
+    doc.setFillColor(...blue);
+    doc.setDrawColor(...blue);
+    doc.roundedRect(M, y, W, 8, 1.5, 1.5, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Remarques / anomalies", M + 4, y + 5.5);
+    y += 15;
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(...dark);
+    const wrapped = doc.splitTextToSize(record.notes, W);
+    wrapped.forEach((line) => {
+      if (y > 272) { doc.addPage(); y = 18; }
+      doc.text(line, M, y);
+      y += 5;
+    });
+    y += 3;
+  }
+
+  /* ====================================================
+     PHOTOS
+  ==================================================== */
+  const photos = Array.isArray(record.photos) ? record.photos : [];
+  if (photos.length) {
+    const imgH = 56;
+    const gap  = 6;
+    const colW = (W - gap) / 2;
+    if (y + imgH + 10 > 275) { doc.addPage(); y = 18; }
+
+    doc.setFillColor(...blue);
+    doc.setDrawColor(...blue);
+    doc.roundedRect(M, y, W, 8, 1.5, 1.5, "FD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Photos", M + 4, y + 5.5);
+    y += 15;
+
+    let col = 0;
+    for (const p of photos) {
+      if (!p || !p.dataUrl) continue;
+      if (y + imgH > 275) { doc.addPage(); y = 18; col = 0; }
+      const x = M + (col === 0 ? 0 : colW + gap);
+      try { doc.addImage(p.dataUrl, "JPEG", x, y, colW, imgH, undefined, "FAST"); } catch(e) {}
+      col = (col + 1) % 2;
+      if (col === 0) y += imgH + 4;
+    }
+    if (col !== 0) y += imgH + 4;
+  }
+
+  /* ====================================================
+     ZONE SIGNATURE
+  ==================================================== */
+  // Si on est encore loin du bas, on colle la signature après le contenu
+  // Si on est trop proche du bas, on saute une page
+  if (y + 25 > PAGE_B) { doc.addPage(); y = PAGE_T; }
+  if (y < 248) y = 248;
+  doc.setDrawColor(210, 210, 210);
+  doc.setLineWidth(0.3);
+  doc.line(M, y, M + 65, y);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...grey);
+  doc.text("Signature du technicien", M, y + 4.5);
 
   const rapSig = localStorage.getItem("companySignature");
   if (rapSig) {
-    try { doc.addImage(rapSig, "PNG", 12, y - 14, 50, 14); } catch(e) {}
+    try { doc.addImage(rapSig, "PNG", M, y - 14, 50, 14); } catch(e) {}
   }
 
   const dateSign = record.date ? record.date.split("-").reverse().join("/") : new Date().toLocaleDateString("fr-FR");
-  doc.text("Fait le " + dateSign, 12, y + 9);
+  doc.text("Fait le " + dateSign, M, y + 9);
 
-  // ========= PIED =========
-  const co = typeof getCompanySettings === "function" ? getCompanySettings() : {};
+  /* ====================================================
+     PIED DE PAGE
+  ==================================================== */
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  doc.setTextColor(140, 140, 140);
+  doc.setFontSize(7.5);
+  doc.setTextColor(160, 160, 160);
   doc.text(
-    `${co.legalName || "AquaClim Prestige"} – SIRET ${co.siret || "XXXXXXXXXXXXX"} – Entretien & Dépannage climatisation / piscine`,
+    (company.legalName || "AquaClim Prestige") + " – SIRET " + (company.siret || "XXXXXXXXXXXXX"),
     105, 287, { align: "center" }
   );
 
-  const fileName =
-    "rapport-" +
-    (record.clientName
-      ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_")
-      : "intervention") +
-    ".pdf";
+  const fileName = "rapport-" + (record.clientName ? record.clientName.replace(/[^a-z0-9\-]+/gi, "_") : "intervention") + ".pdf";
 
   if (mode === "download") {
     doc.save(fileName);
@@ -6140,6 +6209,7 @@ openPdfViewer(url);
 
   }
 }
+
 
 function openRapportPreview(rapportId) {
   const list = getAllRapports();
@@ -10050,13 +10120,42 @@ function loadAttestationsList() {
   const tbody = document.getElementById("attestationsTableBody");
   if (!tbody) return;
 
-  const list = getAllAttestations()
+  let list = getAllAttestations()
     .slice()
     .sort((a, b) => {
       const ad = a.date || "";
       const bd = b.date || "";
       return ad.localeCompare(bd);
     });
+
+  // ── Migration : assign ATT numbers to old attestations that lack one ──
+  const needsNumber = list.filter(a => !a.numero);
+  if (needsNumber.length > 0) {
+    // Collect already-used ATT numbers so we don't collide
+    const usedNumbers = new Set(list.filter(a => a.numero).map(a => a.numero));
+    // Assign sequential numbers per year (use date year if available, else current year)
+    // Build a counter per year
+    const yearCounters = {};
+    usedNumbers.forEach(n => {
+      const m = n.match(/ATT-(\d{4})-(\d+)/);
+      if (m) {
+        const y = +m[1], seq = +m[2];
+        yearCounters[y] = Math.max(yearCounters[y] || 0, seq);
+      }
+    });
+    needsNumber.forEach(att => {
+      const y = att.date ? +att.date.slice(0, 4) : new Date().getFullYear();
+      yearCounters[y] = (yearCounters[y] || 0) + 1;
+      att.numero = `ATT-${y}-${String(yearCounters[y]).padStart(3, "0")}`;
+    });
+    saveAttestations(list);
+    // Sync migrated records to Firestore if online
+    if (db && navigator.onLine) {
+      needsNumber.forEach(att => {
+        db.collection("attestations").doc(att.id).set(att, { merge: true }).catch(() => {});
+      });
+    }
+  }
 
   tbody.innerHTML = "";
 
@@ -10078,8 +10177,11 @@ function loadAttestationsList() {
     const name   = escapeHtml(att.clientName || "");
     const addr   = escapeHtml(att.clientAddress || "");
     const id     = escapeHtml(att.id);
+    const factureLink = att.sourceDocNumber
+      ? `<br><span style="font-size:11px;color:#1565c0;font-weight:500;">→ ${escapeHtml(att.sourceDocNumber)}</span>`
+      : "";
     return `<tr>
-      <td><strong>${numero}</strong></td>
+      <td><strong>${numero}</strong>${factureLink}</td>
       <td>${frDate}</td>
       <td>${name}</td>
       <td>${addr}</td>
@@ -11739,59 +11841,78 @@ function openTarifsPanel() {
   if (isHidden) {
     panel.classList.remove("hidden");
     panel.style.display = "block";
+    // Masquer le tableau des devis/factures pendant l'édition des tarifs
+    const docsCard = document.getElementById("documentsCard");
+    if (docsCard) docsCard.classList.add("hidden");
 
     tbody.innerHTML = "";
     const custom = getCustomPrices();
 
-    PRESTATION_TEMPLATES.forEach((t, idx) => {
-      // ⛔ On ignore Produits & Fournitures dans le tableau des tarifs
-      if (
-        !t ||
-        t._deleted ||
-        !t.kind ||
-        t.kind === "produits" ||
-        t.kind === "fournitures"
-      ) {
-        return;
-      }
+    // Catégories pour les séparateurs visuels
+    const TARIF_CATEGORIES = [
+      { label: "❄️ Climatisation",     icon: "❄️", kinds: ["entretien_clim","depannage_clim"] },
+      { label: "🏊 Piscine",           icon: "🏊", kinds: ["piscine_chlore","piscine_sel","hivernage_piscine","remise_service_piscine","traitement_choc","changement_sable","remplacement_roulement","remplacement_pompe_mo","remplacement_cellule_mo","nettoyage_local","depannage_piscine"] },
+      { label: "🛁 Jacuzzi / Spa",     icon: "🛁", kinds: ["entretien_jacuzzi","vidange_jacuzzi","depannage_jacuzzi"] },
+      { label: "🔧 Divers",            icon: "🔧", kinds: ["deplacement"] },
+    ];
 
+    const eligible = PRESTATION_TEMPLATES.filter(t =>
+      t && !t._deleted && t.kind &&
+      t.kind !== "produits" && t.kind !== "fournitures" && t.kind !== ""
+    );
+
+    // Construire un Map kind → template pour un accès rapide
+    const tmplByKind = {};
+    eligible.forEach(t => tmplByKind[t.kind] = t);
+
+    // Kinds déjà affichés (pour les custom en fin de liste)
+    const displayed = new Set();
+
+    const addSeparator = (label) => {
+      const tr = document.createElement("tr");
+      tr.className = "tarif-category-row";
+      tr.innerHTML = `<td colspan="4" class="tarif-category-label">${label}</td>`;
+      tbody.appendChild(tr);
+    };
+
+    const addRow = (t) => {
+      displayed.add(t.kind);
       const keyPart = t.kind + "_particulier";
-      const keySyn = t.kind + "_syndic";
-
-      const valPart =
-        custom[keyPart] != null ? custom[keyPart] : (t.priceParticulier ?? "");
-      const valSyn =
-        custom[keySyn] != null ? custom[keySyn] : (t.priceSyndic ?? "");
-
-      const isCustom = t.kind.indexOf("custom_") === 0;
-
-      const deleteCellHtml = isCustom
-        ? `<td class="tarif-delete-cell">
-       <button
-         type="button"
-         class="btn btn-danger btn-small date-remove-btn no-print"
-         onclick="deleteCustomPrestation('${t.kind}')"
-         title="Supprimer cette prestation"
-       >
-         ✖
-       </button>
-     </td>`
-        : `<td></td>`;
+      const keySyn  = t.kind + "_syndic";
+      const valPart = custom[keyPart] != null ? custom[keyPart] : (t.priceParticulier ?? "");
+      const valSyn  = custom[keySyn]  != null ? custom[keySyn]  : (t.priceSyndic ?? "");
+      const isCustom = t.kind.startsWith("custom_");
 
       const tr = document.createElement("tr");
       tr.innerHTML =
         `<td class="tarif-label-cell" onclick="toggleDescEditor('${t.kind}')">` +
         `<span class="tarif-label-text">${t.label}</span>` +
-        `<span class="tarif-desc-icon" title="Afficher le texte détaillé">📝</span>` +
+        `<span class="tarif-desc-icon" title="Modifier le texte du devis">📝</span>` +
         `</td>` +
-        `<td><input type="number" step="0.01" class="tarif-part" ` +
-        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"></td>` +
-        `<td><input type="number" step="0.01" class="tarif-syn" ` +
-        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"></td>` +
-        deleteCellHtml;
-
+        `<td><div class="tarif-price-wrap"><input type="number" step="0.01" class="tarif-part" ` +
+        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="particulier" value="${valPart}"><span class="tarif-euro">€</span></div></td>` +
+        `<td><div class="tarif-price-wrap"><input type="number" step="0.01" class="tarif-syn" ` +
+        `oninput="syncTarifRow(this)" data-kind="${t.kind}" data-type="syndic" value="${valSyn}"><span class="tarif-euro">€</span></div></td>` +
+        (isCustom
+          ? `<td class="tarif-delete-cell"><button type="button" class="tarif-del-btn no-print" onclick="deleteCustomPrestation('${t.kind}')" title="Supprimer">✕</button></td>`
+          : `<td></td>`);
       tbody.appendChild(tr);
+    };
+
+    // Afficher par catégorie
+    TARIF_CATEGORIES.forEach(cat => {
+      const items = cat.kinds.map(k => tmplByKind[k]).filter(Boolean);
+      if (items.length === 0) return;
+      addSeparator(cat.label);
+      items.forEach(addRow);
     });
+
+    // Custom prestations en fin
+    const customs = eligible.filter(t => t.kind.startsWith("custom_") && !displayed.has(t.kind));
+    if (customs.length > 0) {
+      addSeparator("⭐ Prestations personnalisées");
+      customs.forEach(addRow);
+    }
 
     document.querySelectorAll(".tarifs-button").forEach((btn) => {
       btn.textContent = "⬆️ Revenir aux prestations";
@@ -11810,6 +11931,9 @@ function resetTarifsPanel() {
 
   panel.classList.add("hidden");
   panel.style.display = "";
+  // Réafficher le tableau des devis/factures
+  const docsCard = document.getElementById("documentsCard");
+  if (docsCard) docsCard.classList.remove("hidden");
   document.querySelectorAll(".tarifs-button").forEach((btn) => {
     btn.textContent = "📋 Prestations";
   });
@@ -13655,89 +13779,52 @@ function hideAllSections() {
    ACCUEIL / MENU PRINCIPAL
 ============================ */
 
-function showHome() {
-  hideHealthCardsEverywhere();
-  const caOverlay = document.getElementById("caReportOverlay");
-  if (caOverlay) caOverlay.classList.add("hidden");
-  const tabHome = document.getElementById("tabHome");
-  const tabDevis = document.getElementById("tabDevis");
-  const tabContrats = document.getElementById("tabContrats");
-  const tabFactures = document.getElementById("tabFactures");
-  const tabAttest = document.getElementById("tabAttest");
-  const tabCA = document.getElementById("tabCA");
-   const tabSettings = document.getElementById("tabSettings"); 
+/**
+ * Masque TOUTES les vues principales en une seule fois.
+ * À appeler en premier dans chaque fonction de navigation.
+ */
+function _hideAllMainViews() {
+  ["homeView","listView","formView","contractView",
+   "attestationView","settingsView","caReportOverlay"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("hidden");
+  });
+  // Aussi masquer le tarifsPanel si ouvert
+  const tp = document.getElementById("tarifsPanel");
+  if (tp) { tp.classList.add("hidden"); tp.style.display = ""; }
+  // Réafficher documentsCard si tarifsPanel était ouvert
+  const dc = document.getElementById("documentsCard");
+  if (dc) dc.classList.remove("hidden");
+}
 
-  const homeView = document.getElementById("homeView");
-  const listView = document.getElementById("listView");
-  const formView = document.getElementById("formView");
-  const contractView = document.getElementById("contractView");
-  const attestationView = document.getElementById("attestationView");
-  const settingsView = document.getElementById("settingsView");
-  settingsView && settingsView.classList.add("hidden");
+function showHome() {
+  _hideAllMainViews();
+  hideHealthCardsEverywhere();
 
   // Onglets
-  tabHome && tabHome.classList.add("active");
-  tabDevis && tabDevis.classList.remove("active");
-  tabContrats && tabContrats.classList.remove("active");
-  tabFactures && tabFactures.classList.remove("active");
-  tabAttest && tabAttest.classList.remove("active");
-  tabCA && tabCA.classList.remove("active");
-  tabSettings && tabSettings.classList.remove("active");
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  const tabHome = document.getElementById("tabHome");
+  if (tabHome) tabHome.classList.add("active");
 
-  // Vues
-  homeView && homeView.classList.remove("hidden");
-  listView && listView.classList.add("hidden");
-  formView && formView.classList.add("hidden");
-  contractView && contractView.classList.add("hidden");
-  attestationView && attestationView.classList.add("hidden");
+  // Afficher uniquement homeView
+  const homeView = document.getElementById("homeView");
+  if (homeView) homeView.classList.remove("hidden");
 
   refreshHomeStats();
 }
 
 function openFromHome(type) {
+  _hideAllMainViews();
+
   // Onglets
-  const tabHome = document.getElementById("tabHome");
-  const tabDevis = document.getElementById("tabDevis");
-  const tabContrats = document.getElementById("tabContrats");
-  const tabFactures = document.getElementById("tabFactures");
-  const tabAttest = document.getElementById("tabAttest");
-  const tabCA = document.getElementById("tabCA");
-    const tabSettings = document.getElementById("tabSettings");
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  if (type === "devis")   { const t = document.getElementById("tabDevis");   if (t) t.classList.add("active"); }
+  if (type === "contrat") { const t = document.getElementById("tabContrats"); if (t) t.classList.add("active"); }
+  if (type === "facture") { const t = document.getElementById("tabFactures"); if (t) t.classList.add("active"); }
 
-  // On quitte l’accueil et les attestations
-  tabHome && tabHome.classList.remove("active");
-  tabAttest && tabAttest.classList.remove("active");
-  tabCA && tabCA.classList.remove("active");
-  tabSettings && tabSettings.classList.remove("active");
-
-  if (type === "devis") {
-    tabDevis && tabDevis.classList.add("active");
-    tabContrats && tabContrats.classList.remove("active");
-    tabFactures && tabFactures.classList.remove("active");
-  } else if (type === "contrat") {
-    tabContrats && tabContrats.classList.add("active");
-    tabDevis && tabDevis.classList.remove("active");
-    tabFactures && tabFactures.classList.remove("active");
-  } else if (type === "facture") {
-    tabFactures && tabFactures.classList.add("active");
-    tabDevis && tabDevis.classList.remove("active");
-    tabContrats && tabContrats.classList.remove("active");
-  }
-
-  const homeView = document.getElementById("homeView");
+  // Afficher la liste
   const listView = document.getElementById("listView");
-  const formView = document.getElementById("formView");
-  const contractView = document.getElementById("contractView");
-  const attestationView = document.getElementById("attestationView");
-  const settingsView = document.getElementById("settingsView");
-
-  // On affiche la liste (devis/factures/contrats)
-  homeView && homeView.classList.add("hidden");
-  attestationView && attestationView.classList.add("hidden");
-  listView && listView.classList.remove("hidden");
-  formView && formView.classList.add("hidden");
-  contractView && contractView.classList.add("hidden");
-  settingsView && settingsView.classList.add("hidden");
+  if (listView) listView.classList.remove("hidden");
 
   // logique existante
   if (typeof switchListType === "function") {

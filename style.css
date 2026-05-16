@@ -545,29 +545,160 @@ textarea {
 .client-list-box {
     max-height: 400px;
     overflow-y: auto;
-    padding: 10px;
     border: 1px solid #ddd;
-    border-radius: 8px;
-    background: #fafafa;
+    border-radius: 10px;
+    background: #ffffff;
+    padding: 4px 0;
 }
 
+/* Compteur clients */
+.client-count-badge {
+    font-size: 12px;
+    color: #888;
+    font-weight: 500;
+    margin-bottom: 6px;
+    padding-left: 2px;
+}
+
+/* ── Nouvelle carte client ── */
+.client-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+.client-card:last-child { border-bottom: none; }
+.client-card:hover { background: #f0f7ff; }
+
+.client-card-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+
+.client-card-body {
+    flex: 1;
+    min-width: 0;
+}
+.client-card-name {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1a1a2e;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.client-card-addr {
+    font-size: 12px;
+    color: #666;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.client-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 3px;
+}
+.client-card-info {
+    font-size: 12px;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+.client-card-icon {
+    font-size: 11px;
+    line-height: 1;
+}
+
+.client-card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    flex-shrink: 0;
+}
+.client-action-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 15px;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: background 0.12s;
+    line-height: 1;
+}
+.client-action-edit:hover   { background: #e3f2fd; }
+.client-action-delete:hover { background: #ffebee; }
+
+/* Message vide */
+.client-empty {
+    padding: 24px;
+    text-align: center;
+    color: #aaa;
+    font-size: 14px;
+}
+
+/* ── Pagination numérotée ── */
+.clients-pagination {
+    margin: 8px 0 2px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: wrap;
+    min-height: 32px;
+}
+.clients-pag-btn {
+    border: 1px solid #ddd;
+    background: #fff;
+    color: #444;
+    padding: 5px 11px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.12s;
+    line-height: 1.4;
+}
+.clients-pag-btn:hover:not(:disabled) {
+    background: #e8f0fe;
+    border-color: #1976d2;
+    color: #1976d2;
+}
+.clients-pag-btn.active {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+    font-weight: 700;
+}
+.clients-pag-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Ancien .client-item gardé pour compatibilité */
 .client-item {
     padding: 10px;
     border-bottom: 1px solid #eee;
 }
-
-.client-item:last-child {
-    border-bottom: none;
-}
-
-.clients-pagination {
-    margin: 8px 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 8px;
-    font-size: 13px;
-}
+.client-item:last-child { border-bottom: none; }
 
 /* Bloc client pour l'impression */
 .print-client-block h3 {
@@ -886,10 +1017,141 @@ textarea {
     color: #999;
 }
 
-/* Panel tarifs */
-#tarifsPanel table.documents-table th,
-#tarifsPanel table.documents-table td {
+/* ══════════════════════════════════════
+   Panel Tarifs – design complet
+══════════════════════════════════════ */
+#tarifsPanel {
+    border-radius: 12px;
+}
+#tarifsPanel h2 {
+    font-size: 18px;
+    color: #1a1a2e;
+    margin-bottom: 14px;
+}
+
+/* Table dédiée tarifs */
+.tarifs-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    font-size: 13px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #dde6f0;
+}
+.tarifs-table th {
+    background: #1a74d9;
+    color: #fff;
+    padding: 11px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.2px;
+    text-align: left;
+}
+.tarifs-th-label  { width: 42%; }
+.tarifs-th-price  { width: 24%; }
+.tarifs-th-action { width: 6%; }
+
+/* Ligne séparateur de catégorie */
+.tarif-category-row td {
+    background: #f0f5fb;
+    border-top: 2px solid #dde6f0;
+    border-bottom: 1px solid #dde6f0;
+    padding: 7px 14px;
+}
+.tarif-category-label {
     font-size: 12px;
+    font-weight: 700;
+    color: #1565c0;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+/* Lignes normales */
+.tarifs-table tbody tr:not(.tarif-category-row) {
+    border-bottom: 1px solid #edf2f7;
+    transition: background 0.12s;
+}
+.tarifs-table tbody tr:not(.tarif-category-row):hover {
+    background: #f0f7ff;
+}
+.tarifs-table td {
+    padding: 9px 14px;
+    vertical-align: middle;
+}
+
+/* Label + icône 📝 */
+.tarif-label-cell {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.tarif-label-text {
+    font-weight: 500;
+    color: #1a1a2e;
+    transition: color 0.12s;
+}
+.tarif-label-cell:hover .tarif-label-text {
+    color: #1976d2;
+    text-decoration: underline;
+}
+.tarif-desc-icon {
+    font-size: 13px;
+    opacity: 0.4;
+    transition: transform 0.15s, opacity 0.15s;
+}
+.tarif-label-cell:hover .tarif-desc-icon {
+    opacity: 1;
+    transform: translateY(-1px) rotate(-5deg);
+}
+
+/* Input avec € */
+.tarif-price-wrap {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 140px;
+}
+.tarif-price-wrap input[type="number"] {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1.5px solid #d0dbe8;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    background: #fff;
+    color: #1a1a2e;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    min-width: 0;
+    width: 90px;
+    text-align: right;
+}
+.tarif-price-wrap input[type="number"]:focus {
+    border-color: #1976d2;
+    box-shadow: 0 0 0 3px rgba(25,118,210,0.12);
+    outline: none;
+}
+.tarif-euro {
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+/* Bouton supprimer custom */
+.tarif-del-btn {
+    border: none;
+    background: transparent;
+    color: #c62828;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 7px;
+    border-radius: 6px;
+    transition: background 0.12s;
+}
+.tarif-del-btn:hover {
+    background: #ffebee;
 }
 
 .tarifs-intro {
@@ -906,33 +1168,7 @@ textarea {
 }
 
 .tarifs-actions-top {
-    margin-bottom: 10px;
-}
-
-.tarif-label-cell {
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.tarif-label-text {
-    text-decoration: none;
-}
-
-.tarif-label-cell:hover .tarif-label-text {
-    text-decoration: underline;
-}
-
-.tarif-desc-icon {
-    font-size: 14px;
-    opacity: 0.7;
-    transition: transform 0.15s ease, opacity 0.15s ease;
-}
-
-.tarif-label-cell:hover .tarif-desc-icon {
-    opacity: 1;
-    transform: translateY(-1px) rotate(-5deg);
+    margin-bottom: 14px;
 }
 
 /* =========================================================
@@ -4092,6 +4328,43 @@ body.dark-mode .documents-table tbody tr:hover {
 body.dark-mode .health-table th { background: #252540; color: #9ab0cc; }
 body.dark-mode .health-table td { color: #d0ddf0; border-bottom-color: #2a2a45; }
 
+/* Dark mode tarifs panel */
+body.dark-mode .tarifs-table {
+  background: #141428;
+  border-color: #2a2a45;
+}
+body.dark-mode .tarifs-table th {
+  background: #1a3a6a;
+}
+body.dark-mode .tarifs-table tbody tr:not(.tarif-category-row) {
+  border-bottom-color: #2a2a45;
+}
+body.dark-mode .tarifs-table tbody tr:not(.tarif-category-row):hover {
+  background: #1e2a40;
+}
+body.dark-mode .tarifs-table td {
+  color: #d0ddf0;
+}
+body.dark-mode .tarif-category-row td {
+  background: #1a1a38;
+  border-color: #2a2a55;
+}
+body.dark-mode .tarif-category-label { color: #5b9ee1; }
+body.dark-mode .tarif-label-text { color: #d0ddf0; }
+body.dark-mode .tarif-label-cell:hover .tarif-label-text { color: #5b9ee1; }
+body.dark-mode .tarif-price-wrap input[type="number"] {
+  background: #1a1a2e;
+  border-color: #3a3a5c;
+  color: #d0ddf0;
+}
+body.dark-mode .tarif-price-wrap input[type="number"]:focus {
+  border-color: #5b9ee1;
+  box-shadow: 0 0 0 3px rgba(91,158,225,0.15);
+}
+body.dark-mode .tarif-euro { color: #7a8aaa; }
+body.dark-mode .tarif-del-btn { color: #ef9a9a; }
+body.dark-mode .tarif-del-btn:hover { background: #3a1a1a; }
+
 /* Ligne de prestation */
 body.dark-mode .prestation-line { background: #252540; border-color: #3a3a5c; }
 body.dark-mode .prestation-line label { color: #7788aa; }
@@ -4101,6 +4374,16 @@ body.dark-mode .totals td { color: #d0ddf0; }
 /* Clients */
 body.dark-mode .client-item { border-bottom-color: #2a2a45; color: #d0ddf0; }
 body.dark-mode .client-list-box { background: #141428; border-color: #3a3a5c; }
+body.dark-mode .client-card { border-bottom-color: #2a2a45; }
+body.dark-mode .client-card:hover { background: #1e2a40; }
+body.dark-mode .client-card-name { color: #d0ddf0; }
+body.dark-mode .client-card-addr,
+body.dark-mode .client-card-info { color: #8a9abb; }
+body.dark-mode .client-count-badge { color: #6a7a9a; }
+body.dark-mode .clients-pag-btn { background: #1a1a2e; border-color: #3a3a5c; color: #9ab0cc; }
+body.dark-mode .clients-pag-btn:hover:not(:disabled) { background: #1e2a40; border-color: #5b9ee1; color: #5b9ee1; }
+body.dark-mode .clients-pag-btn.active { background: #1976d2; color: #fff; border-color: #1976d2; }
+body.dark-mode .client-empty { color: #4a5a7a; }
 
 /* Planning */
 body.dark-mode .planning-details-entry { background: #252540; border-color: #3a3a5c; }
