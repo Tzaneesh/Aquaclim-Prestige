@@ -4786,15 +4786,124 @@ body.dark-mode .dash-extended-value { color: #5b9ee1; }
   /* ── 7. Formulaire devis/facture ── */
   .form-row-2col { grid-template-columns: 1fr !important; }
 
-  /* ── 8. Documents table → card style sur mobile ── */
-  .documents-table { display: none !important; }
-  .mobile-doc-list  { display: block !important; }
+  /* ── 8. Documents : table masquée, cartes mobiles affichées ── */
+  .documents-table          { display: none !important; }
+  #mobileDocList            { display: block !important; }
+
+  /* ── Carte document mobile ── */
+  .mdoc-card {
+    background: #fff;
+    border: 1px solid #e2ecf8;
+    border-radius: 14px;
+    padding: 14px 14px 10px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 6px rgba(25,118,210,0.06);
+    cursor: pointer;
+    transition: box-shadow .15s;
+  }
+  .mdoc-card:active { box-shadow: 0 3px 14px rgba(25,118,210,0.14); }
+  .mdoc-top {
+    display: flex; align-items: flex-start;
+    justify-content: space-between; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .mdoc-num {
+    font-weight: 700; font-size: 13px; color: #1a1a2e;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .mdoc-amount {
+    font-weight: 800; font-size: 15px; color: #1976d2;
+    white-space: nowrap;
+  }
+  .mdoc-client {
+    font-size: 13px; font-weight: 600; color: #2d3a4e;
+    margin-bottom: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .mdoc-meta {
+    display: flex; align-items: center;
+    gap: 10px; flex-wrap: wrap;
+    font-size: 11px; color: #8a9ab0;
+    margin-bottom: 10px;
+  }
+  .mdoc-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .mdoc-actions .btn {
+    flex: 1; font-size: 12px; padding: 8px 6px;
+    width: auto !important; min-width: 0;
+    border-radius: 8px;
+  }
 
   /* ── 9. Zones de texte plus grandes (doigts) ── */
   input, select, textarea {
     font-size: 16px !important; /* évite le zoom auto iOS */
     padding: 10px 12px;
   }
+
+  /* ── 10. Planning mobile : vue liste verticale ── */
+  .planning-layout { flex-direction: column; }
+
+  /* Sidebar planning en bas sur mobile */
+  .planning-sidebar {
+    width: 100% !important;
+    flex: none !important;
+    position: static !important;
+    max-height: none !important;
+  }
+
+  /* Grille 7 colonnes → vue liste verticale */
+  .planning-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+
+  /* Chaque jour devient une carte pleine largeur */
+  .day-column {
+    min-height: auto !important;
+    border-radius: 12px;
+    border-left: 4px solid #e5e7eb;
+    padding: 10px 12px !important;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .day-column.is-today { border-left-color: #1976d2; }
+  .day-column.is-weekend { border-left-color: #e5e7eb; opacity: 0.8; }
+
+  /* Header du jour en ligne (Lun 12) */
+  .day-column-header {
+    font-size: 14px !important;
+    font-weight: 700 !important;
+    color: #1a1a2e;
+  }
+  .day-column.is-today .day-column-header { color: #1976d2; }
+
+  /* Visites : plus visibles */
+  .visit-entry {
+    font-size: 13px !important;
+    padding: 8px 10px !important;
+    border-radius: 10px;
+  }
+  .visit-empty { font-size: 12px; padding: 4px 0; }
+
+  /* Bouton + plus grand (doigts) */
+  .planning-add-btn {
+    padding: 4px 12px !important;
+    font-size: 14px !important;
+    border-radius: 20px;
+  }
+
+  /* Navigation semaine */
+  .planning-header {
+    position: sticky;
+    top: 0; z-index: 10;
+    background: white;
+    padding: 8px 0 12px;
+    margin-bottom: 8px !important;
+  }
+  body.dark-mode .planning-header { background: #141428; }
 }
 
 /* ── Bottom nav cachée sur desktop ── */

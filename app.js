@@ -10114,6 +10114,76 @@ function loadDocumentsList() {
 
     tbody.appendChild(tr);
   });
+
+  // ── Rendu mobile (cartes) ──
+  _renderMobileDocList(filtered);
+}
+
+/**
+ * Génère une liste de cartes pour les petits écrans.
+ * Appelé automatiquement depuis loadDocumentsList.
+ */
+function _renderMobileDocList(docs) {
+  const container = document.getElementById("mobileDocList");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!docs || docs.length === 0) {
+    container.innerHTML = `<div style="text-align:center;color:#aaa;padding:30px 0;font-size:14px;">Aucun document pour le moment</div>`;
+    return;
+  }
+
+  docs.forEach(doc => {
+    const isDevis   = doc.type === "devis";
+    const isFacture = doc.type === "facture";
+
+    // Badge statut
+    let statusBadge = "";
+    if (isDevis) {
+      const st = doc.status || "en_attente";
+      const stMap = { en_attente:"🟡 En attente", accepte:"🟢 Accepté", refuse:"🔴 Refusé", cloture:"⚫ Clôturé", expire:"⚠️ Expiré" };
+      statusBadge = stMap[st] || st;
+    } else if (isFacture) {
+      statusBadge = doc.paid ? "🟢 Payée" : (doc.paidLate ? "🔴 En retard" : "🟡 En attente");
+    }
+
+    const dateText = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR", {day:"2-digit",month:"short",year:"numeric"}) : "";
+    const clientName = escapeHtml(doc.client?.name || "—");
+    const num = escapeHtml(doc.number || "");
+    const subject = escapeHtml(doc.subject || "");
+    const amount = formatEuro(doc.totalTTC);
+    const typeIcon = isDevis ? "📄" : "💰";
+    const typeLabel = isDevis ? "Devis" : "Facture";
+
+    // Couleur carte selon statut
+    let borderColor = "#e2ecf8";
+    if (isFacture && doc.paid) borderColor = "#c6f6d5";
+    else if (isFacture && !doc.paid) borderColor = "#fed7d7";
+
+    const card = document.createElement("div");
+    card.className = "mdoc-card";
+    card.style.borderLeftColor = borderColor;
+    card.style.borderLeftWidth = "4px";
+    card.innerHTML = `
+      <div class="mdoc-top">
+        <div class="mdoc-num">${typeIcon} ${num}</div>
+        <div class="mdoc-amount">${amount}</div>
+      </div>
+      <div class="mdoc-client">${clientName}</div>
+      <div class="mdoc-meta">
+        <span>📅 ${dateText}</span>
+        ${subject ? `<span>· ${subject}</span>` : ""}
+        <span>· ${statusBadge}</span>
+      </div>
+      <div class="mdoc-actions">
+        <button class="btn btn-primary btn-small" onclick="loadDocument('${doc.id}')">✏️ Modifier</button>
+        <button class="btn btn-secondary btn-small" onclick="openPrintable('${doc.id}', true)">👁 Aperçu</button>
+        <button class="btn btn-success btn-small" onclick="openPrintable('${doc.id}')">🖨 Imprimer</button>
+        <button class="btn btn-danger btn-small" onclick="deleteDocument('${doc.id}')">🗑</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
 function loadAttestationsList() {
