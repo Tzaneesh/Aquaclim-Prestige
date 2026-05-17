@@ -5827,12 +5827,29 @@ document.addEventListener("DOMContentLoaded", bindPdfViewerCloseUX);
 
 
 
+// Déclenche l'impression depuis le viewer iOS (ouvre la feuille partage → Save PDF)
+function _pdfViewerPrint() {
+  const frame = document.getElementById("pdfViewerFrame");
+  if (!frame) return;
+  try {
+    frame.contentWindow.focus();
+    frame.contentWindow.print();
+  } catch(e) {
+    // Fallback : ouvrir l'URL du blob dans un onglet pour imprimer
+    if (frame.src && frame.src !== "about:blank") {
+      window.open(frame.src, "_blank");
+    }
+  }
+}
+
 function closePdfViewer() {
   const overlay = document.getElementById("pdfViewerOverlay");
   const frame = document.getElementById("pdfViewerFrame");
+  const printBtn = document.getElementById("pdfPrintBtn");
 
   if (frame) frame.src = "about:blank";
   if (overlay) overlay.classList.add("hidden");
+  if (printBtn) printBtn.style.display = "none";
 
   // si on a pushState → back ferme l’état PDF
   try {
@@ -13111,8 +13128,6 @@ if (!notesText || !String(notesText).trim()) {
   `;
   }
 
- const printWindow = window.open("", "_blank");
-
 const html = `<!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -13554,11 +13569,36 @@ const html = `<!DOCTYPE html>
 </body>
 </html>`;
 
+// ── iOS : afficher dans l’overlay interne + bouton Imprimer/PDF ──
+if (isIOS()) {
+  const overlay  = document.getElementById("pdfViewerOverlay");
+  const frame    = document.getElementById("pdfViewerFrame");
+  const printBtn = document.getElementById("pdfPrintBtn");
+  if (overlay && frame) {
+    const blob = new Blob([html], { type: "text/html" });
+    const blobUrl = URL.createObjectURL(blob);
+    frame.src = blobUrl;
+    overlay.classList.remove("hidden");
+    if (printBtn) printBtn.style.display = "";
+    // Libère le blob après chargement
+    frame.onload = function() {
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+      if (!previewOnly) {
+        try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch(e) {}
+      }
+    };
+  }
+  return;
+}
+
+// ── Desktop / Android : fenêtre classique ──
+const printWindow = window.open("", "_blank");
+if (!printWindow) return;
 printWindow.document.open();
 printWindow.document.write(html);
 printWindow.document.close();
 
-/* Optionnel: titre vide (n’enlève pas "about:blank" mais évite un titre long) */
+/* Optionnel: titre vide */
 try { printWindow.document.title = ""; } catch(e){}
 
 printWindow.onload = function () {
@@ -20124,7 +20164,30 @@ Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corpor
 </body>
 </html>`;
 
+  // ── iOS : afficher dans l'overlay interne + bouton Imprimer/PDF ──
+  if (isIOS()) {
+    const overlay  = document.getElementById("pdfViewerOverlay");
+    const frame    = document.getElementById("pdfViewerFrame");
+    const printBtn = document.getElementById("pdfPrintBtn");
+    if (overlay && frame) {
+      const blob = new Blob([html], { type: "text/html" });
+      const blobUrl = URL.createObjectURL(blob);
+      frame.src = blobUrl;
+      overlay.classList.remove("hidden");
+      if (printBtn) printBtn.style.display = "";
+      frame.onload = function() {
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 30000);
+        if (!previewOnly) {
+          try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch(e) {}
+        }
+      };
+    }
+    return;
+  }
+
+  // ── Desktop / Android : fenêtre classique ──
   const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
   printWindow.document.write(html);
   printWindow.document.close();
 
