@@ -94,10 +94,10 @@
     <span class="mbn-label">Factures</span>
   </button>
 
-  <!-- Attestations -->
-  <button class="mbn-item" id="mbn-attest" onclick="_mbnActivate('attest'); showAttestations()">
-    <span class="mbn-icon">📑</span>
-    <span class="mbn-label">Attestations</span>
+  <!-- Planning -->
+  <button class="mbn-item" id="mbn-planning" onclick="_mbnActivate('planning'); showHome(); setTimeout(()=>{ document.querySelector('.planning-card')?.scrollIntoView({behavior:'smooth',block:'start'}); },200)">
+    <span class="mbn-icon">📅</span>
+    <span class="mbn-label">Planning</span>
   </button>
 
   <!-- Plus (ouvre le drawer) -->
@@ -120,6 +120,11 @@
     <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); _mbnActivate('contrat'); openFromHome('contrat')">
       <span class="mdb-icon">📘</span>
       <span class="mdb-label">Contrats</span>
+    </button>
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); _mbnActivate('attestations'); showAttestations()">
+      <span class="mdb-icon">📜</span>
+      <span class="mdb-label">Attestations</span>
     </button>
 
     <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); openClientsListPopup()">

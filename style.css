@@ -4790,6 +4790,21 @@ body.dark-mode .dash-extended-value { color: #5b9ee1; }
   .documents-table          { display: none !important; }
   #mobileDocList            { display: block !important; }
 
+  /* Exception : le tableau "Clients à suivre" reste visible sur mobile */
+  .followup-card .documents-table {
+    display: table !important;
+    font-size: 12px;
+  }
+  .followup-card .documents-table th,
+  .followup-card .documents-table td {
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+  .followup-card .table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* ── Carte document mobile ── */
   .mdoc-card {
     background: #fff;

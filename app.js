@@ -13133,6 +13133,43 @@ const html = `<!DOCTYPE html>
       print-color-adjust: exact;
     }
 
+    /* ===== BOUTON RETOUR (non imprimé) ===== */
+    .print-back-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 9999;
+      background: #1a74d9;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,.2);
+    }
+    .print-back-btn {
+      background: #fff;
+      color: #1a74d9;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .print-back-btn:active { opacity: .8; }
+    .print-back-label {
+      color: #fff;
+      font-size: 13px;
+      font-weight: 500;
+    }
+    body { padding-top: 52px; } /* espace pour la barre fixe */
+    @media print {
+      .print-back-bar { display: none !important; }
+      body { padding-top: 0 !important; }
+    }
+
     /* ===== STRUCTURE PAGE (stable iOS) ===== */
     .page{ display:block; }
     .page-main{ display:block; }
@@ -13410,6 +13447,12 @@ const html = `<!DOCTYPE html>
 </head>
 
 <body>
+  <!-- Barre retour (masquée à l'impression) -->
+  <div class="print-back-bar">
+    <button class="print-back-btn" onclick="window.close()">← Retour</button>
+    <span class="print-back-label">${isDevis ? "Devis " : "Facture "}${doc.number} — ${escapeHtml(doc.clientName || "")}</span>
+  </div>
+
   <div class="page">
     <div class="page-main">
       <div class="header">
@@ -19530,15 +19573,51 @@ img.sig-client {
     font-size:11px;
   }
 
+  /* ===== BOUTON RETOUR (non imprimé) ===== */
+  .print-back-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 9999;
+    background: #1a74d9;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  }
+  .print-back-btn {
+    background: #fff;
+    color: #1a74d9;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .print-back-label {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  body { padding-top: 52px; }
+
   @media print {
+    .print-back-bar { display: none !important; }
+    body { padding-top: 0 !important; margin:0; }
     @page { margin:0; }
-    body { margin:0; }
   }
 </style>
 
 
 </head>
 <body>
+  <!-- Barre retour (masquée à l'impression) -->
+  <div class="print-back-bar">
+    <button class="print-back-btn" onclick="window.close()">← Retour</button>
+    <span class="print-back-label">Contrat — ${escapeHtml(contract.clientName || "")}</span>
+  </div>
+
 <div class="page">
   <div class="header">
          <h1>${getCompanySettings().companyName}</h1>
@@ -22403,16 +22482,23 @@ function printPlanningWeek() {
   const html = `<!DOCTYPE html><html lang="fr"><head>
     <meta charset="UTF-8"><title>Planning – ${title}</title>
     <style>
-      body { font-family: Arial, sans-serif; padding: 20px; }
+      body { font-family: Arial, sans-serif; padding: 20px; padding-top: 62px; }
       h2 { margin-bottom: 16px; }
       .planning-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
       .day-column { border: 1px solid #ccc; border-radius: 6px; padding: 8px; min-height: 80px; }
       .day-column-header { font-weight: bold; margin-bottom: 6px; font-size: 0.85rem; background:#f0f0f0; padding:4px; border-radius:4px; }
       .planning-item { font-size: 0.78rem; margin-bottom: 4px; padding: 3px 5px; background:#e8f4ff; border-radius:3px; }
       .planning-add-btn { display:none; }
-      @media print { body { padding: 10px; } }
+      .print-back-bar { position:fixed; top:0; left:0; right:0; z-index:9999; background:#1a74d9; padding:10px 16px; display:flex; align-items:center; gap:12px; box-shadow:0 2px 8px rgba(0,0,0,.2); }
+      .print-back-btn { background:#fff; color:#1a74d9; border:none; border-radius:8px; padding:8px 16px; font-size:14px; font-weight:700; cursor:pointer; }
+      .print-back-label { color:#fff; font-size:13px; font-weight:500; }
+      @media print { body { padding: 10px; } .print-back-bar { display:none !important; } }
     </style>
   </head><body>
+    <div class="print-back-bar">
+      <button class="print-back-btn" onclick="window.close()">← Retour</button>
+      <span class="print-back-label">📅 Planning – ${title}</span>
+    </div>
     <h2>📅 Planning – ${title}</h2>
     ${grid.outerHTML}
     <script>window.onload = function(){ window.print(); }<\/script>
