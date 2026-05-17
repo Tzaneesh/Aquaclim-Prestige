@@ -70,6 +70,86 @@
   Hors ligne – données en local
 </div>
 
+<!-- ═══════════════════════════════════════════
+     📱 NAVIGATION MOBILE (bottom bar iOS-style)
+     Visible uniquement sur iPhone / petit écran
+═══════════════════════════════════════════ -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+
+  <!-- Accueil -->
+  <button class="mbn-item active" id="mbn-home" onclick="_mbnActivate('home'); showHome()">
+    <span class="mbn-icon">🏠</span>
+    <span class="mbn-label">Accueil</span>
+  </button>
+
+  <!-- Devis -->
+  <button class="mbn-item" id="mbn-devis" onclick="_mbnActivate('devis'); openFromHome('devis')">
+    <span class="mbn-icon">📄</span>
+    <span class="mbn-label">Devis</span>
+  </button>
+
+  <!-- Factures -->
+  <button class="mbn-item" id="mbn-facture" onclick="_mbnActivate('facture'); openFromHome('facture')">
+    <span class="mbn-icon">💰</span>
+    <span class="mbn-label">Factures</span>
+  </button>
+
+  <!-- Attestations -->
+  <button class="mbn-item" id="mbn-attest" onclick="_mbnActivate('attest'); showAttestations()">
+    <span class="mbn-icon">📑</span>
+    <span class="mbn-label">Attestations</span>
+  </button>
+
+  <!-- Plus (ouvre le drawer) -->
+  <button class="mbn-item" id="mbn-more" onclick="openMobileDrawer()">
+    <span class="mbn-icon">⋯</span>
+    <span class="mbn-label">Plus</span>
+  </button>
+
+</nav>
+
+<!-- Overlay sombre derrière le drawer -->
+<div class="mobile-drawer-overlay" id="mobileDrawerOverlay" onclick="closeMobileDrawer()"></div>
+
+<!-- Drawer "Plus" -->
+<div class="mobile-drawer" id="mobileDrawer">
+  <div class="mobile-drawer-handle"></div>
+  <div class="mobile-drawer-title">Menu</div>
+  <div class="mobile-drawer-grid">
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); _mbnActivate('contrat'); openFromHome('contrat')">
+      <span class="mdb-icon">📘</span>
+      <span class="mdb-label">Contrats</span>
+    </button>
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); openClientsListPopup()">
+      <span class="mdb-icon">👥</span>
+      <span class="mdb-label">Clients</span>
+    </button>
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); _mbnActivate('ca'); openCA()">
+      <span class="mdb-icon">📊</span>
+      <span class="mdb-label">CA</span>
+    </button>
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); openTarifsPanelAny()">
+      <span class="mdb-icon">📋</span>
+      <span class="mdb-label">Tarifs</span>
+    </button>
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); openGlobalSearch()">
+      <span class="mdb-icon">🔍</span>
+      <span class="mdb-label">Recherche</span>
+    </button>
+
+    <button class="mobile-drawer-btn" onclick="closeMobileDrawer(); _mbnActivate('settings'); showSettings()">
+      <span class="mdb-icon">⚙️</span>
+      <span class="mdb-label">Paramètres</span>
+    </button>
+
+  </div>
+</div>
+
 
 <section id="homeView">
 

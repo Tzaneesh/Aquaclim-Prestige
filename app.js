@@ -13795,6 +13795,8 @@ function _hideAllMainViews() {
   // Réafficher documentsCard si tarifsPanel était ouvert
   const dc = document.getElementById("documentsCard");
   if (dc) dc.classList.remove("hidden");
+  // Fermer le drawer mobile si ouvert
+  closeMobileDrawer && closeMobileDrawer();
 }
 
 function showHome() {
@@ -22070,6 +22072,66 @@ function toggleDarkMode() {
   const btn = document.getElementById("darkModeBtn");
   if (btn) btn.textContent = isDark ? "☀️" : "🌙";
 }
+
+/* ═══════════════════════════════════════════════════
+   📱 NAVIGATION MOBILE — bottom bar + drawer
+═══════════════════════════════════════════════════ */
+
+/**
+ * Active visuellement un onglet de la bottom nav mobile.
+ * @param {string} key  'home' | 'devis' | 'facture' | 'attest' | 'contrat' | 'ca' | 'settings'
+ */
+function _mbnActivate(key) {
+  document.querySelectorAll(".mbn-item").forEach(b => b.classList.remove("active"));
+  const map = {
+    home:     "mbn-home",
+    devis:    "mbn-devis",
+    facture:  "mbn-facture",
+    attest:   "mbn-attest",
+    contrat:  null,
+    ca:       null,
+    settings: null,
+  };
+  const id = map[key];
+  if (id) {
+    const el = document.getElementById(id);
+    if (el) el.classList.add("active");
+  }
+  // Pour contrat/ca/settings : activer "Plus" pour indiquer qu'on est dans ce menu
+  if (!id) {
+    const more = document.getElementById("mbn-more");
+    if (more) more.classList.add("active");
+  }
+}
+
+function openMobileDrawer() {
+  document.getElementById("mobileDrawerOverlay")?.classList.add("open");
+  document.getElementById("mobileDrawer")?.classList.add("open");
+  // Activer visuellement "Plus"
+  document.querySelectorAll(".mbn-item").forEach(b => b.classList.remove("active"));
+  document.getElementById("mbn-more")?.classList.add("active");
+}
+
+function closeMobileDrawer() {
+  document.getElementById("mobileDrawerOverlay")?.classList.remove("open");
+  document.getElementById("mobileDrawer")?.classList.remove("open");
+}
+
+// Synchroniser la bottom nav avec les fonctions de navigation principales
+// (patch léger pour que le bon onglet s'allume quand on navigue depuis d'autres chemins)
+const _origShowHome = showHome;
+showHome = function() { _origShowHome.apply(this, arguments); _mbnActivate("home"); };
+
+const _origShowAttestations = showAttestations;
+showAttestations = function() { _origShowAttestations.apply(this, arguments); _mbnActivate("attest"); };
+
+const _origOpenFromHome = openFromHome;
+openFromHome = function(type) {
+  _origOpenFromHome.apply(this, arguments);
+  if (type === "devis")   _mbnActivate("devis");
+  if (type === "facture") _mbnActivate("facture");
+  if (type === "contrat") _mbnActivate("contrat");
+};
 
 (function initDarkMode() {
   if (localStorage.getItem("darkMode") === "1") {
