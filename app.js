@@ -16201,9 +16201,100 @@ function createContractFromDevis() {
     address: devis.siteAddress || "",
   };
 
-  // 3) Pool par défaut (à ajuster dans le contrat)
+  // Date du jour (déclarée ici car utilisée dans les calculs qui suivent)
+  const todayISO = new Date().toISOString().split("T")[0];
+
+  // 3a) Lecture des prestations du devis pour extraire service / passages / prix
+  //     (fait AVANT pool et pricing pour pouvoir les utiliser dans les deux)
+
+  // Kinds qui représentent des passages/entretien récurrents dans un contrat
+  const CONTRACT_PASSAGE_KINDS = [
+    "piscine_chlore", "piscine_sel",
+    "entretien_clim",
+    "entretien_jacuzzi", "vidange_jacuzzi",
+    "hivernage_piscine", "remise_service_piscine",
+  ];
+
+  const _prestations = Array.isArray(devis.prestations) ? devis.prestations : [];
+
+  // Première prestation de type "passage" dans le devis
+  const _mainPrest = _prestations.find(
+    (p) => p && !p.isDetail && p.kind !== "detail_line" && CONTRACT_PASSAGE_KINDS.includes(p.kind)
+  ) || null;
+
+  // Toutes les prestations de type "passage" pour sommer les quantités
+  const _passagePrests = _prestations.filter(
+    (p) => p && !p.isDetail && p.kind !== "detail_line" && CONTRACT_PASSAGE_KINDS.includes(p.kind)
+  );
+
+  const _devisMainService   = _mainPrest ? _mainPrest.kind : "piscine_chlore";
+  const _devisTotalPassages = _passagePrests.reduce((sum, p) => sum + (Number(p.qty) || 0), 0);
+  const _devisUnitPrice     = _mainPrest ? (Number(_mainPrest.price) || 0) : 0;
+
+  // ── Extraire la fréquence mensuelle depuis le champ "unit" du devis ──
+  // Ex : "3 passages/mois pendant 4 mois" → fréquence = 3
+  const _unitText = (_mainPrest?.unit || "").toLowerCase();
+  const _freqMatch = _unitText.match(/(\d+)\s*passages?\s*\/\s*mois/);
+  const _devisFreqPerMonth = _freqMatch ? parseInt(_freqMatch[1], 10) : 0;
+
+  // ── Durée déduite = total / fréquence (arrondi) ──
+  // Options valides dans le select : 4, 5, 6, 12 mois
+  const VALID_DURATIONS = [4, 5, 6, 12];
+  let _devisDuration = 12; // par défaut 12 mois
+  if (_devisFreqPerMonth > 0 && _devisTotalPassages > 0) {
+    const rawDur = Math.round(_devisTotalPassages / _devisFreqPerMonth);
+    // On cherche la valeur valide la plus proche
+    _devisDuration = VALID_DURATIONS.reduce((best, v) =>
+      Math.abs(v - rawDur) < Math.abs(best - rawDur) ? v : best
+    , 12);
+  }
+
+  // ── Date de début : depuis la description ("pour la période juin 2026…") ──
+  const MOIS_FR = {
+    janvier:1, février:2, fevrier:2, mars:3, avril:4,
+    mai:5, juin:6, juillet:7, 'août':8, aout:8,
+    septembre:9, octobre:10, novembre:11, décembre:12, decembre:12
+  };
+  let _devisStartDate = todayISO;
+  const _descText = (_mainPrest?.desc || "").toLowerCase();
+  const _periodMatch = _descText.match(/(?:p[eé]riode|du|de|pour)\s+(\w+)\s+(\d{4})/);
+  if (_periodMatch) {
+    const _mName = _periodMatch[1];
+    const _mYear = parseInt(_periodMatch[2]);
+    const _mNum  = MOIS_FR[_mName];
+    if (_mNum && _mYear) {
+      _devisStartDate = `${_mYear}-${String(_mNum).padStart(2, "0")}-01`;
+    }
+  }
+
+  // ── Répartition hiver/été : calculer avec la vraie période du contrat ──
+  let _devisPassHiver = 0;
+  let _devisPassEte   = _devisFreqPerMonth || 1;
+
+  if (_devisTotalPassages > 0) {
+    const _cm = (typeof computeContractMonths === "function")
+      ? computeContractMonths(_devisStartDate, _devisDuration)
+      : { monthsHiver: 0, monthsEte: _devisDuration };
+    const _mH = _cm.monthsHiver || 0;
+    const _mE = _cm.monthsEte   || _devisDuration;
+
+    // Cherche les entiers (0..5) × (0..6) qui minimisent l'erreur sur le total
+    let _bestErr = Infinity;
+    for (let h = 0; h <= 5; h++) {
+      for (let e = 0; e <= 6; e++) {
+        const err = Math.abs(h * _mH + e * _mE - _devisTotalPassages);
+        if (err < _bestErr) {
+          _bestErr        = err;
+          _devisPassHiver = h;
+          _devisPassEte   = e;
+        }
+      }
+    }
+  }
+
+  // 3b) Pool : type issu du service détecté dans le devis
   const pool = {
-    type: "piscine_chlore", // par défaut, tu pourras changer en sel / spa
+    type: _devisMainService,
     equipment: "",
     volume: "",
     notes: "",
@@ -16214,26 +16305,26 @@ function createContractFromDevis() {
   const clientType =
     devis.conditionsType === "agence" ? "syndic" : "particulier";
 
-  const todayISO = new Date().toISOString().split("T")[0];
+  // 5) Pricing : valeurs tirées du devis
 
-  // 5) Pricing de base : on récupère totals du devis, le reste sera ajusté par le contrat
   const pricing = {
     clientType,
-    mainService: "piscine_chlore", // tu pourras changer ensuite
-    mode: "standard",
-    passHiver: 1,
-    passEte: 2,
+    mainService: _devisMainService,
+    mode: _devisTotalPassages > 0 ? "custom" : "standard",
+    passHiver: _devisPassHiver,
+    passEte:   _devisPassEte,
 
-    startDate: todayISO,
-    durationMonths: 12,
+    startDate: _devisStartDate,
+    durationMonths: _devisDuration,
     endDateLabel: "",
     periodLabel: "",
 
-    totalPassages: 0,
-    unitPrice: 0,
+    totalPassages:   _devisTotalPassages > 0 ? _devisTotalPassages : 0,
+    unitPrice:       _devisUnitPrice,
+    customUnitPrice: _devisUnitPrice, // prix forcé (ne sera pas écrasé par le tarif)
 
-    totalHT: typeof devis.subtotal === "number" ? devis.subtotal : 0,
-    tvaRate: typeof devis.tvaRate === "number" ? devis.tvaRate : 0,
+    totalHT:   typeof devis.subtotal  === "number" ? devis.subtotal  : 0,
+    tvaRate:   typeof devis.tvaRate   === "number" ? devis.tvaRate   : 0,
     tvaAmount: typeof devis.tvaAmount === "number" ? devis.tvaAmount : 0,
     totalTTC:
       typeof devis.totalTTC === "number"
@@ -17519,7 +17610,14 @@ function recomputeContract() {
     document.getElementById("ctIncludeWinter")?.checked || false;
   const airbnbOption = document.getElementById("ctAirbnb")?.checked || false;
 
-  const unitPrice = getTarifFromTemplates(mainService, clientType) || 0;
+  // Prix unitaire : priorité au prix forcé depuis un devis (ctCustomUnitPrice),
+  // sinon on lit le tarif standard de la grille.
+  const _customPriceRaw = parseFloat(
+    document.getElementById("ctCustomUnitPrice")?.value || "0"
+  ) || 0;
+  const unitPrice = _customPriceRaw > 0
+    ? _customPriceRaw
+    : (getTarifFromTemplates(mainService, clientType) || 0);
 
   let extra = 0;
   if (includeOpen) {
@@ -17692,6 +17790,10 @@ function buildContractFromForm(showErrors) {
     periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
     totalPassages,
     unitPrice: parseFloat(unitPriceStr) || 0,
+    // Prix forcé depuis un devis (0 = pas de forçage, on utilise le tarif standard)
+    customUnitPrice: parseFloat(
+      document.getElementById("ctCustomUnitPrice")?.value || "0"
+    ) || 0,
     totalHT: totalHTNum,
     tvaRate,
     tvaAmount,
@@ -17915,6 +18017,21 @@ function fillContractForm(contract) {
   const ctPoolTypeEl = document.getElementById("ctPoolType");
   if (ctPoolTypeEl && ctMainService) {
     ctPoolTypeEl.dispatchEvent(new Event("change"));
+  }
+
+  // ---------- 10b. Prix personnalisé depuis devis ----------
+  // On écrit le prix du devis dans le champ caché AVANT recomputeContract()
+  // pour que ce dernier l'utilise au lieu du tarif standard.
+  const ctCustomUnitPrice = document.getElementById("ctCustomUnitPrice");
+  if (ctCustomUnitPrice) {
+    // Priorité : prix personnalisé explicitement sauvegardé (customUnitPrice)
+    // sinon unitPrice si le mode est custom (vient d'un devis)
+    const customSaved = typeof pr.customUnitPrice === "number" && pr.customUnitPrice > 0
+      ? pr.customUnitPrice
+      : (pr.mode === "custom" && typeof pr.unitPrice === "number" && pr.unitPrice > 0
+          ? pr.unitPrice
+          : 0);
+    ctCustomUnitPrice.value = String(customSaved);
   }
 
   // ---------- 11. Recalcul complet ----------

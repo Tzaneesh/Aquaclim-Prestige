@@ -1699,6 +1699,7 @@
     <option value="0">0 – Sur demande</option>
     <option value="1">1 passage / mois</option>
     <option value="2">2 passages / mois</option>
+    <option value="3">3 passages / mois</option>
     <option value="4">4 passages / mois</option>
   </select>
 </div>
@@ -1709,6 +1710,7 @@
     <option value="0">0 – Sur demande</option>
     <option value="1">1 passage / mois</option>
     <option value="2" selected>2 passages / mois</option>
+    <option value="3">3 passages / mois</option>
     <option value="4">4 passages / mois</option>
   </select>
 </div>
@@ -1765,6 +1767,8 @@
       <div class="form-group">
         <label>Prix unitaire (auto)</label>
         <input type="text" id="ctUnitPrice" readonly>
+        <!-- Prix forcé depuis un devis (0 = utiliser le tarif standard) -->
+        <input type="hidden" id="ctCustomUnitPrice" value="0">
       </div>
 
       <div class="form-group">
