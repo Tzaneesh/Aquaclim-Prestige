@@ -22030,6 +22030,10 @@ function checkScheduledInvoices() {
   });
 
   saveContracts(contracts);
+
+  // Rafraîchir la liste si des factures ont été générées
+  if (typeof loadDocumentsList === "function") loadDocumentsList();
+  if (typeof refreshHomeStats === "function") refreshHomeStats();
 }
 
 
