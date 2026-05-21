@@ -1440,6 +1440,36 @@ textarea {
     z-index: 9999;       /* au-dessus de tout */
 }
 
+/* ── Autocomplete client custom (planning popup iOS) ── */
+#planningClientSuggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #c8d8f0;
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.13);
+  max-height: 200px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  z-index: 10010;
+}
+#planningClientSuggestions .pcs-item {
+  padding: 11px 14px;
+  font-size: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #eef3fa;
+  color: #1a1a2e;
+}
+#planningClientSuggestions .pcs-item:last-child { border-bottom: none; }
+#planningClientSuggestions .pcs-item:active,
+#planningClientSuggestions .pcs-item.pcs-hover { background: #e8f0fe; }
+body.dark-mode #planningClientSuggestions { background: #1e2a3a; border-color: #2a3f5f; }
+body.dark-mode #planningClientSuggestions .pcs-item { color: #e0e8f5; border-color: #2a3f5f; }
+body.dark-mode #planningClientSuggestions .pcs-item:active { background: #2a3f5f; }
+
 
 .popup-overlay.hidden {
     display: none;
@@ -4947,3 +4977,51 @@ body.dark-mode .dash-extended-value { color: #5b9ee1; }
   body.dark-mode .mobile-drawer-handle { background: #3a3a5c; }
   body.dark-mode .mobile-drawer-title { color: #5a6a8a; }
 }
+
+/* ===== Sélecteur de catégorie de contrat (Eau / Clim) ===== */
+.ct-category-selector {
+    display: flex;
+    gap: 12px;
+    margin: 8px 0 20px 0;
+}
+
+.ct-cat-btn {
+    flex: 1;
+    padding: 14px 16px;
+    border: 2px solid #d1d5db;
+    border-radius: 10px;
+    background: #f9fafb;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: #374151;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.18s ease;
+    line-height: 1.3;
+}
+
+.ct-cat-btn span {
+    font-size: 12px;
+    font-weight: 400;
+    color: #6b7280;
+}
+
+.ct-cat-btn:hover {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.ct-cat-btn:hover span { color: #3b82f6; }
+
+.ct-cat-btn.ct-cat-active {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+}
+
+.ct-cat-btn.ct-cat-active span { color: #3b82f6; }

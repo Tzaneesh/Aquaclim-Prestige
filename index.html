@@ -821,14 +821,20 @@
     </div>
 
     <label>Nom du client</label>
-    <input
-      type="text"
-      id="planningPopupClient"
-      list="clientsList"
-      autocomplete="off"
-      onchange="onPlanningPopupClientChange()"
-      onblur="onPlanningPopupClientChange()"
-    >
+    <div style="position:relative;">
+      <input
+        type="text"
+        id="planningPopupClient"
+        list="clientsList"
+        autocomplete="off"
+        placeholder="Rechercher un client…"
+        oninput="_planningClientAutocomplete(this)"
+        onfocus="_planningClientAutocomplete(this)"
+        onchange="onPlanningPopupClientChange()"
+        onblur="onPlanningPopupClientChange()"
+      >
+      <div id="planningClientSuggestions" style="display:none;"></div>
+    </div>
     <button
       id="planningAddClientBtn"
       type="button"
@@ -1479,13 +1485,16 @@
 
  <div class="card">
   <div class="contract-header-blue">
-    <h2>🟦 Contrat d’entretien Piscine / Spa</h2>
+    <h2>🟦 Nouveau contrat d’entretien</h2>
   </div>
 
   <!-- Bandeau lien devis / contrat -->
   <div id="ctDevisBanner" class="devis-banner" style="display:none; margin:10px 0; padding:8px 12px; background:#e3f2fd; border-left:4px solid #1976d2; border-radius:4px; font-size:14px;">
     <!-- Le texte sera rempli par le JS -->
   </div>
+  <!-- Champs cachés pour le meta du contrat (sourceDevisId, etc.) -->
+  <input type="hidden" id="ctMetaSourceDevisId" value="">
+  <input type="hidden" id="ctMetaSourceDevisNumber" value="">
 </div>
 
 
@@ -1613,130 +1622,172 @@
 
 
 
-    <!-- ================= BASSIN ================= -->
-    <h3 class="section-title">3. Caractéristiques du bassin</h3>
-
-    <div class="row">
-<div class="form-group">
-  <label>Type de bassin</label>
-  <select id="ctPoolType">
-    <option value="piscine_chlore">🏊 Piscine au chlore (traitement classique)</option>
-    <option value="piscine_sel">🌊 Piscine au sel (électrolyseur)</option>
-    <option value="spa">🛁 Spa / Jacuzzi</option>
-  </select>
-</div>
-
-
- <div class="form-group">
-  <label>Traitement / équipement principal</label>
-  <select id="ctEquipment">
-    <option value="">—</option>
-    <option value="Traitement manuel">Traitement manuel</option>
-    <option value="Électrolyseur au sel">Électrolyseur au sel</option>
-    <option value="Régulation automatique pH / redox">Régulation automatique pH / redox</option>
-    <option value="Autre (précisé en observation)">Autre (précisé en observation)</option>
-  </select>
-</div>
-
-
-<div class="form-group">
-  <label>Volume approximatif (m³)</label>
-  <input type="text" id="ctVolume">
-</div>
-
-      <div class="form-group">
-        <label>Particularités</label>
-        <textarea id="ctNotes" placeholder="Accès difficile, horaires, animaux…"></textarea>
-      </div>
+    <!-- ================= CHOIX TYPE DE CONTRAT ================= -->
+    <div class="ct-category-selector">
+      <button type="button" id="ctCatEau" class="ct-cat-btn ct-cat-active" onclick="setContractCategory('eau')">
+        🏊 Traitement de l'eau
+        <span>Piscine · Spa · Jacuzzi</span>
+      </button>
+      <button type="button" id="ctCatClim" class="ct-cat-btn" onclick="setContractCategory('clim')">
+        ❄️ Climatisation / PAC
+        <span>Entretien unités intérieures &amp; extérieures</span>
+      </button>
     </div>
+    <input type="hidden" id="ctContractCategory" value="eau">
 
+    <!-- ========================================================= -->
+    <!-- BLOC EAU — Piscine / Spa                                  -->
+    <!-- ========================================================= -->
+    <div id="ctEauBlock">
 
-    <!-- ================= FRÉQUENCE ================= -->
-    <h3 class="section-title">4. Fréquence & planification</h3>
-
-    <div class="row">
-<div class="form-group">
-        <label for="ctStartDate">
- Type de client <span class="required-star">*</span>
-</label>
-  <div class="client-type-row">
-    <label class="client-type-option">
-      <input type="radio" name="ctClientTypeChoice" value="particulier" id="ctClientParticulier" checked>
-      Particulier
-    </label>
-    <label class="client-type-option">
-      <input type="radio" name="ctClientTypeChoice" value="syndic" id="ctClientSyndic">
-      Agence immobilière
-    </label>
-  </div>
-  <!-- Valeur utilisée par le JS (comme avant) -->
-  <input type="hidden" id="ctClientType" value="particulier">
-</div>
-
-
- <div class="form-group">
-  <label>Prestation principale (auto pour le tarif)</label>
-  <select id="ctMainService" disabled>
-    <option value="piscine_chlore">Piscine (Chlore)</option>
-    <option value="piscine_sel">Piscine (Sel)</option>
-    <option value="entretien_jacuzzi">Spa / Jacuzzi</option>
-  </select>
-</div>
-
-
-      <div class="form-group">
-        <label>Mode de passages</label>
-        <select id="ctMode">
-          <option value="standard">Standard : 1/mois hiver – 2/mois été</option>
-          <option value="intensif">Intensif : 2/mois hiver – 4/mois été</option>
-          <option value="custom">Personnalisé</option>
-        </select>
+      <h3 class="section-title">3. Caractéristiques du bassin</h3>
+      <div class="row">
+        <div class="form-group">
+          <label>Type de bassin</label>
+          <select id="ctPoolType">
+            <option value="piscine_chlore">🏊 Piscine au chlore (traitement classique)</option>
+            <option value="piscine_sel">🌊 Piscine au sel (électrolyseur)</option>
+            <option value="spa">🛁 Spa / Jacuzzi</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Traitement / équipement principal</label>
+          <select id="ctEquipment">
+            <option value="">—</option>
+            <option value="Traitement manuel">Traitement manuel</option>
+            <option value="Électrolyseur au sel">Électrolyseur au sel</option>
+            <option value="Régulation automatique pH / redox">Régulation automatique pH / redox</option>
+            <option value="Autre (précisé en observation)">Autre (précisé en observation)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Volume approximatif (m³)</label>
+          <input type="text" id="ctVolume">
+        </div>
+        <div class="form-group">
+          <label>Particularités</label>
+          <textarea id="ctNotes" placeholder="Accès difficile, horaires, animaux…"></textarea>
+        </div>
       </div>
 
-<div class="form-group">
-  <label>Passages hiver (nov → avr)</label>
-  <select id="ctPassHiver">
-    <option value="0">0 – Sur demande</option>
-    <option value="1">1 passage / mois</option>
-    <option value="2">2 passages / mois</option>
-    <option value="3">3 passages / mois</option>
-    <option value="4">4 passages / mois</option>
-  </select>
-</div>
+      <h3 class="section-title">4. Fréquence & planification</h3>
+      <div class="row">
+        <div class="form-group">
+          <label>Mode de passages</label>
+          <select id="ctMode">
+            <option value="standard">Standard : 1/mois hiver – 2/mois été</option>
+            <option value="intensif">Intensif : 2/mois hiver – 4/mois été</option>
+            <option value="custom">Personnalisé</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Passages hiver (nov → avr)</label>
+          <select id="ctPassHiver">
+            <option value="0">0 – Sur demande</option>
+            <option value="1">1 passage / mois</option>
+            <option value="2">2 passages / mois</option>
+            <option value="3">3 passages / mois</option>
+            <option value="4">4 passages / mois</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Passages été (mai → oct)</label>
+          <select id="ctPassEte">
+            <option value="0">0 – Sur demande</option>
+            <option value="1">1 passage / mois</option>
+            <option value="2" selected>2 passages / mois</option>
+            <option value="3">3 passages / mois</option>
+            <option value="4">4 passages / mois</option>
+          </select>
+        </div>
+      </div>
 
-<div class="form-group">
-  <label>Passages été (mai → oct)</label>
-  <select id="ctPassEte">
-    <option value="0">0 – Sur demande</option>
-    <option value="1">1 passage / mois</option>
-    <option value="2" selected>2 passages / mois</option>
-    <option value="3">3 passages / mois</option>
-    <option value="4">4 passages / mois</option>
-  </select>
-</div>
+      <!-- champ caché mainService synchronisé depuis ctPoolType -->
+      <select id="ctMainService" style="display:none;">
+        <option value="piscine_chlore">Piscine (Chlore)</option>
+        <option value="piscine_sel">Piscine (Sel)</option>
+        <option value="entretien_jacuzzi">Spa / Jacuzzi</option>
+      </select>
 
-    </div>
+    </div><!-- fin ctEauBlock -->
 
+    <!-- ========================================================= -->
+    <!-- BLOC CLIM — Climatisation / PAC                           -->
+    <!-- ========================================================= -->
+    <div id="ctClimBlock" style="display:none;">
+
+      <h3 class="section-title">3. Caractéristiques de l'installation</h3>
+      <div class="row">
+        <div class="form-group">
+          <label>Nombre d'unités <span class="required-star">*</span></label>
+          <input type="number" id="ctClimUnits" min="1" max="50" value="1" placeholder="ex : 3">
+          <small style="color:#666;">Unités concernées par le contrat (intérieures + extérieures)</small>
+        </div>
+        <div class="form-group">
+          <label>Marque / modèle (optionnel)</label>
+          <input type="text" id="ctClimBrand" placeholder="ex : Daikin, Mitsubishi, Atlantic…">
+        </div>
+        <div class="form-group">
+          <label>Particularités / accès</label>
+          <textarea id="ctClimNotes" placeholder="Accès toiture, hauteur, horaires…"></textarea>
+        </div>
+      </div>
+
+      <h3 class="section-title">4. Fréquence & tarif</h3>
+      <div class="row">
+        <div class="form-group">
+          <label>Passages par an <span class="required-star">*</span></label>
+          <select id="ctClimPassagesPerYear">
+            <option value="1">1 passage / an</option>
+            <option value="2">2 passages / an</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Prix par unité / passage HT <span class="required-star">*</span></label>
+          <input type="number" id="ctClimPricePerUnit" min="0" step="0.01" placeholder="ex : 80">
+        </div>
+        <div class="form-group">
+          <label>Montant total HT (auto)</label>
+          <input type="text" id="ctClimTotalDisplay" readonly placeholder="—">
+          <small id="ctClimRecapLine" style="color:#2563eb; font-weight:500; margin-top:4px; display:block;"></small>
+        </div>
+      </div>
+
+    </div><!-- fin ctClimBlock -->
+
+    <!-- ========================================================= -->
+    <!-- TYPE CLIENT + DATES (commun aux deux blocs)               -->
+    <!-- ========================================================= -->
     <div class="row">
       <div class="form-group">
-        <label for="ctStartDate">
-  Début du contrat <span class="required-star">*</span>
-</label>
+        <label>Type de client <span class="required-star">*</span></label>
+        <div class="client-type-row">
+          <label class="client-type-option">
+            <input type="radio" name="ctClientTypeChoice" value="particulier" id="ctClientParticulier" checked>
+            Particulier
+          </label>
+          <label class="client-type-option">
+            <input type="radio" name="ctClientTypeChoice" value="syndic" id="ctClientSyndic">
+            Agence immobilière
+          </label>
+        </div>
+        <input type="hidden" id="ctClientType" value="particulier">
+      </div>
 
+      <div class="form-group">
+        <label for="ctStartDate">Début du contrat <span class="required-star">*</span></label>
         <input type="date" id="ctStartDate">
       </div>
 
- <div class="form-group">
-  <label>Durée du contrat</label>
-<select id="ctDuration" class="form-select">
-  <option value="4">4 mois – Saison été (juin → septembre)</option>
-  <option value="5">5 mois – Saison étendue</option>
-  <option value="6">6 mois – Saison longue (mai → octobre)</option>
-  <option value="12">12 mois – Annuel</option>
-</select>
-
-</div>
-
+      <div class="form-group" id="ctDurationGroup">
+        <label>Durée du contrat</label>
+        <select id="ctDuration" class="form-select">
+          <option value="4">4 mois – Saison été (juin → septembre)</option>
+          <option value="5">5 mois – Saison étendue</option>
+          <option value="6">6 mois – Saison longue (mai → octobre)</option>
+          <option value="12" selected>12 mois – Annuel</option>
+        </select>
+      </div>
 
       <div class="form-group">
         <label>Fin du contrat (auto)</label>
@@ -1748,15 +1799,12 @@
         <input type="text" id="ctPeriod" readonly>
       </div>
 
-<div class="form-group">
-  <label>Total passages (auto)</label>
-
-  <input type="text" id="ctTotalPassages" readonly>
-
-  <div id="ctRecapSummary" class="ct-recap-summary"></div>
-  <div id="ctWarning" class="ct-warning hidden"></div>
-</div>
-
+      <div class="form-group" id="ctTotalPassagesGroup">
+        <label>Total passages (auto)</label>
+        <input type="text" id="ctTotalPassages" readonly>
+        <div id="ctRecapSummary" class="ct-recap-summary"></div>
+        <div id="ctWarning" class="ct-warning hidden"></div>
+      </div>
     </div>
 
 

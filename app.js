@@ -2148,6 +2148,64 @@ function onClientNameChange() {
   }
 }
 
+// ── Autocomplete client custom (contourne le bug datalist iOS dans un popup) ──
+function _planningClientAutocomplete(inputEl) {
+  const box = document.getElementById("planningClientSuggestions");
+  if (!box) return;
+
+  const query = (inputEl.value || "").trim().toLowerCase();
+  const clients = (typeof getClients === "function") ? getClients() : [];
+
+  // Filtrer
+  const matches = clients
+    .filter(c => c.name && c.name.toLowerCase().includes(query))
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""))
+    .slice(0, 20);
+
+  if (matches.length === 0) {
+    box.style.display = "none";
+    return;
+  }
+
+  box.innerHTML = "";
+  matches.forEach(c => {
+    const item = document.createElement("div");
+    item.className = "pcs-item";
+    item.textContent = c.name;
+
+    // Touch : utiliser touchend pour éviter le blur qui ferme trop tôt
+    item.addEventListener("touchend", (e) => {
+      e.preventDefault();
+      inputEl.value = c.name;
+      box.style.display = "none";
+      onPlanningPopupClientChange();
+    });
+    item.addEventListener("mousedown", (e) => {
+      e.preventDefault(); // évite le blur
+      inputEl.value = c.name;
+      box.style.display = "none";
+      onPlanningPopupClientChange();
+    });
+    box.appendChild(item);
+  });
+
+  box.style.display = "block";
+}
+
+function _closePlanningClientSuggestions() {
+  const box = document.getElementById("planningClientSuggestions");
+  if (box) box.style.display = "none";
+}
+
+// Fermer le dropdown si on clique ailleurs
+document.addEventListener("click", (e) => {
+  const input = document.getElementById("planningPopupClient");
+  const box   = document.getElementById("planningClientSuggestions");
+  if (box && input && !input.contains(e.target) && !box.contains(e.target)) {
+    box.style.display = "none";
+  }
+});
+
 function onPlanningPopupClientChange() {
   const input = document.getElementById("planningPopupClient");
   const addBtn = document.getElementById("planningAddClientBtn");
@@ -6341,6 +6399,25 @@ function openRapportPopupForEdit(rapportId) {
 
 // ================== NUMÉROTATION DOCUMENTS ==================
 
+function getNextContractNumber() {
+  const year = new Date().getFullYear();
+  const contracts = (typeof getAllContracts === "function") ? getAllContracts() : [];
+  const used = [];
+  contracts.forEach((c) => {
+    if (!c.number) return;
+    const m = c.number.match(/^CTR-(\d{4})-(\d{3})$/);
+    if (!m) return;
+    if (parseInt(m[1], 10) === year) used.push(parseInt(m[2], 10));
+  });
+  used.sort((a, b) => a - b);
+  let next = 1;
+  for (let i = 0; i < used.length; i++) {
+    if (used[i] === next) next++;
+    else if (used[i] > next) break;
+  }
+  return `CTR-${year}-${String(next).padStart(3, "0")}`;
+}
+
 function getNextNumber(type) {
   const year = new Date().getFullYear();
   const prefix = type === "devis" ? "DEV" : "FAC";
@@ -6375,6 +6452,9 @@ function generateId(prefix) {
   return `${prefix}-${Date.now()}-${rnd}`;
 }
 
+// ⚠️ ANCIENNE FONCTION — conservée pour compatibilité avec les contrats existants
+// qui stockaient le numéro dans client.reference. NE PAS utiliser pour les nouveaux contrats.
+// Utiliser getNextContractNumber() (qui stocke dans contract.number) à la place.
 function getNextContractReference() {
   const year = new Date().getFullYear();
   const prefix = "CTR"; // comme DEV / FAC mais pour les contrats
@@ -8356,6 +8436,24 @@ function deleteDocument(id) {
           .doc(id)
           .delete()
           .catch((err) => console.error("Erreur Firestore delete :", err));
+      }
+
+      // 🔴 Fix : si le document supprimé est un devis lié à un ou plusieurs contrats,
+      // on nettoie meta.sourceDevisId sur ces contrats pour éviter un blocage de facturation.
+      if (doc.type === "devis") {
+        const allContracts = (typeof getAllContracts === "function") ? getAllContracts() : [];
+        const affected = allContracts.filter(c => c.meta?.sourceDevisId === id);
+        if (affected.length > 0) {
+          const updated = allContracts.map(c => {
+            if (c.meta?.sourceDevisId !== id) return c;
+            const newMeta = { ...c.meta };
+            delete newMeta.sourceDevisId;
+            delete newMeta.sourceDevisNumber;
+            delete newMeta.sourceDevisStatus;
+            return { ...c, meta: newMeta };
+          });
+          if (typeof saveContracts === "function") saveContracts(updated);
+        }
       }
 
       // ✅ Refresh UI (liste + stats)
@@ -13874,16 +13972,13 @@ function computeNextInvoiceDate(contract) {
   return next.toISOString().slice(0, 10);
 }
 function getContractLabel(type) {
-  if (type === "piscine_chlore" || type === "piscine_sel") {
-    return "Contrat d’entretien Piscine";
-  }
-  if (type === "spa") {
+  if (type === "piscine_chlore") return "Contrat d’entretien Piscine (chlore)";
+  if (type === "piscine_sel")    return "Contrat d’entretien Piscine (sel)";
+  if (type === "spa" || type === "entretien_jacuzzi" || type === "spa_jacuzzi")
     return "Contrat d’entretien Spa / Jacuzzi";
-  }
-  if (type === "piscine+spa") {
-    return "Contrat d’entretien Piscine + Spa / Jacuzzi";
-  }
-  return "Contrat d’entretien Piscine / Spa";
+  if (type === "piscine+spa")    return "Contrat d’entretien Piscine + Spa";
+  if (type === "entretien_clim") return "Contrat d’entretien Climatisation / PAC";
+  return "Contrat d’entretien";
 }
 
 let currentContractId = null;
@@ -14574,23 +14669,54 @@ function contractIsActiveDuringWeek(contract, monday, sunday) {
   return !(end < monday || start > sunday);
 }
 
-// Nombre de passages "en moyenne" par semaine pour cette période
-function getVisitsPerWeekForDate(contract, refDate) {
+// Faut-il afficher une visite cette semaine pour ce contrat ?
+// Retourne le nombre de slots à placer dans la semaine (0 ou 1 pour freq ≤ 4/mois).
+// Approche par intervalle : startDate + n × (30 / perMonth) jours
+// → permet de gérer correctement les contrats qui commencent en fin de mois (ex: 31/05)
+function getVisitsPerWeekForDate(contract, monday) {
   const pr = contract.pricing || {};
-  const month = refDate.getMonth() + 1;
+  const month = monday.getMonth() + 1;
 
-  // Mai à septembre = été, le reste = hiver (simplifié)
+  // Mai à octobre = été (passEte), le reste = hiver (passHiver)
   const perMonth =
-    month >= 5 && month <= 9
-      ? Number(pr.passEte || 0)
+    month >= 5 && month <= 10
+      ? Number(pr.passEte  || 0)
       : Number(pr.passHiver || 0);
 
   if (!perMonth) return 0;
 
-  let visits = Math.round(perMonth / 4); // approx 4 semaines / mois
-  if (visits < 1) visits = 1; // s’il y a des passages, au moins 1
+  // Date de début du contrat (ancre des visites)
+  const startISO = pr.startDate;
+  if (!startISO) return 0;
+  const startDate = new Date(startISO + "T00:00:00");
+  if (isNaN(startDate.getTime())) return 0;
 
-  return visits;
+  // Dimanche de la semaine courante
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+
+  const msPerDay = 86400000;
+
+  // Pour ≥ 4/mois : on utilise intervalles de ~7 jours
+  const intervalDays = 30 / perMonth;
+
+  const daysFromStartToMonday = Math.round((monday - startDate) / msPerDay);
+
+  // Semaine entièrement avant le début du contrat → aucune visite
+  if (daysFromStartToMonday < -6) return 0;
+
+  // Cherche si une occurrence (startDate + n × intervalDays) tombe dans [lundi, dimanche]
+  const nMin = Math.max(0, Math.floor(daysFromStartToMonday / intervalDays) - 1);
+  const nMax = Math.ceil((daysFromStartToMonday + 6) / intervalDays) + 1;
+
+  for (let n = nMin; n <= nMax; n++) {
+    const visitDate = new Date(startDate);
+    visitDate.setDate(startDate.getDate() + Math.round(n * intervalDays));
+    const visitDayFromMonday = Math.round((visitDate - monday) / msPerDay);
+    if (visitDayFromMonday >= 0 && visitDayFromMonday <= 6) return 1;
+  }
+
+  return 0;
 }
 
 function getPlanningColorClass(service) {
@@ -14735,6 +14861,17 @@ function renderPlanningWeek() {
       }
 
       const originalDateISO = dayColumns[dayIndexOriginal].dateStr;
+
+      // ── Ne jamais afficher un passage avant la date de début du contrat ──
+      const _contractStart = contract?.pricing?.startDate || "";
+      if (_contractStart && originalDateISO < _contractStart) continue;
+
+      // ── Ne jamais afficher un passage après la date de fin du contrat ──
+      const _contractEnd = getContractEndDate(contract);
+      if (_contractEnd) {
+        const _endISO = _contractEnd.toISOString().split("T")[0];
+        if (originalDateISO > _endISO) continue;
+      }
 
       const finalDateISO = getOverriddenContractDate(
         contract.id,
@@ -15175,6 +15312,9 @@ function openManualPlanningPopup(dateStr, ev, manualIdToEdit = null) {
 function closeManualPlanningPopup() {
   const overlay = document.getElementById("planningPopup");
   if (!overlay) return;
+
+  // Fermer le dropdown autocomplete client s'il est ouvert
+  _closePlanningClientSuggestions();
 
   const popup = overlay.querySelector(".popup");
   if (popup) popup.classList.remove("show");
@@ -16333,10 +16473,14 @@ function createContractFromDevis() {
           ? devis.subtotal
           : 0,
 
+    // Mode de facturation : repris du devis si disponible, sinon "annuel" par défaut
+    billingMode: devis.billingMode || "annuel",
+
     airbnbOption: false,
   };
 
   // 6) Objet contrat complet
+  // Note : contract.number sera assigné dans buildContractFromForm() à la sauvegarde
   const contract = {
     id: Date.now().toString(),
     client,
@@ -16925,6 +17069,11 @@ function newContract() {
   if (listView) listView.classList.add("hidden");
   if (contractView) contractView.classList.remove("hidden");
 
+  // Remettre le titre générique et le bloc eau par défaut
+  const _formTitle = document.querySelector("#contractView h2");
+  if (_formTitle) _formTitle.textContent = "🟦 Nouveau contrat d'entretien";
+  if (typeof setContractCategory === "function") setContractCategory("eau");
+
   const root = document.getElementById("contractView");
   if (root) {
     root.querySelectorAll("input, textarea, select").forEach((el) => {
@@ -17475,7 +17624,45 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
 
 // ----- Recalcul global du contrat -----
 
+// ===== Bascule entre les deux pages du formulaire contrat =====
+function setContractCategory(cat) {
+  const catEl    = document.getElementById("ctContractCategory");
+  const eauBlock = document.getElementById("ctEauBlock");
+  const climBlock= document.getElementById("ctClimBlock");
+  const btnEau   = document.getElementById("ctCatEau");
+  const btnClim  = document.getElementById("ctCatClim");
+  const durGroup = document.getElementById("ctDurationGroup");
+  const totGroup = document.getElementById("ctTotalPassagesGroup");
+
+  if (catEl) catEl.value = cat;
+
+  const isClim = cat === "clim";
+
+  if (eauBlock)  eauBlock.style.display  = isClim ? "none" : "";
+  if (climBlock) climBlock.style.display = isClim ? "" : "none";
+
+  if (btnEau)  btnEau.classList.toggle("ct-cat-active", !isClim);
+  if (btnClim) btnClim.classList.toggle("ct-cat-active", isClim);
+
+  // Pour clim : durée toujours 12 mois, total passages masqué
+  if (durGroup) durGroup.style.display = isClim ? "none" : "";
+  if (totGroup) totGroup.style.display = isClim ? "none" : "";
+  if (isClim) {
+    const dur = document.getElementById("ctDuration");
+    if (dur) dur.value = "12";
+  }
+
+  recomputeContract();
+}
+
 function recomputeContract() {
+  // 0) Détecter si c'est un contrat clim
+  const _cat = document.getElementById("ctContractCategory")?.value || "eau";
+  if (_cat === "clim") {
+    recomputeContractClim();
+    return;
+  }
+
   // 1) Récup des champs
   const modeEl = document.getElementById("ctMode");
   const passHiverEl = document.getElementById("ctPassHiver");
@@ -17633,7 +17820,10 @@ function recomputeContract() {
 
   let totalHT = totalPassages * unitPrice + extra;
   let airbnbExtra = 0;
-  if (airbnbOption && totalHT > 0) {
+  // +20% Airbnb uniquement si aucun prix personnalisé n'est déjà fixé
+  // (si le prix vient d'un devis négocié, on respecte ce prix sans majoration)
+  const _hasCustomPrice = _customPriceRaw > 0;
+  if (airbnbOption && !_hasCustomPrice && totalHT > 0) {
     airbnbExtra = totalHT * 0.2;
     totalHT += airbnbExtra;
   }
@@ -17679,6 +17869,94 @@ function recomputeContract() {
       txt += " (dont majoration Airbnb : " + format(airbnbExtra) + ")";
     }
     recapTotal.textContent = txt;
+  }
+}
+
+// ----- Recalcul spécifique contrat CLIM -----
+function recomputeContractClim() {
+  const startDateEl    = document.getElementById("ctStartDate");
+  const durationEl     = document.getElementById("ctDuration");
+  const endDateEl      = document.getElementById("ctEndDate");
+  const periodEl       = document.getElementById("ctPeriod");
+  const unitsEl        = document.getElementById("ctClimUnits");
+  const passPerYearEl  = document.getElementById("ctClimPassagesPerYear");
+  const pricePerUnitEl = document.getElementById("ctClimPricePerUnit");
+  const climTotalDisp  = document.getElementById("ctClimTotalDisplay");
+  const climRecapLine  = document.getElementById("ctClimRecapLine");
+  const unitInput      = document.getElementById("ctUnitPrice");
+  const totalHTInput   = document.getElementById("ctTotalHT");
+  const recapPass      = document.getElementById("ctRecapPassages");
+  const recapPrice     = document.getElementById("ctRecapPrice");
+  const recapTotal     = document.getElementById("ctRecapTotal");
+  const warnBox        = document.getElementById("ctWarning");
+
+  const format = typeof formatEuro === "function"
+    ? formatEuro
+    : (v) => (v && v.toFixed ? v.toFixed(2) + " €" : (v || 0) + " €");
+
+  // Dates (toujours 12 mois pour clim)
+  const startISO = startDateEl?.value || "";
+  const duration = 12;
+  if (durationEl) durationEl.value = "12";
+
+  if (startISO) {
+    const info = computeContractMonths(startISO, duration);
+    if (endDateEl) endDateEl.value = info.endDateISO || "";
+    if (periodEl) {
+      const debutFr = new Date(startISO + "T00:00:00").toLocaleDateString("fr-FR");
+      const finFr   = info.endDateISO
+        ? new Date(info.endDateISO + "T00:00:00").toLocaleDateString("fr-FR")
+        : "";
+      periodEl.value = debutFr && finFr ? `${debutFr} → ${finFr}` : "";
+    }
+  } else {
+    if (endDateEl) endDateEl.value = "";
+    if (periodEl)  periodEl.value  = "";
+  }
+
+  // Calcul
+  const nbUnits       = parseInt(unitsEl?.value || "1", 10) || 1;
+  const passPerYear   = parseInt(passPerYearEl?.value || "1", 10) || 1;
+  const pricePerUnit  = parseFloat(pricePerUnitEl?.value || "0") || 0;
+
+  const totalPassages = passPerYear;       // nb de visites dans l'année
+  const unitPrice     = pricePerUnit;      // prix par unité par passage
+  const totalHT       = nbUnits * passPerYear * pricePerUnit;
+
+  const tvaRate = parseFloat(String(document.getElementById("tvaRate")?.value || "0").replace(",", ".")) || 0;
+  const tvaAmount = totalHT * (tvaRate / 100);
+  const totalTTC  = totalHT + tvaAmount;
+  const clientType = document.getElementById("ctClientType")?.value || "particulier";
+
+  // Affichage dans le bloc clim
+  const recapLine = `${nbUnits} unité${nbUnits>1?"s":""} × ${passPerYear} passage${passPerYear>1?"s":""}/an × ${format(pricePerUnit)} = ${format(totalHT)} HT`;
+  if (climTotalDisp) climTotalDisp.value = format(totalHT);
+  if (climRecapLine) climRecapLine.textContent = recapLine;
+
+  // Aussi mettre à jour les champs partagés (recap bas de page)
+  if (unitInput)    unitInput.value    = format(unitPrice);
+  if (totalHTInput) totalHTInput.value = format(totalHT);
+  if (recapPass)    recapPass.textContent = `${totalPassages} passage${totalPassages > 1 ? "s" : ""} / an — ${nbUnits} unité${nbUnits > 1 ? "s" : ""}`;
+  if (recapPrice)   recapPrice.textContent = format(unitPrice) + " / unité / passage";
+
+  if (recapTotal) {
+    const displayAmount = tvaRate > 0 ? totalTTC : totalHT;
+    const labelAmount   = tvaRate > 0 ? "Montant TTC" : (clientType === "syndic" ? "Montant HT" : "Net à payer");
+    recapTotal.textContent = labelAmount + " : " + format(displayAmount);
+  }
+
+  if (warnBox) {
+    const warnings = [];
+    if (!startISO) warnings.push("Merci de renseigner une date de début.");
+    if (nbUnits < 1) warnings.push("Le nombre d'unités doit être au moins 1.");
+    if (pricePerUnit <= 0) warnings.push("Merci de renseigner un prix par unité.");
+    if (warnings.length > 0) {
+      warnBox.innerHTML = `<span style="font-size:18px;line-height:1;">⚠️</span><div><strong>Attention :</strong><br>${warnings.join("<br>")}</div>`;
+      warnBox.classList.remove("hidden");
+    } else {
+      warnBox.classList.add("hidden");
+      warnBox.innerHTML = "";
+    }
   }
 }
 
@@ -17735,17 +18013,25 @@ function buildContractFromForm(showErrors) {
     address: (document.getElementById("ctSiteAddress")?.value || "").trim(),
   };
 
+  // Détecter la catégorie une seule fois (utilisée partout dans cette fonction)
+  const _isClimBuild   = (document.getElementById("ctContractCategory")?.value || "eau") === "clim";
+  const _buildPoolType = _isClimBuild ? "entretien_clim" : (document.getElementById("ctPoolType")?.value || "piscine_chlore").trim();
+
   const pool = {
-    type: (document.getElementById("ctPoolType")?.value || "").trim(),
-    equipment: (document.getElementById("ctEquipment")?.value || "").trim(),
-    volume: (document.getElementById("ctVolume")?.value || "").trim(),
-    notes: (document.getElementById("ctNotes")?.value || "").trim(),
+    type: _buildPoolType,
+    equipment: _isClimBuild
+      ? (document.getElementById("ctClimBrand")?.value || "").trim()
+      : (document.getElementById("ctEquipment")?.value || "").trim(),
+    volume: _isClimBuild ? "" : (document.getElementById("ctVolume")?.value || "").trim(),
+    notes: _isClimBuild
+      ? (document.getElementById("ctClimNotes")?.value || "").trim()
+      : (document.getElementById("ctNotes")?.value || "").trim(),
   };
 
   const startDate = (
     document.getElementById("ctStartDate")?.value || ""
   ).trim();
-  const duration =
+  const duration = _isClimBuild ? 12 :
     parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
 
   const totalPassagesStr = (
@@ -17773,31 +18059,37 @@ function buildContractFromForm(showErrors) {
   const tvaAmount = totalHTNum * (tvaRate / 100);
   const totalTTC = totalHTNum + tvaAmount;
 
+  // Champs spécifiques clim
+  const _climUnits       = _isClimBuild ? (parseInt(document.getElementById("ctClimUnits")?.value || "1", 10) || 1) : 0;
+  const _climPassPerYear = _isClimBuild ? (parseInt(document.getElementById("ctClimPassagesPerYear")?.value || "1", 10) || 1) : 0;
+  const _climPricePerUnit= _isClimBuild ? (parseFloat(document.getElementById("ctClimPricePerUnit")?.value || "0") || 0) : 0;
+
   const pricing = {
     clientType: clientTypeValue || "particulier",
 
-    mainService: (
-      document.getElementById("ctMainService")?.value || "piscine_chlore"
-    ).trim(),
-    mode: (document.getElementById("ctMode")?.value || "standard").trim(),
-    passHiver:
-      parseInt(document.getElementById("ctPassHiver")?.value || "0", 10) || 0,
-    passEte:
-      parseInt(document.getElementById("ctPassEte")?.value || "0", 10) || 0,
+    mainService: _isClimBuild
+      ? "entretien_clim"
+      : (document.getElementById("ctMainService")?.value || "piscine_chlore").trim(),
+    mode: _isClimBuild ? "clim" : (document.getElementById("ctMode")?.value || "standard").trim(),
+    passHiver: _isClimBuild ? 0 : (parseInt(document.getElementById("ctPassHiver")?.value || "0", 10) || 0),
+    passEte:   _isClimBuild ? 0 : (parseInt(document.getElementById("ctPassEte")?.value || "0", 10) || 0),
+
+    // Champs clim
+    climUnits:        _climUnits,
+    climPassPerYear:  _climPassPerYear,
+    climPricePerUnit: _climPricePerUnit,
+
     startDate,
     durationMonths: duration,
     endDateLabel: (document.getElementById("ctEndDate")?.value || "").trim(),
     periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
-    totalPassages,
-    unitPrice: parseFloat(unitPriceStr) || 0,
-    // Prix forcé depuis un devis (0 = pas de forçage, on utilise le tarif standard)
-    customUnitPrice: parseFloat(
-      document.getElementById("ctCustomUnitPrice")?.value || "0"
-    ) || 0,
-    totalHT: totalHTNum,
+    totalPassages: _isClimBuild ? _climPassPerYear : totalPassages,
+    unitPrice: _isClimBuild ? _climPricePerUnit : (parseFloat(unitPriceStr) || 0),
+    customUnitPrice: _isClimBuild ? 0 : (parseFloat(document.getElementById("ctCustomUnitPrice")?.value || "0") || 0),
+    totalHT: _isClimBuild ? (_climUnits * _climPassPerYear * _climPricePerUnit) : totalHTNum,
     tvaRate,
-    tvaAmount,
-    totalTTC,
+    tvaAmount: _isClimBuild ? (_climUnits * _climPassPerYear * _climPricePerUnit * tvaRate / 100) : tvaAmount,
+    totalTTC:  _isClimBuild ? (_climUnits * _climPassPerYear * _climPricePerUnit * (1 + tvaRate / 100)) : totalTTC,
 
     // 🔹 NOUVEAUX CHAMPS FACTURATION
 
@@ -17806,9 +18098,8 @@ function buildContractFromForm(showErrors) {
 
     // ---------- Options forfaitaires ----------
 
-    includeOpening:
-      document.getElementById("ctIncludeOpening")?.checked || false,
-    includeWinter: document.getElementById("ctIncludeWinter")?.checked || false,
+    includeOpening: _isClimBuild ? false : (document.getElementById("ctIncludeOpening")?.checked || false),
+    includeWinter:  _isClimBuild ? false : (document.getElementById("ctIncludeWinter")?.checked || false),
 
     // ---------- Usage Airbnb ----------
 
@@ -17822,15 +18113,29 @@ function buildContractFromForm(showErrors) {
     existing = getContract(currentContractId);
   }
 
+  // Meta : on part de l'existant en base, puis on fusionne avec
+  // les champs cachés du formulaire (sourceDevisId conservé depuis fillContractForm)
+  const formDevisId  = document.getElementById("ctMetaSourceDevisId")?.value  || "";
+  const formDevisNum = document.getElementById("ctMetaSourceDevisNumber")?.value || "";
+
+  const baseMeta = existing?.meta || {};
+  const mergedMeta = {
+    ...baseMeta,
+    // Les champs cachés ont priorité si remplis (devis créé depuis le form)
+    ...(formDevisId  ? { sourceDevisId:     formDevisId  } : {}),
+    ...(formDevisNum ? { sourceDevisNumber:  formDevisNum } : {}),
+  };
+
   const contract = {
     id: currentContractId || Date.now().toString(),
+    number: existing?.number || getNextContractNumber(),
     client,
     site,
     pool,
     pricing,
     // on garde status/meta si ça existe déjà
     status: existing?.status || null,
-    meta: existing?.meta || {},
+    meta: mergedMeta,
     createdAt: existing?.createdAt || new Date().toISOString(),
   };
 
@@ -17849,6 +18154,13 @@ function fillContractForm(contract) {
   const p = contract.pool || {};
   const pr = contract.pricing || {};
   const meta = contract.meta || {};
+
+  // Titre du formulaire dynamique selon le type de contrat
+  const _formTitle = document.querySelector("#contractView h2");
+  if (_formTitle) {
+    const _type = pr.mainService || p.type || "";
+    _formTitle.textContent = "🟦 " + (getContractLabel(_type) || "Contrat d'entretien");
+  }
 
   // ---------- 1. CLIENT ----------
   const ctClientCiv = document.getElementById("ctClientCivility");
@@ -18001,6 +18313,12 @@ function fillContractForm(contract) {
   }
   updateCtDevisBanner(linkedDevis, meta);
 
+  // ---------- 8b. Champs cachés meta (sourceDevisId conservé jusqu'au Save) ----------
+  const _hiddenDevisId  = document.getElementById("ctMetaSourceDevisId");
+  const _hiddenDevisNum = document.getElementById("ctMetaSourceDevisNumber");
+  if (_hiddenDevisId)  _hiddenDevisId.value  = meta.sourceDevisId     || "";
+  if (_hiddenDevisNum) _hiddenDevisNum.value = meta.sourceDevisNumber  || "";
+
   // ---------- 9. PRIX ----------
   const unitInput = document.getElementById("ctUnitPrice");
   const totalHTInp = document.getElementById("ctTotalHT");
@@ -18012,11 +18330,31 @@ function fillContractForm(contract) {
     totalHTInp.value = pr.totalHT != null ? pr.totalHT : "";
   }
 
-  // ---------- 10. Type de bassin -> prestation ----------
-  const ctMainService = document.getElementById("ctMainService");
-  const ctPoolTypeEl = document.getElementById("ctPoolType");
-  if (ctPoolTypeEl && ctMainService) {
-    ctPoolTypeEl.dispatchEvent(new Event("change"));
+  // ---------- 9b. Catégorie & champs CLIM ----------
+  const isClimFill = (pr.mainService || p.type || "") === "entretien_clim";
+
+  // Activer le bon onglet
+  if (typeof setContractCategory === "function") {
+    setContractCategory(isClimFill ? "clim" : "eau");
+  }
+
+  if (isClimFill) {
+    const ctClimUnitsEl       = document.getElementById("ctClimUnits");
+    const ctClimPassPerYearEl = document.getElementById("ctClimPassagesPerYear");
+    const ctClimPriceEl       = document.getElementById("ctClimPricePerUnit");
+    const ctClimBrandEl       = document.getElementById("ctClimBrand");
+    const ctClimNotesEl       = document.getElementById("ctClimNotes");
+    if (ctClimUnitsEl)        ctClimUnitsEl.value        = pr.climUnits        || 1;
+    if (ctClimPassPerYearEl)  ctClimPassPerYearEl.value  = pr.climPassPerYear  || 1;
+    if (ctClimPriceEl)        ctClimPriceEl.value        = pr.climPricePerUnit || "";
+    if (ctClimBrandEl)        ctClimBrandEl.value        = p.equipment         || "";
+    if (ctClimNotesEl)        ctClimNotesEl.value        = p.notes             || "";
+  } else {
+    // ---------- 10. Type de bassin -> prestation ----------
+    const ctPoolTypeEl = document.getElementById("ctPoolType");
+    if (ctPoolTypeEl) {
+      ctPoolTypeEl.dispatchEvent(new Event("change"));
+    }
   }
 
   // ---------- 10b. Prix personnalisé depuis devis ----------
@@ -18316,6 +18654,22 @@ function saveContract() {
   // 1️⃣ Recalcul préalable (passages, total, labels)
   recomputeContract();
 
+  // Blocage si contrat eau avec 0 passages
+  const _saveCat = document.getElementById("ctContractCategory")?.value || "eau";
+  if (_saveCat !== "clim") {
+    const _totalPass = parseInt(document.getElementById("ctTotalPassages")?.value || "0", 10) || 0;
+    if (_totalPass === 0) {
+      showConfirmDialog({
+        title: "Contrat sans passages",
+        message: "Le total de passages calculé est 0. Vérifiez la date de début, la durée et la fréquence avant d'enregistrer.",
+        confirmLabel: "OK",
+        variant: "error",
+        icon: "⚠️",
+      });
+      return;
+    }
+  }
+
   // 2️⃣ Construction complète depuis le formulaire
   let contract = buildContractFromForm(true);
   if (!contract) return;
@@ -18327,16 +18681,6 @@ function saveContract() {
       pr.billingMode = "mensuel";
     }
   }
-  if (pr.clientType === "syndic") {
-    if (
-      !["mensuel", "trimestriel", "semestriel", "annuel"].includes(
-        pr.billingMode,
-      )
-    ) {
-      pr.billingMode = "annuel";
-    }
-  }
-
   if (pr.clientType === "syndic") {
     if (
       !["mensuel", "trimestriel", "semestriel", "annuel"].includes(
@@ -18443,12 +18787,13 @@ function saveContract() {
 
   // ✅ Cas 2 : Pas de devis obligatoire OU devis déjà accepté
 
-  // ✅ VERROU : pas de facturation tant que le contrat n'est pas signé
+  // ✅ VERROU : facturation autorisée si le contrat est signé OU si le devis lié est accepté
   const isSigned = isContractSigned(contract);
+  const devisAccepted = isDevisAcceptedForContract(contract);
+  const billingAllowed = isSigned || devisAccepted;
 
-
-  if (!isSigned) {
-    // On neutralise l’échéancier tant que pas signé
+  if (!billingAllowed) {
+    // On neutralise l’échéancier tant que pas signé et pas de devis accepté
     contract.pricing.nextInvoiceDate = "";
 
     // Re-sauvegarde (local + firestore) pour être sûr que nextInvoiceDate reste vide
@@ -18461,7 +18806,7 @@ function saveContract() {
       title: "Contrat enregistré",
       message:
         "Contrat enregistré ✅\n\n" +
-        "⛔ Aucune facture ne sera générée tant que le client n’a pas signé (Bon pour accord).",
+        "⛔ Aucune facture ne sera générée tant que le client n’a pas signé (Bon pour accord) ou qu’un devis accepté n’est pas associé.",
       confirmLabel: "OK",
       cancelLabel: "",
       variant: "info",
@@ -18472,7 +18817,7 @@ function saveContract() {
     return;
   }
 
-  // ✅ À partir d’ici : contrat signé → on peut facturer
+  // ✅ À partir d’ici : contrat signé OU devis accepté → on peut facturer
   if (isNew) {
     // 1️⃣ Facture initiale (PARTICULIER uniquement)
     const invoice = generateImmediateBilling(contract);
@@ -19372,15 +19717,17 @@ function openContractPDF(previewOnly = false) {
   const startDateFR = formatDateFr(pr.startDate);
   const endDateFR = formatDateFr(pr.endDateLabel);
 
-  // Libellé du bassin
-
-  // Libellé du bassin
+  // Libellé du bassin (utilise poolType = mainService || p.type pour être cohérent)
   const poolLabel =
-    p.type === "piscine_sel"
+    poolType === "piscine_sel"
       ? "Piscine au sel"
-      : p.type === "piscine_chlore"
+      : poolType === "piscine_chlore"
         ? "Piscine au chlore"
-        : "Spa / Jacuzzi";
+        : poolType === "entretien_clim"
+          ? "Climatisation / PAC"
+          : (poolType === "spa" || poolType === "spa_jacuzzi" || poolType === "entretien_jacuzzi")
+            ? "Spa / Jacuzzi"
+            : "Installation";
 
   // Titre et sous-titre d’en-tête
   const headerTitle = `CONTRAT D’ENTRETIEN – ${poolLabel.toUpperCase()}`;
@@ -19395,8 +19742,11 @@ function openContractPDF(previewOnly = false) {
   let baseHTForInfo = totalHTSafe;
   let airbnbExtraForInfo = 0;
 
-  if (pr.airbnbOption && totalHTSafe > 0) {
-    baseHTForInfo = totalHTSafe / 1.2; // base HT
+  // La majoration +20% n'est affichée que si elle a été effectivement appliquée
+  // (pas de majoration quand le prix est personnalisé / issu d'un devis négocié)
+  const _airbnbHasMarkup = pr.airbnbOption && !(pr.customUnitPrice > 0);
+  if (_airbnbHasMarkup && totalHTSafe > 0) {
+    baseHTForInfo = totalHTSafe / 1.2;
     airbnbExtraForInfo = totalHTSafe - baseHTForInfo;
   }
 
@@ -19564,107 +19914,128 @@ function openContractPDF(previewOnly = false) {
 <html lang="fr">
 <head>
 <meta charset="UTF-8" />
-<title>Contrat d'entretien piscine / spa</title>
+<title>${getContractLabel(poolType)} – ${c.name || ""}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: Arial, sans-serif;
-  font-size: 10.5px;
+  font-size: 9.5px;
   color:#333;
   display: flex;
-  justify-content: center;   /* centre la page dans la fenêtre */
+  justify-content: center;
 }
 
 .page {
-  width: 210mm;              /* largeur A4 */
-  margin: 0 auto;            /* sécurité */
-  padding: 10mm 12mm 12mm 12mm;
+  width: 210mm;
+  margin: 0 auto;
+  padding: 8mm 11mm 10mm 11mm;
   box-sizing: border-box;
 }
 
-
   .header {
     text-align: center;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     border-bottom: 1.5px solid #1a74d9;
-    padding-bottom: 4px;
+    padding-bottom: 3px;
   }
 
   .header img.logo {
-    height: 55px;
-    margin-bottom: 3px;
+    height: 45px;
+    margin-bottom: 2px;
   }
 
   .header h1 {
     color: #1a74d9;
-    font-size: 18px;
-    margin-bottom: 2px;
+    font-size: 16px;
+    margin-bottom: 1px;
   }
 
   .header .subtitle {
-    font-size: 10px;
-    margin-bottom: 2px;
+    font-size: 9px;
+    margin-bottom: 1px;
   }
 
   .header .contact {
-    font-size: 9.5px;
+    font-size: 8.5px;
   }
 
   h2.contrat-title {
     text-align:center;
-    margin: 6px 0 2px;
-    font-size: 14px;
+    margin: 4px 0 2px;
+    font-size: 13px;
     text-transform: uppercase;
   }
   .contrat-period {
-    font-size: 10px;
+    font-size: 9.5px;
     font-weight: normal;
     text-transform: none;
   }
 
   .contrat-subtitle {
     text-align: center;
-    font-size: 10px;
-    margin-bottom: 4px;
+    font-size: 9.5px;
+    margin-bottom: 3px;
   }
 
   .ref-bar {
     display:flex;
-    justify-content: flex-start; /* plus de client à droite */
-    font-size: 9.5px;
-    margin: 4px 0 2px;
+    justify-content: flex-start;
+    font-size: 9px;
+    margin: 3px 0 2px;
   }
 
   .section {
-    margin-top: 10px;              /* moins d’espace entre sections */
+    margin-top: 5px;
+  }
+
+  .section-clauses {
+    margin-top: 5px;
+  }
+
+  /* Sections 6+7 ne se séparent jamais */
+  .section-tarifs-sig-wrapper {
     page-break-inside: avoid;
     break-inside: avoid;
-    -webkit-column-break-inside: avoid;
   }
 
   .section-title {
     font-weight: bold;
-    margin-bottom: 2px;
+    margin-bottom: 1px;
     color: #1a74d9;
-    font-size: 10.5px;
+    font-size: 9.5px;
     page-break-after: avoid;
   }
 
   .block {
     border: 1px solid #cbd3e1;
-    border-radius: 6px;
-    padding: 5px 7px;
-    margin-bottom: 4px;
+    border-radius: 5px;
+    padding: 3px 6px;
+    margin-bottom: 2px;
     background:#fafbff;
   }
 
   .block p {
-    margin: 1px 0;
+    margin: 0;
   }
 
   .block p,
   .block ul li {
-    line-height: 1.25; /* compact mais lisible */
+    line-height: 1.18;
+  }
+
+  /* Grille 2 colonnes pour les clauses */
+  .clauses-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px 10px;
+    margin-top: 2px;
+  }
+  .clause-item {
+    padding: 1px 0;
+  }
+  .clause-item p {
+    margin: 0;
+    line-height: 1.2;
   }
 
   .label {
@@ -19796,7 +20167,7 @@ ${terminationBillingBlockTop}
 
 
   <div class="ref-bar">
-  <div><strong>Contrat n°</strong> ${c.reference || contract.id}</div>
+  <div><strong>Contrat n°</strong> ${contract.number || (meta.sourceDevisNumber ? meta.sourceDevisNumber.replace(/^DEV-/, 'CTR-') : 'CTR-' + contract.id.slice(-6))}${meta.sourceDevisNumber ? ` &nbsp;–&nbsp; <span style="font-weight:normal;">Réf. devis : ${meta.sourceDevisNumber}</span>` : ''}</div>
 </div>
 
 
@@ -19834,7 +20205,7 @@ ${terminationBillingBlockTop}
           : ""
       }
 
-      ${c.reference ? `<p>Référence contrat : ${c.reference}</p>` : ""}
+      ${c.reference && !meta.sourceDevisNumber ? `<p>Réf. interne client : ${c.reference}</p>` : ""}
 
       ${
         pr.clientType === "syndic"
@@ -19851,17 +20222,7 @@ ${terminationBillingBlockTop}
           : ""
       }
 
-      <p>Type d’installation :
-        ${
-          p.type === "piscine_sel"
-            ? "Piscine au sel"
-            : p.type === "piscine_chlore"
-              ? "Piscine au chlore"
-              : p.type === "spa"
-                ? "Spa / Jacuzzi"
-                : ""
-        }
-      </p>
+      <p>Type d’installation : ${poolLabel}</p>
       ${p.volume ? `<p>Volume approximatif : ${p.volume} m³</p>` : ""}
       ${p.notes ? `<p>Particularités / Accès : ${p.notes}</p>` : ""}
     </div>
@@ -19872,7 +20233,13 @@ ${terminationBillingBlockTop}
   <div class="section">
     <div class="section-title">2. Objet du contrat</div>
     <div class="block">
-      <p>Le présent contrat a pour objet l’entretien, la surveillance et le contrôle des installations énoncées ci-dessus, comprenant piscine, spa, jacuzzi et local technique, selon la fréquence et les prestations décrites ci-après.</p>
+      <p>${
+        isPiscine
+          ? `Le présent contrat a pour objet l’entretien régulier, la surveillance et le contrôle de la ${poolLabel.toLowerCase()} et du local technique, selon la fréquence et les prestations décrites ci-après.`
+          : isSpa
+            ? `Le présent contrat a pour objet l’entretien régulier, la surveillance et le contrôle du spa / jacuzzi et du local technique, selon la fréquence et les prestations décrites ci-après.`
+            : `Le présent contrat a pour objet l’entretien régulier, la surveillance et le contrôle des installations énoncées ci-dessus et du local technique, selon la fréquence et les prestations décrites ci-après.`
+      }</p>
     </div>
   </div>
 
@@ -19881,45 +20248,42 @@ ${terminationBillingBlockTop}
   <div class="section">
     <div class="section-title">3. Fréquence des interventions & période</div>
     <div class="block">
+    ${poolType === "entretien_clim" ? `
       <div class="grid-2">
         <div>
-          <p><span class="label">Prestation principale :</span>
-           ${
-             poolType === "piscine_sel"
-               ? "Piscine au sel"
-               : poolType === "piscine_chlore"
-                 ? "Piscine au chlore"
-                 : "Spa / Jacuzzi"
-           }
-
-          </p>
-          <p><span class="label">Mode de passages :</span>
-            ${
-              pr.mode === "standard"
-                ? "Standard : 1/mois hiver – 2/mois été"
-                : pr.mode === "intensif"
-                  ? "Intensif : 2/mois hiver – 4/mois été"
-                  : "Personnalisé"
-            }
-          </p>
-          <p><span class="label">Passages hiver (nov → avr) :</span> ${pr.passHiver} / mois</p>
-          <p><span class="label">Passages été (mai → oct) :</span> ${pr.passEte} / mois</p>
+          <p><span class="label">Type de prestation :</span> Entretien Climatisation / PAC</p>
+          <p><span class="label">Nombre d'unités :</span> ${pr.climUnits || 1} unité${(pr.climUnits||1) > 1 ? "s" : ""}</p>
+          <p><span class="label">Passages par an :</span> ${pr.climPassPerYear || 1} passage${(pr.climPassPerYear||1) > 1 ? "s" : ""} / an</p>
         </div>
         <div>
-          <p>
-            <span class="label">Période du contrat :</span>
-            ${startDateFR} → ${endDateFR} (${pr.durationMonths} mois)
-          </p>
-          <p>
-            <span class="label">Nombre de visites prévues :</span>
-            ${pr.totalPassages}
-          </p>
+          <p><span class="label">Période du contrat :</span> ${startDateFR} → ${endDateFR} (12 mois)</p>
+          <p><span class="label">Prix par unité / passage :</span> ${format(pr.climPricePerUnit || 0)}</p>
         </div>
       </div>
-
+      <p class="amount-highlight">
+        ${pr.climUnits || 1} unité${(pr.climUnits||1)>1?"s":""} × ${pr.climPassPerYear || 1} passage${(pr.climPassPerYear||1)>1?"s":""} × ${format(pr.climPricePerUnit || 0)} = <strong>${format(totalHTSafe)}</strong> HT
+      </p>
+    ` : `
+      <div class="grid-2">
+        <div>
+          <p><span class="label">Prestation principale :</span> ${poolLabel}</p>
+          <p><span class="label">Mode de passages :</span>
+            ${pr.mode === "standard" ? "Standard : 1/mois hiver – 2/mois été"
+              : pr.mode === "intensif" ? "Intensif : 2/mois hiver – 4/mois été"
+              : "Personnalisé"}
+          </p>
+          ${Number(pr.passHiver) > 0 ? `<p><span class="label">Passages hiver (nov → avr) :</span> ${pr.passHiver} / mois</p>` : ""}
+          ${Number(pr.passEte) > 0 ? `<p><span class="label">Passages été (mai → oct) :</span> ${pr.passEte} / mois</p>` : ""}
+        </div>
+        <div>
+          <p><span class="label">Période du contrat :</span> ${startDateFR} → ${endDateFR} (${pr.durationMonths} mois)</p>
+          <p><span class="label">Nombre de visites prévues :</span> ${pr.totalPassages}</p>
+        </div>
+      </div>
       <p class="amount-highlight">
         Prix par passage : ${format(pr.unitPrice)} — Montant total du contrat : ${format(totalHTSafe)}
       </p>
+    `}
     </div>
   </div>
 
@@ -19932,7 +20296,7 @@ ${terminationBillingBlockTop}
     ${
       isPiscine
         ? `
-    <p class="label">4.1 Prestations standards (piscine chlore / sel)</p>
+    <p class="label">4.1 Prestations standards (${poolType === "piscine_sel" ? "piscine au sel" : "piscine au chlore"})</p>
     <ul>
       <li>Contrôle et nettoyage : paniers skimmer, préfiltre pompe, ligne d’eau, fond et parois (si robot absent ou HS).</li>
       <li>Vérification du système de filtration.</li>
@@ -19950,7 +20314,7 @@ ${terminationBillingBlockTop}
     ${
       isSpa
         ? `
-    <p class="label" style="margin-top:4px;">4.1 Prestations Spa / Jacuzzi</p>
+    <p class="label" style="margin-top:2px;">4.1 Prestations Spa / Jacuzzi</p>
     <ul>
       <li>Vidange complète selon la fréquence définie.</li>
       <li>Nettoyage de la cuve, des buses et des cartouches.</li>
@@ -19962,11 +20326,30 @@ ${terminationBillingBlockTop}
         : ""
     }
 
-    <p class="label" style="margin-top:4px;">4.2 Remise en service / hivernage</p>
-    <p>
-      Remise en service et hivernage (actif ou passif) peuvent être inclus
-      selon l’option choisie et feront l’objet d’une fiche ou d’un devis associé.
-    </p>
+    ${
+      poolType === "entretien_clim"
+        ? `
+    <p class="label" style="margin-top:2px;">4.1 Prestations Climatisation / PAC</p>
+    <ul>
+      <li>Vérification du bon fonctionnement de l’unité intérieure et extérieure.</li>
+      <li>Nettoyage des filtres et des grilles d’aération.</li>
+      <li>Contrôle des températures de soufflage et des pressions de fonctionnement.</li>
+      <li>Vérification des connexions électriques et des sécurités.</li>
+      <li>Contrôle du circuit frigorifique (absence de fuites).</li>
+      <li>Conseils d’usage et ajustements nécessaires.</li>
+    </ul>
+    `
+        : ""
+    }
+
+    ${isPiscine ? `
+    <p class="label" style="margin-top:2px;">4.2 Remise en service / hivernage</p>
+    <p>Remise en service et hivernage (actif ou passif) peuvent être inclus selon l’option choisie et feront l’objet d’une fiche ou d’un devis associé.</p>
+    ` : isSpa ? `
+    <p class="label" style="margin-top:2px;">4.2 Vidange & remise en eau</p>
+    <p>Une vidange complète du spa et sa remise en eau peuvent être incluses selon la fréquence contractuelle.</p>
+    ` : ""
+    }
 
   </div>
 </div>
@@ -19974,105 +20357,90 @@ ${terminationBillingBlockTop}
 
 <!-- 5. Clauses contractuelles & responsabilités -->
 
-<div class="section">
-  <div style="height:10px;"></div>
+<div class="section section-clauses">
   <div class="section-title">5. Clauses contractuelles & responsabilités</div>
   <div class="block">
 
     <p class="label">5.1 Prestations non incluses (hors forfait)</p>
     <ul>
-      <li>Dépannage, fuites, réparations hydrauliques et climatisation.</li>
-      <li>Remplacement de matériel (pompe, filtre, cellule, carte, pièces diverses).</li>
-      <li>Travaux nécessitant une vidange complète.</li>
-      <li>Nettoyages lourds : eau verte, algues massives, tempête, sable saharien…</li>
-      <li>Passages liés à un usage intensif ou à une location saisonnière.</li>
+      ${isPiscine ? `
+      <li>Dépannage, fuites et réparations hydrauliques.</li>
+      <li>Remplacement de matériel (pompe, filtre, cellule d'électrolyse, pièces diverses).</li>
+      ` : isSpa ? `
+      <li>Dépannage, fuites et réparations hydrauliques du spa / jacuzzi.</li>
+      <li>Remplacement de matériel (pompe, jets, carte électronique, résistance, pièces diverses).</li>
+      ` : poolType === "entretien_clim" ? `
+      <li>Dépannage, fuites de fluide frigorigène et réparations électriques.</li>
+      <li>Remplacement de matériel (compresseur, carte électronique, pièces diverses).</li>
+      ` : `
+      <li>Dépannage, fuites et réparations hydrauliques.</li>
+      <li>Remplacement de matériel (pompe, filtre, pièces diverses).</li>
+      `}
+      ${poolType !== "entretien_clim" ? `<li>Travaux nécessitant une vidange complète.</li>` : ""}
+      <li>Nettoyages lourds${poolType === "entretien_clim" ? " (encrassement excessif, rénovation)" : " : eau verte, algues massives, tempête, sable saharien…"}.</li>
+      ${pr.airbnbOption
+        ? `<li>Dégradations ou nettoyages exceptionnels liés à un usage anormal ou à une négligence des locataires.</li>`
+        : `<li>Passages liés à un usage intensif ou à une location saisonnière.</li>`
+      }
     </ul>
 
-    <p class="label" style="margin-top:4px;">5.2 Produits & consommables</p>
-    <p>
-      Les produits (chlore, sel, correcteurs, floculant…) sont fournis selon devis ou facture.
-      Les surconsommations liées à la météo, à l’usage ou à un matériel défectueux
-      peuvent être facturées.
-    </p>
+    <p class="label" style="margin-top:2px;">5.2 Produits & consommables</p>
+    <p>${isPiscine
+      ? `Les produits (chlore, sel, correcteurs de pH/TAC, floculant…) sont fournis selon devis ou facture. Les surconsommations liées à la météo, à l’usage ou à un matériel défectueux peuvent être facturées.`
+      : isSpa
+        ? `Les produits (désinfectant, correcteurs de pH, détartrant, produits de choc…) sont fournis selon devis ou facture. Les surconsommations liées à l’usage ou à un matériel défectueux peuvent être facturées.`
+        : poolType === "entretien_clim"
+          ? `Les consommables (nettoyants, filtres de rechange, produits de traitement d’air) sont fournis selon devis ou facture.`
+          : `Les produits nécessaires à l’entretien sont fournis selon devis ou facture. Les surconsommations liées à la météo, à l’usage ou à un matériel défectueux peuvent être facturées.`
+    }</p>
 
-    <p class="label" style="margin-top:4px;">5.3 Déchets & conformité</p>
-    <p>
-      Les déchets sont évacués conformément à la réglementation applicable et aux filières de traitement en vigueur.
-    </p>
+    <p class="label" style="margin-top:2px;">5.3 Déchets & conformité</p>
+    <p>Les déchets sont évacués conformément à la réglementation applicable et aux filières de traitement en vigueur.</p>
 
-    <p class="label" style="margin-top:4px;">5.4 Accès aux installations – déplacement dû</p>
-    <p>
-      Le client garantit l’accès au bassin et au local technique.
-     En cas d’accès impossible (clé absente, code erroné, animaux, etc.), le déplacement reste dû. Le prestataire n’est pas tenu d’attendre au-delà de 10 minutes.
-    </p>
+    <p class="label" style="margin-top:2px;">5.4 Accès aux installations – déplacement dû</p>
+    <p>Le client garantit l’accès au bassin et au local technique. En cas d’accès impossible (clé absente, code erroné, animaux, etc.), le déplacement reste dû. Le prestataire n’est pas tenu d’attendre au-delà de 10 minutes.</p>
 
-    <p class="label" style="margin-top:4px;">5.5 Obligations du client</p>
-    <p>
-      Le client informe de tout changement d’usage (location, forte fréquentation),
-      travaux, panne, fuite ou modification technique.
-      Le client garantit le bon fonctionnement de la filtration (pompe, horloge, vannes)
-      et un temps de filtration suffisant.
-    </p>
+    <p class="label" style="margin-top:2px;">5.5 Obligations du client</p>
+    <p>${pr.airbnbOption
+      ? `Le client informe le prestataire de tout changement de planning locatif susceptible d’affecter les interventions (travaux, panne, fuite ou modification technique). Le client garantit le bon fonctionnement de la filtration et un temps de filtration suffisant entre chaque rotation de locataires.`
+      : `Le client informe de tout changement d’usage (location, forte fréquentation), travaux, panne, fuite ou modification technique. Le client garantit le bon fonctionnement de la filtration (pompe, horloge, vannes) et un temps de filtration suffisant.`
+    }</p>
 
-    <p class="label" style="margin-top:4px;">5.6 Obligation de moyens</p>
-    <p>
-      AquaClim Prestige intervient avec une obligation de moyens.
-      L’apparition d’algues ou d’eau trouble peut provenir d’intempéries,
-      d’un usage intensif ou d’un matériel défaillant et peut nécessiter des interventions hors contrat.
-    </p>
+    <p class="label" style="margin-top:2px;">5.6 – 5.7 Obligation de moyens & qualité de l’eau</p>
+    <p>AquaClim Prestige intervient avec une obligation de moyens. La qualité de l’eau dépend de facteurs externes (météo, fréquentation, état du matériel, interventions de tiers). L’apparition d’algues ou d’eau trouble peut nécessiter des interventions hors contrat.</p>
 
-    <p class="label" style="margin-top:4px;">5.7 Absence d’obligation de résultat</p>
-    <p>
-Le prestataire est tenu à une obligation de moyens. La qualité de l’eau dépend de facteurs externes (météo, fréquentation, état du matériel, interventions de tiers…). Des interventions hors contrat peuvent être nécessaires.
-    </p>
+    <p class="label" style="margin-top:2px;">5.8 Limitation de responsabilité</p>
+    <p>La responsabilité du prestataire est strictement limitée aux dommages directs, prouvés et imputables à une faute caractérisée dans l’exécution de la prestation. Elle ne pourra excéder le montant encaissé au titre du présent contrat sur l’année en cours. Dommages indirects, pertes d’exploitation et préjudices commerciaux sont exclus. Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corporel.</p>
 
-    <p class="label" style="margin-top:4px;">5.8 Limitation de responsabilité</p>
-    <p>
-      La responsabilité du prestataire est strictement limitée aux dommages directs,
-      prouvés et imputables à une faute caractérisée dans l’exécution de la prestation.
-      En tout état de cause, la responsabilité financière du prestataire ne pourra excéder
-      le montant total des sommes effectivement encaissées au titre du présent contrat
-      sur l’année contractuelle en cours.
-      Sont exclus tous dommages indirects, pertes d’exploitation, pertes d’usage,
-      préjudices commerciaux ou frais annexes.
-Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corporel.
-    </p>
+    <p class="label" style="margin-top:2px;">5.9 Installations non conformes</p>
+    <p>En cas d’installation dangereuse ou non conforme (fuite importante, électricité défectueuse, surchauffe moteur…), les interventions peuvent être suspendues jusqu’à remise en conformité.</p>
 
-    <p class="label" style="margin-top:4px;">5.9 Installations non conformes</p>
-    <p>
-      En cas d’installation dangereuse ou non conforme (fuite importante, électricité défectueuse,
-      surchauffe moteur…), les interventions peuvent être suspendues jusqu’à remise en conformité.
-    </p>
+    <p class="label" style="margin-top:2px;">${pr.airbnbOption ? `5.10 Usage locatif – conditions spécifiques` : `5.10 Locations saisonnières & usage intensif`}</p>
+    <p>${pr.airbnbOption
+      ? (pr.customUnitPrice > 0
+          ? `L’usage locatif intensif de l’installation (location courte durée, rotation de locataires) est pris en compte dans la fréquence et le tarif définis au présent contrat. Tout passage exceptionnel rendu nécessaire par une dégradation, une négligence des locataires ou un usage manifestement anormal reste hors forfait et fera l’objet d’une facturation séparée.`
+          : `L’usage locatif intensif de l’installation (location courte durée, rotation de locataires) est pris en compte dans la fréquence et le tarif définis au présent contrat, avec application d’une majoration de 20 %. Tout passage exceptionnel rendu nécessaire par une dégradation, une négligence des locataires ou un usage manifestement anormal reste hors forfait et fera l’objet d’une facturation séparée.`)
+      : `En cas de location (Airbnb, saisonnier) ou usage intensif, des passages supplémentaires peuvent être nécessaires et facturés.`
+    }</p>
 
-    <p class="label" style="margin-top:4px;">5.10 Locations saisonnières & usage intensif</p>
-    <p>
-      En cas de location (Airbnb, saisonnier) ou usage intensif,
-      des passages supplémentaires peuvent être nécessaires et facturés.
-    </p>
+    <p class="label" style="margin-top:2px;">5.11 Assurance & exclusions</p>
+    <p>AquaClim Prestige est assuré en RC Pro. La responsabilité ne couvre pas les défauts structurels, la plomberie enterrée, le matériel ancien ou non conforme, ni la mauvaise utilisation par le client. Le prestataire n’est pas responsable d’un mauvais traitement lié à un matériel défaillant.</p>
 
-    <p class="label" style="margin-top:4px;">5.11 Assurance & exclusions</p>
-    <p>
-      AquaClim Prestige est assuré en RC Pro.
-      La responsabilité ne couvre pas les défauts structurels, la plomberie enterrée,
-      le matériel ancien ou non conforme, ni la mauvaise utilisation par le client.
-      Le prestataire n’est pas responsable d’un mauvais traitement lié à un matériel défaillant.
-    </p>
+    <p class="label" style="margin-top:2px;">5.12 Interventions de tiers</p>
+    <p>${pr.clientType === "syndic"
+      ? `Le prestataire n’assure pas l’exploitation quotidienne de l’installation. Toute intervention, réglage ou modification réalisée par un tiers exonère le prestataire de toute responsabilité sur les conséquences directes ou indirectes pouvant en résulter.`
+      : `Toute intervention, réglage ou modification réalisée sur l’installation par un tiers (électricien, plombier, autre prestataire) sans information préalable d’AquaClim Prestige exonère le prestataire de toute responsabilité sur les conséquences directes ou indirectes pouvant en résulter.`
+    }</p>
 
-    ${
-      pr.clientType === "syndic"
-        ? `
-    <p class="label" style="margin-top:4px;">5.12 Exploitation et interventions de tiers</p>
-    <p>
-      Le prestataire n’assure pas l’exploitation quotidienne de l’installation.
-      Toute intervention, réglage ou modification réalisée par un tiers
-      exonère le prestataire de toute responsabilité sur les conséquences
-      directes ou indirectes pouvant en résulter.
-    </p>
-    `
-        : ""
-    }
+  </div><!-- fin bloc 5.1→5.12 -->
 
-    <p class="label" style="margin-top:4px;">5.13 Durée – renouvellement – résiliation</p>
+  <!-- Saut de page : 5.13 démarre en haut de page 2 -->
+  <div style="page-break-after: always;"></div>
+  <div style="height: 8mm;"></div>
+
+  <div class="block"><!-- nouveau bloc 5.13→5.19 -->
+
+    <p class="label" style="margin-top:2px;">5.13 Durée – renouvellement – résiliation</p>
     ${
       pr.clientType === "syndic"
         ? `
@@ -20128,49 +20496,37 @@ Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corpor
     <!-- Encadré automatique si résilié -->
     ${resiliationHTML}
 
-    <p class="label" style="margin-top:4px;">5.14 Photos (preuve)</p>
-    <p>
-      Le prestataire peut prendre des photos avant/après intervention.
-      Elles peuvent servir de preuve en cas de litige.
-    </p>
+    <p class="label" style="margin-top:2px;">5.14 Photos (preuve)</p>
+    <p>Le prestataire peut prendre des photos avant/après intervention. Elles peuvent servir de preuve en cas de litige.</p>
 
-    <p class="label" style="margin-top:4px;">5.15 Délais d’intervention</p>
-    <p>
-      Les interventions sont réalisées dans un délai raisonnable selon le planning.
-      Aucun délai impératif ne peut être imposé sans accord écrit.
-    </p>
+    <p class="label" style="margin-top:2px;">5.15 Délais d’intervention</p>
+    <p>Les interventions sont réalisées dans un délai raisonnable selon le planning. Aucun délai impératif ne peut être imposé sans accord écrit.</p>
 
-    <p class="label" style="margin-top:4px;">5.16 Eau verte & intempéries</p>
-    <p>
-      Les eaux vertes, algues, sable saharien, pollen ou dépôts liés aux intempéries
-      relèvent d’interventions hors contrat et peuvent être facturés.
-    </p>
+    <p class="label" style="margin-top:2px;">5.16 ${isPiscine ? `Eau verte & intempéries` : poolType === "entretien_clim" ? `Encrassement excessif & intempéries` : `Dégradations & intempéries`}</p>
+    <p>${isPiscine
+      ? `Les eaux vertes, algues, sable saharien, pollen ou dépôts liés aux intempéries relèvent d’interventions hors contrat et peuvent être facturés.`
+      : poolType === "entretien_clim"
+        ? `Un encrassement excessif des filtres, unités ou gaines dû à un environnement anormal (chantier, poussières, animaux) relève d’interventions hors contrat et peut être facturé.`
+        : `Les dépôts calcaires importants, mousses, dégradations liées aux intempéries ou à un usage anormal relèvent d’interventions hors contrat et peuvent être facturés.`
+    }</p>
 
-    <p class="label" style="margin-top:4px;">5.17 Réclamations</p>
-    <p>
-     Toute réclamation doit être formulée par écrit dans un délai raisonnable, idéalement sous 48 h, afin de permettre une vérification rapide.
-    </p>
+    <p class="label" style="margin-top:2px;">5.17 Réclamations</p>
+    <p>Toute réclamation doit être formulée par écrit dans un délai raisonnable, idéalement sous 48 h, afin de permettre une vérification rapide.</p>
 
-    <p class="label" style="margin-top:4px;">5.18 Révision annuelle</p>
-    <p>
-      Les tarifs peuvent être révisés chaque 1er janvier
-      selon l’évolution des coûts et de l’indice Syntec.
-    </p>
+    <p class="label" style="margin-top:2px;">5.18 Révision annuelle</p>
+    <p>Les tarifs peuvent être révisés chaque 1er janvier selon l’évolution des coûts et de l’indice Syntec.</p>
 
-    <p class="label" style="margin-top:4px;">5.19 Données personnelles</p>
-    <p>
-      Les données clients sont utilisées uniquement pour la gestion et ne sont jamais revendues.
-      AquaClim Prestige garantit la confidentialité des accès, codes et informations fournies.
-    </p>
+    <p class="label" style="margin-top:2px;">5.19 Données personnelles</p>
+    <p>Les données clients sont utilisées uniquement pour la gestion et ne sont jamais revendues. AquaClim Prestige garantit la confidentialité des accès, codes et informations fournies.</p>
 
   </div>
 </div>
 
+<!-- 6+7 dans un wrapper inséparable pour éviter que la signature parte en page 3 -->
+<div class="section-tarifs-sig-wrapper">
 
 <!-- 6. Tarifs & paiement -->
-
-
-  <div class="section">
+  <div class="section section-tarifs">
     <div class="section-title">6. Tarifs & paiement</div>
     <div class="block tarif-block">
       ${
@@ -20211,13 +20567,25 @@ Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corpor
 <p style="margin-top:6px;">
   <strong>Mode de facturation :</strong> ${buildBillingPlanLine(pr) || "—"}
 </p>
+<p style="margin-top:4px;">
+  <strong>Délai de paiement :</strong> À réception de facture, sans escompte pour paiement anticipé.
+</p>
+<p style="margin-top:4px;">
+  <strong>Modes de règlement acceptés :</strong> Virement bancaire, chèque, espèces (dans les limites légales).
+</p>
+${pr.clientType === "syndic" ? `
+<p style="margin-top:4px; font-size:9px; color:#555;">
+  Tout retard de paiement entraîne de plein droit l'application de pénalités de retard au taux de 3 fois le taux d'intérêt légal en vigueur, ainsi qu'une indemnité forfaitaire de recouvrement de 40 € (art. L.441-10 du Code de commerce).
+</p>` : `
+<p style="margin-top:4px; font-size:9px; color:#555;">
+  En cas de retard de paiement, le prestataire se réserve le droit de suspendre les interventions après mise en demeure restée sans effet sous 8 jours.
+</p>`}
 
     </div>
   </div>
 
   <!-- 7. Signature -->
-
-  <div class="section">
+  <div class="section section-signature">
     <div class="section-title">7. Signature des parties</div>
     <div class="block">
       <p>Fait à Nice, le ${pdfDateStr}</p>
@@ -20275,9 +20643,9 @@ Cette limitation ne s’applique pas en cas de faute lourde ou de dommage corpor
     </div>
   </div>
 
+</div><!-- fin section-tarifs-sig-wrapper -->
 
-
-</div>
+</div><!-- fin .page -->
 </body>
 </html>`;
 
@@ -20528,9 +20896,9 @@ function openContractSchedulePopup() {
 
   // 🔹 Ligne 1 : "Contrat entretien piscine Mr Dupont"
   const clientName = (client.name || "").trim();
-  let titleText = "Contrat d'entretien piscine";
+  let titleText = getContractLabel(pr.mainService || pool?.type || "");
   if (clientName) {
-    titleText += " " + clientName;
+    titleText += " – " + clientName;
   }
 
   // 🔹 Ligne 2 : "Du 04/01/2026 au 09/08/2026"
@@ -20998,23 +21366,26 @@ function initContractsUI() {
     el.addEventListener(evtName, recomputeContract);
   });
 
-  // synchronisation type de bassin -> prestation principale
+  // synchronisation type de bassin -> prestation principale (eau seulement)
   const poolTypeEl = document.getElementById("ctPoolType");
   const mainServiceEl = document.getElementById("ctMainService");
 
   if (poolTypeEl && mainServiceEl) {
     poolTypeEl.addEventListener("change", () => {
       const v = poolTypeEl.value;
-      if (v === "piscine_sel") {
-        mainServiceEl.value = "piscine_sel";
-      } else if (v === "piscine_chlore") {
-        mainServiceEl.value = "piscine_chlore";
-      } else {
-        mainServiceEl.value = "entretien_jacuzzi";
-      }
+      if (v === "piscine_sel") mainServiceEl.value = "piscine_sel";
+      else if (v === "piscine_chlore") mainServiceEl.value = "piscine_chlore";
+      else mainServiceEl.value = "entretien_jacuzzi";
       recomputeContract();
     });
   }
+
+  // Recalcul auto clim quand on change les champs dédiés
+  ["ctClimUnits","ctClimPassagesPerYear","ctClimPricePerUnit"].forEach(id => {
+    const el2 = document.getElementById(id);
+    if (el2) el2.addEventListener("input", recomputeContract);
+    if (el2) el2.addEventListener("change", recomputeContract);
+  });
 
   // radios type client
   const ctPartRadio = document.getElementById("ctClientParticulier");
@@ -21179,9 +21550,12 @@ function generateImmediateBilling(contract) {
 
   // Type de service
   const poolType = pr.mainService || "";
-  const serviceLabel = poolType.includes("spa")
-    ? "Entretien spa / jacuzzi"
-    : "Entretien piscine";
+  const serviceLabel =
+    poolType === "entretien_clim"
+      ? "Entretien climatisation / PAC"
+      : (poolType === "spa" || poolType === "spa_jacuzzi" || poolType === "entretien_jacuzzi")
+        ? "Entretien spa / jacuzzi"
+        : "Entretien piscine";
 
   const globalPeriod = formatContractGlobalPeriod(pr); // "mai 2026 à octobre 2026"
 
@@ -21324,14 +21698,12 @@ function createAutomaticInvoice(contract) {
 
   // Type de service
   const poolType = pr.mainService || "";
-  let serviceLabel = "Entretien piscine";
-  if (
-    poolType === "spa" ||
-    poolType === "spa_jacuzzi" ||
-    poolType === "entretien_jacuzzi"
-  ) {
-    serviceLabel = "Entretien spa / jacuzzi";
-  }
+  const serviceLabel =
+    poolType === "entretien_clim"
+      ? "Entretien climatisation / PAC"
+      : (poolType === "spa" || poolType === "spa_jacuzzi" || poolType === "entretien_jacuzzi")
+        ? "Entretien spa / jacuzzi"
+        : "Entretien piscine";
 
   const globalPeriod = formatContractGlobalPeriod(pr);
   const moisLabel = monthYearFr(nextISO);
@@ -21585,8 +21957,8 @@ function checkScheduledInvoices() {
       return;
     }
     const pr = contract.pricing || {};
-    // ✅ NE RIEN FACTURER tant que le contrat n'est pas signé
-    if (!contract.signature) {
+    // ✅ NE RIEN FACTURER tant que le contrat n'est pas signé ET qu'aucun devis accepté n'est lié
+    if (!contract.signature && !isDevisAcceptedForContract(contract)) {
       return;
     }
 
@@ -21605,6 +21977,17 @@ function checkScheduledInvoices() {
 
     const totalInstallments = getNumberOfInstallments(pr);
     let installmentsCount = countContractInstallmentInvoices(contract.id);
+
+    // 🔧 Auto-réparation : si nextInvoiceDate est vide mais qu'on peut facturer,
+    //    on le recalcule (cas des contrats sauvegardés avant la signature/acceptation devis)
+    if (!pr.nextInvoiceDate && installmentsCount < totalInstallments) {
+      pr.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
+      if (pr.nextInvoiceDate) {
+        contract.pricing = pr;
+        const _allC = getAllContracts().map((c) => c.id === contract.id ? contract : c);
+        saveContracts(_allC);
+      }
+    }
 
     // 🧮 Calcul de la fin de contrat (optionnel, tu peux le garder si tu l'utilises ailleurs)
     let limitISO = todayISO;
