@@ -18819,32 +18819,19 @@ function saveContract() {
 
   // ✅ À partir d’ici : contrat signé OU devis accepté → on peut facturer
   if (isNew) {
-    // 1️⃣ Facture initiale (PARTICULIER uniquement)
-    const invoice = generateImmediateBilling(contract);
-
-    if (invoice) {
-      const docs = getAllDocuments();
-      docs.push(invoice);
-      saveDocuments(docs);
-
-      if (typeof saveSingleDocumentToFirestore === "function") {
-        saveSingleDocumentToFirestore(invoice);
-      }
+    // ✅ Délègue toute la logique de facturation initiale + rattrapage à rebuildContractInvoices
+    // (facture initiale, nextInvoiceDate, catch-up des mois passés, anti-doublon)
+    if (typeof rebuildContractInvoices === "function") {
+      rebuildContractInvoices(contract);
     }
 
-    // 2️⃣ Définition de la première échéance (particulier + syndic)
-    contract.pricing.nextInvoiceDate = computeNextInvoiceDate(contract) || "";
-
-    // 3️⃣ Re-sauvegarde du contrat mis à jour
-    saveContracts(list);
+    // Sync Firestore contrat (rebuildContractInvoices gère les docs Firestore)
     if (typeof saveSingleContractToFirestore === "function") {
       saveSingleContractToFirestore(contract);
     }
 
-    // 4️⃣ Rattrapage éventuel (contrats dans le passé)
-    if (typeof checkScheduledInvoices === "function") {
-      checkScheduledInvoices();
-    }
+    // Rafraîchir la liste des factures
+    if (typeof loadDocumentsList === "function") loadDocumentsList();
   } else {
     // Contrat existant, déjà signé → recalcul facturation
     rebuildContractInvoices(contract);
@@ -21684,7 +21671,12 @@ function createAutomaticInvoice(contract) {
       d.contractId === contract.id &&
       d.date === nextISO &&
       Array.isArray(d.prestations) &&
-      d.prestations.some((p) => p && p.kind === "contrat_echeance"),
+      d.prestations.some(
+        (p) =>
+          p &&
+          (p.kind === "contrat_echeance" ||
+            p.kind === "contrat_echeance_initiale"),
+      ),
   );
   if (alreadyExists) return null;
 
