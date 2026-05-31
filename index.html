@@ -58,6 +58,7 @@
   <button id="tabDevis" class="btn tab-btn" onclick="openFromHome('devis')">📄 Devis</button>
   <button id="tabContrats" class="btn tab-btn" onclick="openFromHome('contrat')">📘 Contrats</button>
   <button id="tabFactures" class="btn tab-btn" onclick="openFromHome('facture')">💰 Factures</button>
+  <button id="tabPlanning" class="btn tab-btn" onclick="showPlanning()">📅 Planning</button>
   <button class="btn tab-btn" onclick="openTarifsPanelAny()">📋 Tarifs prestations</button>
 <button class="btn tab-btn" type="button" onclick="openClientsListPopup()">👥 Clients</button>
   <button id="tabAttest" class="btn tab-btn" onclick="showAttestations()">📑 Attestations</button>
@@ -2077,8 +2078,8 @@
       </div>
 
       <div class="ca-filter ca-export-group">
-        <button type="button" class="btn btn-secondary btn-small" onclick="exportCAURSSAFCSV()">
-          📤 Export URSSAF
+        <button type="button" class="btn btn-primary btn-small" onclick="exportCAURSSAFCSV()">
+          📄 Déclaration URSSAF (PDF)
         </button>
         <button type="button" class="btn btn-secondary btn-small" onclick="exportCAFullCSV()">
           📊 Export Expert-comptable

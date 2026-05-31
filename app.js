@@ -114,10 +114,19 @@ const PRESTATION_TEMPLATES = [
     title: "Entretien climatisation",
     priceParticulier: 100,
     priceSyndic: 120,
-    descParticulier:
-      "Nettoyage filtres, turbine, évaporateur et bac à condensats. Contrôle évacuation et nettoyage groupe extérieur.",
-    descSyndic:
-      "Nettoyage complet intérieur/extérieur, contrôle évacuation, désinfection et vérification installation. Contrôle températures et rapport gestionnaire.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Nettoyage des filtres",
+      "Nettoyage et désinfection unité intérieure",
+      "Nettoyage évaporateur",
+      "Nettoyage et désinfection du bac à condensats et test d’écoulement",
+      "Nettoyage des ailettes du condenseur et du caisson extérieur",
+      "Vérification connexions électriques",
+      "Contrôle fonctionnement froid / chaud",
+      "Mesure températures soufflage",
+      "Contrôle télécommande et réglages",
+    ],
   },
 
   // 2. Entretien piscine chlore
@@ -127,10 +136,18 @@ const PRESTATION_TEMPLATES = [
     title: "Entretien piscine chlore",
     priceParticulier: 80,
     priceSyndic: 120,
-    descParticulier:
-      "Analyse de l’eau, nettoyage bassin, contrôle filtration, rinçage et ajustement traitement.",
-    descSyndic:
-      "Analyse complète, nettoyage bassin, contrôle local technique, pression filtre, rinçage, vérification pompe et rapport gestionnaire.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Analyse de l’eau",
+      "Ajustement chimique selon résultats",
+      "Nettoyage préfiltre",
+      "Aspiration fond de bassin",
+      "Brossage parois",
+      "Contrôle pression filtre et backwash",
+      "Contrôle pompe, débit, programmateur",
+      "Nettoyage ligne d’eau",
+    ],
   },
 
   // 3. Entretien piscine sel
@@ -140,10 +157,19 @@ const PRESTATION_TEMPLATES = [
     title: "Entretien piscine sel",
     priceParticulier: 80,
     priceSyndic: 100,
-    descParticulier:
-      "Analyse eau, nettoyage bassin, contrôle cellule électrolyse, pompe et filtration. Réglage production de sel.",
-    descSyndic:
-      "Analyse complète, nettoyage, contrôle cellule et production, vérification filtration, réglages boîtier et rapport gestionnaire.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Analyse de l’eau",
+      "Ajustement chimique selon résultats",
+      "Nettoyage préfiltre",
+      "Aspiration fond de bassin",
+      "Brossage parois",
+      "Contrôle pression filtre et backwash",
+      "Contrôle pompe, débit, programmateur",
+      "Contrôle fonctionnement électrolyseur",
+      "Nettoyage ligne d’eau",
+    ],
   },
 
   // 4. Entretien jacuzzi
@@ -153,10 +179,16 @@ const PRESTATION_TEMPLATES = [
     title: "Entretien jacuzzi / spa",
     priceParticulier: 80,
     priceSyndic: 100,
-    descParticulier:
-      "Nettoyage spa, filtres, contrôle eau, désinfection buses et vérification pompe/chauffage.",
-    descSyndic:
-      "Nettoyage complet, analyse eau, désinfection, contrôle installation, pompes/chauffage et rapport gestionnaire.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Analyse et équilibrage eau",
+      "Nettoyage filtre",
+      "Nettoyage ligne d’eau et surface",
+      "Désinfection des buses",
+      "Contrôle pompe et chauffage",
+      "Contrôle jets et tableau de commande",
+    ],
   },
 
   // 5. Hivernage piscine
@@ -164,25 +196,62 @@ const PRESTATION_TEMPLATES = [
     label: "Hivernage piscine",
     kind: "hivernage_piscine",
     title: "Hivernage piscine",
-    priceParticulier: 100,
-    priceSyndic: 120,
-    descParticulier:
-      "Nettoyage, baisse niveau eau, ajout produit d’hivernage et sécurisation local technique.",
-    descSyndic:
-      "Nettoyage complet, abaissement contrôlé, purge éventuelle, sécurisation local technique et rapport gestionnaire.",
+    priceParticulier: 150,
+    priceSyndic: 180,
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Analyse de l’eau",
+      "Traitement choc fin de saison",
+      "Nettoyage fond, parois, ligne d’eau",
+      "Backwash et rinçage filtre",
+      "Vidange pompe, filtre, réchauffeur",
+      "Mise en place bâche / couverture hivernale",
+    ],
   },
 
-  // 6. Remise en service piscine
+  // 6a. Remise en service piscine — eau propre
   {
-    label: "Remise en service piscine",
+    label: "Remise en service — eau propre",
+    kind: "remise_service_propre",
+    title: "Remise en service piscine",
+    priceParticulier: 120,
+    priceSyndic: 150,
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Retrait et nettoyage bâche",
+      "Inspection bassin et équipements",
+      "Vérification pompe",
+      "Nettoyage préfiltre et backwash",
+      "Brossage parois et fond",
+      "Analyse de l’eau",
+      "Correction des paramètres eau",
+      "Détartrage cellule électrolyseur (si piscine au sel)",
+    ],
+  },
+
+  // 6b. Remise en service piscine — eau verte / algues
+  {
+    label: "Remise en service — eau verte / algues",
     kind: "remise_service_piscine",
     title: "Remise en service piscine",
-    priceParticulier: 100,
-    priceSyndic: 120,
-    descParticulier:
-      "Nettoyage, remise en route filtration, analyse eau et réglages nécessaires.",
-    descSyndic:
-      "Redémarrage complet, analyse et réglages, contrôle local technique, étanchéité et rapport gestionnaire.",
+    priceParticulier: 200,
+    priceSyndic: 240,
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Inspection bassin et équipements",
+      "Vérification pompe",
+      "Nettoyage préfiltre et backwash complet du filtre",
+      "Traitement choc anti-algues",
+      "Brossage intensif parois et fond",
+      "Aspiration fond",
+      "Floculation si eau très trouble",
+      "Analyse de l’eau",
+      "Correction des paramètres eau",
+      "Détartrage cellule électrolyseur (si piscine au sel)",
+    ],
   },
 
   // 7. Vidange + nettoyage jacuzzi
@@ -190,12 +259,19 @@ const PRESTATION_TEMPLATES = [
     label: "Vidange + nettoyage jacuzzi",
     kind: "vidange_jacuzzi",
     title: "Vidange et nettoyage jacuzzi / spa",
-    priceParticulier: 120,
-    priceSyndic: 150,
-    descParticulier:
-      "Vidange complète, nettoyage cuve/buses, nettoyage filtre, remise en eau et équilibrage.",
-    descSyndic:
-      "Vidange complète, nettoyage cuve/buses, remise en eau, équilibrage et rapport gestionnaire.",
+    priceParticulier: 150,
+    priceSyndic: 180,
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Traitement choc canalisations avant vidange",
+      "Vidange complète",
+      "Détartrage et nettoyage buses",
+      "Nettoyage et désinfection coque",
+      "Nettoyage filtre",
+      "Remplissage et traitement de mise en route",
+      "Analyse et équilibrage eau",
+    ],
   },
 
   // 8. Traitement choc piscine
@@ -203,12 +279,19 @@ const PRESTATION_TEMPLATES = [
     label: "Traitement choc piscine",
     kind: "traitement_choc",
     title: "Traitement choc piscine",
-    priceParticulier: 70,
-    priceSyndic: 90,
-    descParticulier:
-      "Application traitement choc, remise en route filtration et rinçage après clarification.",
-    descSyndic:
-      "Traitement adapté, suivi filtration, analyse après traitement, rinçage filtre et rapport gestionnaire.",
+    priceParticulier: 90,
+    priceSyndic: 110,
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Analyse de l’eau",
+      "Correction pH",
+      "Traitement chlore choc",
+      "Floculant si eau trouble",
+      "Brossage parois",
+      "Aspiration fond si dépôts",
+      "Mise en fonctionnement filtration en continu",
+    ],
   },
 
   // 9. Changement sable / charge filtre
@@ -218,10 +301,16 @@ const PRESTATION_TEMPLATES = [
     title: "Changement sable / charge filtre",
     priceParticulier: 300,
     priceSyndic: 360,
-    descParticulier:
-      "Vidange filtre, remplacement charge, rinçage et remise en service.",
-    descSyndic:
-      "Vidange complète, nettoyage cuve, contrôle crépines, remplacement charge, rinçage et rapport gestionnaire.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Coupure installation",
+      "Extraction sable usagé",
+      "Rinçage et inspection intérieur cuve",
+      "Remplissage média filtrant",
+      "Backwash et rinçage de mise en service",
+      "Test d’étanchéité et analyse de l’eau",
+    ],
   },
 
   // 10. Remplacement roulement pompe piscine
@@ -231,21 +320,35 @@ const PRESTATION_TEMPLATES = [
     title: "Remplacement roulement pompe piscine",
     priceParticulier: 180,
     priceSyndic: 220,
-    descParticulier: "Remplacement roulements pompe.",
-    descSyndic:
-      "Démontage, extraction, remplacement roulement, remontage, test et rapport technicien.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Diagnostic et coupure électrique",
+      "Isolement hydraulique",
+      "Démontage et extraction du moteur",
+      "Remplacement des roulements et du joint de garniture mécanique",
+      "Remontage et test de fonctionnement",
+      "Contrôle étanchéité et débit",
+    ],
   },
 
   // 11. Remplacement pompe piscine 
   {
-    label: "Remplacement pompe piscine ",
+    label: "Remplacement pompe piscine",
     kind: "remplacement_pompe_mo",
     title: "Remplacement pompe piscine",
     priceParticulier: 150,
     priceSyndic: 180,
-    descParticulier: "Remplacement pompe",
-    descSyndic:
-      "Dépose/installation, raccordement, réglages et rapport technicien.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Diagnostic et coupure électrique",
+      "Isolement hydraulique",
+      "Dépose de l’ancienne pompe",
+      "Pose et raccordement nouvelle pompe",
+      "Réglages et amorçage",
+      "Test fonctionnement et contrôle étanchéité",
+    ],
   },
 
   // 12. Remplacement cellule électrolyseur
@@ -255,9 +358,16 @@ const PRESTATION_TEMPLATES = [
     title: "Remplacement cellule électrolyseur",
     priceParticulier: 120,
     priceSyndic: 150,
-    descParticulier: "Remplacement cellule, contrôle étanchéité.",
-    descSyndic:
-      "Dépose/installation, test production, réglages, contrôle étanchéité et rapport.",
+    descParticulier: "",
+    descSyndic: "",
+    detailLines: [
+      "Contrôle du taux de sel et diagnostic de la cellule",
+      "Démontage de l’ancienne cellule",
+      "Détartrage",
+      "Pose de la nouvelle cellule",
+      "Réglage du taux de sel et de la production de chlore",
+      "Test de fonctionnement et contrôle de l’eau",
+    ],
   },
 
   // 13. Nettoyage local technique
@@ -3920,7 +4030,7 @@ function getCAAvailableYears() {
  * year = null => toutes années confondues (utile pour "Toutes").
  */
 function computeCAMonthsForYear(year) {
-  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && (d.date || d.paymentDate));
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     month: i + 1,
@@ -3934,28 +4044,38 @@ function computeCAMonthsForYear(year) {
   }));
 
   docs.forEach((d) => {
-    if (!d.date) return;
-
-    const dt = new Date(d.date);
-    const y = dt.getFullYear();
-    if (!isNaN(y) && year && y !== year) return; // si année précise
-
-    const mIndex = dt.getMonth(); // 0..11
-    const month = months[mIndex];
-
     const ht = Number(d.subtotal || 0) || 0;
     const tva = Number(d.tvaAmount || 0) || 0;
     const ttc = Number(d.totalTTC || 0) || 0;
 
-    month.totalHT += ht;
-    month.totalTVA += tva;
-    month.totalTTC += ttc;
-
     if (d.paid) {
-      month.paidTTC += ttc;
+      // ✅ CA encaissé → classé par DATE DE PAIEMENT (comptabilité de trésorerie)
+      const payISO = (d.paymentDate || d.date || "").slice(0, 10);
+      if (!payISO) return;
+      const dtPay = new Date(payISO + "T00:00:00");
+      const yPay = dtPay.getFullYear();
+      if (isNaN(yPay)) return;
+      if (year && yPay !== year) return;
+      const mIndex = dtPay.getMonth();
+      const month = months[mIndex];
+      month.totalHT  += ht;
+      month.totalTVA += tva;
+      month.totalTTC += ttc;
+      month.paidTTC  += ttc;
       month.paidCount += 1;
     } else {
-      month.unpaidTTC += ttc;
+      // 📋 Facture non payée → classée par date d'émission (activité de facturation)
+      if (!d.date) return;
+      const dtEmit = new Date(d.date + "T00:00:00");
+      const yEmit = dtEmit.getFullYear();
+      if (isNaN(yEmit)) return;
+      if (year && yEmit !== year) return;
+      const mIndex = dtEmit.getMonth();
+      const month = months[mIndex];
+      month.totalHT  += ht;
+      month.totalTVA += tva;
+      month.totalTTC += ttc;
+      month.unpaidTTC  += ttc;
       month.unpaidCount += 1;
     }
   });
@@ -4271,44 +4391,305 @@ function closeCAReport() {
 /* ===== Exports CSV ===== */
 
 function exportCAURSSAFCSV() {
+  try {
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert("jsPDF non charge. Verifiez la connexion internet.");
+    return;
+  }
+
   const yearSelect = document.getElementById("caYearSelect");
-  if (!yearSelect) return;
-  const value = yearSelect.value || "all";
-  const year = value === "all" ? null : parseInt(value, 10) || null;
+  const value      = yearSelect ? (yearSelect.value || "all") : "all";
+  const selectedYear = value === "all"
+    ? new Date().getFullYear()
+    : (parseInt(value, 10) || new Date().getFullYear());
 
-  // URSSAF = CA encaissé (factures payées) par mois
-  const months = computeCAMonthsForYear(year);
+  const months    = computeCAMonthsForYear(selectedYear);
+  const company   = (typeof getCompanySettings === "function") ? getCompanySettings() : {};
+  const tvaStatus = (typeof getMicroTVAStatus  === "function") ? getMicroTVAStatus()  : { mode: "franchise" };
+  const THRESHOLD = (typeof MICRO_TVA_THRESHOLD_BASE !== "undefined") ? MICRO_TVA_THRESHOLD_BASE : 36800;
 
-  const monthNames = [
-    "Janvier",
-    "Février",
-    "Mars",
-    "Avril",
-    "Mai",
-    "Juin",
-    "Juillet",
-    "Août",
-    "Septembre",
-    "Octobre",
-    "Novembre",
-    "Décembre",
-  ];
+  // ── Formateur nombres : espace simple comme séparateur de milliers
+  // (toLocaleString("fr-FR") insère un U+202F que jsPDF rend en "/")
+  const fmt = (v) => {
+    const n = Number(v || 0);
+    const parts = n.toFixed(2).split(".");
+    parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+    return parts.join(",") + " EUR";
+  };
 
-  let csv = "Mois;CA encaissé TTC\n";
+  // ── Palette ──────────────────────────────────────────
+  const C = {
+    blue:   [25,  118, 210],
+    blueD:  [13,   71, 161],
+    blueL:  [232, 244, 255],
+    green:  [ 27,  94,  32],
+    greenL: [232, 245, 233],
+    red:    [198,  40,  40],
+    redL:   [255, 235, 238],
+    grey:   [120, 120, 120],
+    greyL:  [247, 249, 251],
+    greyM:  [220, 225, 230],
+    dark:   [ 20,  20,  20],
+    white:  [255, 255, 255],
+  };
+  const M = 14;
+  const W = 210 - M * 2;
+  const doc = new window.jspdf.jsPDF();
 
-  months.forEach((m, idx) => {
-    csv += `${monthNames[idx]};${m.paidTTC.toFixed(2).replace(".", ",")}\n`;
+  // Donnees agregees
+  const annualCA  = months.reduce((s, m) => s + (m.paidTTC   || 0), 0);
+  const annualCnt = months.reduce((s, m) => s + (m.paidCount || 0), 0);
+  const pct       = THRESHOLD > 0 ? Math.min(annualCA / THRESHOLD * 100, 999) : 0;
+  const isObl     = tvaStatus.mode === "obligatoire";
+  const MOIS      = ["Janvier","Fevrier","Mars","Avril","Mai","Juin",
+                     "Juillet","Aout","Septembre","Octobre","Novembre","Decembre"];
+  const QTRIM     = ["T1  Janv - Mars","T2  Avr - Juin","T3  Juil - Sept","T4  Oct - Dec"];
+  const quarters  = [0,1,2,3].map(q => ({
+    ca:  months.slice(q*3, q*3+3).reduce((s,m) => s + (m.paidTTC   || 0), 0),
+    cnt: months.slice(q*3, q*3+3).reduce((s,m) => s + (m.paidCount || 0), 0),
+  }));
+
+  // ════════════════════════════════
+  // HEADER
+  // ════════════════════════════════
+  doc.setFillColor(...C.blue);
+  doc.rect(0, 0, 210, 26, "F");
+
+  doc.setTextColor(...C.white);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(14);
+  doc.text(company.companyName || "AquaClim Prestige", M, 11);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.text(company.subtitle || "Entretien & Depannage - Climatisation & Piscine", M, 18);
+
+  // Badge droite
+  doc.setFillColor(...C.white);
+  doc.roundedRect(143, 4, 53, 18, 2, 2, "F");
+  doc.setTextColor(...C.blue);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8);
+  doc.text("DECLARATION CA", 169, 11, { align: "center" });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  doc.setTextColor(...C.grey);
+  doc.text("Micro-Entrepreneur", 169, 18, { align: "center" });
+
+  // ── Coordonnees societe ──
+  let y = 32;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.grey);
+  [
+    company.legalName || "",
+    company.address   || "",
+    [company.phone, company.email].filter(Boolean).join("   "),
+    company.siret ? "SIRET : " + company.siret : "",
+  ].filter(Boolean).forEach(l => { doc.text(l, M, y); y += 3.8; });
+
+  // ── Titre ──
+  y += 3;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(15);
+  doc.setTextColor(...C.dark);
+  doc.text("Declaration de Chiffre d'Affaires", M, y);
+  y += 5.5;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...C.blue);
+  doc.text("Exercice " + selectedYear + "   |   Micro-Entrepreneur   |   Recettes encaissees", M, y);
+  y += 1.5;
+  doc.setDrawColor(...C.blueL);
+  doc.setLineWidth(0.5);
+  doc.line(M, y + 2, 210 - M, y + 2);
+  y += 8;
+
+  // ════════════════════════════
+  // TOTAL ANNUEL — grande case
+  // ════════════════════════════
+  doc.setFillColor(...C.blueD);
+  doc.roundedRect(M, y, W, 20, 3, 3, "F");
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(180, 210, 255);
+  doc.text("TOTAL ANNUEL " + selectedYear, M + 6, y + 7);
+  doc.setFontSize(7.5);
+  doc.text(annualCnt + " facture" + (annualCnt > 1 ? "s" : "") + " encaissee" + (annualCnt > 1 ? "s" : ""), M + 6, y + 13);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(...C.white);
+  doc.text(fmt(annualCA), 210 - M - 5, y + 13, { align: "right" });
+  y += 26;
+
+  // ════════════════════════════
+  // 4 CASES TRIMESTRIELLES
+  // ════════════════════════════
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...C.dark);
+  doc.text("Montants a declarer par trimestre :", M, y);
+  y += 5;
+
+  const bW = (W - 6) / 2;
+  const bH = 26;
+
+  quarters.forEach((q, qi) => {
+    const bx = M + (qi % 2) * (bW + 6);
+    const by = y + Math.floor(qi / 2) * (bH + 5);
+
+    // Fond
+    doc.setFillColor(...C.greyL);
+    doc.setDrawColor(...C.greyM);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(bx, by, bW, bH, 3, 3, "FD");
+
+    // Barre couleur gauche
+    doc.setFillColor(...C.blue);
+    doc.roundedRect(bx, by, 4, bH, 2, 2, "F");
+    doc.rect(bx + 2, by, 2, bH, "F");
+
+    // Label trimestre
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...C.blue);
+    doc.text(QTRIM[qi], bx + 8, by + 9);
+
+    // Montant
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(q.ca > 0 ? 13 : 11);
+    doc.setTextColor(...(q.ca > 0 ? C.dark : C.grey));
+    doc.text(q.ca > 0 ? fmt(q.ca) : "0,00 EUR", bx + bW - 5, by + 20, { align: "right" });
+
+    // Nb factures
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...C.grey);
+    doc.text(q.cnt + " fact.", bx + 8, by + 21);
   });
 
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = year ? `CA_URSSAF_${year}.csv` : "CA_URSSAF_toutes_annees.csv";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  y += 2 * (bH + 5) + 6;
+
+  // ════════════════════════════
+  // TABLEAU MENSUEL DETAILLE
+  // ════════════════════════════
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...C.dark);
+  doc.text("Detail mensuel :", M, y);
+  y += 5;
+
+  const cW  = [40, 22, 48, 48, 24];
+  const cX  = [M, M+40, M+62, M+110, M+158];
+  const hH  = 7.5;
+  const rH  = 6.2;
+
+  // En-tete tableau
+  doc.setFillColor(...C.blue);
+  doc.rect(M, y, W, hH, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.white);
+  [["Mois",0,"left"],["Fact.",1,"right"],["CA HT",2,"right"],["CA TTC",3,"right"],["Trim.",4,"right"]].forEach(([lbl,i,al]) => {
+    const tx = al === "left" ? cX[i] + 3 : cX[i] + cW[i] - 2;
+    doc.text(lbl, tx, y + 5.2, { align: al });
+  });
+  y += hH;
+
+  months.forEach((m, idx) => {
+    const ca  = m.paidTTC   || 0;
+    const ht  = m.totalHT   || 0;
+    const cnt = m.paidCount || 0;
+
+    if (idx % 2 === 0) {
+      doc.setFillColor(...C.greyL);
+      doc.rect(M, y, W, rH, "F");
+    }
+
+    doc.setFontSize(8);
+    const midY = y + 4.2;
+
+    // Mois
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...(ca > 0 ? C.dark : C.grey));
+    doc.text(MOIS[idx], cX[0] + 3, midY);
+
+    // Nb factures
+    doc.setTextColor(...(cnt > 0 ? C.dark : C.grey));
+    doc.text(cnt > 0 ? String(cnt) : "-", cX[1] + cW[1] - 2, midY, { align: "right" });
+
+    // HT
+    doc.setTextColor(...C.grey);
+    doc.text(ca > 0 ? fmt(ht) : "-", cX[2] + cW[2] - 2, midY, { align: "right" });
+
+    // TTC
+    doc.setFont("helvetica", ca > 0 ? "bold" : "normal");
+    doc.setTextColor(...(ca > 0 ? C.dark : C.grey));
+    doc.text(ca > 0 ? fmt(ca) : "-", cX[3] + cW[3] - 2, midY, { align: "right" });
+
+    // Trimestre (1er mois uniquement)
+    if (idx % 3 === 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.setTextColor(...C.blue);
+      doc.text("T" + (Math.floor(idx/3) + 1), cX[4] + cW[4] - 2, midY, { align: "right" });
+    }
+
+    y += rH;
+
+    // Separateur fin de trimestre
+    if (idx % 3 === 2) {
+      doc.setDrawColor(...C.greyM);
+      doc.setLineWidth(0.4);
+      doc.line(M, y, M + W, y);
+      y += 1.5;
+    }
+  });
+
+  // ════════════════════════════
+  // STATUT TVA
+  // ════════════════════════════
+  y += 6;
+  const sBg   = isObl ? C.redL   : C.greenL;
+  const sBord = isObl ? C.red    : C.green;
+  const sTxt  = isObl ? C.red    : C.green;
+  doc.setFillColor(...sBg);
+  doc.setDrawColor(...sBord);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(M, y, W, 14, 2, 2, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(...sTxt);
+  doc.text(isObl ? "TVA OBLIGATOIRE" : "Franchise en base de TVA", M + 5, y + 6);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  doc.setTextColor(...C.grey);
+  doc.text(
+    "Seuil : " + fmt(THRESHOLD) + "   CA encaisse : " + fmt(annualCA) + "   (" + pct.toFixed(1) + " % atteint)",
+    M + 5, y + 11
+  );
+  y += 20;
+
+  // ════════════════════════════
+  // PIED DE PAGE
+  // ════════════════════════════
+  const d   = new Date();
+  const gen = d.getDate() + "/" + (d.getMonth() + 1) + "/" + d.getFullYear();
+  doc.setDrawColor(...C.greyM);
+  doc.setLineWidth(0.3);
+  doc.line(M, y, 210 - M, y);
+  doc.setFont("helvetica", "italic");
+  doc.setFontSize(6.5);
+  doc.setTextColor(...C.grey);
+  doc.text(
+    "Genere le " + gen + "  -  " + (company.companyName || "AquaClim Prestige") + "  -  Usage interne / declaration URSSAF",
+    105, y + 4, { align: "center" }
+  );
+
+  doc.save("Declaration_CA_URSSAF_" + selectedYear + ".pdf");
+
+  } catch(e) {
+    alert("Erreur generation PDF : " + e.message + "\n\nLigne : " + (e.stack || "").split("\n")[1]);
+  }
 }
 
 function exportCAFullCSV() {
@@ -4946,6 +5327,46 @@ function closeSendPopup() {
   if (popup) popup.classList.remove("show");
   overlay.classList.add("hidden");
   currentSendDoc = null;
+}
+
+// ⚡ ACTION RAPIDE : ouvrir l'envoi email depuis la liste (sans ouvrir le doc)
+function quickSendEmail(id) {
+  const doc = getDocument(id);
+  if (!doc) return;
+
+  currentSendDoc = doc;
+  const { body } = buildSendMessage(doc);
+
+  const infoEl  = document.getElementById("sendDocInfo");
+  const txtArea = document.getElementById("sendMessagePreview");
+  const overlay = document.getElementById("sendPopup");
+
+  if (infoEl) {
+    const typeLabel = doc.type === "facture" ? "Facture" : doc.type === "devis" ? "Devis" : "Document";
+    infoEl.textContent = `${typeLabel} ${doc.number || ""} – ${doc?.client?.name || ""}`;
+  }
+  if (txtArea) txtArea.value = body;
+  if (typeof refreshSendTemplateSelect === "function") refreshSendTemplateSelect();
+
+  if (overlay) {
+    overlay.classList.remove("hidden");
+    const popup = overlay.querySelector(".popup");
+    if (popup) { void popup.offsetWidth; popup.classList.add("show"); }
+  }
+}
+
+// ⚡ ACTION RAPIDE : basculer payé / en attente depuis la liste
+function quickMarkPaid(id) {
+  const doc = getDocument(id);
+  if (!doc || doc.type !== "facture") return;
+
+  if (doc.paid) {
+    // Repasser en attente
+    setPaymentMode(id, "");
+  } else {
+    // Marquer payée (on garde le mode déjà choisi sinon "Virement" par défaut)
+    setPaymentMode(id, doc.paymentMode || "Virement");
+  }
 }
 
 // ---------- Email / WhatsApp ----------
@@ -6489,6 +6910,20 @@ function getNextContractReference() {
 // ================== TABS DEVIS / FACTURES / CONTRATS ==================
 
 function switchListType(type) {
+  // 🔒 Si un formulaire est ouvert avec des modifs, demander confirmation
+  if (_formDirty && _isAnyFormVisible()) {
+    showConfirmDialog({
+      title: "Modifications non sauvegardées",
+      message: "Tu as des modifications non enregistrées.\nChanger d'onglet sans sauvegarder ?",
+      confirmLabel: "Changer sans sauvegarder",
+      cancelLabel: "Rester",
+      variant: "danger",
+      icon: "⚠️",
+      onConfirm: () => { _clearFormDirty(); switchListType(type); },
+    });
+    return;
+  }
+
   // On cache la vue Accueil quand on passe à une liste
   const homeView = document.getElementById("homeView");
   if (homeView) homeView.classList.add("hidden");
@@ -7006,6 +7441,77 @@ function removePassageDate(btn) {
   row.remove();
 }
 
+// ═══════════════════════════════════════════════════════════
+// Construction du menu déroulant des prestations avec sous-menus
+// ═══════════════════════════════════════════════════════════
+function buildPrestationOptionsHtml() {
+  // Catégorie de chaque prestation (par "kind")
+  const GROUP_BY_KIND = {
+    // Entretien
+    entretien_clim:        "Entretien",
+    piscine_chlore:        "Entretien",
+    piscine_sel:           "Entretien",
+    entretien_jacuzzi:     "Entretien",
+    // Saisonnier piscine
+    hivernage_piscine:     "Saisonnier piscine",
+    remise_service_propre: "Saisonnier piscine",
+    remise_service_piscine:"Saisonnier piscine",
+    // Traitements
+    vidange_jacuzzi:       "Traitements",
+    traitement_choc:       "Traitements",
+    // Réparations
+    changement_sable:        "Réparations",
+    remplacement_roulement:  "Réparations",
+    remplacement_pompe_mo:   "Réparations",
+    remplacement_cellule_mo: "Réparations",
+    // Dépannages
+    depannage_clim:        "Dépannages",
+    depannage_piscine:     "Dépannages",
+    depannage_jacuzzi:     "Dépannages",
+    // Divers
+    nettoyage_local:       "Divers",
+    deplacement:           "Divers",
+    produits:              "Divers",
+    fournitures:           "Divers",
+  };
+
+  // Ordre d'affichage des groupes
+  const GROUP_ORDER = [
+    "Entretien",
+    "Saisonnier piscine",
+    "Traitements",
+    "Réparations",
+    "Dépannages",
+    "Divers",
+  ];
+
+  let html = "";
+
+  // 1) Option vide "— Choisir un modèle —" (toujours en premier, hors groupe)
+  PRESTATION_TEMPLATES.forEach((t, idx) => {
+    if (t && !t.kind && !t._deleted) {
+      html += `<option value="${idx}">${t.label}</option>`;
+    }
+  });
+
+  // 2) Groupes
+  GROUP_ORDER.forEach((groupName) => {
+    const items = [];
+    PRESTATION_TEMPLATES.forEach((t, idx) => {
+      if (!t || t._deleted || !t.kind) return;
+      const g = GROUP_BY_KIND[t.kind] || "Divers";
+      if (g === groupName) {
+        items.push(`<option value="${idx}">${t.label}</option>`);
+      }
+    });
+    if (items.length > 0) {
+      html += `<optgroup label="${groupName}">${items.join("")}</optgroup>`;
+    }
+  });
+
+  return html;
+}
+
 function addPrestation() {
   prestationCount++;
   const container = document.getElementById("prestationsContainer");
@@ -7017,10 +7523,7 @@ function addPrestation() {
   line.dataset.basePrice = "0";
   line.dataset.autoPrice = "1"; // prix auto actif par défaut
 
-  const optionsHtml = PRESTATION_TEMPLATES.map((t, idx) => {
-    if (!t || t._deleted) return "";
-    return `<option value="${idx}">${t.label}</option>`;
-  }).join("");
+  const optionsHtml = buildPrestationOptionsHtml();
 
   line.innerHTML = `
     <div class="form-group">
@@ -7284,6 +7787,7 @@ function removePrestation(id) {
   if (!line) return;
   line.remove();
   calculateTotals();
+  if (typeof _addDetailToggles === "function") _addDetailToggles();
 }
 function reorderPriceFields(line) {
   const kind = line.dataset.kind || "";
@@ -7389,6 +7893,7 @@ function applyTemplate(selectEl) {
       template.kind === "piscine_sel" ||
       template.kind === "entretien_jacuzzi" ||
       template.kind === "hivernage_piscine" ||
+      template.kind === "remise_service_propre" ||
       template.kind === "remise_service_piscine" ||
       template.kind === "vidange_jacuzzi" ||
       template.kind === "traitement_choc" ||
@@ -7457,7 +7962,108 @@ function applyTemplate(selectEl) {
 
   updatePurchaseVisibility(line);
   calculateTotals();
+
+  // ═══════════════════════════════════════════════════════
+  // 🎯 Lignes de détail automatiques
+  // ═══════════════════════════════════════════════════════
+  // 1) Supprimer les anciennes lignes de détail déjà injectées après cette ligne
+  let _next = line.nextElementSibling;
+  while (_next && _next.dataset.isDetail === "1" && _next.dataset.autoInjected === "1") {
+    const _toRemove = _next;
+    _next = _next.nextElementSibling;
+    _toRemove.remove();
+  }
+
+  // 2) Injecter les nouvelles lignes si le template en a
+  if (Array.isArray(template.detailLines) && template.detailLines.length > 0) {
+    let _insertAfter = line;
+    template.detailLines.forEach((text) => {
+      prestationCount++;
+      const _id   = prestationCount;
+      const _dl   = document.createElement("div");
+      _dl.className       = "prestation-line prestation-detail-line";
+      _dl.id              = "prestation-" + _id;
+      _dl.dataset.kind    = "detail_line";
+      _dl.dataset.isDetail      = "1";
+      _dl.dataset.autoInjected  = "1";   // marqueur pour savoir qu'on peut les supprimer/remplacer
+      _dl.dataset.detail        = "";
+      _dl.dataset.basePrice     = "0";
+      _dl.dataset.autoPrice     = "0";
+      _dl.innerHTML = `
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Ligne détail incluse</label>
+          <input type="text" class="prestation-desc"
+                 value="${text.replace(/"/g, "&quot;")}"
+                 onchange="calculateTotals()" />
+          <input type="hidden" class="prestation-qty"   value="0">
+          <input type="hidden" class="prestation-unit"  value="">
+          <input type="hidden" class="prestation-price" value="0">
+          <span class="prestation-total" style="display:none;">0,00 €</span>
+          <div class="form-group no-print prestation-remove-wrapper">
+            <button type="button" class="btn-remove-line"
+                    onclick="removePrestation(${_id})">✖ Supprimer cette ligne</button>
+          </div>
+        </div>`;
+      _insertAfter.insertAdjacentElement("afterend", _dl);
+      _insertAfter = _dl;
+    });
+  }
+
+  // Ajoute le bouton de repli des lignes de détail
+  _addDetailToggles();
 } // <- fin de applyTemplate
+
+// ═══════════════════════════════════════════════════════════
+// #4 Repli / dépli des lignes de détail dans le formulaire
+// ═══════════════════════════════════════════════════════════
+function _addDetailToggles() {
+  const container = document.getElementById("prestationsContainer");
+  if (!container) return;
+
+  // Nettoyer les anciens boutons (on reconstruit proprement)
+  container.querySelectorAll(".detail-toggle-btn").forEach((b) => b.remove());
+
+  const mainLines = Array.from(container.children).filter(
+    (el) =>
+      el.classList &&
+      el.classList.contains("prestation-line") &&
+      !el.classList.contains("prestation-detail-line"),
+  );
+
+  mainLines.forEach((line) => {
+    // Collecter les lignes de détail qui suivent immédiatement
+    const details = [];
+    let next = line.nextElementSibling;
+    while (
+      next &&
+      next.classList &&
+      next.classList.contains("prestation-detail-line")
+    ) {
+      details.push(next);
+      next = next.nextElementSibling;
+    }
+    if (details.length === 0) return;
+
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "detail-toggle-btn no-print";
+
+    const setLabel = (collapsed) => {
+      btn.textContent = collapsed
+        ? `▸ Afficher les ${details.length} lignes de détail`
+        : "▾ Masquer les détails";
+    };
+    setLabel(false);
+
+    btn.addEventListener("click", () => {
+      const willCollapse = !details[0].classList.contains("detail-collapsed");
+      details.forEach((d) => d.classList.toggle("detail-collapsed", willCollapse));
+      setLabel(willCollapse);
+    });
+
+    line.insertAdjacentElement("afterend", btn);
+  });
+}
 
 
 function onPriceChange(input) {
@@ -7632,6 +8238,29 @@ function calculateTotals() {
       totalLabelEl.textContent = "TOTAL TTC :";
     }
   }
+
+  // 🔻 Total collant en bas du formulaire
+  _updateStickyTotal(formatEuro(totalTTC));
+}
+
+// Crée/maj le bandeau de total collant, visible quand on remplit un devis/facture
+function _updateStickyTotal(amountText) {
+  let bar = document.getElementById("formStickyTotal");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "formStickyTotal";
+    bar.innerHTML =
+      `<span class="fst-label">Total à payer</span>` +
+      `<span class="fst-amount">0,00 €</span>`;
+    document.body.appendChild(bar);
+  }
+  const amtEl = bar.querySelector(".fst-amount");
+  if (amtEl) amtEl.textContent = amountText;
+
+  // Visible uniquement quand le formulaire devis/facture est affiché
+  const fv = document.getElementById("formView");
+  const visible = fv && !fv.classList.contains("hidden");
+  bar.classList.toggle("visible", !!visible);
 }
 
 // ================== TYPE CLIENT / CONDITIONS ==================
@@ -7778,6 +8407,20 @@ function setConditions(type) {
 // ================== CRÉATION / CHARGEMENT DOCUMENT ==================
 
 function newDocument(type) {
+  // 🔒 Demande confirmation si des modifs sont en cours
+  if (_formDirty && _isAnyFormVisible()) {
+    showConfirmDialog({
+      title: "Modifications non sauvegardées",
+      message: "Tu as des modifications non enregistrées.\nCréer un nouveau document sans sauvegarder ?",
+      confirmLabel: "Nouveau sans sauvegarder",
+      cancelLabel: "Rester",
+      variant: "danger",
+      icon: "⚠️",
+      onConfirm: () => { _clearFormDirty(); newDocument(type); },
+    });
+    return;
+  }
+  _clearFormDirty();
   currentDocumentId = null;
   document.getElementById("listView").classList.add("hidden");
   document.getElementById("formView").classList.remove("hidden");
@@ -7849,6 +8492,20 @@ function newDocument(type) {
 }
 
 function loadDocument(id) {
+  // 🔒 Demande confirmation si des modifs sont en cours
+  if (_formDirty && _isAnyFormVisible()) {
+    showConfirmDialog({
+      title: "Modifications non sauvegardées",
+      message: "Tu as des modifications non enregistrées.\nOuvrir un autre document sans sauvegarder ?",
+      confirmLabel: "Ouvrir sans sauvegarder",
+      cancelLabel: "Rester",
+      variant: "danger",
+      icon: "⚠️",
+      onConfirm: () => { _clearFormDirty(); loadDocument(id); },
+    });
+    return;
+  }
+
   const doc = getDocument(id);
   if (!doc) return;
   currentDocumentId = id;
@@ -8073,6 +8730,7 @@ doc.prestations.forEach((p) => {
     }
   });
   calculateTotals();
+  _addDetailToggles();
   // ✅ On resauvegarde si on a nettoyé un doc ancien
   try {
     const docsAll = getAllDocuments();
@@ -8102,6 +8760,8 @@ doc.prestations.forEach((p) => {
   if (typeof _lockIndemnite40Line === "function") {
     document.querySelectorAll(".prestation-line").forEach(_lockIndemnite40Line);
   }
+  // Document chargé → on repart de zéro (pas de modifs en attente)
+  _clearFormDirty();
 }
 
 // ================== SAUVEGARDE / SUPPRESSION / DUPLICATION ==================
@@ -8390,13 +9050,10 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
     if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
   } catch (e) {}
 
-  showConfirmDialog({
-    title: "Enregistrement réussi",
-    message: `La ${doc.type} ${doc.number || ""} a été enregistrée.`,
-    confirmLabel: "OK",
-    variant: "success",
-    icon: "✅",
-  });
+  _clearFormDirty();
+
+  const _typeLabel = doc.type === "devis" ? "Devis" : "Facture";
+  showToast(`${_typeLabel} ${doc.number || ""} enregistré${doc.type === "facture" ? "e" : ""}`, "success");
 
   currentDocumentId = doc.id;
   loadDocumentsList();
@@ -8581,14 +9238,18 @@ function duplicateCurrent() {
 }
 
 function backToList() {
-hideHealthCardsEverywhere();
-  document.getElementById("formView").classList.add("hidden");
-  document.getElementById("listView").classList.remove("hidden");
-  currentDocumentId = null;
-  resetTarifsPanel();
-  loadYearFilter();
-  loadDocumentsList();
-  updateTransformButtonVisibility();
+  confirmIfDirty(() => {
+    hideHealthCardsEverywhere();
+    document.getElementById("formView").classList.add("hidden");
+    document.getElementById("listView").classList.remove("hidden");
+    const fst = document.getElementById("formStickyTotal");
+    if (fst) fst.classList.remove("visible");
+    currentDocumentId = null;
+    resetTarifsPanel();
+    loadYearFilter();
+    loadDocumentsList();
+    updateTransformButtonVisibility();
+  });
 }
 
 function syncMicroTVAStatusWithCurrentCA() {
@@ -8601,49 +9262,42 @@ function syncMicroTVAStatusWithCurrentCA() {
 // =====================================
 
 function computeCA() {
-  const docs = getAllDocuments().filter((d) => d.type === "facture" && d.date);
+  const docs = getAllDocuments().filter((d) => d.type === "facture" && (d.date || d.paymentDate));
 
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
 
-  let totalYear = 0; // CA annuel (affiché)
-  let totalPaidYear = 0; // CA réellement encaissé → micro-entreprise
-  let totalUnpaid = 0;
+  // ✅ CA micro-entreprise = comptabilité de trésorerie
+  // → uniquement les factures PAYÉES, classées par DATE DE PAIEMENT
+  let totalPaidYear = 0;
   let monthTotal = 0;
 
   docs.forEach((f) => {
+    if (!f.paid) return; // seules les factures encaissées comptent
+
     const amount = Number(f.totalTTC || 0);
     if (!amount) return;
 
-    const isPaid = !!f.paid;
-    const payDate = f.paymentDate || f.date;
+    // Date de référence = date de paiement si connue, sinon date d'émission
+    const refDate = (f.paymentDate || f.date || "").slice(0, 10);
+    if (!refDate) return;
 
-    // --------------------------
-    // CA affiché = basé sur la DATE FACTURE
-    // --------------------------
-    if (f.date.startsWith(String(year))) {
-      totalYear += amount;
+    if (refDate.startsWith(String(year))) {
+      totalPaidYear += amount;
 
-      if (isPaid) totalPaidYear += amount;
-      else totalUnpaid += amount;
-
-      // mois courant
-      if (f.date.startsWith(`${year}-${month}`)) {
+      if (refDate.startsWith(`${year}-${month}`)) {
         monthTotal += amount;
       }
     }
   });
 
   // Surveiller le seuil TVA micro
-  if (typeof checkMicroTVAThreshold === "function") {
-    if (typeof refreshMicroTVAState === "function") {
-  refreshMicroTVAState(false);
-}
-
+  if (typeof refreshMicroTVAState === "function") {
+    refreshMicroTVAState(false);
   }
 
-  // TRÈS IMPORTANT : renvoyer le CA encaissé (micro)
+  // CA encaissé sur l'année en cours (comptabilité de trésorerie)
   return totalPaidYear;
 }
 
@@ -9923,6 +10577,35 @@ function refreshDocumentHealthUI(doc) {
 
 // ================== LISTE DOCUMENTS & STATUTS ==================
 
+// Écran vide accueillant avec bouton d'action contextuel
+function _buildEmptyStateHtml() {
+  const type = (typeof currentListType !== "undefined" && currentListType) ? currentListType : "devis";
+
+  let icon, title, sub, ctaLabel, ctaAction;
+  if (type === "facture") {
+    icon = "💰";
+    title = "Aucune facture pour le moment";
+    sub = "Crée ta première facture ou génère-la depuis un devis accepté.";
+    ctaLabel = "+ Nouvelle facture";
+    ctaAction = "newDocument('facture')";
+  } else {
+    icon = "📄";
+    title = "Aucun devis pour le moment";
+    sub = "Crée ton premier devis pour démarrer.";
+    ctaLabel = "+ Nouveau devis";
+    ctaAction = "newDocument('devis')";
+  }
+
+  return (
+    `<div class="empty-state">` +
+      `<div class="empty-icon">${icon}</div>` +
+      `<div class="empty-title">${title}</div>` +
+      `<div class="empty-sub">${sub}</div>` +
+      `<button class="empty-cta" type="button" onclick="${ctaAction}">${ctaLabel}</button>` +
+    `</div>`
+  );
+}
+
 function loadDocumentsList() {
   // Cas spécial : onglet Contrats
   if (currentListType === "contrat") {
@@ -10010,7 +10693,7 @@ function loadDocumentsList() {
 
   if (filtered.length === 0) {
     tbody.innerHTML =
-      '<tr><td colspan="7" class="no-docs-cell">Aucun document pour le moment</td></tr>';
+      `<tr><td colspan="7" class="no-docs-cell">${_buildEmptyStateHtml()}</td></tr>`;
     return;
   }
 
@@ -10133,6 +10816,9 @@ function loadDocumentsList() {
       if (displayStatus === "accepte") {
         badgeDevisClass = "badge-devis-accepte";
         text = "Accepté";
+      } else if (displayStatus === "realise") {
+        badgeDevisClass = "badge-devis-realise";
+        text = "Réalisé";
       } else if (displayStatus === "cloture") {
         badgeDevisClass = "badge-devis-cloture";
         text = "Clôturé";
@@ -10153,6 +10839,9 @@ function loadDocumentsList() {
         `<option value="accepte" ${
           storedStatus === "accepte" ? "selected" : ""
         }>Accepté</option>` +
+        `<option value="realise" ${
+          storedStatus === "realise" ? "selected" : ""
+        }>Réalisé</option>` +
         `<option value="cloture" ${
           storedStatus === "cloture" ? "selected" : ""
         }>Clôturé</option>` +
@@ -10186,6 +10875,16 @@ function loadDocumentsList() {
     const previewBtnClass = printBtnClass;
     const deleteBtnClass = "btn btn-danger btn-small";
 
+    // ⚡ Actions rapides (sans ouvrir le document)
+    const qaPaidBtn =
+      doc.type === "facture"
+        ? (doc.paid
+            ? `<button class="qa-btn qa-unpaid" type="button" title="Marquer en attente"
+                       onclick="quickMarkPaid('${doc.id}')">↩️ En attente</button>`
+            : `<button class="qa-btn qa-paid" type="button" title="Marquer payée"
+                       onclick="quickMarkPaid('${doc.id}')">💰 Payée</button>`)
+        : "";
+
     const actionsHtml =
       `<div class="actions-btns">` +
       `<div class="actions-btns-row">
@@ -10199,6 +10898,11 @@ function loadDocumentsList() {
                    onclick="openPrintable('${doc.id}', true)">Aperçu</button>
            <button class="${deleteBtnClass}" type="button"
                    onclick="deleteDocument('${doc.id}')">Supprimer</button>
+         </div>` +
+      `<div class="qa-row">
+           <button class="qa-btn qa-email" type="button" title="Envoyer par email"
+                   onclick="quickSendEmail('${doc.id}')">📧 Email</button>
+           ${qaPaidBtn}
          </div>` +
       `</div>`;
 
@@ -10244,7 +10948,7 @@ function _renderMobileDocList(docs) {
   container.innerHTML = "";
 
   if (!docs || docs.length === 0) {
-    container.innerHTML = `<div style="text-align:center;color:#aaa;padding:30px 0;font-size:14px;">Aucun document pour le moment</div>`;
+    container.innerHTML = _buildEmptyStateHtml();
     return;
   }
 
@@ -10256,7 +10960,7 @@ function _renderMobileDocList(docs) {
     let statusBadge = "";
     if (isDevis) {
       const st = doc.status || "en_attente";
-      const stMap = { en_attente:"🟡 En attente", accepte:"🟢 Accepté", refuse:"🔴 Refusé", cloture:"⚫ Clôturé", expire:"⚠️ Expiré" };
+      const stMap = { en_attente:"🟡 En attente", accepte:"🟢 Accepté", realise:"🟠 Réalisé", refuse:"🔴 Refusé", cloture:"⚫ Clôturé", expire:"⚠️ Expiré" };
       statusBadge = stMap[st] || st;
     } else if (isFacture) {
       statusBadge = doc.paid ? "🟢 Payée" : (doc.paidLate ? "🔴 En retard" : "🟡 En attente");
@@ -10295,6 +10999,14 @@ function _renderMobileDocList(docs) {
         <button class="btn btn-secondary btn-small" onclick="openPrintable('${doc.id}', true)">👁 Aperçu</button>
         <button class="btn btn-success btn-small" onclick="openPrintable('${doc.id}')">🖨 Imprimer</button>
         <button class="btn btn-danger btn-small" onclick="deleteDocument('${doc.id}')">🗑</button>
+      </div>
+      <div class="qa-row">
+        <button class="qa-btn qa-email" onclick="quickSendEmail('${doc.id}')">📧 Email</button>
+        ${isFacture
+          ? (doc.paid
+              ? `<button class="qa-btn qa-unpaid" onclick="quickMarkPaid('${doc.id}')">↩️ En attente</button>`
+              : `<button class="qa-btn qa-paid" onclick="quickMarkPaid('${doc.id}')">💰 Payée</button>`)
+          : ""}
       </div>
     `;
     container.appendChild(card);
@@ -10870,7 +11582,7 @@ function renderContractStatusBadge(contract) {
 
   // 🎯 Cas contrat lié à un devis
   if (meta.sourceDevisNumber) {
-    if (devisStatus === "accepte" || devisStatus === "accepted") {
+    if (devisStatus === "accepte" || devisStatus === "accepted" || devisStatus === "realise") {
       return `<span class="status-badge status-accepted">En cours</span>`;
     }
 
@@ -11364,7 +12076,7 @@ function handleAfterInvoicePaid(doc) {
 // ===============================
 // 🧾 Création d'une facture à partir d'un devis accepté
 // ===============================
-function createInvoiceFromDevis(devis) {
+function createInvoiceFromDevis(devis, dateOverride) {
   if (!devis || devis.type !== "devis") return null;
 
   const todayISO = new Date().toISOString().slice(0, 10);
@@ -11411,7 +12123,7 @@ function createInvoiceFromDevis(devis) {
     id,
     type: "facture",
     number,
-    date: todayISO,
+    date: (dateOverride && dateOverride.length === 10) ? dateOverride : todayISO,
     validityDate: "",
 
     subject,
@@ -11558,14 +12270,14 @@ saveDocuments(docs);
     doc.sourceDevisId &&
     typeof setDevisStatus === "function"
   ) {
-    // Passage NON PAYÉ → PAYÉ
+    // Passage NON PAYÉ → PAYÉ → devis clôturé
     if (!wasPaid && doc.paid) {
       setDevisStatus(doc.sourceDevisId, "cloture");
     }
 
-    // Passage PAYÉ → NON PAYÉ
+    // Passage PAYÉ → NON PAYÉ → retour en "réalisé" (travail fait, pas encore encaissé)
     if (wasPaid && !doc.paid) {
-      setDevisStatus(doc.sourceDevisId, "accepte");
+      setDevisStatus(doc.sourceDevisId, "realise");
     }
   }
 
@@ -11589,6 +12301,15 @@ saveDocuments(docs);
   }
   if (typeof computeCA === "function") {
     computeCA();
+  }
+
+  // 🔔 Retour visuel
+  if (typeof showToast === "function") {
+    if (!wasPaid && doc.paid) {
+      showToast(`Facture ${doc.number || ""} marquée payée`, "success");
+    } else if (wasPaid && !doc.paid) {
+      showToast(`Facture ${doc.number || ""} remise en attente`, "info");
+    }
   }
 }
 
@@ -11732,17 +12453,53 @@ try { setTimeout(() => maybeOpenDevisAcceptedPlanner(doc), 0); } catch(e) {}
       }
     });
 
-    // 🟥 CAS 2 : aucun contrat lié → on génère une facture "classique" automatiquement
-    if (
-      linkedContracts.length === 0 &&
-      typeof createInvoiceFromDevis === "function"
-    ) {
-      const factureAuto = createInvoiceFromDevis(doc);
-      if (factureAuto) {
-        console.log(
-          "[Devis] Facture auto créée à l'acceptation :",
-          factureAuto.number,
-        );
+    // 🟥 CAS 2 : aucun contrat lié → on n'émet plus la facture ici.
+    //    La facture sera générée quand le devis passe à "Réalisé".
+  }
+
+  // 3b) Passage à "réalisé" → popup date + génération de la facture
+  if (status === "realise" && oldStatus !== "realise") {
+    const linkedContracts =
+      (typeof getAllContracts === "function" ? getAllContracts() : [])
+        .filter((c) => c.meta && c.meta.sourceDevisId === doc.id);
+
+    // Les devis liés à un contrat ne génèrent pas de facture directe ici
+    if (linkedContracts.length === 0 && typeof createInvoiceFromDevis === "function") {
+      // Anti-doublon : une facture existe déjà pour ce devis ?
+      const existingFac = getAllDocuments().find(
+        (d) => d.type === "facture" && d.sourceDevisId === doc.id,
+      );
+
+      if (existingFac) {
+        showConfirmDialog({
+          title: "Facture déjà existante",
+          message: `La facture ${existingFac.number} a déjà été générée pour ce devis. Aucune nouvelle facture créée.`,
+          confirmLabel: "OK",
+          cancelLabel: "",
+          variant: "info",
+          icon: "ℹ️",
+        });
+      } else {
+        const todayISO = new Date().toISOString().slice(0, 10);
+        showDatePickerDialog({
+          title: "✅ Devis réalisé",
+          message: `Date de réalisation pour le devis ${doc.number || ""} :`,
+          defaultDate: todayISO,
+          confirmLabel: "Générer la facture",
+          onConfirm: (dateChoisie) => {
+            const facture = createInvoiceFromDevis(doc, dateChoisie);
+            if (facture) {
+              if (typeof loadDocumentsList === "function") loadDocumentsList();
+              if (typeof refreshHomeStats === "function") refreshHomeStats();
+              const dateFR = new Date(dateChoisie + "T00:00:00").toLocaleDateString("fr-FR");
+              showToast(`Facture ${facture.number} générée (${dateFR})`, "success");
+            }
+          },
+          onCancel: () => {
+            // Annulé → on remet en "accepte"
+            setDevisStatus(id, "accepte");
+          },
+        });
       }
     }
   }
@@ -12036,7 +12793,7 @@ function openTarifsPanel() {
     // Catégories pour les séparateurs visuels
     const TARIF_CATEGORIES = [
       { label: "❄️ Climatisation",     icon: "❄️", kinds: ["entretien_clim","depannage_clim"] },
-      { label: "🏊 Piscine",           icon: "🏊", kinds: ["piscine_chlore","piscine_sel","hivernage_piscine","remise_service_piscine","traitement_choc","changement_sable","remplacement_roulement","remplacement_pompe_mo","remplacement_cellule_mo","nettoyage_local","depannage_piscine"] },
+      { label: "🏊 Piscine",           icon: "🏊", kinds: ["piscine_chlore","piscine_sel","hivernage_piscine","remise_service_propre","remise_service_piscine","traitement_choc","changement_sable","remplacement_roulement","remplacement_pompe_mo","remplacement_cellule_mo","nettoyage_local","depannage_piscine"] },
       { label: "🛁 Jacuzzi / Spa",     icon: "🛁", kinds: ["entretien_jacuzzi","vidange_jacuzzi","depannage_jacuzzi"] },
       { label: "🔧 Divers",            icon: "🔧", kinds: ["deplacement"] },
     ];
@@ -12489,6 +13246,51 @@ function deleteCustomPrestation(kind) {
   });
 }
 
+// ================== NOTIFICATIONS TOAST ==================
+// Petit bandeau qui apparaît en haut et disparaît tout seul.
+// type : "success" | "error" | "info" | "warning"
+function showToast(message, type = "success", duration = 2600) {
+  if (!message) return;
+
+  // Conteneur (créé une seule fois)
+  let container = document.getElementById("toastContainer");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "toastContainer";
+    document.body.appendChild(container);
+  }
+
+  const ICONS = {
+    success: "✅",
+    error:   "❌",
+    info:    "ℹ️",
+    warning: "⚠️",
+  };
+
+  const toast = document.createElement("div");
+  toast.className = "toast toast-" + type;
+  toast.innerHTML =
+    `<span class="toast-icon">${ICONS[type] || "ℹ️"}</span>` +
+    `<span class="toast-msg"></span>`;
+  // texte injecté en textContent (sécurité anti-HTML)
+  toast.querySelector(".toast-msg").textContent = message;
+
+  container.appendChild(toast);
+
+  // Animation d'entrée
+  requestAnimationFrame(() => toast.classList.add("toast-show"));
+
+  // Disparition automatique
+  const hide = () => {
+    toast.classList.remove("toast-show");
+    setTimeout(() => { try { toast.remove(); } catch (e) {} }, 320);
+  };
+  const timer = setTimeout(hide, duration);
+
+  // Clic = fermeture immédiate
+  toast.addEventListener("click", () => { clearTimeout(timer); hide(); });
+}
+
 // ================== MODAL DE CONFIRMATION ==================
 
 function showConfirmDialog({
@@ -12624,8 +13426,137 @@ function showConfirmDialog({
   overlay.classList.remove("hidden");
 }
 
+// =========================================================
+// POPUP DATE PICKER (utilisée pour "Devis réalisé")
+// =========================================================
+function showDatePickerDialog({
+  title = "Date",
+  message = "",
+  defaultDate = "",
+  confirmLabel = "Confirmer",
+  onConfirm,
+  onCancel,
+}) {
+  // Création dynamique de l'overlay (auto-supprimé à la fermeture)
+  const overlay = document.createElement("div");
+  overlay.className = "confirm-overlay";
+  overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;z-index:9999;";
+
+  overlay.innerHTML =
+    `<div class="confirm-box info" style="max-width:360px;width:90%;padding:28px 24px;">` +
+      `<div class="confirm-icon info" style="font-size:28px;margin-bottom:8px;">📅</div>` +
+      `<h3 class="confirm-title" style="margin-bottom:8px;">${title}</h3>` +
+      `<p class="confirm-message" style="margin-bottom:14px;color:#374151;">${message}</p>` +
+      `<input type="date" id="_dpInput" value="${defaultDate}" ` +
+        `style="width:100%;padding:9px 10px;border:1.5px solid #2563eb;border-radius:8px;` +
+        `font-size:15px;margin-bottom:18px;box-sizing:border-box;">` +
+      `<div class="confirm-buttons">` +
+        `<button id="_dpCancel" class="btn btn-secondary" type="button">Annuler</button>` +
+        `<button id="_dpOk" class="btn btn-primary" type="button">${confirmLabel}</button>` +
+      `</div>` +
+    `</div>`;
+
+  document.body.appendChild(overlay);
+
+  // Focus sur le champ date
+  setTimeout(() => { const inp = document.getElementById("_dpInput"); if (inp) inp.focus(); }, 60);
+
+  function close() { try { document.body.removeChild(overlay); } catch(e) {} }
+
+  document.getElementById("_dpOk").onclick = () => {
+    const val = (document.getElementById("_dpInput")?.value || defaultDate || "").slice(0, 10);
+    close();
+    if (typeof onConfirm === "function") onConfirm(val);
+  };
+
+  document.getElementById("_dpCancel").onclick = () => {
+    close();
+    if (typeof onCancel === "function") onCancel();
+  };
+}
+
 const signatureClientTitle = "Bon pour accord";
 const signatureClientText = "Bon pour accord, lu et approuvé.";
+
+// ============================================================
+// 🔒 PROTECTION FORMULAIRE NON SAUVEGARDÉ
+// ============================================================
+let _formDirty = false;
+
+function _markFormDirty()  { _formDirty = true;  _updateDirtyIndicator(); }
+function _clearFormDirty() { _formDirty = false; _updateDirtyIndicator(); }
+
+// Affiche/masque le petit badge "modifications non enregistrées" près du titre
+function _updateDirtyIndicator() {
+  // Trouver le titre du formulaire visible
+  let titleEl = null;
+  const fv = document.getElementById("formView");
+  const cv = document.getElementById("contractView");
+  if (fv && !fv.classList.contains("hidden")) {
+    titleEl = document.getElementById("formTitle");
+  } else if (cv && !cv.classList.contains("hidden")) {
+    titleEl = cv.querySelector("h2");
+  }
+
+  // Récupérer (ou créer) le badge
+  let badge = document.getElementById("dirtyIndicator");
+  if (!badge) {
+    badge = document.createElement("span");
+    badge.id = "dirtyIndicator";
+    badge.innerHTML = `<span class="dirty-dot"></span>Modifications non enregistrées`;
+  }
+
+  if (_formDirty && titleEl) {
+    // placer le badge juste après le titre courant
+    if (badge.previousElementSibling !== titleEl) {
+      titleEl.insertAdjacentElement("afterend", badge);
+    }
+    badge.classList.add("visible");
+  } else {
+    badge.classList.remove("visible");
+  }
+}
+
+function _isAnyFormVisible() {
+  const fv = document.getElementById("formView");
+  const cv = document.getElementById("contractView");
+  return (fv && !fv.classList.contains("hidden")) ||
+         (cv && !cv.classList.contains("hidden"));
+}
+
+/**
+ * Si des modifs non sauvegardées existent, demande confirmation avant de
+ * continuer. Appelle onProceed() directement si rien n'est modifié.
+ */
+function confirmIfDirty(onProceed) {
+  if (!_formDirty || !_isAnyFormVisible()) {
+    onProceed();
+    return;
+  }
+  showConfirmDialog({
+    title: "Modifications non sauvegardées",
+    message: "Tu as des modifications non enregistrées.\nQuitter sans sauvegarder ?",
+    confirmLabel: "Quitter sans sauvegarder",
+    cancelLabel: "Rester",
+    variant: "danger",
+    icon: "⚠️",
+    onConfirm: () => {
+      _clearFormDirty();
+      onProceed();
+    },
+  });
+}
+
+/** Attache les listeners une seule fois au démarrage de l'app */
+function _initDirtyTracking() {
+  ["formView", "contractView"].forEach((viewId) => {
+    const el = document.getElementById(viewId);
+    if (!el) return;
+    // input = frappe au clavier, change = select/checkbox/date
+    el.addEventListener("input",  _markFormDirty);
+    el.addEventListener("change", _markFormDirty);
+  });
+}
 
 // =========================================================
 // PLAN DE FACTURATION (affichage PRO dans Contrat + Devis)
@@ -12745,6 +13676,7 @@ function openPrintable(id, previewOnly) {
       "piscine_chlore",
       "piscine_sel",
       "hivernage_piscine",
+      "remise_service_propre",
       "remise_service_piscine",
       "traitement_choc",
       "changement_sable",
@@ -14043,24 +14975,51 @@ function _hideAllMainViews() {
   // Réafficher documentsCard si tarifsPanel était ouvert
   const dc = document.getElementById("documentsCard");
   if (dc) dc.classList.remove("hidden");
+  // Masquer le total collant (on n'est plus dans un formulaire)
+  const fst = document.getElementById("formStickyTotal");
+  if (fst) fst.classList.remove("visible");
   // Fermer le drawer mobile si ouvert
   closeMobileDrawer && closeMobileDrawer();
 }
 
 function showHome() {
-  _hideAllMainViews();
-  hideHealthCardsEverywhere();
+  confirmIfDirty(() => {
+    _hideAllMainViews();
+    hideHealthCardsEverywhere();
 
-  // Onglets
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  const tabHome = document.getElementById("tabHome");
-  if (tabHome) tabHome.classList.add("active");
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    const tabHome = document.getElementById("tabHome");
+    if (tabHome) tabHome.classList.add("active");
 
-  // Afficher uniquement homeView
-  const homeView = document.getElementById("homeView");
-  if (homeView) homeView.classList.remove("hidden");
+    const homeView = document.getElementById("homeView");
+    if (homeView) homeView.classList.remove("hidden");
 
-  refreshHomeStats();
+    refreshHomeStats();
+  });
+}
+
+// 📅 Accès direct au planning (affiche l'accueil et défile jusqu'au planning)
+function showPlanning() {
+  confirmIfDirty(() => {
+    _hideAllMainViews();
+    hideHealthCardsEverywhere();
+
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    const tabP = document.getElementById("tabPlanning");
+    if (tabP) tabP.classList.add("active");
+
+    const homeView = document.getElementById("homeView");
+    if (homeView) homeView.classList.remove("hidden");
+
+    refreshHomeStats();
+
+    // Rafraîchir + défiler jusqu'à la carte planning
+    try { if (typeof renderPlanningWeek === "function") renderPlanningWeek(); } catch (e) {}
+    setTimeout(() => {
+      const card = document.querySelector(".planning-card");
+      if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+  });
 }
 
 function openFromHome(type) {
@@ -14239,6 +15198,7 @@ function refreshHomeStats() {
 }
 
 // ========= CHIFFRE D'AFFAIRES (CARTE DASHBOARD) =========
+// ✅ Comptabilité de trésorerie : CA = factures PAYÉES, classées par DATE DE PAIEMENT
 const now = new Date();
 const currentYear = now.getFullYear();
 const currentMonth = now.getMonth(); // 0-11
@@ -14246,25 +15206,30 @@ const currentMonth = now.getMonth(); // 0-11
 let caTotal = 0;
 let caPaid = 0;
 let caUnpaid = 0;
-let caThisMonth = 0;
+let caThisMonth = 0; // CA encaissé ce mois-ci (par date de paiement)
 
 factures.forEach((f) => {
   const val = Number(f.totalTTC || 0);
   if (isNaN(val)) return;
 
   caTotal += val;
-  if (f.paid) caPaid += val;
-  else caUnpaid += val;
 
-  if (f.date) {
-    const d = new Date(f.date + "T00:00:00");
-    if (
-      !isNaN(d.getTime()) &&
-      d.getFullYear() === currentYear &&
-      d.getMonth() === currentMonth
-    ) {
-      caThisMonth += val;
+  if (f.paid) {
+    caPaid += val;
+    // CA du mois courant = date de paiement dans le mois
+    const payISO = (f.paymentDate || f.date || "").slice(0, 10);
+    if (payISO) {
+      const dp = new Date(payISO + "T00:00:00");
+      if (
+        !isNaN(dp.getTime()) &&
+        dp.getFullYear() === currentYear &&
+        dp.getMonth() === currentMonth
+      ) {
+        caThisMonth += val;
+      }
     }
+  } else {
+    caUnpaid += val;
   }
 });
 
@@ -14447,6 +15412,39 @@ function getOverriddenContractDate(contractId, originalDateISO) {
   return ov ? ov.newDate : originalDateISO;
 }
 
+// ───────────────────────────────────────────────────────────
+// Suivi "fait" des passages de CONTRAT dans le planning
+// (stockés en local par clé contractId|date d'origine)
+// ───────────────────────────────────────────────────────────
+function _getContractDoneSet() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem("contractPlanningDone") || "[]"));
+  } catch (e) {
+    return new Set();
+  }
+}
+function _saveContractDoneSet(set) {
+  localStorage.setItem("contractPlanningDone", JSON.stringify([...set]));
+}
+function isContractVisitDone(contractId, originalDate) {
+  return _getContractDoneSet().has(contractId + "|" + originalDate);
+}
+function toggleContractVisitDone(contractId, originalDate) {
+  const set = _getContractDoneSet();
+  const key = contractId + "|" + originalDate;
+  const nowDone = !set.has(key);
+  if (nowDone) set.add(key); else set.delete(key);
+  _saveContractDoneSet(set);
+
+  try { renderPlanningWeek(); } catch (e) {}
+  if (typeof showToast === "function") {
+    showToast(
+      nowDone ? "Intervention marquée faite ✅" : "Intervention remise à faire",
+      nowDone ? "success" : "info",
+    );
+  }
+}
+
 async function applyContractPlanningOverride(contractId, originalDate, newDate) {
   try {
     if (!db) return;
@@ -14513,42 +15511,59 @@ function applyCompanySettingsToUI(settings) {
 function initPlanningDnD() {
   // ✅ Sortable pas chargé => pas de drag
   if (typeof Sortable === "undefined") {
-    console.warn(
-      "❌ SortableJS manquant. Ajoute le <script Sortable.min.js> dans index.html.",
-    );
+    console.warn("❌ SortableJS manquant. Ajoute le <script Sortable.min.js> dans index.html.");
     return;
   }
 
-  // ✅ reset anciennes instances
-  planningSortables.forEach((s) => {
-    try {
-      s.destroy();
-    } catch (e) {}
-  });
+  // ✅ Reset anciennes instances
+  planningSortables.forEach((s) => { try { s.destroy(); } catch (e) {} });
   planningSortables = [];
+
+  // Détection tactile (iPhone, iPad, Android)
+  const isTouchDevice = ("ontouchstart" in window) || navigator.maxTouchPoints > 0;
 
   document.querySelectorAll(".day-visits").forEach((listEl) => {
     const sortable = new Sortable(listEl, {
-      group: "planning",
-      animation: 150,
+      group:    "planning",
       draggable: ".visit-entry",
-      filter: ".visit-empty",
+      filter:   ".visit-empty",
 
-  // ✅ Rend le drag + facile (surtout sur touchpad / mobile)
-  forceFallback: true,
-  fallbackOnBody: true,
-  fallbackTolerance: 8,         // 👈 clé: évite "micro drag" qui sélectionne
-  touchStartThreshold: 8,       // 👈 clé: il faut bouger un peu avant que ça drag
-  delay: 80,                    // 👈 petit délai pour éviter les clics / sélections
-  delayOnTouchOnly: true,       // 👈 uniquement sur mobile / tactile
+      // Classes CSS pour le retour visuel
+      ghostClass:  "sortable-ghost",
+      chosenClass: "sortable-chosen",
+      dragClass:   "sortable-drag",
 
-  onStart() {
-    document.body.classList.add("is-dragging");
-  },
+      // Animation plus courte = plus nerveux
+      animation: 100,
+
+      // ── PC : drag natif HTML5 (beaucoup plus fluide que le fallback JS)
+      // ── Mobile : fallback JS obligatoire (iOS ne supporte pas HTML5 DnD)
+      forceFallback:    isTouchDevice,
+      fallbackOnBody:   isTouchDevice,
+      fallbackTolerance: isTouchDevice ? 3 : 0,
+
+      // Délai avant départ du drag :
+      //  • Mobile : 200 ms pour laisser le temps de scroller sans déclencher le drag
+      //  • PC     : 0 ms, le drag démarre immédiatement au premier mouvement
+      delay:           isTouchDevice ? 200 : 0,
+      delayOnTouchOnly: true,
+
+      // Seuil de mouvement avant que le drag se déclenche (mobile uniquement)
+      touchStartThreshold: isTouchDevice ? 4 : 1,
+
+      // Auto-scroll au bord de l'écran pendant le drag
+      scroll:            true,
+      scrollSensitivity: 60,
+      scrollSpeed:       18,
+
+      onStart() {
+        document.body.classList.add("is-dragging");
+      },
 
       onEnd(evt) {
-        const itemEl = evt.item;
+        document.body.classList.remove("is-dragging");
 
+        const itemEl    = evt.item;
         const newDateISO = evt.to.closest(".day-column")?.dataset?.date;
         const oldDateISO = evt.from.closest(".day-column")?.dataset?.date;
         if (!newDateISO || newDateISO === oldDateISO) return;
@@ -14563,10 +15578,9 @@ function initPlanningDnD() {
 
         // 🔵 CONTRAT
         if (itemEl.classList.contains("visit-contract")) {
-          const contractId = itemEl.dataset.contractId;
+          const contractId  = itemEl.dataset.contractId;
           const originalDate = itemEl.dataset.originalDate;
           if (!contractId || !originalDate) return;
-
           applyContractPlanningOverride(contractId, originalDate, newDateISO);
         }
       },
@@ -14889,6 +15903,9 @@ function renderPlanningWeek() {
       const div = document.createElement("div");
       div.className =
         "visit-entry visit-contract " + getPlanningColorClass(serviceLabel);
+      if (isContractVisitDone(contract.id, originalDateISO)) {
+        div.classList.add("is-done");
+      }
       div.dataset.contractId = contract.id;
       div.dataset.originalDate = originalDateISO;
 
@@ -15129,6 +16146,14 @@ function openPlanningDayDetails(dateStr) {
                 : ""
             }
             <div class="planning-actions">
+              <button class="btn btn-small btn-secondary"
+                onclick="toggleContractVisitDone('${item.contractId}', '${item.originalDate}')">
+                ${
+                  isContractVisitDone(item.contractId, item.originalDate)
+                    ? "↩ Annuler"
+                    : "✅ Fait"
+                }
+              </button>
               <button class="btn btn-small btn-success"
                 onclick="createFactureFromContractItem('${item.contractId}')">
                 💶 Facturer
@@ -17052,10 +18077,24 @@ function isDevisAcceptedForContract(contract) {
   if (!devis) return false;
 
   const status = devis.status || "en_attente";
-  return status === "accepte" || status === "cloture";
+  return status === "accepte" || status === "realise" || status === "cloture";
 }
 
 function newContract() {
+  // 🔒 Demande confirmation si des modifs sont en cours
+  if (_formDirty && _isAnyFormVisible()) {
+    showConfirmDialog({
+      title: "Modifications non sauvegardées",
+      message: "Tu as des modifications non enregistrées.\nCréer un nouveau contrat sans sauvegarder ?",
+      confirmLabel: "Nouveau sans sauvegarder",
+      cancelLabel: "Rester",
+      variant: "danger",
+      icon: "⚠️",
+      onConfirm: () => { _clearFormDirty(); newContract(); },
+    });
+    return;
+  }
+  _clearFormDirty();
   currentContractId = null;
   // 🧽 on nettoie le bandeau "Contrat lié au devis"
   const banner = document.getElementById("ctDevisBanner");
@@ -18434,6 +19473,8 @@ if (ctManual) {
   ctManual.value = contract.meta?.manualStatus || "";
 }
 
+  // Formulaire contrat chargé → plus aucune modif en attente
+  _clearFormDirty();
   }
 
 
@@ -18836,27 +19877,16 @@ function saveContract() {
     // Contrat existant, déjà signé → recalcul facturation
     rebuildContractInvoices(contract);
 
-    showConfirmDialog({
-      title: "Contrat mis à jour",
-      message: "Le contrat signé et toute la facturation ont été recalculés ✔️",
-      confirmLabel: "OK",
-      variant: "success",
-      icon: "🔁",
-    });
+    showToast("Contrat mis à jour et facturation recalculée", "success");
 
     return;
   }
 
 
-  // 🔟 Popup de confirmation standard (si on n’est pas sorti avant)
-  showConfirmDialog({
-    title: "Contrat enregistré",
-    message: "Le contrat d'entretien a été enregistré avec succès.",
-    confirmLabel: "OK",
-    cancelLabel: "",
-    variant: "success",
-    icon: "✅",
-  });
+  _clearFormDirty();
+
+  // 🔟 Notification de confirmation standard (si on n’est pas sorti avant)
+  showToast("Contrat d’entretien enregistré", "success");
 
   if (typeof refreshHomeStats === "function") {
     refreshHomeStats();
@@ -22480,6 +23510,9 @@ window.onload = function () {
   loadCustomTexts();
 
   applyCompanySettingsToUI();
+
+  // 🔒 Activer la détection des modifications non sauvegardées
+  if (typeof _initDirtyTracking === "function") _initDirtyTracking();
 
   setTVA(0);
   if (typeof refreshClientDatalist === "function") refreshClientDatalist();
