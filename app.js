@@ -5364,8 +5364,8 @@ function quickMarkPaid(id) {
     // Repasser en attente
     setPaymentMode(id, "");
   } else {
-    // Marquer payée (on garde le mode déjà choisi sinon "Virement" par défaut)
-    setPaymentMode(id, doc.paymentMode || "Virement");
+    // Marquer payée (on garde le mode déjà choisi sinon "virement" par défaut)
+    setPaymentMode(id, doc.paymentMode || "virement");
   }
 }
 
@@ -10979,6 +10979,26 @@ function _renderMobileDocList(docs) {
     if (isFacture && doc.paid) borderColor = "#c6f6d5";
     else if (isFacture && !doc.paid) borderColor = "#fed7d7";
 
+    // Sélecteur de mode de paiement (factures uniquement)
+    let payRow = "";
+    if (isFacture) {
+      const mode = doc.paymentMode || "";
+      const opt = (val, label) =>
+        `<option value="${val}" ${mode === val ? "selected" : ""}>${label}</option>`;
+      payRow = `
+      <div class="mdoc-pay">
+        <span class="mdoc-pay-label">💳 Règlement</span>
+        <select class="mdoc-pay-select ${doc.paid ? "is-paid" : "is-unpaid"}"
+                onchange="setPaymentMode('${doc.id}', this.value)">
+          ${opt("", "Non réglée")}
+          ${opt("especes", "Espèces")}
+          ${opt("cb", "CB")}
+          ${opt("virement", "Virement")}
+          ${opt("cheque", "Chèque")}
+        </select>
+      </div>`;
+    }
+
     const card = document.createElement("div");
     card.className = "mdoc-card";
     card.style.borderLeftColor = borderColor;
@@ -10994,19 +11014,13 @@ function _renderMobileDocList(docs) {
         ${subject ? `<span>· ${subject}</span>` : ""}
         <span>· ${statusBadge}</span>
       </div>
+      ${payRow}
       <div class="mdoc-actions">
         <button class="btn btn-primary btn-small" onclick="loadDocument('${doc.id}')">✏️ Modifier</button>
         <button class="btn btn-secondary btn-small" onclick="openPrintable('${doc.id}', true)">👁 Aperçu</button>
         <button class="btn btn-success btn-small" onclick="openPrintable('${doc.id}')">🖨 Imprimer</button>
-        <button class="btn btn-danger btn-small" onclick="deleteDocument('${doc.id}')">🗑</button>
-      </div>
-      <div class="qa-row">
         <button class="qa-btn qa-email" onclick="quickSendEmail('${doc.id}')">📧 Email</button>
-        ${isFacture
-          ? (doc.paid
-              ? `<button class="qa-btn qa-unpaid" onclick="quickMarkPaid('${doc.id}')">↩️ En attente</button>`
-              : `<button class="qa-btn qa-paid" onclick="quickMarkPaid('${doc.id}')">💰 Payée</button>`)
-          : ""}
+        <button class="btn btn-danger btn-small" onclick="deleteDocument('${doc.id}')">🗑</button>
       </div>
     `;
     container.appendChild(card);

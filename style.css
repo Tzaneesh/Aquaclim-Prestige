@@ -4975,12 +4975,63 @@ body.dark-mode .dash-extended-value { color: #5b9ee1; }
     margin-bottom: 10px;
   }
   .mdoc-actions {
-    display: flex; gap: 8px; flex-wrap: wrap;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-top: 4px;
   }
-  .mdoc-actions .btn {
-    flex: 1; font-size: 12px; padding: 8px 6px;
-    width: auto !important; min-width: 0;
+  .mdoc-actions .btn,
+  .mdoc-actions .qa-btn {
+    flex: 0 1 calc(33.333% - 6px);
+    min-width: 0;
+    max-width: calc(50% - 4px);
+    font-size: 12.5px;
+    padding: 9px 6px;
+    width: auto !important;
     border-radius: 8px;
+    text-align: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+
+  /* Sélecteur de mode de paiement dans la carte facture */
+  .mdoc-pay {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 10px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+  }
+  .mdoc-pay-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #475569;
+    white-space: nowrap;
+  }
+  .mdoc-pay-select {
+    flex: 1;
+    font-size: 15px !important;
+    padding: 9px 10px !important;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background: #fff;
+    font-weight: 600;
+  }
+  .mdoc-pay-select.is-paid {
+    border-color: #16a34a;
+    color: #15803d;
+    background: #f0fdf4;
+  }
+  .mdoc-pay-select.is-unpaid {
+    border-color: #f59e0b;
+    color: #b45309;
+    background: #fffbeb;
   }
 
   /* ── 9. Zones de texte plus grandes (doigts) ── */
