@@ -2256,6 +2256,21 @@ function onClientNameChange() {
   if (civ && client.civility) {
     civ.value = client.civility;
   }
+
+  // 📍 Adresse d'intervention spécifique au client → auto-remplissage
+  const diffCb = document.getElementById("diffSiteAddress");
+  const siteAddrInp = document.getElementById("siteAddress");
+  const siteNameInp = document.getElementById("siteName");
+  if (client.siteAddress && client.siteAddress.trim()) {
+    if (diffCb) diffCb.checked = true;
+    if (siteAddrInp) siteAddrInp.value = client.siteAddress;
+    if (siteNameInp && !siteNameInp.value) siteNameInp.value = client.name || "";
+  } else {
+    // Pas d'adresse d'intervention spécifique → on décoche (sauf agence)
+    const isAgence = document.getElementById("clientSyndic")?.checked || false;
+    if (diffCb && !isAgence) diffCb.checked = false;
+  }
+  if (typeof _updateSiteBlockVisibility === "function") _updateSiteBlockVisibility();
 }
 
 // ── Autocomplete client custom (contourne le bug datalist iOS dans un popup) ──
@@ -3623,7 +3638,10 @@ function renderClientsList() {
     const color    = _clientAvatarColor(client.name || "");
 
     const addrHtml  = client.address
-      ? `<div class="client-card-addr"><span class="client-card-icon">📍</span>${client.address}</div>`
+      ? `<div class="client-card-addr"><span class="client-card-icon">🧾</span>${client.address}</div>`
+      : "";
+    const siteHtml  = (client.siteAddress && client.siteAddress.trim())
+      ? `<div class="client-card-addr"><span class="client-card-icon">📍</span>Intervention : ${client.siteAddress}</div>`
       : "";
     const phoneHtml = client.phone
       ? `<span class="client-card-info"><span class="client-card-icon">📞</span>${client.phone}</span>`
@@ -3642,7 +3660,7 @@ function renderClientsList() {
       <div class="client-card-avatar" style="background:${color}">${initials}</div>
       <div class="client-card-body">
         <div class="client-card-name">${client.name || ""}</div>
-        ${addrHtml}${metaHtml}
+        ${addrHtml}${siteHtml}${metaHtml}
       </div>
       <div class="client-card-actions">
         <button class="client-action-btn client-action-edit"   title="Modifier"   onclick="editClient(${index})">✏️</button>
@@ -3760,6 +3778,8 @@ function editClient(index) {
 
   document.getElementById("editClientName").value = c.name;
   document.getElementById("editClientAddress").value = c.address;
+  const _siteEl = document.getElementById("editClientSiteAddress");
+  if (_siteEl) _siteEl.value = c.siteAddress || "";
   document.getElementById("editClientPhone").value = c.phone;
   document.getElementById("editClientEmail").value = c.email;
 document.getElementById("editClientPrivateNotes").value = c.privateNotes || "";
@@ -3781,6 +3801,8 @@ function openAddClientFromList() {
   // Vide les champs
   document.getElementById("editClientName").value = "";
   document.getElementById("editClientAddress").value = "";
+  const _siteEl0 = document.getElementById("editClientSiteAddress");
+  if (_siteEl0) _siteEl0.value = "";
   document.getElementById("editClientPhone").value = "";
   document.getElementById("editClientEmail").value = "";
 document.getElementById("editClientPrivateNotes").value = "";
@@ -3807,6 +3829,7 @@ function saveEditedClient() {
 
   const name = document.getElementById("editClientName").value.trim();
   const address = document.getElementById("editClientAddress").value.trim();
+  const siteAddress = (document.getElementById("editClientSiteAddress")?.value || "").trim();
   const phone = document.getElementById("editClientPhone").value.trim();
   const email = document.getElementById("editClientEmail").value.trim();
   const privateNotes = document.getElementById("editClientPrivateNotes").value.trim();
@@ -3844,6 +3867,7 @@ function saveEditedClient() {
       id: getClientDocId({ name, address }),
       name,
       address,
+      siteAddress,
       phone,
       email,
       privateNotes,
@@ -3859,6 +3883,7 @@ function saveEditedClient() {
       ...old,
       name,
       address,
+      siteAddress,
       phone,
       email,
       privateNotes,
@@ -8368,6 +8393,29 @@ function selectClientType(type) {
   setTVA(rate);
 }
 
+// Affiche le bloc "Lieu d'intervention" si agence OU si case "adresse différente" cochée
+function _updateSiteBlockVisibility() {
+  const siteBlock = document.getElementById("siteBlock");
+  if (!siteBlock) return;
+  const isAgence = document.getElementById("clientSyndic")?.checked || false;
+  const diff = document.getElementById("diffSiteAddress")?.checked || false;
+  siteBlock.style.display = (isAgence || diff) ? "block" : "none";
+}
+
+// Case "Adresse d'intervention différente" (particuliers)
+function toggleSiteAddress() {
+  const cb = document.getElementById("diffSiteAddress");
+  const siteNameInp = document.getElementById("siteName");
+  const siteAddrInp = document.getElementById("siteAddress");
+  // Si on décoche → on vide les champs chantier (sauf agence)
+  const isAgence = document.getElementById("clientSyndic")?.checked || false;
+  if (cb && !cb.checked && !isAgence) {
+    if (siteNameInp) siteNameInp.value = "";
+    if (siteAddrInp) siteAddrInp.value = "";
+  }
+  _updateSiteBlockVisibility();
+}
+
 function setConditions(type) {
   const notesEl = document.getElementById("notes");
   const cbClientPart = document.getElementById("clientParticulier");
@@ -8441,6 +8489,8 @@ function newDocument(type) {
   if (siteNameInp) siteNameInp.value = "";
   if (siteAddrInp) siteAddrInp.value = "";
   if (siteBlock) siteBlock.style.display = "none";
+  const _diffReset = document.getElementById("diffSiteAddress");
+  if (_diffReset) _diffReset.checked = false;
 
   const siteCivilityEl = document.getElementById("siteCivility");
   if (siteCivilityEl) siteCivilityEl.value = "";
@@ -8549,7 +8599,16 @@ function loadDocument(id) {
   const siteAddrInp = document.getElementById("siteAddress");
   if (siteNameInp) siteNameInp.value = doc.siteName || "";
   if (siteAddrInp) siteAddrInp.value = doc.siteAddress || "";
-  if (siteBlock) siteBlock.style.display = doc.conditionsType === "agence" ? "block" : "none";
+
+  // 📍 Cocher la case "adresse différente" si une adresse d'intervention est enregistrée
+  const _diffCb = document.getElementById("diffSiteAddress");
+  const _hasSite = !!(doc.siteAddress || doc.siteName);
+  if (_diffCb) _diffCb.checked = _hasSite && doc.conditionsType !== "agence";
+
+  if (siteBlock) {
+    siteBlock.style.display =
+      (doc.conditionsType === "agence" || _hasSite) ? "block" : "none";
+  }
 
   updateButtonColors();
 
@@ -8979,10 +9038,10 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
       email: clientEmail,
     },
 
-    // ✅ Adresse du chantier (syndic) — était perdue à chaque save
-    siteCivility: document.getElementById("siteCivility")?.value || existing?.siteCivility || "",
-    siteName: document.getElementById("siteName")?.value || existing?.siteName || "",
-    siteAddress: document.getElementById("siteAddress")?.value || existing?.siteAddress || "",
+    // ✅ Adresse du chantier / lieu d'intervention (le formulaire fait foi)
+    siteCivility: document.getElementById("siteCivility")?.value || "",
+    siteName: document.getElementById("siteName")?.value || "",
+    siteAddress: document.getElementById("siteAddress")?.value || "",
 
     prestations,
     subtotal,
@@ -18157,6 +18216,13 @@ function newContract() {
   const ctMode = document.getElementById("ctMode");
   if (ctMode) ctMode.value = "standard";
 
+  // Réinitialiser le champ "Total passages" en mode auto (verrouillé)
+  const ctTotalPassReset = document.getElementById("ctTotalPassages");
+  if (ctTotalPassReset) {
+    ctTotalPassReset.readOnly = true;
+    ctTotalPassReset.classList.remove("ct-editable");
+  }
+
   const ctPassHiver = document.getElementById("ctPassHiver");
   if (ctPassHiver) ctPassHiver.value = "1";
 
@@ -18708,6 +18774,24 @@ function setContractCategory(cat) {
   recomputeContract();
 }
 
+// Active/désactive la saisie manuelle du nombre de visites
+function toggleCustomPassages() {
+  const cb = document.getElementById("ctCustomPassages");
+  const field = document.getElementById("ctTotalPassages");
+  if (!cb || !field) return;
+
+  if (cb.checked) {
+    field.readOnly = false;
+    field.classList.add("ct-editable");
+    // petit focus pour inviter à saisir
+    setTimeout(() => { try { field.focus(); field.select(); } catch (e) {} }, 30);
+  } else {
+    field.readOnly = true;
+    field.classList.remove("ct-editable");
+  }
+  recomputeContract();
+}
+
 function recomputeContract() {
   // 0) Détecter si c'est un contrat clim
   const _cat = document.getElementById("ctContractCategory")?.value || "eau";
@@ -18784,12 +18868,23 @@ function recomputeContract() {
     if (periodEl) periodEl.value = "";
   }
 
-  // 4) Total passages
-  const totalPassages = monthsHiver * passHiver + monthsEte * passEte;
-  totalPassEl.value = String(totalPassages);
+  // 4) Total passages — auto OU personnalisé
+  const autoTotal = monthsHiver * passHiver + monthsEte * passEte;
+  const customOn = document.getElementById("ctCustomPassages")?.checked || false;
+
+  let totalPassages;
+  if (customOn) {
+    // On respecte la valeur saisie par l'utilisateur (sans l'écraser)
+    totalPassages = parseInt(totalPassEl.value || "0", 10) || 0;
+  } else {
+    totalPassages = autoTotal;
+    totalPassEl.value = String(totalPassages);
+  }
 
   if (recapSummary) {
-    if (monthsEte + monthsHiver === 0 || (passEte === 0 && passHiver === 0)) {
+    if (customOn) {
+      recapSummary.textContent = `Nombre de visites personnalisé : ${totalPassages}`;
+    } else if (monthsEte + monthsHiver === 0 || (passEte === 0 && passHiver === 0)) {
       recapSummary.textContent = "";
     } else {
       const parts = [];
@@ -19136,6 +19231,7 @@ function buildContractFromForm(showErrors) {
     durationMonths: duration,
     endDateLabel: (document.getElementById("ctEndDate")?.value || "").trim(),
     periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
+    customPassages: _isClimBuild ? false : (document.getElementById("ctCustomPassages")?.checked || false),
     totalPassages: _isClimBuild ? _climPassPerYear : totalPassages,
     unitPrice: _isClimBuild ? _climPricePerUnit : (parseFloat(unitPriceStr) || 0),
     customUnitPrice: _isClimBuild ? 0 : (parseFloat(document.getElementById("ctCustomUnitPrice")?.value || "0") || 0),
@@ -19315,6 +19411,16 @@ function fillContractForm(contract) {
   if (ctTotalPass) {
     ctTotalPass.value =
       pr.totalPassages != null ? String(pr.totalPassages) : "0";
+  }
+
+  // Restaurer le mode "personnalisé" du nombre de visites
+  const ctCustomPass = document.getElementById("ctCustomPassages");
+  if (ctCustomPass) {
+    ctCustomPass.checked = !!pr.customPassages;
+    if (ctTotalPass) {
+      ctTotalPass.readOnly = !pr.customPassages;
+      ctTotalPass.classList.toggle("ct-editable", !!pr.customPassages);
+    }
   }
 
   // ---------- 6. OPTIONS ----------
@@ -20937,7 +21043,9 @@ function openContractPDF(previewOnly = false) {
     `;
   } else {
     clientSignatureHTML = `
-      <p>(Aucune signature disponible)</p>
+      <p>Bon pour accord, lu et approuvé.</p>
+      <p>Date :</p>
+      <p>Signature du client :</p>
     `;
   }
 
@@ -21656,7 +21764,11 @@ ${pr.clientType === "syndic" ? `
 
           ${
             !contract._inheritedSignature && !contract.signature
-              ? `<p>(Aucune signature disponible)</p>`
+              ? `
+                <p>Bon pour accord, lu et approuvé.</p>
+                <p>Date :</p>
+                <p>Signature du client :</p>
+              `
               : ""
           }
         </div>

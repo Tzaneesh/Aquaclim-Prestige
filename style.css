@@ -1359,6 +1359,14 @@ textarea {
     color: #374151;
 }
 
+/* Champ "Total passages" en mode saisie manuelle */
+#ctTotalPassages.ct-editable {
+    background: #fffbeb;
+    border-color: #f59e0b;
+    color: #92400e;
+    font-weight: 700;
+}
+
 .ct-recap-summary strong {
     font-weight: 600;
 }

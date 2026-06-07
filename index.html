@@ -1198,9 +1198,13 @@
 
         <div class="form-group">
          <label class="form-label">
-  Adresse <span class="required-star">*</span>
+  Adresse (facturation) <span class="required-star">*</span>
 </label>
           <input type="text" id="clientAddress">
+          <label style="font-weight:400;font-size:12.5px;color:#475569;display:inline-flex;align-items:center;gap:6px;cursor:pointer;margin-top:6px;">
+            <input type="checkbox" id="diffSiteAddress" onchange="toggleSiteAddress()">
+            📍 Adresse d'intervention différente de la facturation
+          </label>
         </div>
 
         <div class="form-group">
@@ -1801,8 +1805,14 @@
       </div>
 
       <div class="form-group" id="ctTotalPassagesGroup">
-        <label>Total passages (auto)</label>
-        <input type="text" id="ctTotalPassages" readonly>
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <span>Total passages</span>
+          <span style="font-weight:400;font-size:12px;color:#475569;display:inline-flex;align-items:center;gap:5px;cursor:pointer;">
+            <input type="checkbox" id="ctCustomPassages" onchange="toggleCustomPassages()"> Personnaliser
+          </span>
+        </label>
+        <input type="number" id="ctTotalPassages" min="0" step="1" readonly inputmode="numeric"
+               oninput="if(document.getElementById('ctCustomPassages')?.checked) recomputeContract();">
         <div id="ctRecapSummary" class="ct-recap-summary"></div>
         <div id="ctWarning" class="ct-warning hidden"></div>
       </div>
@@ -2289,9 +2299,14 @@
         <input type="text" id="editClientName">
 
              <label for="editClientAddress">
-  Adresse <span class="required-star">*</span>
+  Adresse (facturation) <span class="required-star">*</span>
 </label>
         <input type="text" id="editClientAddress">
+
+        <label for="editClientSiteAddress">
+  Adresse d'intervention <span style="font-weight:400;color:#64748b;font-size:12px;">(si différente — ex : la piscine est à une autre adresse)</span>
+</label>
+        <input type="text" id="editClientSiteAddress" placeholder="Laisser vide si identique à l'adresse de facturation">
 
         <label>Téléphone</label>
         <input type="text" id="editClientPhone">
