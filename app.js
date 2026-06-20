@@ -3643,14 +3643,17 @@ function renderClientsList() {
     const siteHtml  = (client.siteAddress && client.siteAddress.trim())
       ? `<div class="client-card-addr"><span class="client-card-icon">📍</span>Intervention : ${client.siteAddress}</div>`
       : "";
+    const siretHtml = (client.siret && client.siret.trim())
+      ? `<span class="client-card-info"><span class="client-card-icon">🏢</span>SIRET ${client.siret}</span>`
+      : "";
     const phoneHtml = client.phone
       ? `<span class="client-card-info"><span class="client-card-icon">📞</span>${client.phone}</span>`
       : "";
     const emailHtml = client.email
       ? `<span class="client-card-info"><span class="client-card-icon">✉️</span>${client.email}</span>`
       : "";
-    const metaHtml  = (phoneHtml || emailHtml)
-      ? `<div class="client-card-meta">${phoneHtml}${emailHtml}</div>`
+    const metaHtml  = (phoneHtml || emailHtml || siretHtml)
+      ? `<div class="client-card-meta">${phoneHtml}${emailHtml}${siretHtml}</div>`
       : "";
 
     const item = document.createElement("div");
@@ -3780,6 +3783,8 @@ function editClient(index) {
   document.getElementById("editClientAddress").value = c.address;
   const _siteEl = document.getElementById("editClientSiteAddress");
   if (_siteEl) _siteEl.value = c.siteAddress || "";
+  const _siretEl = document.getElementById("editClientSiret");
+  if (_siretEl) _siretEl.value = c.siret || "";
   document.getElementById("editClientPhone").value = c.phone;
   document.getElementById("editClientEmail").value = c.email;
 document.getElementById("editClientPrivateNotes").value = c.privateNotes || "";
@@ -3803,6 +3808,8 @@ function openAddClientFromList() {
   document.getElementById("editClientAddress").value = "";
   const _siteEl0 = document.getElementById("editClientSiteAddress");
   if (_siteEl0) _siteEl0.value = "";
+  const _siretEl0 = document.getElementById("editClientSiret");
+  if (_siretEl0) _siretEl0.value = "";
   document.getElementById("editClientPhone").value = "";
   document.getElementById("editClientEmail").value = "";
 document.getElementById("editClientPrivateNotes").value = "";
@@ -3830,6 +3837,7 @@ function saveEditedClient() {
   const name = document.getElementById("editClientName").value.trim();
   const address = document.getElementById("editClientAddress").value.trim();
   const siteAddress = (document.getElementById("editClientSiteAddress")?.value || "").trim();
+  const siret = (document.getElementById("editClientSiret")?.value || "").replace(/\s/g, "").trim();
   const phone = document.getElementById("editClientPhone").value.trim();
   const email = document.getElementById("editClientEmail").value.trim();
   const privateNotes = document.getElementById("editClientPrivateNotes").value.trim();
@@ -3868,6 +3876,7 @@ function saveEditedClient() {
       name,
       address,
       siteAddress,
+      siret,
       phone,
       email,
       privateNotes,
@@ -3884,6 +3893,7 @@ function saveEditedClient() {
       name,
       address,
       siteAddress,
+      siret,
       phone,
       email,
       privateNotes,
@@ -7296,6 +7306,11 @@ function updateDocType() {
       devisSignatureWrapper.style.display = "none";
     }
   }
+
+  // 🧾 Bouton Factur-X : uniquement pour les factures
+  document.querySelectorAll(".facturx-btn").forEach((b) => {
+    b.style.display = type === "facture" ? "inline-block" : "none";
+  });
 
   refreshDevisStatusUI(type, validityInput.value);
   updateButtonColors();
@@ -12589,6 +12604,221 @@ try { setTimeout(() => maybeOpenDevisAcceptedPlanner(doc), 0); } catch(e) {}
 }
 
 // ================== EXPORT CSV FACTURES ==================
+
+// ═══════════════════════════════════════════════════════════
+// FACTUR-X — Génération du fichier de données (XML CII / EN 16931, profil BASIC)
+// ═══════════════════════════════════════════════════════════
+
+function _fxEsc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+function _fxNum(v) {
+  const n = Number(v || 0);
+  return (isFinite(n) ? n : 0).toFixed(2);
+}
+// Découpe une adresse française "12 rue X, 06000 Nice" → { line, cp, ville }
+function _fxParseAddress(addr) {
+  const raw = String(addr || "").trim();
+  const m = raw.match(/(\d{5})\s+(.+)$/);
+  if (m) {
+    const cp = m[1];
+    const ville = m[2].replace(/[,;]+$/, "").trim();
+    let line = raw.slice(0, m.index).replace(/[,;]\s*$/, "").trim();
+    if (!line) line = raw;
+    return { line, cp, ville };
+  }
+  return { line: raw || "—", cp: "", ville: raw || "—" };
+}
+
+function generateFacturXXML(doc) {
+  const cs = (typeof getCompanySettings === "function") ? getCompanySettings() : {};
+
+  const dateISO = (doc.date || "").slice(0, 10).replace(/-/g, ""); // YYYYMMDD (format 102)
+  const ht  = Number(doc.subtotal || 0);
+  const tva = Number(doc.tvaAmount || 0);
+  const ttc = Number(doc.totalTTC || (ht + tva));
+  const rate = Number(doc.tvaRate || 0);
+
+  // Catégorie TVA : franchise en base (0 %) = "E" (exonéré) ; sinon "S" (taux normal)
+  const isFranchise = rate === 0;
+  const taxCat = isFranchise ? "E" : "S";
+  const exemptReason = isFranchise ? "TVA non applicable, art. 293 B du CGI" : "";
+
+  // Vendeur (toi)
+  const sellerSiret = String(cs.siret || "").replace(/\s/g, "");
+  const sellerAddr = _fxParseAddress(cs.address);
+
+  // Acheteur (client)
+  const buyer = doc.client || {};
+  const buyerAddr = _fxParseAddress(buyer.address);
+  // SIRET client : sur le doc si présent, sinon depuis la fiche client
+  let buyerSiret = String(buyer.siret || "").replace(/\s/g, "");
+  if (!buyerSiret && buyer.name && typeof _getClientByName === "function") {
+    const _bc = _getClientByName(buyer.name);
+    if (_bc && _bc.siret) buyerSiret = String(_bc.siret).replace(/\s/g, "");
+  }
+  const buyerLegalXml = buyerSiret
+    ? `
+        <ram:SpecifiedLegalOrganization>
+          <ram:ID schemeID="0002">${_fxEsc(buyerSiret)}</ram:ID>
+        </ram:SpecifiedLegalOrganization>`
+    : "";
+
+  // Lignes (on exclut les lignes de détail)
+  const prest = (Array.isArray(doc.prestations) ? doc.prestations : [])
+    .filter((p) => p && !p.isDetail && p.kind !== "detail_line");
+
+  let lineXml = "";
+  prest.forEach((p, i) => {
+    const qty = Number(p.qty || 0) || 0;
+    const price = Number(p.price || 0) || 0;
+    const lineTotal = Number(p.total != null ? p.total : qty * price) || 0;
+    lineXml += `
+    <ram:IncludedSupplyChainTradeLineItem>
+      <ram:AssociatedDocumentLineDocument>
+        <ram:LineID>${i + 1}</ram:LineID>
+      </ram:AssociatedDocumentLineDocument>
+      <ram:SpecifiedTradeProduct>
+        <ram:Name>${_fxEsc(p.desc || "Prestation")}</ram:Name>
+      </ram:SpecifiedTradeProduct>
+      <ram:SpecifiedLineTradeAgreement>
+        <ram:NetPriceProductTradePrice>
+          <ram:ChargeAmount>${_fxNum(price)}</ram:ChargeAmount>
+        </ram:NetPriceProductTradePrice>
+      </ram:SpecifiedLineTradeAgreement>
+      <ram:SpecifiedLineTradeDelivery>
+        <ram:BilledQuantity unitCode="C62">${qty}</ram:BilledQuantity>
+      </ram:SpecifiedLineTradeDelivery>
+      <ram:SpecifiedLineTradeSettlement>
+        <ram:ApplicableTradeTax>
+          <ram:TypeCode>VAT</ram:TypeCode>
+          <ram:CategoryCode>${taxCat}</ram:CategoryCode>
+          <ram:RateApplicablePercent>${_fxNum(rate)}</ram:RateApplicablePercent>
+        </ram:ApplicableTradeTax>
+        <ram:SpecifiedTradeSettlementLineMonetarySummation>
+          <ram:LineTotalAmount>${_fxNum(lineTotal)}</ram:LineTotalAmount>
+        </ram:SpecifiedTradeSettlementLineMonetarySummation>
+      </ram:SpecifiedLineTradeSettlement>
+    </ram:IncludedSupplyChainTradeLineItem>`;
+  });
+
+  const sellerVatXml = cs.vatNumber
+    ? `
+        <ram:SpecifiedTaxRegistration>
+          <ram:ID schemeID="VA">${_fxEsc(cs.vatNumber)}</ram:ID>
+        </ram:SpecifiedTaxRegistration>`
+    : "";
+
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<rsm:CrossIndustryInvoice xmlns:rsm="urn:un:unece:uncefact:data:standard:CrossIndustryInvoice:100" xmlns:ram="urn:un:unece:uncefact:data:standard:ReusableAggregateBusinessInformationEntity:100" xmlns:udt="urn:un:unece:uncefact:data:standard:UnqualifiedDataType:100">
+  <rsm:ExchangedDocumentContext>
+    <ram:GuidelineSpecifiedDocumentContextParameter>
+      <ram:ID>urn:cen.eu:en16931:2017#compliant#urn:factur-x.eu:1p0:basic</ram:ID>
+    </ram:GuidelineSpecifiedDocumentContextParameter>
+  </rsm:ExchangedDocumentContext>
+  <rsm:ExchangedDocument>
+    <ram:ID>${_fxEsc(doc.number || "")}</ram:ID>
+    <ram:TypeCode>380</ram:TypeCode>
+    <ram:IssueDateTime>
+      <udt:DateTimeString format="102">${dateISO}</udt:DateTimeString>
+    </ram:IssueDateTime>
+  </rsm:ExchangedDocument>
+  <rsm:SupplyChainTradeTransaction>${lineXml}
+    <ram:ApplicableHeaderTradeAgreement>
+      <ram:SellerTradeParty>
+        <ram:Name>${_fxEsc(cs.legalName || cs.companyName || "")}</ram:Name>
+        <ram:SpecifiedLegalOrganization>
+          <ram:ID schemeID="0002">${_fxEsc(sellerSiret)}</ram:ID>
+        </ram:SpecifiedLegalOrganization>
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>${_fxEsc(sellerAddr.cp)}</ram:PostcodeCode>
+          <ram:LineOne>${_fxEsc(sellerAddr.line)}</ram:LineOne>
+          <ram:CityName>${_fxEsc(sellerAddr.ville)}</ram:CityName>
+          <ram:CountryID>FR</ram:CountryID>
+        </ram:PostalTradeAddress>${sellerVatXml}
+      </ram:SellerTradeParty>
+      <ram:BuyerTradeParty>
+        <ram:Name>${_fxEsc(buyer.name || "")}</ram:Name>${buyerLegalXml}
+        <ram:PostalTradeAddress>
+          <ram:PostcodeCode>${_fxEsc(buyerAddr.cp)}</ram:PostcodeCode>
+          <ram:LineOne>${_fxEsc(buyerAddr.line)}</ram:LineOne>
+          <ram:CityName>${_fxEsc(buyerAddr.ville)}</ram:CityName>
+          <ram:CountryID>FR</ram:CountryID>
+        </ram:PostalTradeAddress>
+      </ram:BuyerTradeParty>
+    </ram:ApplicableHeaderTradeAgreement>
+    <ram:ApplicableHeaderTradeDelivery/>
+    <ram:ApplicableHeaderTradeSettlement>
+      <ram:InvoiceCurrencyCode>EUR</ram:InvoiceCurrencyCode>
+      <ram:ApplicableTradeTax>
+        <ram:CalculatedAmount>${_fxNum(tva)}</ram:CalculatedAmount>
+        <ram:TypeCode>VAT</ram:TypeCode>
+        ${exemptReason ? `<ram:ExemptionReason>${_fxEsc(exemptReason)}</ram:ExemptionReason>` : ""}
+        <ram:BasisAmount>${_fxNum(ht)}</ram:BasisAmount>
+        <ram:CategoryCode>${taxCat}</ram:CategoryCode>
+        <ram:RateApplicablePercent>${_fxNum(rate)}</ram:RateApplicablePercent>
+      </ram:ApplicableTradeTax>
+      <ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+        <ram:LineTotalAmount>${_fxNum(ht)}</ram:LineTotalAmount>
+        <ram:TaxBasisTotalAmount>${_fxNum(ht)}</ram:TaxBasisTotalAmount>
+        <ram:TaxTotalAmount currencyID="EUR">${_fxNum(tva)}</ram:TaxTotalAmount>
+        <ram:GrandTotalAmount>${_fxNum(ttc)}</ram:GrandTotalAmount>
+        <ram:DuePayableAmount>${_fxNum(ttc)}</ram:DuePayableAmount>
+      </ram:SpecifiedTradeSettlementHeaderMonetarySummation>
+    </ram:ApplicableHeaderTradeSettlement>
+  </rsm:SupplyChainTradeTransaction>
+</rsm:CrossIndustryInvoice>`;
+
+  return xml;
+}
+
+function exportFacturX(id) {
+  const doc = id ? getDocument(id) : (currentDocumentId ? getDocument(currentDocumentId) : null);
+
+  if (!doc) {
+    showToast("Ouvre/enregistre d'abord une facture", "warning");
+    return;
+  }
+  if (doc.type !== "facture") {
+    showToast("Le Factur-X ne concerne que les factures", "info");
+    return;
+  }
+
+  // Avertissement SIRET non renseigné
+  const cs = (typeof getCompanySettings === "function") ? getCompanySettings() : {};
+  const siret = String(cs.siret || "").replace(/\s/g, "");
+  if (!siret || /x/i.test(siret) || siret.length < 9) {
+    showConfirmDialog({
+      title: "SIRET manquant",
+      message: "Ton numéro SIRET n'est pas renseigné dans les paramètres.\n\nLe fichier Factur-X sera généré mais devra être complété avec ton vrai SIRET pour être valable. Continuer ?",
+      confirmLabel: "Générer quand même",
+      cancelLabel: "Annuler",
+      variant: "warning",
+      icon: "⚠️",
+      onConfirm: () => _downloadFacturX(doc),
+    });
+    return;
+  }
+  _downloadFacturX(doc);
+}
+
+function _downloadFacturX(doc) {
+  const xml = generateFacturXXML(doc);
+  const blob = new Blob([xml], { type: "application/xml;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Factur-X_${(doc.number || "facture").replace(/[^\w-]/g, "_")}.xml`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  if (typeof showToast === "function") showToast("Fichier Factur-X généré", "success");
+}
 
 function exportFacturesCSV() {
   const docs = getAllDocuments().filter((d) => d.type === "facture");

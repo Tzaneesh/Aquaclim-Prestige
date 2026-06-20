@@ -1097,6 +1097,7 @@
 
   <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
 <button class="btn action-button" type="button" onclick="openSendPopup()">📤 Envoyer au client</button>
+<button class="btn action-button facturx-btn" type="button" style="display:none;" onclick="exportFacturX()">🧾 Factur-X (XML)</button>
 
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
@@ -1453,6 +1454,7 @@
 
   <button id="contractFromDevisButton" class="btn action-button" style="display:none;" onclick="createContractFromDevis()">📘 Contrat</button>
 <button class="btn action-button" type="button" onclick="openSendPopup()">📤 Envoyer au client</button>
+<button class="btn action-button facturx-btn" type="button" style="display:none;" onclick="exportFacturX()">🧾 Factur-X (XML)</button>
 
       <button class="btn btn-danger" onclick="deleteCurrent()">🗑️ Supprimer</button>
     </div>
@@ -2313,6 +2315,12 @@
 
         <label>Email</label>
         <input type="text" id="editClientEmail">
+
+        <label for="editClientSiret">
+  SIRET <span style="font-weight:400;color:#64748b;font-size:12px;">(client professionnel / agence — requis pour la facture électronique B2B)</span>
+</label>
+        <input type="text" id="editClientSiret" inputmode="numeric" placeholder="14 chiffres — laisser vide pour un particulier">
+
 <label>Notes privées (digicode, portail, clés…)</label>
 <textarea id="editClientPrivateNotes" rows="4"
   placeholder="Ex: Digicode 1234 • Portail à droite • Clés sous le pot…"></textarea>
