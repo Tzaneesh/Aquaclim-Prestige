@@ -2894,6 +2894,17 @@ function generatePDFAttestation(mode = "print") {
 }
 
 function detectRapportTypeFromDevis(devis) {
+  // ✅ Facture issue d'un contrat : on détecte via le service du contrat
+  // (le libellé d'une échéance ne contient pas toujours "chlore"/"sel")
+  if (devis.contractId && typeof getContract === "function") {
+    const c = getContract(devis.contractId);
+    const ms = (c?.pricing?.mainService || c?.pool?.type || "").trim();
+    if (ms === "entretien_clim") return "entretien_clim";
+    if (ms === "piscine_sel") return "piscine_sel";
+    if (ms === "piscine_chlore") return "piscine_chlore";
+    if (ms === "entretien_jacuzzi" || ms === "spa_jacuzzi" || ms === "spa") return "entretien_jacuzzi";
+  }
+
   const text = JSON.stringify(devis.prestations || []).toLowerCase();
   // ✅ Détection fiable via "kind"
   if (text.includes('"kind":"entretien_clim"')) return "entretien_clim";
@@ -3067,36 +3078,37 @@ function onGenerateRapportFromCurrent() {
     return;
   }
 
-  // Only devis
-  if (doc.type !== "devis") {
+  // Devis OU facture
+  if (doc.type !== "devis" && doc.type !== "facture") {
     if (typeof showConfirmDialog === "function") {
       showConfirmDialog({
         title: "Action impossible",
         message:
-          "Le rapport d’intervention ne peut être généré qu’à partir d’un devis.",
+          "Le rapport d’intervention se génère depuis un devis ou une facture.",
         confirmLabel: "OK",
         cancelLabel: "",
         variant: "warning",
         icon: "🧾",
       });
     } else {
-      alert("Le rapport technique ne peut être généré qu’à partir d’un devis.");
+      alert("Le rapport technique se génère depuis un devis ou une facture.");
     }
     return;
   }
 
-  // ✅ Génère le rapport intelligent à partir de ce devis (sans ouvrir de popup)
+  // ✅ Génère le rapport intelligent à partir de ce document
   const rapport = createRapportFromDevis(doc);
   if (!rapport) return;
 
   const numero = doc.number || doc.id || "";
+  const _docLabel = doc.type === "facture" ? "la facture" : "le devis";
 
   // 🔔 Message pro de confirmation
   if (typeof showConfirmDialog === "function") {
     showConfirmDialog({
       title: "Rapport d’intervention créé",
       message:
-        `Un rapport technique a été créé pour le devis ${numero}.\n` +
+        `Un rapport technique a été créé pour ${_docLabel} ${numero}.\n` +
         `Tu pourras le consulter et l’imprimer depuis l’onglet "Attestations & Rapports".`,
       confirmLabel: "OK",
       cancelLabel: "",
@@ -3104,7 +3116,7 @@ function onGenerateRapportFromCurrent() {
       icon: "📝",
     });
   } else {
-    alert("Un rapport d’intervention a été créé pour le devis " + numero + ".");
+    alert("Un rapport d’intervention a été créé pour " + _docLabel + " " + numero + ".");
   }
 }
 
@@ -7332,9 +7344,11 @@ function updateTransformButtonVisibility() {
   if (contractBtn) {
     contractBtn.style.display = canTransform ? "inline-block" : "none";
   }
-  // 🔥 Ici : le bouton rapport n’apparaît que pour les devis
+  // 🔥 Le bouton rapport apparaît pour les devis ET les factures
+  //    (uniquement quand le document est enregistré)
   if (rapportBtn) {
-    rapportBtn.style.display = isDevis ? "inline-block" : "none";
+    const canRapport = (type === "devis" || type === "facture") && !!currentDocumentId;
+    rapportBtn.style.display = canRapport ? "inline-block" : "none";
   }
 }
 
@@ -8174,10 +8188,18 @@ function calculateTotals() {
     if (kind === "entretien_clim") {
       const n = qty <= 0 ? 1 : qty;
 
-      // Libellé au pluriel
+      // Libellé au pluriel — uniquement si le texte est vide ou le libellé auto
+      // (on préserve un texte personnalisé tapé par l'utilisateur)
       if (descInput) {
-        const plural = n >= 2 ? "s" : "";
-        descInput.value = "Entretien climatisation" + plural;
+        const cur = (descInput.value || "").trim().toLowerCase();
+        const isAuto =
+          cur === "" ||
+          cur === "entretien climatisation" ||
+          cur === "entretien climatisations";
+        if (isAuto) {
+          const plural = n >= 2 ? "s" : "";
+          descInput.value = "Entretien climatisation" + plural;
+        }
       }
 
       const clientType = getCurrentClientType();
@@ -8774,6 +8796,13 @@ doc.prestations.forEach((p) => {
     // ✅ CORRECTIF : basePrice = prix réellement sauvegardé, pas le prix du template
     // (évite que rouvrir une facture remette le prix par défaut du modèle)
     line.dataset.basePrice = Number(p.price || 0).toFixed(2);
+
+    // 🔧 CLIM : on conserve le prix sauvegardé tel quel à la réouverture.
+    //    Sinon la grille dégressive se ré-applique par-dessus un prix déjà dégressif
+    //    et fait baisser le prix de 5 € à chaque ouverture.
+    if ((p.kind || "") === "entretien_clim") {
+      line.dataset.autoPrice = "0";
+    }
 
     // ✅ IMPORTANT : on remet le purchase APRÈS tous les updates (visibility/layout)
     const purchaseInput = line.querySelector(".prestation-purchase");
@@ -15732,7 +15761,7 @@ function _saveContractDoneSet(set) {
 function isContractVisitDone(contractId, originalDate) {
   return _getContractDoneSet().has(contractId + "|" + originalDate);
 }
-function toggleContractVisitDone(contractId, originalDate) {
+function toggleContractVisitDone(contractId, originalDate, dateStr) {
   const set = _getContractDoneSet();
   const key = contractId + "|" + originalDate;
   const nowDone = !set.has(key);
@@ -15740,6 +15769,8 @@ function toggleContractVisitDone(contractId, originalDate) {
   _saveContractDoneSet(set);
 
   try { renderPlanningWeek(); } catch (e) {}
+  // 🔁 On garde le panneau du jour ouvert pour enchaîner les "Fait"
+  try { if (dateStr) openPlanningDayDetails(dateStr); } catch (e) {}
   if (typeof showToast === "function") {
     showToast(
       nowDone ? "Intervention marquée faite ✅" : "Intervention remise à faire",
@@ -16047,6 +16078,9 @@ function getPlanningColorClass(service) {
   return "planning-kind-default";
 }
 
+// Jour actuellement ouvert dans le panneau de détails (pour le garder ouvert après re-render)
+let _currentOpenPlanningDay = null;
+
 function renderPlanningWeek() {
   const grid = document.getElementById("planningGrid");
   const labelEl = document.getElementById("planningWeekLabel");
@@ -16302,6 +16336,15 @@ function renderPlanningWeek() {
   });
 
   initPlanningDnD();
+
+  // 🔁 Si un jour était ouvert, on le ré-affiche (le panneau reste ouvert
+  //    après marquage "Fait", drag&drop, ou synchro Firestore en arrière-plan)
+  if (
+    _currentOpenPlanningDay &&
+    currentPlanningData.some((d) => d.date === _currentOpenPlanningDay)
+  ) {
+    try { openPlanningDayDetails(_currentOpenPlanningDay); } catch (e) {}
+  }
 }
 function openPlanningTour(dateStr) {
   const day = currentPlanningData.find((d) => d.date === dateStr);
@@ -16368,6 +16411,9 @@ function openPlanningTour(dateStr) {
 function openPlanningDayDetails(dateStr) {
   const detailsEl = document.getElementById("planningDetails");
   if (!detailsEl) return;
+
+  // Mémorise le jour ouvert pour le rouvrir automatiquement après chaque re-render
+  _currentOpenPlanningDay = dateStr;
 
   // 🔵 déplace le cadre bleu sur la case cliquée
   document.querySelectorAll(".day-column").forEach((col) => {
@@ -16450,7 +16496,7 @@ function openPlanningDayDetails(dateStr) {
             }
             <div class="planning-actions">
               <button class="btn btn-small btn-secondary"
-                onclick="toggleContractVisitDone('${item.contractId}', '${item.originalDate}')">
+                onclick="toggleContractVisitDone('${item.contractId}', '${item.originalDate}', '${dateStr}')">
                 ${
                   isContractVisitDone(item.contractId, item.originalDate)
                     ? "↩ Annuler"
@@ -17954,6 +18000,15 @@ function generateDevisFromInvoice(invoice) {
 function maybeForceDevisInsteadOfSavingInvoice(invoiceDraft) {
   if (!invoiceDraft) return false;
   if (invoiceDraft.type !== "facture") return false;
+
+  // ✅ Facture issue d'un CONTRAT validé → le contrat tient lieu d'accord,
+  //    pas besoin de devis obligatoire. On laisse modifier librement.
+  if (invoiceDraft.contractId) return false;
+  if (Array.isArray(invoiceDraft.prestations) &&
+      invoiceDraft.prestations.some((p) =>
+        p && (p.kind === "contrat_echeance" || p.kind === "contrat_echeance_initiale"))) {
+    return false;
+  }
 
   const clientType = String(invoiceDraft.conditionsType || "particulier").trim().toLowerCase();
   const totalTTC = Number(invoiceDraft.totalTTC);
@@ -24518,18 +24573,41 @@ function computeDashboardExtended() {
     }
   }
 
-  // Délai moyen acceptation devis
-  const delays = devis.filter(d => d.status === "accepte" && d.date && d.acceptedAt).map(d => {
-    const created = new Date(d.date + "T00:00:00");
-    const accepted = new Date(d.acceptedAt);
-    return Math.round((accepted - created) / 86400000);
-  }).filter(n => !isNaN(n) && n >= 0);
-  if (el("dashAvgDelay")) {
-    if (delays.length > 0) {
-      const avg = Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
-      el("dashAvgDelay").textContent = `${avg} jour${avg > 1 ? "s" : ""}`;
+  const _fmt = (typeof formatEuro === "function")
+    ? formatEuro
+    : (v) => Number(v || 0).toFixed(2) + " €";
+
+  // 💼 CA contrats actifs (revenus récurrents)
+  if (el("dashRecurrent")) {
+    let caContrats = 0;
+    try {
+      const contracts = (typeof getAllContracts === "function") ? getAllContracts() : [];
+      contracts.forEach((c) => {
+        const st = (typeof computeContractStatus === "function") ? computeContractStatus(c) : null;
+        const active = !st ||
+          (typeof CONTRACT_STATUS !== "undefined" &&
+            (st === CONTRACT_STATUS.EN_COURS || st === CONTRACT_STATUS.A_RENOUVELER));
+        if (active) caContrats += Number(c.pricing?.totalTTC || c.pricing?.totalHT || 0);
+      });
+    } catch (e) {}
+    el("dashRecurrent").textContent = caContrats > 0 ? _fmt(caContrats) : "–";
+  }
+
+  // 📋 Devis en attente (nombre + montant potentiel)
+  if (el("dashPendingDevis")) {
+    const pending = devis.filter((d) => !d.status || d.status === "en_attente");
+    const pendingAmount = pending.reduce((s, d) => s + Number(d.totalTTC || 0), 0);
+    el("dashPendingDevis").textContent =
+      pending.length > 0 ? `${pending.length} · ${_fmt(pendingAmount)}` : "0";
+  }
+
+  // 🛒 Panier moyen (montant moyen d'une facture)
+  if (el("dashAvgBasket")) {
+    if (factures.length > 0) {
+      const avg = factures.reduce((s, f) => s + Number(f.totalTTC || 0), 0) / factures.length;
+      el("dashAvgBasket").textContent = _fmt(avg);
     } else {
-      el("dashAvgDelay").textContent = "–";
+      el("dashAvgBasket").textContent = "–";
     }
   }
 }
