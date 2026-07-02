@@ -10774,9 +10774,16 @@ function loadDocumentsList() {
 
   // 🔽 Tri : date ou numéro selon le select
   const sortSel = document.getElementById("sortDocumentsBy");
-  const sortMode = sortSel ? sortSel.value : "date_desc";
+  const sortMode = sortSel ? sortSel.value : "payment_desc";
 
   filtered.sort((a, b) => {
+    // 🔴 FACTURES : les impayées toujours en haut (ça saute aux yeux)
+    if (currentListType === "facture") {
+      const ua = a.paid ? 1 : 0;
+      const ub = b.paid ? 1 : 0;
+      if (ua !== ub) return ua - ub; // impayée (0) avant payée (1)
+    }
+
     if (sortMode === "number_desc") {
       const na = (a.number || "").toString();
       const nb = (b.number || "").toString();
@@ -10784,7 +10791,17 @@ function loadDocumentsList() {
       return nb.localeCompare(na, "fr", { numeric: true });
     }
 
-    // défaut : date décroissante
+    if (sortMode === "payment_desc") {
+      // Tri par date de paiement (factures payées d'abord, dans l'ordre d'encaissement).
+      // Les non payées / sans date de paiement retombent sur la date d'émission.
+      const keyA = (a.paid && a.paymentDate) ? a.paymentDate : (a.date || a.createdAt || "");
+      const keyB = (b.paid && b.paymentDate) ? b.paymentDate : (b.date || b.createdAt || "");
+      const da = keyA ? new Date(keyA) : new Date(0);
+      const db = keyB ? new Date(keyB) : new Date(0);
+      return db - da;
+    }
+
+    // défaut : date d'émission décroissante
     const da = a.date ? new Date(a.date) : new Date(a.createdAt || 0);
     const db = b.date ? new Date(b.date) : new Date(b.createdAt || 0);
     return db - da;
