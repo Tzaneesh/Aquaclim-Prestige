@@ -2476,9 +2476,9 @@ function onAttDateChange() {
   const dateEl = document.getElementById("attDate");
   const nextEl = document.getElementById("attNextService");
   if (!dateEl?.value || !nextEl) return;
-  const d = new Date(dateEl.value + "T00:00:00");
-  d.setFullYear(d.getFullYear() + 1);
-  nextEl.value = d.toISOString().split("T")[0];
+  nextEl.value = (typeof _addOneYearISO === "function")
+    ? _addOneYearISO(dateEl.value)
+    : dateEl.value;
 }
 
 function onAttClientNameChange() {
@@ -2534,9 +2534,9 @@ function onRapDateChange() {
   // En création : n'écrase pas si déjà rempli manuellement
   // En édition : recalcule toujours pour refléter la nouvelle date
   if (nextEl.value && !currentRapportId) return;
-  const d = new Date(dateEl.value + "T00:00:00");
-  d.setFullYear(d.getFullYear() + 1);
-  nextEl.value = d.toISOString().split("T")[0];
+  nextEl.value = (typeof _addOneYearISO === "function")
+    ? _addOneYearISO(dateEl.value)
+    : dateEl.value;
 }
 
 function onRapportClientNameChange() {
@@ -2727,6 +2727,9 @@ function openClimAttestationGenerator() {
   if (!overlay) return;
 
   currentAttestationId = null;
+  // Attestation manuelle → aucune facture source par défaut
+  // (évite qu'un lien facture résiduel se recolle par erreur)
+  currentAttestationSource = null;
 
   const s = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
   s("attClientName", "");
@@ -5557,6 +5560,15 @@ function saveAttestationOnly() {
   closeAttestationPopup();
 }
 
+// Ajoute 1 an à une date ISO "YYYY-MM-DD" sans passer par toISOString
+// (évite tout décalage lié au fuseau horaire → l'année reste exacte)
+function _addOneYearISO(iso) {
+  const m = String(iso || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!m) return "";
+  const y = parseInt(m[1], 10) + 1;
+  return `${y}-${m[2]}-${m[3]}`;
+}
+
 function autoCreateClimAttestationForInvoice(doc) {
   if (!doc) return;
 
@@ -5571,6 +5583,7 @@ function autoCreateClimAttestationForInvoice(doc) {
   const name = (doc.client && doc.client.name) || "";
   const addr = (doc.client && doc.client.address) || "";
   const date = doc.date || new Date().toISOString().slice(0, 10);
+  const nextService = _addOneYearISO(date); // prochain entretien = +1 an
 
   // 🔢 Nombre d’unités = somme des quantités sur les lignes de clim
   let units = 1;
@@ -5598,6 +5611,7 @@ function autoCreateClimAttestationForInvoice(doc) {
     clientName: name,
     clientAddress: addr,
     date,
+    nextService,
     units,
     notes: "",
     ops: null,
@@ -5609,9 +5623,19 @@ function autoCreateClimAttestationForInvoice(doc) {
   list.push(record);
   saveAttestations(list);
 
+  // Sync Firestore si dispo
+  if (typeof saveSingleAttestationToFirestore === "function") {
+    try { saveSingleAttestationToFirestore(record); } catch (e) {}
+  }
+
   // Si tu es sur l’onglet Attestations, on rafraîchit la liste
   if (typeof loadAttestationsList === "function") {
     loadAttestationsList();
+  }
+
+  // 🔔 Notifier l'utilisateur (sinon il ne voit pas qu'elle a été créée)
+  if (typeof showToast === "function") {
+    showToast(`Attestation clim ${record.numero} générée`, "success");
   }
 }
 
@@ -11270,32 +11294,28 @@ function deleteAttestation(attId) {
 function openAttestationForInvoice(doc) {
   if (!doc) return;
 
-  // On mémorise la facture source
-  if (typeof currentAttestationSource === "undefined") {
-    window.currentAttestationSource = null;
-  }
+  // 1) On ouvre/réinitialise le formulaire D'ABORD (il vide tous les champs)
+  openClimAttestationGenerator();
 
+  // 2) PUIS on mémorise la facture source (après le reset, sinon il serait effacé)
   currentAttestationSource = {
     id: doc.id || null,
     number: doc.number || null,
   };
 
-  // Pré-remplissage des champs de la popup
+  // 3) Et on pré-remplit les champs (après le reset, sinon ils seraient vidés)
   const attName = document.getElementById("attClientName");
   const attAddr = document.getElementById("attClientAddress");
   const attDate = document.getElementById("attDate");
   const attUnits = document.getElementById("attUnits");
-  const attNotes = document.getElementById("attNotes");
+  const attNext = document.getElementById("attNextService");
 
   if (attName) attName.value = (doc.client && doc.client.name) || "";
   if (attAddr) attAddr.value = (doc.client && doc.client.address) || "";
-  if (attDate)
-    attDate.value = doc.date || new Date().toISOString().slice(0, 10);
-  if (attUnits && !attUnits.value) attUnits.value = 1;
-  if (attNotes) attNotes.value = "";
-
-  // On ouvre la popup (elle garde ce qu’on vient de mettre)
-  openClimAttestationGenerator();
+  const _attDate = doc.date || new Date().toISOString().slice(0, 10);
+  if (attDate) attDate.value = _attDate;
+  if (attNext && typeof _addOneYearISO === "function") attNext.value = _addOneYearISO(_attDate);
+  if (attUnits) attUnits.value = 1;
 }
 
 // Utilisé par Aperçu / Imprimer
@@ -11519,12 +11539,8 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
 
   /* ================= PROCHAIN ENTRETIEN ================= */
 
-  const attNextSvc = record.nextService || (() => {
-    if (!record.date) return "";
-    const d = new Date(record.date + "T00:00:00");
-    d.setFullYear(d.getFullYear() + 1);
-    return d.toISOString().split("T")[0];
-  })();
+  const attNextSvc = record.nextService ||
+    (typeof _addOneYearISO === "function" ? _addOneYearISO(record.date) : "");
 
   if (attNextSvc) {
     y += 10;
@@ -12188,13 +12204,27 @@ function handleAfterInvoicePaid(doc) {
         (p) => p && ["entretien_clim", "depannage_clim"].includes(p.kind),
       );
 
-    // 2) On regarde aussi l'objet, au cas où tu écris "Entretien clim"
-    const subj = (doc.subject || "").toLowerCase();
+    // 2) On regarde aussi l'objet et les libellés (clim / climatisation / PAC / pompe à chaleur)
+    const hay = (
+      (doc.subject || "") + " " +
+      (Array.isArray(doc.prestations) ? doc.prestations.map((p) => p && p.desc || "").join(" ") : "")
+    ).toLowerCase();
     const looksLikeClim =
-      subj.includes("clim") || subj.includes("climatisation");
+      hay.includes("clim") ||
+      hay.includes("climatisation") ||
+      /\bpac\b/.test(hay) ||
+      hay.includes("pompe à chaleur") ||
+      hay.includes("pompe a chaleur");
+
+    // 3) Facture issue d'un contrat CLIM
+    let contractIsClim = false;
+    if (doc.contractId && typeof getContract === "function") {
+      const c = getContract(doc.contractId);
+      contractIsClim = (c?.pricing?.mainService || c?.pool?.type || "") === "entretien_clim";
+    }
 
     // ❌ Si ce n’est pas une facture de clim → on ne fait rien
-    if (!hasClimKind && !looksLikeClim) {
+    if (!hasClimKind && !looksLikeClim && !contractIsClim) {
       return;
     }
 
