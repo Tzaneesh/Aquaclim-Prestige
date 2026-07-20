@@ -12020,6 +12020,31 @@ function loadContractsList() {
 
   const contracts = getAllContracts();
 
+  // 🔧 Migration : attribuer un vrai numéro CTR aux contrats qui n'en ont pas
+  // (anciens contrats qui n'affichaient qu'une réf client ou un numéro de devis)
+  // Compteurs locaux par année pour éviter les doublons pendant la boucle.
+  const _counters = {};
+  contracts.forEach((c) => {
+    const m = String(c.number || "").match(/^CTR-(\d{4})-(\d{3})$/);
+    if (m) _counters[m[1]] = Math.max(_counters[m[1]] || 0, parseInt(m[2], 10));
+  });
+  let _migrated = false;
+  contracts.forEach((c) => {
+    if (!c.number || !/^CTR-\d{4}-\d{3}$/.test(String(c.number))) {
+      const y = (c.pricing?.startDate || c.createdAt || "").slice(0, 4) ||
+                String(new Date().getFullYear());
+      _counters[y] = (_counters[y] || 0) + 1;
+      c.number = `CTR-${y}-${String(_counters[y]).padStart(3, "0")}`;
+      _migrated = true;
+    }
+  });
+  if (_migrated) {
+    saveContracts(contracts);
+    if (typeof saveSingleContractToFirestore === "function") {
+      contracts.forEach((c) => { try { saveSingleContractToFirestore(c); } catch (e) {} });
+    }
+  }
+
   const searchInput = document.getElementById("docSearchInput");
   const q = (searchInput ? searchInput.value : "").trim().toLowerCase();
 
@@ -12081,7 +12106,8 @@ function loadContractsList() {
   filtered.forEach((c) => {
     const tr = document.createElement("tr");
 
-    const ref = c.client?.reference || "";
+    // ✅ On affiche le VRAI numéro de contrat (c.number), pas l'ancienne réf client
+    const ref = c.number || c.client?.reference || "";
     const clientName = c.client?.name || "";
 
     // 🔵 conversion ISO → DD/MM/YYYY
@@ -12184,6 +12210,70 @@ function loadContractsList() {
       `<td>${actionsHtml}</td>`;
 
     tbody.appendChild(tr);
+  });
+
+  // 📱 Rendu mobile (cartes) — sinon sur iPhone on garde les cartes devis/factures
+  _renderMobileContractsList(filtered);
+}
+
+// Rendu des contrats en cartes pour iPhone / petits écrans
+function _renderMobileContractsList(contracts) {
+  const container = document.getElementById("mobileDocList");
+  if (!container) return;
+  container.innerHTML = "";
+
+  if (!contracts || contracts.length === 0) {
+    container.innerHTML =
+      `<div class="empty-state">` +
+        `<div class="empty-icon">📘</div>` +
+        `<div class="empty-title">Aucun contrat</div>` +
+        `<div class="empty-sub">Crée ton premier contrat d'entretien.</div>` +
+        `<button class="empty-cta" type="button" onclick="newContract()">+ Nouveau contrat</button>` +
+      `</div>`;
+    return;
+  }
+
+  const STAT = {
+    [CONTRACT_STATUS.EN_COURS]:     "🟢 En cours",
+    [CONTRACT_STATUS.A_RENOUVELER]: "🟠 À renouveler",
+    [CONTRACT_STATUS.RESILIE]:      "🔴 Résilié",
+    [CONTRACT_STATUS.TERMINE]:      "⚫ Terminé",
+  };
+
+  contracts.forEach((c) => {
+    const num        = escapeHtml(c.number || c.client?.reference || c.id || "");
+    const clientName = escapeHtml(c.client?.name || "—");
+    const title      = escapeHtml(getContractListTitle(c) || "");
+    const startFR    = c.pricing?.startDate ? formatDateFr(c.pricing.startDate) : "";
+    const total      = formatEuro(c.pricing?.totalHT != null ? c.pricing.totalHT : 0);
+    const st         = computeContractStatus(c);
+    const signed     = (typeof isContractSigned === "function") ? isContractSigned(c) : true;
+    const statusTxt  = !signed ? "🟡 En attente signature" : (STAT[st] || "");
+
+    const card = document.createElement("div");
+    card.className = "mdoc-card";
+    card.style.borderLeftColor = "#4f46e5"; // indigo (couleur contrats)
+    card.style.borderLeftWidth = "4px";
+    card.innerHTML = `
+      <div class="mdoc-top">
+        <div class="mdoc-num">📘 ${num}</div>
+        <div class="mdoc-amount">${total}</div>
+      </div>
+      <div class="mdoc-client">${clientName}</div>
+      <div class="mdoc-meta">
+        ${startFR ? `<span>📅 ${startFR}</span>` : ""}
+        ${title ? `<span>· ${title}</span>` : ""}
+        ${statusTxt ? `<span>· ${statusTxt}</span>` : ""}
+      </div>
+      <div class="mdoc-actions">
+        <button class="btn btn-primary btn-small" onclick="openContractFromList('${c.id}')">✏️ Modifier</button>
+        <button class="btn btn-secondary btn-small" onclick="previewContractFromList('${c.id}')">👁 Aperçu</button>
+        <button class="btn btn-success btn-small" onclick="printContractFromList('${c.id}')">🖨 Imprimer</button>
+        <button class="qa-btn qa-paid" onclick="transformContractFromList('${c.id}')">💶 Facturer</button>
+        <button class="btn btn-danger btn-small" onclick="deleteContractFromList('${c.id}')">🗑</button>
+      </div>
+    `;
+    container.appendChild(card);
   });
 }
 
@@ -15828,21 +15918,54 @@ function toggleContractVisitDone(contractId, originalDate, dateStr) {
 
 async function applyContractPlanningOverride(contractId, originalDate, newDate) {
   try {
-    if (!db) return;
-
     const id = `${contractId}__${originalDate}`; // ID stable (important)
-    await db.collection("contractPlanningOverrides").doc(id).set({
-      id,
-      contractId,
-      originalDate,
-      newDate,
-      updatedAt: Date.now(),
-    }, { merge: true });
+    const rec = { id, contractId, originalDate, newDate, updatedAt: Date.now() };
 
-    // Pas besoin de renderPlanningWeek() : ton onSnapshot contractPlanningOverrides le fera.
+    // ✅ Mise à jour LOCALE immédiate (fonctionne même hors ligne / sans Firestore)
+    if (!Array.isArray(contractPlanningOverrides)) contractPlanningOverrides = [];
+    const idx = contractPlanningOverrides.findIndex(
+      (o) => o.contractId === contractId && o.originalDate === originalDate,
+    );
+    if (idx >= 0) contractPlanningOverrides[idx] = rec;
+    else contractPlanningOverrides.push(rec);
+    try {
+      localStorage.setItem("contractPlanningOverrides", JSON.stringify(contractPlanningOverrides));
+    } catch (e) {}
+
+    // Rafraîchir tout de suite
+    try { renderPlanningWeek(); } catch (e) {}
+
+    // Firestore si dispo (l'onSnapshot re-synchronisera aussi)
+    if (db) {
+      await db.collection("contractPlanningOverrides").doc(id).set(rec, { merge: true });
+    }
   } catch (e) {
     console.error("applyContractPlanningOverride error:", e);
   }
+}
+
+// 📅 Ouvre un sélecteur de date pour déplacer une intervention (contrat ou manuel)
+function promptMovePlanningVisit(type, id, originalDate, currentDate) {
+  showDatePickerDialog({
+    title: "Déplacer l'intervention",
+    message: "Choisis la nouvelle date de passage :",
+    defaultDate: currentDate || originalDate || new Date().toISOString().slice(0, 10),
+    confirmLabel: "Déplacer",
+    onConfirm: (newDate) => {
+      if (!newDate) return;
+      _currentOpenPlanningDay = newDate; // on rouvrira ce jour après re-render
+      if (type === "contract") {
+        applyContractPlanningOverride(id, originalDate, newDate);
+      } else {
+        moveManualPlanningItemToDate(id, newDate);
+        try { renderPlanningWeek(); } catch (e) {}
+      }
+      if (typeof showToast === "function") {
+        const dFR = new Date(newDate + "T00:00:00").toLocaleDateString("fr-FR");
+        showToast("Intervention déplacée au " + dFR, "success");
+      }
+    },
+  });
 }
 
 function applyCompanySettingsToUI(settings) {
@@ -16226,6 +16349,12 @@ function renderPlanningWeek() {
       return;
     }
 
+    // ✅ Ne pas afficher un contrat NON signé (et sans devis accepté) au planning
+    //    (même règle que la facturation : rien tant que ce n'est pas validé)
+    const _signed = (typeof isContractSigned === "function") ? isContractSigned(contract) : false;
+    const _devisOK = (typeof isDevisAcceptedForContract === "function") ? isDevisAcceptedForContract(contract) : false;
+    if (!_signed && !_devisOK) return;
+
     if (!contractIsActiveDuringWeek(contract, monday, sunday)) return;
 
     const visits = getVisitsPerWeekForDate(contract, monday);
@@ -16550,6 +16679,10 @@ function openPlanningDayDetails(dateStr) {
                     : "✅ Fait"
                 }
               </button>
+              <button class="btn btn-small btn-secondary"
+                onclick="promptMovePlanningVisit('contract', '${item.contractId}', '${item.originalDate}', '${item.date || dateStr}')">
+                📅 Déplacer
+              </button>
               <button class="btn btn-small btn-success"
                 onclick="createFactureFromContractItem('${item.contractId}')">
                 💶 Facturer
@@ -16591,16 +16724,9 @@ function openPlanningDayDetails(dateStr) {
                 onclick="${
                   item.sourceId
                     ? `openDevisAcceptedActionPopup('${item.sourceId}')`
-                    : `showConfirmDialog({
-                        title:'Replanifier',
-                        message:'Pour déplacer un passage manuel : glisse-dépose la carte sur un autre jour ✅',
-                        confirmLabel:'OK',
-                        cancelLabel:'',
-                        variant:'info',
-                        icon:'ℹ️'
-                      })`
+                    : `promptMovePlanningVisit('manual', '${item.id}', '${dateStr}', '${dateStr}')`
                 }">
-                🔁 Replanifier
+                📅 Déplacer
               </button>
 
               <button class="btn btn-small btn-secondary"
@@ -18220,7 +18346,7 @@ function generateDevisFromContract(contract) {
     const kindOpening =
       mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
         ? "vidange_jacuzzi"
-        : "remise_service_piscine";
+        : "remise_service_propre";
 
     const openingPrice = getTarifFromTemplates(kindOpening, clientType) || 0;
 
@@ -19291,7 +19417,7 @@ function recomputeContract() {
     const kindOpening =
       mainService === "entretien_jacuzzi" || mainService === "spa_jacuzzi"
         ? "vidange_jacuzzi"
-        : "remise_service_piscine";
+        : "remise_service_propre";
     extra += getTarifFromTemplates(kindOpening, clientType) || 0;
   }
   if (includeWinter) {
@@ -21676,7 +21802,7 @@ ${terminationBillingBlockTop}
           : ""
       }
 
-      ${c.reference && !meta.sourceDevisNumber ? `<p>Réf. interne client : ${c.reference}</p>` : ""}
+      ${c.reference && !meta.sourceDevisNumber && !/^CTR-/i.test(String(c.reference).trim()) ? `<p>Réf. interne client : ${c.reference}</p>` : ""}
 
       ${
         pr.clientType === "syndic"
@@ -21752,7 +21878,24 @@ ${terminationBillingBlockTop}
         </div>
       </div>
       <p class="amount-highlight">
-        Prix par passage : ${format(pr.unitPrice)} — Montant total du contrat : ${format(totalHTSafe)}
+        ${(() => {
+          const _pass = Number(pr.totalPassages || 0);
+          const _unit = Number(pr.unitPrice || 0);
+          const _base = _pass * _unit;
+          const _ct = pr.clientType || "particulier";
+          const _ms = pr.mainService || "piscine_chlore";
+          const _openKind = (_ms === "entretien_jacuzzi" || _ms === "spa_jacuzzi")
+            ? "vidange_jacuzzi" : "remise_service_propre";
+          const _open   = pr.includeOpening ? (getTarifFromTemplates(_openKind, _ct) || 0) : 0;
+          const _winter = pr.includeWinter  ? (getTarifFromTemplates("hivernage_piscine", _ct) || 0) : 0;
+          const _remainder = totalHTSafe - _base - _open - _winter; // ex : majoration Airbnb
+          let rows = `Entretien : ${_pass} passage${_pass > 1 ? "s" : ""} × ${format(_unit)} = ${format(_base)}`;
+          if (_open > 0)   rows += `<br>Remise en service (début de saison) : ${format(_open)}`;
+          if (_winter > 0) rows += `<br>Hivernage complet : ${format(_winter)}`;
+          if (_remainder > 0.5) rows += `<br>Majoration usage locatif / Airbnb (+20 %) : ${format(_remainder)}`;
+          rows += `<br><strong>Montant total du contrat : ${format(totalHTSafe)} HT</strong>`;
+          return rows;
+        })()}
       </p>
     `}
     </div>
@@ -21813,10 +21956,20 @@ ${terminationBillingBlockTop}
         : ""
     }
 
-    ${isPiscine ? `
+    ${isPiscine ? (
+      (pr.includeOpening || pr.includeWinter)
+        ? `
+    <p class="label" style="margin-top:2px;">4.2 Prestations saisonnières incluses dans ce contrat</p>
+    <ul>
+      ${pr.includeOpening ? `<li><strong>Remise en service en début de saison</strong> — remise en eau, redémarrage de la filtration, équilibrage, traitement choc et contrôle complet du bassin.</li>` : ""}
+      ${pr.includeWinter ? `<li><strong>Hivernage complet</strong> — nettoyage, traitement choc, abaissement du niveau d’eau, purge des équipements et sécurisation du bassin.</li>` : ""}
+    </ul>
+    `
+        : `
     <p class="label" style="margin-top:2px;">4.2 Remise en service / hivernage</p>
     <p>Remise en service et hivernage (actif ou passif) peuvent être inclus selon l’option choisie et feront l’objet d’une fiche ou d’un devis associé.</p>
-    ` : isSpa ? `
+    `
+    ) : isSpa ? `
     <p class="label" style="margin-top:2px;">4.2 Vidange & remise en eau</p>
     <p>Une vidange complète du spa et sa remise en eau peuvent être incluses selon la fréquence contractuelle.</p>
     ` : ""
