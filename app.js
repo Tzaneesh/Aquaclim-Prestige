@@ -7355,7 +7355,7 @@ function updateDocType() {
 function updateTransformButtonVisibility() {
   const transformBtn = document.getElementById("transformButton");
   const contractBtn = document.getElementById("contractFromDevisButton");
-  const rapportBtn = document.getElementById("rapportFromDevisButton");
+  const rapportBtns = document.querySelectorAll(".js-rapport-btn");
   const typeSelect = document.getElementById("docType");
   const type = typeSelect ? typeSelect.value : "devis";
 
@@ -7368,11 +7368,57 @@ function updateTransformButtonVisibility() {
   if (contractBtn) {
     contractBtn.style.display = canTransform ? "inline-block" : "none";
   }
-  // 🔥 Le bouton rapport apparaît pour les devis ET les factures
+  // 🔥 Le(s) bouton(s) rapport apparaissent pour les devis ET les factures
   //    (uniquement quand le document est enregistré)
-  if (rapportBtn) {
-    const canRapport = (type === "devis" || type === "facture") && !!currentDocumentId;
+  //    → pour une FACTURE CLIM, ils deviennent "Générer attestation clim"
+  const canRapport = (type === "devis" || type === "facture") && !!currentDocumentId;
+  const _doc = canRapport && typeof getDocument === "function" ? getDocument(currentDocumentId) : null;
+  const _isClimFacture = canRapport && type === "facture" && _docLooksClim(_doc);
+  rapportBtns.forEach((rapportBtn) => {
     rapportBtn.style.display = canRapport ? "inline-block" : "none";
+    if (!canRapport) return;
+    if (_isClimFacture) {
+      rapportBtn.textContent = "📋 Générer attestation clim";
+      rapportBtn.onclick = onGenerateAttestationFromCurrent;
+    } else {
+      rapportBtn.textContent = "📝 Générer rapport d’intervention";
+      rapportBtn.onclick = onGenerateRapportFromCurrent;
+    }
+  });
+}
+
+// Détecte si un document (facture/devis) concerne la climatisation / PAC
+function _docLooksClim(doc) {
+  if (!doc) return false;
+  if (Array.isArray(doc.prestations) &&
+      doc.prestations.some((p) => p && ["entretien_clim", "depannage_clim"].includes(p.kind))) {
+    return true;
+  }
+  const hay = (
+    (doc.subject || "") + " " +
+    (Array.isArray(doc.prestations) ? doc.prestations.map((p) => p && p.desc || "").join(" ") : "")
+  ).toLowerCase();
+  if (hay.includes("clim") || /\bpac\b/.test(hay) ||
+      hay.includes("pompe à chaleur") || hay.includes("pompe a chaleur")) {
+    return true;
+  }
+  if (doc.contractId && typeof getContract === "function") {
+    const c = getContract(doc.contractId);
+    if ((c?.pricing?.mainService || c?.pool?.type || "") === "entretien_clim") return true;
+  }
+  return false;
+}
+
+// Génère (ouvre le formulaire pré-rempli) une attestation clim depuis la facture courante
+function onGenerateAttestationFromCurrent() {
+  if (!currentDocumentId) {
+    if (typeof showToast === "function") showToast("Ouvre d’abord une facture", "warning");
+    return;
+  }
+  const doc = (typeof getDocument === "function") ? getDocument(currentDocumentId) : null;
+  if (!doc) return;
+  if (typeof openAttestationForInvoice === "function") {
+    openAttestationForInvoice(doc);
   }
 }
 
@@ -9175,6 +9221,16 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
   // ✅ Recalcule TVA/CA après encaissement / sauvegarde
   try {
     if (typeof refreshMicroTVAState === "function") refreshMicroTVAState(false);
+  } catch (e) {}
+
+  // ✅ Facture qui vient de passer PAYÉE via le formulaire → attestation clim auto
+  //    (le même déclenchement existe déjà via les boutons de la liste / setPaymentMode)
+  try {
+    const _wasPaid = !!(existing && existing.paid);
+    if (doc.type === "facture" && doc.paid && !_wasPaid &&
+        typeof handleAfterInvoicePaid === "function") {
+      handleAfterInvoicePaid(doc);
+    }
   } catch (e) {}
 
   _clearFormDirty();
@@ -14935,8 +14991,8 @@ const html = `<!DOCTYPE html>
       /* marges ici = plus stable iOS */
       @page{ size:A4; margin:10mm 12mm 14mm 12mm; }
 
-      /* SHRINK léger = évite souvent la 2e page sur iPhone */
-      body{ zoom:0.90; }
+      /* SHRINK = évite la 2e page. iOS a besoin d'un peu plus que le PC. */
+      body{ zoom:${(typeof isIOS === "function" && isIOS()) ? "0.80" : "0.90"}; }
 
       /* pas de padding en print (marges gérées par @page) */
       .page{ padding:0 !important; }
