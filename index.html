@@ -1797,17 +1797,19 @@
 
       <div class="form-group" id="ctDurationGroup">
         <label>Durée du contrat</label>
-        <select id="ctDuration" class="form-select">
+        <select id="ctDuration" class="form-select" onchange="onContractDurationChange()">
           <option value="4">4 mois – Saison été (juin → septembre)</option>
           <option value="5">5 mois – Saison étendue</option>
           <option value="6">6 mois – Saison longue (mai → octobre)</option>
           <option value="12" selected>12 mois – Annuel</option>
+          <option value="custom">Personnalisé (dates libres)</option>
         </select>
       </div>
 
       <div class="form-group">
-        <label>Fin du contrat (auto)</label>
+        <label id="ctEndDateLabel">Fin du contrat (auto)</label>
         <input type="text" id="ctEndDate" readonly>
+        <input type="date" id="ctEndDateCustom" style="display:none;" onchange="recomputeContract()">
       </div>
 
       <div class="form-group">

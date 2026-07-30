@@ -18745,6 +18745,10 @@ function newContract() {
 
   const ctDuration = document.getElementById("ctDuration");
   if (ctDuration) ctDuration.value = "12";
+  // Réinitialiser le mode dates libres
+  const ctEndDateCustomReset = document.getElementById("ctEndDateCustom");
+  if (ctEndDateCustomReset) ctEndDateCustomReset.value = "";
+  if (typeof onContractDurationChange === "function") onContractDurationChange();
 
   const ctPoolType = document.getElementById("ctPoolType");
   if (ctPoolType) ctPoolType.value = "piscine_chlore";
@@ -19255,6 +19259,42 @@ function computeMonthsEteHiverBetween(startISO, endISO) {
   return { monthsEte, monthsHiver };
 }
 
+// Version FRACTIONNAIRE : compte les mois au prorata des jours couverts
+// (ex : 01/08 → 15/09 = 1 mois été + 0,5 mois été = 1,5 mois été)
+function computeMonthsEteHiverFraction(startISO, endISO) {
+  if (!startISO || !endISO) return { monthsEte: 0, monthsHiver: 0 };
+  const start = new Date(startISO + "T00:00:00");
+  const end = new Date(endISO + "T00:00:00");
+  if (isNaN(start.getTime()) || isNaN(end.getTime()) || end < start) {
+    return { monthsEte: 0, monthsHiver: 0 };
+  }
+
+  let y = start.getFullYear();
+  let m = start.getMonth();
+  let monthsEte = 0;
+  let monthsHiver = 0;
+  const ONE_DAY = 24 * 60 * 60 * 1000;
+
+  while (y < end.getFullYear() || (y === end.getFullYear() && m <= end.getMonth())) {
+    const monthStart = new Date(y, m, 1);
+    const monthEnd = new Date(y, m + 1, 0);
+    const daysInMonth = monthEnd.getDate();
+
+    const effStart = monthStart < start ? start : monthStart;
+    const effEnd = monthEnd > end ? end : monthEnd;
+    const daysCovered = Math.floor((effEnd - effStart) / ONE_DAY) + 1;
+    const fraction = Math.min(1, Math.max(0, daysCovered / daysInMonth));
+
+    // Mai (4) à Octobre (9) = été
+    if (m >= 4 && m <= 9) monthsEte += fraction;
+    else monthsHiver += fraction;
+
+    m++;
+    if (m > 11) { m = 0; y++; }
+  }
+  return { monthsEte, monthsHiver };
+}
+
 // ----- Recalcul global du contrat -----
 
 // ===== Bascule entre les deux pages du formulaire contrat =====
@@ -19302,6 +19342,26 @@ function toggleCustomPassages() {
   } else {
     field.readOnly = true;
     field.classList.remove("ct-editable");
+  }
+  recomputeContract();
+}
+
+// Bascule entre durée prédéfinie et dates libres (personnalisé)
+function onContractDurationChange() {
+  const dur        = document.getElementById("ctDuration");
+  const customEnd  = document.getElementById("ctEndDateCustom");
+  const readonlyEnd= document.getElementById("ctEndDate");
+  const label      = document.getElementById("ctEndDateLabel");
+  const isCustom   = dur && dur.value === "custom";
+
+  if (customEnd)   customEnd.style.display   = isCustom ? "" : "none";
+  if (readonlyEnd) readonlyEnd.style.display = isCustom ? "none" : "";
+  if (label)       label.textContent = isCustom ? "Fin du contrat (choisir la date)" : "Fin du contrat (auto)";
+
+  // Pré-remplir le sélecteur avec la fin actuelle si vide
+  if (isCustom && customEnd && !customEnd.value) {
+    const cur = readonlyEnd?.value;
+    if (cur && /^\d{4}-\d{2}-\d{2}$/.test(cur)) customEnd.value = cur;
   }
   recomputeContract();
 }
@@ -19355,35 +19415,56 @@ function recomputeContract() {
   }
 
   const startISO = startDateEl.value || "";
-  const duration = parseInt(durationEl.value || "0", 10) || 0;
+  const durationRaw = durationEl.value || "0";
+  const isCustomDates = durationRaw === "custom";
+  let duration = parseInt(durationRaw, 10) || 0;
 
   let monthsEte = 0;
   let monthsHiver = 0;
-
-  // 3) Calcul des mois + date de fin via computeContractMonths()
   let endISO = "";
-  if (startISO && duration > 0) {
+
+  const _periodFR = (s, e) => {
+    const d = new Date(s + "T00:00:00").toLocaleDateString("fr-FR");
+    const f = new Date(e + "T00:00:00").toLocaleDateString("fr-FR");
+    return `${d} → ${f}`;
+  };
+
+  // 3) Calcul des mois + date de fin
+  if (isCustomDates) {
+    // 🗓️ Mode DATES LIBRES : la fin vient du sélecteur de date
+    const customEndEl = document.getElementById("ctEndDateCustom");
+    endISO = customEndEl?.value || "";
+    if (startISO && endISO && endISO >= startISO) {
+      // Prorata des jours (ex : 01/08 → 15/09 = 1,5 mois été)
+      const eh = computeMonthsEteHiverFraction(startISO, endISO);
+      monthsEte = eh.monthsEte;
+      monthsHiver = eh.monthsHiver;
+      const _s = new Date(startISO + "T00:00:00");
+      const _e = new Date(endISO + "T00:00:00");
+      duration = Math.max(
+        1,
+        (_e.getFullYear() - _s.getFullYear()) * 12 + (_e.getMonth() - _s.getMonth()) + 1,
+      );
+      if (endDateEl) endDateEl.value = endISO;
+      if (periodEl) periodEl.value = _periodFR(startISO, endISO);
+    } else {
+      if (periodEl) periodEl.value = "";
+    }
+  } else if (startISO && duration > 0) {
     const info = computeContractMonths(startISO, duration);
     monthsEte = info.monthsEte;
     monthsHiver = info.monthsHiver;
     endISO = info.endDateISO;
-
     if (endDateEl) endDateEl.value = endISO;
-
-    if (periodEl) {
-      const debutFr = new Date(startISO + "T00:00:00").toLocaleDateString(
-        "fr-FR",
-      );
-      const finFr = new Date(endISO + "T00:00:00").toLocaleDateString("fr-FR");
-      periodEl.value = `${debutFr} → ${finFr}`;
-    }
+    if (periodEl) periodEl.value = _periodFR(startISO, endISO);
   } else {
     if (endDateEl) endDateEl.value = "";
     if (periodEl) periodEl.value = "";
   }
 
   // 4) Total passages — auto OU personnalisé
-  const autoTotal = monthsHiver * passHiver + monthsEte * passEte;
+  //    (arrondi : en dates libres, les mois peuvent être fractionnaires)
+  const autoTotal = Math.round(monthsHiver * passHiver + monthsEte * passEte);
   const customOn = document.getElementById("ctCustomPassages")?.checked || false;
 
   let totalPassages;
@@ -19693,8 +19774,21 @@ function buildContractFromForm(showErrors) {
   const startDate = (
     document.getElementById("ctStartDate")?.value || ""
   ).trim();
-  const duration = _isClimBuild ? 12 :
-    parseInt(document.getElementById("ctDuration")?.value || "0", 10) || 0;
+
+  // Durée : soit une valeur prédéfinie, soit calculée depuis les dates libres
+  const _durRaw = document.getElementById("ctDuration")?.value || "0";
+  const _isCustomDates = !_isClimBuild && _durRaw === "custom";
+  const _customEndISO = (document.getElementById("ctEndDateCustom")?.value || "").trim();
+  let duration;
+  if (_isClimBuild) {
+    duration = 12;
+  } else if (_isCustomDates && startDate && _customEndISO && _customEndISO >= startDate) {
+    const _s = new Date(startDate + "T00:00:00");
+    const _e = new Date(_customEndISO + "T00:00:00");
+    duration = Math.max(1, (_e.getFullYear() - _s.getFullYear()) * 12 + (_e.getMonth() - _s.getMonth()) + 1);
+  } else {
+    duration = parseInt(_durRaw, 10) || 0;
+  }
 
   const totalPassagesStr = (
     document.getElementById("ctTotalPassages")?.value || "0"
@@ -19745,6 +19839,8 @@ function buildContractFromForm(showErrors) {
     durationMonths: duration,
     endDateLabel: (document.getElementById("ctEndDate")?.value || "").trim(),
     periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
+    customDates: _isCustomDates,
+    endDateISO: _isCustomDates ? _customEndISO : "",
     customPassages: _isClimBuild ? false : (document.getElementById("ctCustomPassages")?.checked || false),
     totalPassages: _isClimBuild ? _climPassPerYear : totalPassages,
     unitPrice: _isClimBuild ? _climPricePerUnit : (parseFloat(unitPriceStr) || 0),
@@ -19910,10 +20006,20 @@ function fillContractForm(contract) {
   if (ctStartDate) ctStartDate.value = pr.startDate || "";
 
   const ctDuration = document.getElementById("ctDuration");
+  const ctEndDateCustom = document.getElementById("ctEndDateCustom");
   if (ctDuration) {
-    const dur = pr.durationMonths || 12;
-    ctDuration.value = String(dur) || "12";
+    if (pr.customDates && pr.endDateISO) {
+      // 🗓️ Contrat à dates libres
+      ctDuration.value = "custom";
+      if (ctEndDateCustom) ctEndDateCustom.value = pr.endDateISO;
+    } else {
+      const dur = pr.durationMonths || 12;
+      // On ne garde que les durées prédéfinies connues, sinon 12
+      ctDuration.value = ["4", "5", "6", "12"].includes(String(dur)) ? String(dur) : "12";
+    }
   }
+  // Appliquer l'affichage (montre/masque le sélecteur de date de fin)
+  if (typeof onContractDurationChange === "function") onContractDurationChange();
 
   const ctEndDate = document.getElementById("ctEndDate");
   if (ctEndDate) ctEndDate.value = pr.endDateLabel || "";
