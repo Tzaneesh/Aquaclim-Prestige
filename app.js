@@ -1109,9 +1109,21 @@ let db = null;
 let unsubDocs = null;
 let unsubContracts = null;
 let unsubClients = null;
-let manualPlanningItems = [];
+let manualPlanningItems = (() => {
+  try { return JSON.parse(localStorage.getItem("manualPlanningItems") || "[]") || []; }
+  catch (e) { return []; }
+})();
 let editingManualPlanningId = null;
-let contractPlanningOverrides = [];
+let contractPlanningOverrides = (() => {
+  try { return JSON.parse(localStorage.getItem("contractPlanningOverrides") || "[]") || []; }
+  catch (e) { return []; }
+})();
+
+// Ordre des interventions à l'intérieur d'une journée : { dateISO: [visitKey, ...] }
+let planningOrder = (() => {
+  try { return JSON.parse(localStorage.getItem("planningOrder") || "{}") || {}; }
+  catch (e) { return {}; }
+})();
 
 // ================== OFFLINE / SYNC QUEUE ==================
 
@@ -1301,12 +1313,16 @@ db.collection("config").doc("companySettings").onSnapshot((doc) => {
 
 // =================== PLANNING MANUEL ===================
 db.collection("planningManual").onSnapshot((snap) => {
-  const arr = [];
-  snap.forEach((d) => arr.push(d.data()));
-  manualPlanningItems = arr;
+  const remote = [];
+  snap.forEach((d) => remote.push(d.data()));
 
-  // cache local (optionnel)
-  localStorage.setItem("manualPlanningItems", JSON.stringify(arr));
+  // 🔀 Firestore fait foi, mais on garde les items locaux pas encore remontés
+  const remoteIds = new Set(remote.map((o) => o && o.id).filter(Boolean));
+  const localOnly = (Array.isArray(manualPlanningItems) ? manualPlanningItems : [])
+    .filter((o) => o && o.id && !remoteIds.has(o.id));
+  manualPlanningItems = remote.concat(localOnly);
+
+  localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems));
 
   try { renderPlanningWeek(); } catch(e) {}
   try { renderPlanningSidebar(); } catch(e) {}
@@ -1314,12 +1330,26 @@ db.collection("planningManual").onSnapshot((snap) => {
 
 // =================== OVERRIDES CONTRATS ===================
 db.collection("contractPlanningOverrides").onSnapshot((snap) => {
-  const arr = [];
-  snap.forEach((d) => arr.push(d.data()));
-  contractPlanningOverrides = arr;
+  const remote = [];
+  snap.forEach((d) => remote.push(d.data()));
 
-  // cache local (optionnel)
-  localStorage.setItem("contractPlanningOverrides", JSON.stringify(arr));
+  // 🔀 Fusion : Firestore fait foi, mais on GARDE les déplacements locaux
+  //    pas encore remontés (sinon un refresh remet le planning comme au départ)
+  const byId = {};
+  (Array.isArray(contractPlanningOverrides) ? contractPlanningOverrides : []).forEach((o) => {
+    if (o && o.id) byId[o.id] = o;
+  });
+  remote.forEach((o) => {
+    if (!o || !o.id) return;
+    const local = byId[o.id];
+    // Firestore l'emporte, sauf si la version locale est plus récente (pas encore syncro)
+    if (!local || (Number(o.updatedAt) || 0) >= (Number(local.updatedAt) || 0)) {
+      byId[o.id] = o;
+    }
+  });
+  contractPlanningOverrides = Object.values(byId);
+
+  localStorage.setItem("contractPlanningOverrides", JSON.stringify(contractPlanningOverrides));
 
   try { renderPlanningWeek(); } catch(e) {}
 });
@@ -15972,6 +16002,37 @@ function toggleContractVisitDone(contractId, originalDate, dateStr) {
   }
 }
 
+// Capture l'ordre actuel des cartes d'une journée (depuis le DOM) et le mémorise
+function capturePlanningDayOrder(dateISO, listEl) {
+  if (!dateISO || !listEl) return;
+  const keys = Array.from(listEl.querySelectorAll(".visit-entry"))
+    .map((el) => el.dataset.visitKey)
+    .filter(Boolean);
+  if (keys.length === 0) {
+    delete planningOrder[dateISO];
+  } else {
+    planningOrder[dateISO] = keys;
+  }
+  try { localStorage.setItem("planningOrder", JSON.stringify(planningOrder)); } catch (e) {}
+}
+
+// Réordonne les cartes d'une colonne selon l'ordre mémorisé pour ce jour
+function applyPlanningDayOrder(dateISO, listEl) {
+  if (!dateISO || !listEl) return;
+  const order = planningOrder[dateISO];
+  if (!Array.isArray(order) || order.length === 0) return;
+  const cards = Array.from(listEl.querySelectorAll(".visit-entry"));
+  cards.sort((a, b) => {
+    const ia = order.indexOf(a.dataset.visitKey);
+    const ib = order.indexOf(b.dataset.visitKey);
+    // les cartes non listées (nouvelles) vont à la fin, dans leur ordre d'origine
+    const ra = ia === -1 ? 9999 : ia;
+    const rb = ib === -1 ? 9999 : ib;
+    return ra - rb;
+  });
+  cards.forEach((c) => listEl.appendChild(c)); // ré-append dans le bon ordre
+}
+
 async function applyContractPlanningOverride(contractId, originalDate, newDate) {
   try {
     const id = `${contractId}__${originalDate}`; // ID stable (important)
@@ -16126,23 +16187,30 @@ function initPlanningDnD() {
         const itemEl    = evt.item;
         const newDateISO = evt.to.closest(".day-column")?.dataset?.date;
         const oldDateISO = evt.from.closest(".day-column")?.dataset?.date;
-        if (!newDateISO || newDateISO === oldDateISO) return;
+        if (!newDateISO) return;
 
-        // 🟢 MANUEL
-        if (itemEl.classList.contains("visit-manual")) {
-          const manualId = itemEl.dataset.manualId;
-          if (!manualId) return;
-          moveManualPlanningItemToDate(manualId, newDateISO);
-          return;
+        const changedDay = oldDateISO && newDateISO !== oldDateISO;
+
+        // 1) CHANGEMENT DE JOUR → déplacement (déclenche un re-render)
+        if (changedDay) {
+          if (itemEl.classList.contains("visit-manual")) {
+            const manualId = itemEl.dataset.manualId;
+            if (manualId) moveManualPlanningItemToDate(manualId, newDateISO);
+          } else if (itemEl.classList.contains("visit-contract")) {
+            const contractId  = itemEl.dataset.contractId;
+            const originalDate = itemEl.dataset.originalDate;
+            if (contractId && originalDate) applyContractPlanningOverride(contractId, originalDate, newDateISO);
+          }
         }
 
-        // 🔵 CONTRAT
-        if (itemEl.classList.contains("visit-contract")) {
-          const contractId  = itemEl.dataset.contractId;
-          const originalDate = itemEl.dataset.originalDate;
-          if (!contractId || !originalDate) return;
-          applyContractPlanningOverride(contractId, originalDate, newDateISO);
-        }
+        // 2) SAUVEGARDER L'ORDRE de la/les journée(s) (y compris réorg dans le même jour)
+        //    On lit depuis le DOM courant (frais après un éventuel re-render).
+        const _captureDay = (dateISO) => {
+          const col = document.querySelector(`.day-column[data-date="${dateISO}"] .day-visits`);
+          if (col) capturePlanningDayOrder(dateISO, col);
+        };
+        _captureDay(newDateISO);
+        if (changedDay && oldDateISO) _captureDay(oldDateISO);
       },
     });
 
@@ -16477,6 +16545,7 @@ function renderPlanningWeek() {
       }
       div.dataset.contractId = contract.id;
       div.dataset.originalDate = originalDateISO;
+      div.dataset.visitKey = "c:" + contract.id + ":" + originalDateISO;
 
       const title = document.createElement("div");
       title.className = "visit-title";
@@ -16523,6 +16592,7 @@ function renderPlanningWeek() {
     if (item.isDone) div.classList.add("is-done");
 
     div.dataset.manualId = item.id;
+    div.dataset.visitKey = "m:" + item.id;
 
     const title = document.createElement("div");
     title.className = "visit-title";
@@ -16553,6 +16623,13 @@ function renderPlanningWeek() {
       sourceId: item.sourceId || "",
       sourceType: item.sourceType || "",
     });
+  });
+
+  // ===========================
+  // 3b) Ordre intra-journée (réorganisation manuelle mémorisée)
+  // ===========================
+  dayColumns.forEach((col) => {
+    applyPlanningDayOrder(col.dateStr, col.list);
   });
 
   // ===========================
@@ -17250,6 +17327,8 @@ async function moveManualPlanningItemToDate(manualId, newDateISO) {
       const it = manualPlanningItems.find((x) => x.id === manualId);
       if (it) it.date = newDateISO;
     }
+    // ✅ cache local immédiat (persiste même sans Firestore / hors ligne)
+    try { localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems)); } catch (e) {}
 
     if (!db) return;
     await db.collection("planningManual").doc(manualId).set(
