@@ -16002,6 +16002,39 @@ function toggleContractVisitDone(contractId, originalDate, dateStr) {
   }
 }
 
+// ── Passages de contrat RETIRÉS du planning (occurrences supprimées) ──
+function _getContractRemovedSet() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem("contractPlanningRemoved") || "[]"));
+  } catch (e) {
+    return new Set();
+  }
+}
+function _saveContractRemovedSet(set) {
+  localStorage.setItem("contractPlanningRemoved", JSON.stringify([...set]));
+}
+function isContractVisitRemoved(contractId, originalDate) {
+  return _getContractRemovedSet().has(contractId + "|" + originalDate);
+}
+function removeContractVisit(contractId, originalDate, dateStr) {
+  showConfirmDialog({
+    title: "Retirer ce passage",
+    message: "Retirer cette intervention du planning ?\n\n(Le contrat n'est pas supprimé, seul ce passage précis est retiré.)",
+    confirmLabel: "Retirer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "🗑️",
+    onConfirm: () => {
+      const set = _getContractRemovedSet();
+      set.add(contractId + "|" + originalDate);
+      _saveContractRemovedSet(set);
+      try { renderPlanningWeek(); } catch (e) {}
+      try { if (dateStr) openPlanningDayDetails(dateStr); } catch (e) {}
+      if (typeof showToast === "function") showToast("Passage retiré du planning", "info");
+    },
+  });
+}
+
 // Capture l'ordre actuel des cartes d'une journée (depuis le DOM) et le mémorise
 function capturePlanningDayOrder(dateISO, listEl) {
   if (!dateISO || !listEl) return;
@@ -16524,6 +16557,9 @@ function renderPlanningWeek() {
         if (originalDateISO > _endISO) continue;
       }
 
+      // 🗑️ Passage retiré manuellement du planning → on ne l'affiche pas
+      if (isContractVisitRemoved(contract.id, originalDateISO)) continue;
+
       const finalDateISO = getOverriddenContractDate(
         contract.id,
         originalDateISO,
@@ -16657,7 +16693,20 @@ function renderPlanningWeek() {
 }
 function openPlanningTour(dateStr) {
   const day = currentPlanningData.find((d) => d.date === dateStr);
-  const items = (day && day.items) ? day.items : [];
+  let items = (day && day.items) ? day.items.slice() : [];
+
+  // 🔢 Ordonner selon l'ordre du planning (réorganisation mémorisée)
+  const _order = planningOrder[dateStr];
+  if (Array.isArray(_order) && _order.length) {
+    const _vk = (it) => it.type === "contract"
+      ? "c:" + it.contractId + ":" + it.originalDate
+      : "m:" + it.id;
+    items.sort((a, b) => {
+      const ia = _order.indexOf(_vk(a));
+      const ib = _order.indexOf(_vk(b));
+      return (ia === -1 ? 9999 : ia) - (ib === -1 ? 9999 : ib);
+    });
+  }
 
   // 1) récupérer les adresses valides (contract + manual)
   const addresses = items
@@ -16754,6 +16803,19 @@ function openPlanningDayDetails(dateStr) {
   if (!day || !day.items.length) {
     html += `<div class="visit-empty">Aucun passage prévu.</div>`;
   } else {
+    // 🔢 Trier les items selon l'ordre du planning (réorganisation mémorisée)
+    const _visitKey = (it) => it.type === "contract"
+      ? "c:" + it.contractId + ":" + it.originalDate
+      : "m:" + it.id;
+    const _order = planningOrder[dateStr];
+    if (Array.isArray(_order) && _order.length) {
+      day.items.sort((a, b) => {
+        const ia = _order.indexOf(_visitKey(a));
+        const ib = _order.indexOf(_visitKey(b));
+        return (ia === -1 ? 9999 : ia) - (ib === -1 ? 9999 : ib);
+      });
+    }
+
     day.items.forEach((item) => {
       // Notes : item (planning popup) + fiche client
       const c = item.clientName ? _getClientByName(item.clientName) : null;
@@ -16819,6 +16881,10 @@ function openPlanningDayDetails(dateStr) {
               <button class="btn btn-small btn-success"
                 onclick="createFactureFromContractItem('${item.contractId}')">
                 💶 Facturer
+              </button>
+              <button class="btn btn-small btn-danger"
+                onclick="removeContractVisit('${item.contractId}', '${item.originalDate}', '${dateStr}')">
+                🗑️ Retirer
               </button>
             </div>
           </div>
@@ -17309,15 +17375,34 @@ function toggleManualPlanningDone(manualId, dateStr) {
 }
 
 
-async function deleteManualPlanningItem(id, dateStr) {
-  try {
-    if (db) await db.collection("planningManual").doc(id).delete();
-    // Pas besoin de render ici : le onSnapshot planningManual va refresh tout.
-    // Si tu veux garder le panneau du jour à jour instant :
-    if (dateStr) openPlanningDayDetails(dateStr);
-  } catch (e) {
-    console.error("deleteManualPlanningItem error:", e);
-  }
+function deleteManualPlanningItem(id, dateStr) {
+  showConfirmDialog({
+    title: "Supprimer l'intervention",
+    message: "Supprimer définitivement cette intervention du planning ?",
+    confirmLabel: "Supprimer",
+    cancelLabel: "Annuler",
+    variant: "danger",
+    icon: "🗑️",
+    onConfirm: async () => {
+      try {
+        // 1) Retirer du tableau local + cache immédiat (fonctionne même hors ligne)
+        if (Array.isArray(manualPlanningItems)) {
+          manualPlanningItems = manualPlanningItems.filter((x) => x && x.id !== id);
+          try { localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems)); } catch (e) {}
+        }
+
+        // 2) Rafraîchir tout de suite
+        try { renderPlanningWeek(); } catch (e) {}
+        if (dateStr) { try { openPlanningDayDetails(dateStr); } catch (e) {} }
+        if (typeof showToast === "function") showToast("Intervention supprimée", "info");
+
+        // 3) Firestore
+        if (db) await db.collection("planningManual").doc(id).delete();
+      } catch (e) {
+        console.error("deleteManualPlanningItem error:", e);
+      }
+    },
+  });
 }
 
 async function moveManualPlanningItemToDate(manualId, newDateISO) {
