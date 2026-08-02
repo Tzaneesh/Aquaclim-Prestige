@@ -15929,6 +15929,89 @@ async function upsertManualPlanningItemToFirestore(item) {
   await db.collection("planningManual").doc(item.id).set(item, { merge: true });
 }
 
+// ==========================================================================
+// 📅 PRÉ-REMPLISSAGE PLANNING — Client « Le Montanan » (Nice)
+//    Calendrier de passages personnalisé issu du PDF du client.
+//    Idempotent : ids déterministes + drapeau localStorage.
+//    Ajoute 21 interventions manuelles (le client peut les déplacer/supprimer,
+//    ou tu peux ensuite créer le contrat officiel avec le même calendrier).
+// ==========================================================================
+function seedMontananPlanning() {
+  try {
+    if (localStorage.getItem("seed_montanan_v1") === "done") return;
+
+    // 21 dates exactes + observation associée
+    const PASSAGES = [
+      ["2026-08-31", "Démarrage saison (avec P. Juven)"],
+      ["2026-09-05", "Passage de contrôle"],
+      ["2026-09-12", "Entretien / Hivernage (filtration à l'arrêt à partir du 12/09)"],
+      ["2027-02-19", "Passage de contrôle / Entretien"],
+      ["2027-03-20", "Entretien"],
+      ["2027-05-15", "Mise en route (filtration relancée)"],
+      ["2027-05-22", "Entretien"],
+      ["2027-05-29", "Entretien"],
+      ["2027-06-05", "Entretien"],
+      ["2027-06-12", "Entretien"],
+      ["2027-06-19", "Entretien"],
+      ["2027-06-26", "Entretien"],
+      ["2027-07-03", "Entretien"],
+      ["2027-07-10", "Entretien"],
+      ["2027-07-17", "Entretien"],
+      ["2027-07-24", "Entretien"],
+      ["2027-07-31", "Entretien"],
+      ["2027-08-07", "Entretien"],
+      ["2027-08-14", "Entretien"],
+      ["2027-08-21", "Entretien"],
+      ["2027-08-28", "Entretien"],
+    ];
+
+    manualPlanningItems = manualPlanningItems || [];
+    let added = 0;
+
+    PASSAGES.forEach(([iso, obs]) => {
+      const id = "seed-montanan-" + iso;
+      // Anti-doublon (même si le drapeau a été perdu)
+      if (manualPlanningItems.some((x) => x && x.id === id)) return;
+
+      const item = {
+        id,
+        date: iso,
+        service: "Entretien piscine",
+        label: "Entretien piscine",
+        clientName: "Le Montanan (Nice)",
+        address: "Nice",
+        phone: "",
+        email: "",
+        time: "11:30",
+        notes: obs,
+        privateNotes:
+          "Contrat 1 an à partir du 31/08/2026 — Passage le samedi dès 11h30 " +
+          "en présence de la femme de ménage. Facturation à la fin de chaque mois. " +
+          "Filtration à l'arrêt du 12/09/2026 au 15/05/2027.",
+        sourceType: "seed",
+        sourceId: "montanan",
+      };
+
+      manualPlanningItems.push(item);
+      added++;
+      // Sync Firestore (best-effort)
+      try { upsertManualPlanningItemToFirestore(item).catch(() => {}); } catch (e) {}
+    });
+
+    if (added > 0) {
+      try { localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems)); } catch (e) {}
+    }
+    localStorage.setItem("seed_montanan_v1", "done");
+
+    if (added > 0) {
+      try { renderPlanningWeek(); } catch (e) {}
+      console.log(`📅 Planning « Le Montanan » pré-rempli (${added} passages ajoutés).`);
+    }
+  } catch (e) {
+    console.warn("seedMontananPlanning a échoué :", e);
+  }
+}
+
 
 // ====== PLANNING HEBDO ======
 
@@ -16511,6 +16594,78 @@ function renderPlanningWeek() {
     const _signed = (typeof isContractSigned === "function") ? isContractSigned(contract) : false;
     const _devisOK = (typeof isDevisAcceptedForContract === "function") ? isDevisAcceptedForContract(contract) : false;
     if (!_signed && !_devisOK) return;
+
+    // ==========================================================
+    // 📅 CALENDRIER PERSONNALISÉ : passages aux dates exactes
+    //    (prioritaire sur la cadence régulière mois/été/hiver)
+    // ==========================================================
+    const _customPassageDates = Array.isArray(contract?.pricing?.customPassageDates)
+      ? contract.pricing.customPassageDates.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x))
+      : [];
+
+    if (_customPassageDates.length) {
+      const clientName =
+        (contract.client && contract.client.name) ||
+        (contract.client && contract.client.reference) ||
+        "Client";
+      const phone = contract.client?.phone || "";
+      const address = contract.client?.address || "";
+      const serviceLabel = getServiceLabelForContract(contract);
+      const mondayISO = dayColumns[0].dateStr;
+      const sundayISO = dayColumns[6].dateStr;
+
+      _customPassageDates.forEach((originalDateISO) => {
+        // Passage retiré manuellement → on ne l'affiche pas
+        if (isContractVisitRemoved(contract.id, originalDateISO)) return;
+
+        // Un passage peut avoir été déplacé (override) vers un autre jour
+        const finalDateISO = getOverriddenContractDate(contract.id, originalDateISO);
+        if (finalDateISO < mondayISO || finalDateISO > sundayISO) return;
+
+        const dayIndexFinal = currentPlanningData.findIndex(
+          (d) => d.date === finalDateISO,
+        );
+        if (dayIndexFinal === -1) return;
+
+        const column = dayColumns[dayIndexFinal];
+        const info = currentPlanningData[dayIndexFinal];
+
+        const div = document.createElement("div");
+        div.className =
+          "visit-entry visit-contract " + getPlanningColorClass(serviceLabel);
+        if (isContractVisitDone(contract.id, originalDateISO)) {
+          div.classList.add("is-done");
+        }
+        div.dataset.contractId = contract.id;
+        div.dataset.originalDate = originalDateISO;
+        div.dataset.visitKey = "c:" + contract.id + ":" + originalDateISO;
+
+        const title = document.createElement("div");
+        title.className = "visit-title";
+        title.textContent = serviceLabel;
+        div.appendChild(title);
+
+        const sub = document.createElement("div");
+        sub.className = "visit-pool";
+        sub.textContent = clientName;
+        div.appendChild(sub);
+
+        column.list.appendChild(div);
+
+        info.items.push({
+          type: "contract",
+          clientName,
+          serviceLabel,
+          phone,
+          address,
+          contractId: contract.id,
+          originalDate: originalDateISO,
+          date: finalDateISO,
+        });
+      });
+
+      return; // ⛔ on n'applique PAS la cadence régulière pour ce contrat
+    }
 
     if (!contractIsActiveDuringWeek(contract, monday, sunday)) return;
 
@@ -18912,6 +19067,12 @@ function newContract() {
   // Réinitialiser le mode dates libres
   const ctEndDateCustomReset = document.getElementById("ctEndDateCustom");
   if (ctEndDateCustomReset) ctEndDateCustomReset.value = "";
+  const ctCustomPassageDatesReset = document.getElementById("ctCustomPassageDates");
+  if (ctCustomPassageDatesReset) ctCustomPassageDatesReset.value = "";
+  const ctCustomDatesInfoReset = document.getElementById("ctCustomDatesInfo");
+  if (ctCustomDatesInfoReset) ctCustomDatesInfoReset.textContent = "";
+  window.__ctCustomPassageDates = null;
+  window.__ctForcedPassages = null;
   if (typeof onContractDurationChange === "function") onContractDurationChange();
 
   const ctPoolType = document.getElementById("ctPoolType");
@@ -19511,6 +19672,53 @@ function toggleCustomPassages() {
 }
 
 // Bascule entre durée prédéfinie et dates libres (personnalisé)
+// 📅 Analyse une liste de dates saisies librement (une par ligne, ou séparées
+//    par virgule / point-virgule). Accepte JJ/MM/AAAA, AAAA-MM-JJ, JJ-MM-AAAA,
+//    JJ.MM.AAAA. Retourne un tableau ISO (AAAA-MM-JJ) trié, sans doublons.
+function parseCustomPassageDates(text) {
+  if (!text || typeof text !== "string") return [];
+  const out = new Set();
+  const tokens = text.split(/[\n,;]+/);
+  for (let raw of tokens) {
+    const t = (raw || "").trim();
+    if (!t) continue;
+    let iso = "";
+    let m;
+    if ((m = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/))) {
+      // AAAA-MM-JJ
+      iso = `${m[1]}-${String(m[2]).padStart(2, "0")}-${String(m[3]).padStart(2, "0")}`;
+    } else if ((m = t.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{4})$/))) {
+      // JJ/MM/AAAA (ou . ou -)
+      iso = `${m[3]}-${String(m[2]).padStart(2, "0")}-${String(m[1]).padStart(2, "0")}`;
+    } else {
+      continue; // format non reconnu → ignoré
+    }
+    // Validation basique de la date
+    const d = new Date(iso + "T12:00:00");
+    if (isNaN(d.getTime())) continue;
+    const [yy, mm, dd] = iso.split("-").map(Number);
+    if (d.getFullYear() !== yy || d.getMonth() + 1 !== mm || d.getDate() !== dd) continue;
+    out.add(iso);
+  }
+  return Array.from(out).sort();
+}
+
+// 📅 Appelé à chaque saisie dans le champ « dates exactes »
+function onCustomPassageDatesInput() {
+  recomputeContract();
+}
+
+// 📅 Durée approximative en mois entre deux dates ISO, basée sur les JOURS réels
+//    (évite le "13 mois" quand début et fin tombent dans le même mois-calendrier).
+//    Ex : 31/08/2026 → 28/08/2027 = 362 j ≈ 12 mois (et non 13).
+function approxMonthsBetween(startISO, endISO) {
+  const s = new Date(startISO + "T00:00:00");
+  const e = new Date(endISO + "T00:00:00");
+  if (isNaN(s.getTime()) || isNaN(e.getTime()) || e < s) return 0;
+  const days = (e - s) / 86400000;
+  return Math.max(1, Math.round(days / 30.4375)); // 30.4375 = jours moyens/mois
+}
+
 function onContractDurationChange() {
   const dur        = document.getElementById("ctDuration");
   const customEnd  = document.getElementById("ctEndDateCustom");
@@ -19521,6 +19729,15 @@ function onContractDurationChange() {
   if (customEnd)   customEnd.style.display   = isCustom ? "" : "none";
   if (readonlyEnd) readonlyEnd.style.display = isCustom ? "none" : "";
   if (label)       label.textContent = isCustom ? "Fin du contrat (choisir la date)" : "Fin du contrat (auto)";
+
+  // 📅 Champ « dates de passage exactes » visible uniquement en mode personnalisé
+  const customDatesGroup = document.getElementById("ctCustomDatesGroup");
+  if (customDatesGroup) customDatesGroup.style.display = isCustom ? "" : "none";
+  // Si des dates exactes sont saisies, le sélecteur de fin est piloté par ces dates
+  const hasExactDates = isCustom &&
+    parseCustomPassageDates(document.getElementById("ctCustomPassageDates")?.value || "").length > 0;
+  if (customEnd) customEnd.disabled = hasExactDates;
+  if (label && hasExactDates) label.textContent = "Fin du contrat (dernière date saisie)";
 
   // Pré-remplir le sélecteur avec la fin actuelle si vide
   if (isCustom && customEnd && !customEnd.value) {
@@ -19578,7 +19795,7 @@ function recomputeContract() {
     passEteEl.value = "4";
   }
 
-  const startISO = startDateEl.value || "";
+  let startISO = startDateEl.value || "";
   const durationRaw = durationEl.value || "0";
   const isCustomDates = durationRaw === "custom";
   let duration = parseInt(durationRaw, 10) || 0;
@@ -19594,25 +19811,66 @@ function recomputeContract() {
   };
 
   // 3) Calcul des mois + date de fin
+  // Reset des dates exactes (seul le mode « dates exactes » ci-dessous les remplit)
+  if (!isCustomDates) {
+    window.__ctCustomPassageDates = null;
+    window.__ctForcedPassages = null;
+  }
   if (isCustomDates) {
-    // 🗓️ Mode DATES LIBRES : la fin vient du sélecteur de date
-    const customEndEl = document.getElementById("ctEndDateCustom");
-    endISO = customEndEl?.value || "";
-    if (startISO && endISO && endISO >= startISO) {
-      // Prorata des jours (ex : 01/08 → 15/09 = 1,5 mois été)
+    // 📅 On regarde d'abord si des DATES EXACTES ont été saisies
+    const customDatesEl = document.getElementById("ctCustomPassageDates");
+    const parsedDates = customDatesEl ? parseCustomPassageDates(customDatesEl.value) : [];
+    const infoEl = document.getElementById("ctCustomDatesInfo");
+
+    if (parsedDates.length) {
+      // 📅 Mode DATES EXACTES : début = 1re date, fin = dernière date, total = nb de dates
+      window.__ctCustomPassageDates = parsedDates.slice();
+      window.__ctForcedPassages = parsedDates.length;
+
+      const firstISO = parsedDates[0];
+      const lastISO = parsedDates[parsedDates.length - 1];
+
+      // Le début du contrat s'aligne sur la 1re date (si vide ou postérieur)
+      if (!startISO || startISO > firstISO) {
+        startISO = firstISO;
+        if (startDateEl) startDateEl.value = firstISO;
+      }
+      endISO = lastISO;
+
+      const customEndEl = document.getElementById("ctEndDateCustom");
+      if (customEndEl) customEndEl.value = lastISO;
+
       const eh = computeMonthsEteHiverFraction(startISO, endISO);
       monthsEte = eh.monthsEte;
       monthsHiver = eh.monthsHiver;
-      const _s = new Date(startISO + "T00:00:00");
-      const _e = new Date(endISO + "T00:00:00");
-      duration = Math.max(
-        1,
-        (_e.getFullYear() - _s.getFullYear()) * 12 + (_e.getMonth() - _s.getMonth()) + 1,
-      );
+      duration = approxMonthsBetween(startISO, endISO);
       if (endDateEl) endDateEl.value = endISO;
       if (periodEl) periodEl.value = _periodFR(startISO, endISO);
+      if (infoEl) {
+        infoEl.textContent =
+          `✓ ${parsedDates.length} passage(s) — du ` +
+          new Date(firstISO + "T00:00:00").toLocaleDateString("fr-FR") +
+          " au " +
+          new Date(lastISO + "T00:00:00").toLocaleDateString("fr-FR");
+      }
     } else {
-      if (periodEl) periodEl.value = "";
+      // 🗓️ Mode DATES LIBRES simple : la fin vient du sélecteur de date
+      window.__ctCustomPassageDates = null;
+      window.__ctForcedPassages = null;
+      if (infoEl) infoEl.textContent = "";
+      const customEndEl = document.getElementById("ctEndDateCustom");
+      endISO = customEndEl?.value || "";
+      if (startISO && endISO && endISO >= startISO) {
+        // Prorata des jours (ex : 01/08 → 15/09 = 1,5 mois été)
+        const eh = computeMonthsEteHiverFraction(startISO, endISO);
+        monthsEte = eh.monthsEte;
+        monthsHiver = eh.monthsHiver;
+        duration = approxMonthsBetween(startISO, endISO);
+        if (endDateEl) endDateEl.value = endISO;
+        if (periodEl) periodEl.value = _periodFR(startISO, endISO);
+      } else {
+        if (periodEl) periodEl.value = "";
+      }
     }
   } else if (startISO && duration > 0) {
     const info = computeContractMonths(startISO, duration);
@@ -19632,7 +19890,11 @@ function recomputeContract() {
   const customOn = document.getElementById("ctCustomPassages")?.checked || false;
 
   let totalPassages;
-  if (customOn) {
+  if (isCustomDates && window.__ctForcedPassages != null) {
+    // 📅 Dates exactes : le total est le nombre de dates saisies (non modifiable)
+    totalPassages = window.__ctForcedPassages;
+    totalPassEl.value = String(totalPassages);
+  } else if (customOn) {
     // On respecte la valeur saisie par l'utilisateur (sans l'écraser)
     totalPassages = parseInt(totalPassEl.value || "0", 10) || 0;
   } else {
@@ -19641,7 +19903,9 @@ function recomputeContract() {
   }
 
   if (recapSummary) {
-    if (customOn) {
+    if (isCustomDates && window.__ctForcedPassages != null) {
+      recapSummary.textContent = `Calendrier personnalisé : ${totalPassages} passage(s) à dates fixes`;
+    } else if (customOn) {
       recapSummary.textContent = `Nombre de visites personnalisé : ${totalPassages}`;
     } else if (monthsEte + monthsHiver === 0 || (passEte === 0 && passHiver === 0)) {
       recapSummary.textContent = "";
@@ -19777,6 +20041,97 @@ function recomputeContract() {
     }
     recapTotal.textContent = txt;
   }
+
+  // 📅 Liste des dates de passage prévues (calendrier personnalisé)
+  renderContractPassageDatesList(
+    isCustomDates && Array.isArray(window.__ctCustomPassageDates)
+      ? window.__ctCustomPassageDates
+      : [],
+  );
+}
+
+// 📅 Affiche la liste des dates de passage dans le récapitulatif du contrat,
+//    regroupées par mois (ex : « Août 2026 : sam. 31 »).
+function renderContractPassageDatesList(dates) {
+  const wrap = document.getElementById("ctRecapDatesWrap");
+  const box = document.getElementById("ctRecapDates");
+  if (!wrap || !box) return;
+
+  if (!Array.isArray(dates) || dates.length === 0) {
+    wrap.style.display = "none";
+    box.innerHTML = "";
+    return;
+  }
+
+  const sorted = dates
+    .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x))
+    .slice()
+    .sort();
+
+  // Regroupement par mois
+  const groups = [];
+  let current = null;
+  sorted.forEach((iso) => {
+    const d = new Date(iso + "T00:00:00");
+    const monthKey = iso.slice(0, 7);
+    const monthLabel = d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    if (!current || current.key !== monthKey) {
+      current = { key: monthKey, label: monthLabel, items: [] };
+      groups.push(current);
+    }
+    current.items.push(String(d.getDate())); // numéro de jour seul
+  });
+
+  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  box.innerHTML = groups
+    .map(
+      (g) =>
+        `<div><strong>${cap(g.label)}</strong> : ${g.items.join(", ")}</div>`,
+    )
+    .join("");
+  wrap.style.display = "";
+}
+
+// 📅 Génère le HTML du calendrier des passages pour le PDF/contrat client.
+//    Retourne "" si le contrat n'utilise pas de dates personnalisées.
+function buildContractPassageDatesHtml(pr) {
+  const dates = Array.isArray(pr?.customPassageDates)
+    ? pr.customPassageDates.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).slice().sort()
+    : [];
+  if (!dates.length) return "";
+
+  const groups = [];
+  let current = null;
+  dates.forEach((iso) => {
+    const d = new Date(iso + "T00:00:00");
+    const key = iso.slice(0, 7);
+    if (!current || current.key !== key) {
+      // Mois abrégé (« Août », « Sept. ») + année
+      let ms = d.toLocaleDateString("fr-FR", { month: "short" }).replace(/\.$/, "");
+      ms = ms.charAt(0).toUpperCase() + ms.slice(1);
+      current = { key, label: `${ms} ${iso.slice(0, 4)}`, days: [] };
+      groups.push(current);
+    }
+    current.days.push(String(d.getDate())); // numéro de jour seul (compact)
+  });
+
+  const cells = groups
+    .map(
+      (g) =>
+        `<div style="padding:1px 0;line-height:1.35;">` +
+        `<span style="font-weight:700;">${g.label}</span> — ${g.days.join(", ")}` +
+        `</div>`,
+    )
+    .join("");
+
+  return `
+    <div style="margin-top:8px;">
+      <p><span class="label">📅 Calendrier des passages prévus (${dates.length}) :</span></p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 18px;margin-top:3px;">${cells}</div>
+      <p style="font-size:8px;color:#666;margin-top:4px;">
+        Dates prévisionnelles, ajustables selon la météo, l’accès au bassin et les contraintes techniques.
+      </p>
+    </div>`;
 }
 
 // ----- Recalcul spécifique contrat CLIM -----
@@ -19943,13 +20298,15 @@ function buildContractFromForm(showErrors) {
   const _durRaw = document.getElementById("ctDuration")?.value || "0";
   const _isCustomDates = !_isClimBuild && _durRaw === "custom";
   const _customEndISO = (document.getElementById("ctEndDateCustom")?.value || "").trim();
+  // 📅 Dates de passage exactes (calendrier personnalisé)
+  const _customPassageDates = _isCustomDates
+    ? parseCustomPassageDates(document.getElementById("ctCustomPassageDates")?.value || "")
+    : [];
   let duration;
   if (_isClimBuild) {
     duration = 12;
   } else if (_isCustomDates && startDate && _customEndISO && _customEndISO >= startDate) {
-    const _s = new Date(startDate + "T00:00:00");
-    const _e = new Date(_customEndISO + "T00:00:00");
-    duration = Math.max(1, (_e.getFullYear() - _s.getFullYear()) * 12 + (_e.getMonth() - _s.getMonth()) + 1);
+    duration = approxMonthsBetween(startDate, _customEndISO);
   } else {
     duration = parseInt(_durRaw, 10) || 0;
   }
@@ -20005,8 +20362,12 @@ function buildContractFromForm(showErrors) {
     periodLabel: (document.getElementById("ctPeriod")?.value || "").trim(),
     customDates: _isCustomDates,
     endDateISO: _isCustomDates ? _customEndISO : "",
+    // 📅 Calendrier personnalisé : liste des dates de passage exactes (ISO)
+    customPassageDates: _customPassageDates,
     customPassages: _isClimBuild ? false : (document.getElementById("ctCustomPassages")?.checked || false),
-    totalPassages: _isClimBuild ? _climPassPerYear : totalPassages,
+    totalPassages: _isClimBuild
+      ? _climPassPerYear
+      : (_customPassageDates.length ? _customPassageDates.length : totalPassages),
     unitPrice: _isClimBuild ? _climPricePerUnit : (parseFloat(unitPriceStr) || 0),
     customUnitPrice: _isClimBuild ? 0 : (parseFloat(document.getElementById("ctCustomUnitPrice")?.value || "0") || 0),
     totalHT: _isClimBuild ? (_climUnits * _climPassPerYear * _climPricePerUnit) : totalHTNum,
@@ -20171,18 +20532,33 @@ function fillContractForm(contract) {
 
   const ctDuration = document.getElementById("ctDuration");
   const ctEndDateCustom = document.getElementById("ctEndDateCustom");
+  const _hasCustomPassageDates = Array.isArray(pr.customPassageDates) && pr.customPassageDates.length > 0;
   if (ctDuration) {
-    if (pr.customDates && pr.endDateISO) {
-      // 🗓️ Contrat à dates libres
+    if (_hasCustomPassageDates || (pr.customDates && pr.endDateISO)) {
+      // 🗓️ Contrat à dates libres / calendrier personnalisé
       ctDuration.value = "custom";
-      if (ctEndDateCustom) ctEndDateCustom.value = pr.endDateISO;
+      if (ctEndDateCustom) ctEndDateCustom.value = pr.endDateISO || "";
     } else {
       const dur = pr.durationMonths || 12;
       // On ne garde que les durées prédéfinies connues, sinon 12
       ctDuration.value = ["4", "5", "6", "12"].includes(String(dur)) ? String(dur) : "12";
     }
   }
-  // Appliquer l'affichage (montre/masque le sélecteur de date de fin)
+
+  // 📅 Restituer les dates de passage exactes (calendrier personnalisé)
+  const ctCustomPassageDatesEl = document.getElementById("ctCustomPassageDates");
+  if (ctCustomPassageDatesEl) {
+    ctCustomPassageDatesEl.value = _hasCustomPassageDates
+      ? pr.customPassageDates
+          .map((iso) => {
+            const parts = String(iso).split("-");
+            return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso;
+          })
+          .join("\n")
+      : "";
+  }
+
+  // Appliquer l'affichage (montre/masque le sélecteur de date de fin + dates exactes)
   if (typeof onContractDurationChange === "function") onContractDurationChange();
 
   const ctEndDate = document.getElementById("ctEndDate");
@@ -20968,10 +21344,10 @@ function formatNicePeriod(startISO, endRaw) {
   const startFR = start.toLocaleDateString("fr-FR", opts);
   const endFR = end.toLocaleDateString("fr-FR", opts);
 
-  const months =
-    (end.getFullYear() - start.getFullYear()) * 12 +
-    (end.getMonth() - start.getMonth()) +
-    1;
+  const months = approxMonthsBetween(
+    start.toISOString().slice(0, 10),
+    end.toISOString().slice(0, 10),
+  );
 
   return `du ${startFR} au ${endFR} (${months} mois)`;
 }
@@ -21840,6 +22216,21 @@ function openContractPDF(previewOnly = false) {
 <title>${getContractLabel(poolType)} – ${c.name || ""}</title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
+
+  /* 🖨️ Pagination identique en impression directe ET en "Enregistrer au format PDF".
+     Sans ceci, l'export PDF ajoute ses marges par défaut (~10 mm) par-dessus le
+     padding de .page → le contenu déborde et crée une page en trop.
+     On met les marges du navigateur à 0 : les marges visuelles sont gérées
+     uniquement par le padding de .page (11 mm sur les côtés). */
+  @page {
+    size: A4;
+    /* On laisse les marges du navigateur à 0 : l'espace en haut de page 1 vient
+       du padding de .page, et l'espace en haut de la page 2 vient d'un bloc
+       vide (spacer) placé après le saut de page. Ainsi l'espacement fonctionne
+       même si l'utilisateur choisit "Marges : Aucune" dans le dialogue PDF. */
+    margin: 0;
+  }
+
 body {
   font-family: Arial, sans-serif;
   font-size: 9.5px;
@@ -21848,10 +22239,17 @@ body {
   justify-content: center;
 }
 
+@media print {
+  html, body { width: 210mm; }
+  body { display: block; }
+  .page { margin: 0 auto; }
+}
+
+
 .page {
   width: 210mm;
   margin: 0 auto;
-  padding: 8mm 11mm 10mm 11mm;
+  padding: 12mm 11mm 8mm 11mm;
   box-sizing: border-box;
 }
 
@@ -21944,6 +22342,19 @@ body {
   .block p,
   .block ul li {
     line-height: 1.18;
+  }
+
+  /* Une clause (titre + texte + liste) ne se coupe jamais en plein milieu
+     entre deux pages */
+  .block p,
+  .block ul {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  /* Un titre de clause reste collé au texte qui suit */
+  .block p.label {
+    page-break-after: avoid;
+    break-after: avoid;
   }
 
   /* Grille 2 colonnes pour les clauses */
@@ -22190,19 +22601,22 @@ ${terminationBillingBlockTop}
       <div class="grid-2">
         <div>
           <p><span class="label">Prestation principale :</span> ${poolLabel}</p>
-          <p><span class="label">Mode de passages :</span>
+          ${(Array.isArray(pr.customPassageDates) && pr.customPassageDates.length)
+            ? `<p><span class="label">Rythme des passages :</span> Calendrier personnalisé (dates fixes)</p>`
+            : `<p><span class="label">Mode de passages :</span>
             ${pr.mode === "standard" ? "Standard : 1/mois hiver – 2/mois été"
               : pr.mode === "intensif" ? "Intensif : 2/mois hiver – 4/mois été"
               : "Personnalisé"}
           </p>
           ${Number(pr.passHiver) > 0 ? `<p><span class="label">Passages hiver (nov → avr) :</span> ${pr.passHiver} / mois</p>` : ""}
-          ${Number(pr.passEte) > 0 ? `<p><span class="label">Passages été (mai → oct) :</span> ${pr.passEte} / mois</p>` : ""}
+          ${Number(pr.passEte) > 0 ? `<p><span class="label">Passages été (mai → oct) :</span> ${pr.passEte} / mois</p>` : ""}`}
         </div>
         <div>
           <p><span class="label">Période du contrat :</span> ${startDateFR} → ${endDateFR} (${pr.durationMonths} mois)</p>
           <p><span class="label">Nombre de visites prévues :</span> ${pr.totalPassages}</p>
         </div>
       </div>
+      ${buildContractPassageDatesHtml(pr)}
       <p class="amount-highlight">
         ${(() => {
           const _pass = Number(pr.totalPassages || 0);
@@ -22305,7 +22719,7 @@ ${terminationBillingBlockTop}
 </div>
 
 
-<!-- 5. Clauses contractuelles & responsabilités -->
+<!-- 5. Clauses contractuelles & responsabilités (flux naturel, coupures entre clauses) -->
 
 <div class="section section-clauses">
   <div class="section-title">5. Clauses contractuelles & responsabilités</div>
@@ -22376,19 +22790,20 @@ ${terminationBillingBlockTop}
     <p class="label" style="margin-top:2px;">5.11 Assurance & exclusions</p>
     <p>AquaClim Prestige est assuré en RC Pro. La responsabilité ne couvre pas les défauts structurels, la plomberie enterrée, le matériel ancien ou non conforme, ni la mauvaise utilisation par le client. Le prestataire n’est pas responsable d’un mauvais traitement lié à un matériel défaillant.</p>
 
+  </div><!-- fin bloc 5.1→5.11 (fin de la page 1) -->
+
+  <!-- Saut de page → 5.12 démarre en HAUT de la page 2 -->
+  <div style="page-break-after: always;"></div>
+  <!-- Espace vide en haut de la page 2 (fonctionne même avec "Marges : Aucune") -->
+  <div style="height: 12mm;"></div>
+
+  <div class="block"><!-- bloc 5.12→5.19 (page 2) -->
+
     <p class="label" style="margin-top:2px;">5.12 Interventions de tiers</p>
     <p>${pr.clientType === "syndic"
       ? `Le prestataire n’assure pas l’exploitation quotidienne de l’installation. Toute intervention, réglage ou modification réalisée par un tiers exonère le prestataire de toute responsabilité sur les conséquences directes ou indirectes pouvant en résulter.`
       : `Toute intervention, réglage ou modification réalisée sur l’installation par un tiers (électricien, plombier, autre prestataire) sans information préalable d’AquaClim Prestige exonère le prestataire de toute responsabilité sur les conséquences directes ou indirectes pouvant en résulter.`
     }</p>
-
-  </div><!-- fin bloc 5.1→5.12 -->
-
-  <!-- Saut de page : 5.13 démarre en haut de page 2 -->
-  <div style="page-break-after: always;"></div>
-  <div style="height: 8mm;"></div>
-
-  <div class="block"><!-- nouveau bloc 5.13→5.19 -->
 
     <p class="label" style="margin-top:2px;">5.13 Durée – renouvellement – résiliation</p>
     ${
@@ -24540,6 +24955,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Badge + sync queue
   updateOfflineBadge();
   if (navigator.onLine && db) processSyncQueue();
+
+  // 📅 Pré-remplissage planning « Le Montanan » (une seule fois)
+  if (typeof seedMontananPlanning === "function") seedMontananPlanning();
 
   // Rapport inputs
   const rapPhotos = document.getElementById("rapPhotosInput");

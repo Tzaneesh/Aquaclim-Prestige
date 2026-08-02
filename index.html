@@ -1812,6 +1812,21 @@
         <input type="date" id="ctEndDateCustom" style="display:none;" onchange="recomputeContract()">
       </div>
 
+      <div class="form-group" id="ctCustomDatesGroup" style="display:none;">
+        <label>📅 Dates de passage exactes</label>
+        <div style="font-size:12px;color:#64748b;margin:2px 0 6px;">
+          Une date par ligne (ou séparées par une virgule). Formats acceptés :
+          <strong>31/08/2026</strong> ou <strong>2026-08-31</strong>.
+          Le début, la fin et le nombre de passages se calculent automatiquement.
+          Laisse vide pour utiliser une fréquence régulière (mois/été/hiver).
+        </div>
+        <textarea id="ctCustomPassageDates" rows="7"
+                  oninput="onCustomPassageDatesInput()"
+                  placeholder="31/08/2026&#10;05/09/2026&#10;12/09/2026&#10;19/02/2027&#10;20/03/2027&#10;..."
+                  style="width:100%;box-sizing:border-box;padding:10px;border:1px solid #cbd5e1;border-radius:8px;font-family:inherit;font-size:14px;resize:vertical;"></textarea>
+        <div id="ctCustomDatesInfo" style="font-size:12px;color:#0f766e;margin-top:6px;font-weight:600;"></div>
+      </div>
+
       <div class="form-group">
         <label>Période couverte</label>
         <input type="text" id="ctPeriod" readonly>
@@ -1901,6 +1916,10 @@
   <p><strong>Visites :</strong> <span id="ctRecapPassages">0</span></p>
   <p><strong>Prix unitaire :</strong> <span id="ctRecapPrice">0 €</span></p>
   <p><strong>Total contrat :</strong> <span id="ctRecapTotal">0 €</span></p>
+  <div id="ctRecapDatesWrap" style="display:none;margin-top:10px;">
+    <p style="margin:0 0 6px;"><strong>📅 Dates de passage prévues :</strong></p>
+    <div id="ctRecapDates" style="font-size:13px;line-height:1.7;color:#334155;"></div>
+  </div>
 </div>
 
 <!-- SIGNATURE CONTRAT SYNDIC -->
