@@ -1113,6 +1113,16 @@ let manualPlanningItems = (() => {
   try { return JSON.parse(localStorage.getItem("manualPlanningItems") || "[]") || []; }
   catch (e) { return []; }
 })();
+// 🔄 Items manuels créés/modifiés localement mais pas encore confirmés côté serveur.
+//    Sert à distinguer « créé hors-ligne (à garder) » de « supprimé sur un autre
+//    appareil (à retirer) » lors de la fusion du snapshot Firestore.
+let pendingManualPlanningIds = (() => {
+  try { return new Set(JSON.parse(localStorage.getItem("pendingManualPlanningIds") || "[]")); }
+  catch (e) { return new Set(); }
+})();
+function _savePendingManualPlanningIds() {
+  try { localStorage.setItem("pendingManualPlanningIds", JSON.stringify([...pendingManualPlanningIds])); } catch (e) {}
+}
 let editingManualPlanningId = null;
 let contractPlanningOverrides = (() => {
   try { return JSON.parse(localStorage.getItem("contractPlanningOverrides") || "[]") || []; }
@@ -1316,11 +1326,19 @@ db.collection("planningManual").onSnapshot((snap) => {
   const remote = [];
   snap.forEach((d) => remote.push(d.data()));
 
-  // 🔀 Firestore fait foi, mais on garde les items locaux pas encore remontés
+  // 🔀 Firestore fait foi. On ne conserve en local QUE les items encore en
+  //    attente d'upload (créés/modifiés hors-ligne). Un item absent de Firestore
+  //    ET non "pending" = supprimé sur un autre appareil → on le retire.
   const remoteIds = new Set(remote.map((o) => o && o.id).filter(Boolean));
   const localOnly = (Array.isArray(manualPlanningItems) ? manualPlanningItems : [])
-    .filter((o) => o && o.id && !remoteIds.has(o.id));
+    .filter((o) => o && o.id && !remoteIds.has(o.id) && pendingManualPlanningIds.has(o.id));
   manualPlanningItems = remote.concat(localOnly);
+
+  // Nettoyage : les ids "pending" désormais présents côté serveur ne le sont plus
+  remoteIds.forEach((id) => {
+    if (pendingManualPlanningIds.has(id)) pendingManualPlanningIds.delete(id);
+  });
+  _savePendingManualPlanningIds();
 
   localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems));
 
@@ -1353,6 +1371,28 @@ db.collection("contractPlanningOverrides").onSnapshot((snap) => {
 
   try { renderPlanningWeek(); } catch(e) {}
 });
+
+// =========== FLAGS PLANNING : passages retirés / marqués "fait" ===========
+// Suivent une seule liste de clés "contractId|dateOrigine" chacun.
+function _bindPlanningFlagDoc(docId, localKey) {
+  db.collection("planningFlags").doc(docId).onSnapshot((doc) => {
+    if (!doc.exists) {
+      // Pas encore sur le cloud → on migre l'état local existant (une fois)
+      let local = [];
+      try { local = JSON.parse(localStorage.getItem(localKey) || "[]") || []; } catch (e) {}
+      if (local.length && db) {
+        db.collection("planningFlags").doc(docId).set({ keys: local }, { merge: true }).catch(() => {});
+      }
+      return;
+    }
+    const data = doc.data() || {};
+    const keys = Array.isArray(data.keys) ? data.keys : [];
+    localStorage.setItem(localKey, JSON.stringify(keys));
+    try { renderPlanningWeek(); } catch (e) {}
+  });
+}
+_bindPlanningFlagDoc("contractRemoved", "contractPlanningRemoved");
+_bindPlanningFlagDoc("contractDone", "contractPlanningDone");
 
 
 // =================== ATTESTATIONS (LIVE) ===================
@@ -15600,6 +15640,13 @@ function refreshHomeStats() {
   // Sécu : si pas de dashboard sur la page, on ne fait rien
   if (!document.getElementById("homeView")) return;
 
+  // 🔄 La liste « Clients à suivre » se rafraîchit automatiquement en même temps
+  //    que le tableau de bord (à chaque changement de données : paiement, devis,
+  //    synchro Firestore, navigation…). Plus besoin du bouton Rafraîchir.
+  if (typeof renderClientsFollowup === "function") {
+    try { renderClientsFollowup(); } catch (e) {}
+  }
+
   const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
   const contracts =
     typeof getAllContracts === "function" ? getAllContracts() : [];
@@ -15925,8 +15972,15 @@ async function saveDocumentToFirestore(docObj) {
 }
 
 async function upsertManualPlanningItemToFirestore(item) {
-  if (!db || !item?.id) return;
+  if (!item?.id) return;
+  // On marque l'item comme "en attente" tant que le serveur n'a pas confirmé
+  pendingManualPlanningIds.add(item.id);
+  _savePendingManualPlanningIds();
+  if (!db) return;
   await db.collection("planningManual").doc(item.id).set(item, { merge: true });
+  // ✅ Confirmé côté serveur → plus besoin de le garder "pending"
+  pendingManualPlanningIds.delete(item.id);
+  _savePendingManualPlanningIds();
 }
 
 // ==========================================================================
@@ -16063,6 +16117,10 @@ function _getContractDoneSet() {
 }
 function _saveContractDoneSet(set) {
   localStorage.setItem("contractPlanningDone", JSON.stringify([...set]));
+  // 🔄 Synchro multi-appareils
+  try {
+    if (db) db.collection("planningFlags").doc("contractDone").set({ keys: [...set] }, { merge: true }).catch(() => {});
+  } catch (e) {}
 }
 function isContractVisitDone(contractId, originalDate) {
   return _getContractDoneSet().has(contractId + "|" + originalDate);
@@ -16095,6 +16153,10 @@ function _getContractRemovedSet() {
 }
 function _saveContractRemovedSet(set) {
   localStorage.setItem("contractPlanningRemoved", JSON.stringify([...set]));
+  // 🔄 Synchro multi-appareils
+  try {
+    if (db) db.collection("planningFlags").doc("contractRemoved").set({ keys: [...set] }, { merge: true }).catch(() => {});
+  } catch (e) {}
 }
 function isContractVisitRemoved(contractId, originalDate) {
   return _getContractRemovedSet().has(contractId + "|" + originalDate);
@@ -17545,6 +17607,9 @@ function deleteManualPlanningItem(id, dateStr) {
           manualPlanningItems = manualPlanningItems.filter((x) => x && x.id !== id);
           try { localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems)); } catch (e) {}
         }
+        // Ne plus considérer cet item comme "à uploader"
+        pendingManualPlanningIds.delete(id);
+        _savePendingManualPlanningIds();
 
         // 2) Rafraîchir tout de suite
         try { renderPlanningWeek(); } catch (e) {}
@@ -19439,6 +19504,11 @@ saveClients(cloudClients);
         }
 
         updateOfflineBadge();
+
+        // 🔄 Met à jour le tableau de bord + la liste « Clients à suivre »
+        if (typeof refreshHomeStats === "function") {
+          try { refreshHomeStats(); } catch (e) {}
+        }
       },
       (e) => {
         console.error("Erreur onSnapshot clients Firestore :", e);
@@ -19989,7 +20059,18 @@ function recomputeContract() {
     extra += getTarifFromTemplates("hivernage_piscine", clientType) || 0;
   }
 
-  let totalHT = totalPassages * unitPrice + extra;
+  // 📅 Contrats à DATES PERSONNALISÉES : la remise en service et l'hivernage
+  //    font partie des dates saisies (ce sont 2 des passages listés). On ne les
+  //    facture donc pas EN PLUS d'un entretien → on retire 1 entretien par option.
+  //    Ex : 21 dates avec remise + hivernage = 19 entretiens + 1 remise + 1 hivernage.
+  const _isCustomDatesContract =
+    isCustomDates && Array.isArray(window.__ctCustomPassageDates) && window.__ctCustomPassageDates.length > 0;
+  const _specialsIncluded = (includeOpen ? 1 : 0) + (includeWinter ? 1 : 0);
+  const _entretienCount = _isCustomDatesContract
+    ? Math.max(0, totalPassages - _specialsIncluded)
+    : totalPassages;
+
+  let totalHT = _entretienCount * unitPrice + extra;
   let airbnbExtra = 0;
   // +20% Airbnb uniquement si aucun prix personnalisé n'est déjà fixé
   // (si le prix vient d'un devis négocié, on respecte ce prix sans majoration)
@@ -22619,15 +22700,20 @@ ${terminationBillingBlockTop}
       ${buildContractPassageDatesHtml(pr)}
       <p class="amount-highlight">
         ${(() => {
-          const _pass = Number(pr.totalPassages || 0);
+          const _totalPass = Number(pr.totalPassages || 0);
           const _unit = Number(pr.unitPrice || 0);
-          const _base = _pass * _unit;
           const _ct = pr.clientType || "particulier";
           const _ms = pr.mainService || "piscine_chlore";
           const _openKind = (_ms === "entretien_jacuzzi" || _ms === "spa_jacuzzi")
             ? "vidange_jacuzzi" : "remise_service_propre";
           const _open   = pr.includeOpening ? (getTarifFromTemplates(_openKind, _ct) || 0) : 0;
           const _winter = pr.includeWinter  ? (getTarifFromTemplates("hivernage_piscine", _ct) || 0) : 0;
+          // 📅 Dates personnalisées : la remise et l'hivernage font partie des
+          //    passages listés → on les retire du nombre d'entretiens facturés.
+          const _hasCustomDates = Array.isArray(pr.customPassageDates) && pr.customPassageDates.length > 0;
+          const _specials = (pr.includeOpening ? 1 : 0) + (pr.includeWinter ? 1 : 0);
+          const _pass = _hasCustomDates ? Math.max(0, _totalPass - _specials) : _totalPass;
+          const _base = _pass * _unit;
           const _remainder = totalHTSafe - _base - _open - _winter; // ex : majoration Airbnb
           let rows = `Entretien : ${_pass} passage${_pass > 1 ? "s" : ""} × ${format(_unit)} = ${format(_base)}`;
           if (_open > 0)   rows += `<br>Remise en service (début de saison) : ${format(_open)}`;
@@ -24046,19 +24132,28 @@ function createAutomaticInvoice(contract) {
   const nextISO = pr.nextInvoiceDate;
   if (!nextISO) return null;
 
-  // 🔒 Anti-doublon : facture déjà créée à cette date ?
+  // 🆔 ID DÉTERMINISTE (contrat + date d'échéance).
+  //    Garantit que si le PC et le téléphone génèrent la même échéance avant de
+  //    s'être synchronisés, ils écrivent dans LE MÊME document Firestore → un
+  //    seul document au final (plus de facture en double pour la même période).
+  const _detId = "FAC-" + (contract.id || "x") + "-" + nextISO;
+
+  // 🔒 Anti-doublon : facture déjà créée pour cette échéance ?
+  //    (par id déterministe OU par contrat+date+type d'échéance)
   const alreadyExists = getAllDocuments().some(
     (d) =>
-      d.type === "facture" &&
-      d.contractId === contract.id &&
-      d.date === nextISO &&
-      Array.isArray(d.prestations) &&
-      d.prestations.some(
-        (p) =>
-          p &&
-          (p.kind === "contrat_echeance" ||
-            p.kind === "contrat_echeance_initiale"),
-      ),
+      d &&
+      (d.id === _detId ||
+        (d.type === "facture" &&
+          d.contractId === contract.id &&
+          d.date === nextISO &&
+          Array.isArray(d.prestations) &&
+          d.prestations.some(
+            (p) =>
+              p &&
+              (p.kind === "contrat_echeance" ||
+                p.kind === "contrat_echeance_initiale"),
+          ))),
   );
   if (alreadyExists) return null;
 
@@ -24196,7 +24291,7 @@ function createAutomaticInvoice(contract) {
   const conditionsType = clientType === "syndic" ? "agence" : "particulier";
 
   return {
-    id: generateId("FAC"),
+    id: _detId,
     type: "facture",
     number,
     date: nextISO,
