@@ -222,6 +222,11 @@
         </button>
       </div> <!-- fin .dash-card-ca -->
 
+    </div> <!-- fin .dashboard-grid (cartes d'action) -->
+
+    <!-- Rangée : Statistiques + Agenda côte à côte -->
+    <div class="dashboard-secondary">
+
       <!-- 📈 Stats avancées -->
       <div class="dash-card" id="dashStatsCard">
         <div class="dash-header">📈 Statistiques</div>
@@ -259,7 +264,25 @@
         </button>
       </div>
 
-    </div> <!-- fin .dashboard-grid -->
+      <!-- 📅 Agenda : aujourd'hui & demain (à côté de Statistiques) -->
+      <div class="card agenda-card">
+        <div class="agenda-head">
+          <h2 class="section-title">📅 Aujourd’hui &amp; demain</h2>
+          <button class="btn btn-secondary btn-small" type="button" onclick="showPlanning()">Voir le planning →</button>
+        </div>
+        <div class="agenda-cols">
+          <div class="agenda-col agenda-col--today">
+            <div class="agenda-col-title" id="agendaTodayTitle">Aujourd’hui</div>
+            <div class="agenda-list" id="agendaTodayList"></div>
+          </div>
+          <div class="agenda-col">
+            <div class="agenda-col-title" id="agendaTomorrowTitle">Demain</div>
+            <div class="agenda-list" id="agendaTomorrowList"></div>
+          </div>
+        </div>
+      </div>
+
+    </div> <!-- fin .dashboard-secondary -->
 
     <!-- 🩺 Tableau État de santé global -->
     <div class="card health-card">
@@ -2137,13 +2160,13 @@
         <div class="ca-summary-sub" id="caSummaryTotalHT">HT : –</div>
       </div>
 
-      <div class="ca-summary-card">
-        <div class="ca-summary-label">CA payé TTC</div>
+      <div class="ca-summary-card ca-summary-card--paid">
+        <div class="ca-summary-label">💰 CA encaissé (URSSAF)</div>
         <div class="ca-summary-value" id="caSummaryPaidTTC">–</div>
         <div class="ca-summary-sub" id="caSummaryPaidPct">– % des factures</div>
       </div>
 
-      <div class="ca-summary-card">
+      <div class="ca-summary-card ca-summary-card--unpaid">
         <div class="ca-summary-label">CA impayé TTC</div>
         <div class="ca-summary-value ca-badge-danger" id="caSummaryUnpaidTTC">–</div>
         <div class="ca-summary-sub" id="caSummaryUnpaidCount">– factures impayées</div>
@@ -2155,7 +2178,7 @@
         <div class="ca-summary-sub" id="caSummaryTVARate">TVA moyenne : –</div>
       </div>
 
-      <div class="ca-summary-card">
+      <div class="ca-summary-card ca-summary-card--month">
         <div class="ca-summary-label">Mois en cours (TTC)</div>
         <div class="ca-summary-value" id="caSummaryCurrentMonth">–</div>
         <div class="ca-summary-sub" id="caSummaryCurrentMonthLabel">–</div>
@@ -2173,8 +2196,9 @@
       <h4>Évolution mensuelle du CA (TTC)</h4>
       <div id="caChartBars" class="ca-chart-bars"></div>
       <div class="ca-chart-legend">
-        <span class="ca-legend-current">■ Année sélectionnée</span>
-        <span class="ca-legend-prev" id="caLegendPrevYear">■ N-1</span>
+        <span class="ca-legend-current">Année sélectionnée</span>
+        <span class="ca-legend-month">Mois en cours</span>
+        <span class="ca-legend-prev" id="caLegendPrevYear">N-1</span>
       </div>
     </div>
 

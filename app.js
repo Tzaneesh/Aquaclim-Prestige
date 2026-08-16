@@ -1305,6 +1305,23 @@ db.collection("config").doc("companySettings").onSnapshot((doc) => {
 
   localStorage.setItem("acp_company_settings_v1", JSON.stringify(data));
 
+  // 🔄 Signature entreprise synchronisée entre appareils
+  if (typeof data.signature === "string") {
+    if (data.signature) localStorage.setItem("companySignature", data.signature);
+    else localStorage.removeItem("companySignature");
+    if (typeof loadSignaturePreview === "function") {
+      try { loadSignaturePreview(); } catch (e) {}
+    }
+  } else {
+    // Pas encore de signature sur le cloud → on migre celle déjà en local
+    const _localSig = localStorage.getItem("companySignature");
+    if (_localSig && db) {
+      try {
+        db.collection("config").doc("companySettings").set({ signature: _localSig }, { merge: true }).catch(() => {});
+      } catch (e) {}
+    }
+  }
+
   applyCompanySettingsToUI(data);
   fillCompanySettingsForm();
 
@@ -2703,8 +2720,13 @@ function saveSignatureImage(input) {
   if (!file) return;
   const reader = new FileReader();
   reader.onload = function(e) {
-    localStorage.setItem("companySignature", e.target.result);
+    const dataUrl = e.target.result;
+    localStorage.setItem("companySignature", dataUrl);
     loadSignaturePreview();
+    // 🔄 Synchro multi-appareils : la signature suit les paramètres entreprise
+    try {
+      if (db) db.collection("config").doc("companySettings").set({ signature: dataUrl }, { merge: true }).catch(() => {});
+    } catch (err) {}
   };
   reader.readAsDataURL(file);
 }
@@ -2714,6 +2736,10 @@ function removeSignatureImage() {
   const inp = document.getElementById("signatureUpload");
   if (inp) inp.value = "";
   loadSignaturePreview();
+  // 🔄 Retire aussi la signature du cloud
+  try {
+    if (db) db.collection("config").doc("companySettings").set({ signature: "" }, { merge: true }).catch(() => {});
+  } catch (err) {}
 }
 
 function loadSignaturePreview() {
@@ -4398,8 +4424,15 @@ function renderCAReport() {
   if (tbody) {
     tbody.innerHTML = "";
 
+    const _isCurYear = (selectedYear == null || selectedYear === now.getFullYear());
+
     report.months.forEach((m, idx) => {
       const tr = document.createElement("tr");
+
+      // Surligne la ligne du mois en cours
+      if (_isCurYear && idx === now.getMonth()) {
+        tr.classList.add("ca-row--current");
+      }
 
       const monthLabel = monthNames[idx].slice(0, 3); // abréviation
 
@@ -4438,12 +4471,26 @@ function renderCAReport() {
       ...(prevReport ? prevValues : [0]),
     );
 
+    // Montant complet affiché au-dessus des barres (ex : "2 600 €", sans décimales)
+    const _caBarAmount = (v) =>
+      (!v || v <= 0) ? "" : Math.round(v).toLocaleString("fr-FR") + " €";
+
     report.months.forEach((m, idx) => {
       const group = document.createElement("div");
       group.className = "ca-bar-group";
 
+      // 🔢 Montant affiché au-dessus de la barre
+      const valLabel = document.createElement("div");
+      valLabel.className = "ca-bar-value";
+      valLabel.textContent = _caBarAmount(m.totalTTC);
+      group.appendChild(valLabel);
+
       const bar = document.createElement("div");
       bar.className = "ca-bar";
+      // Met en avant le mois en cours (vert)
+      if ((selectedYear == null || selectedYear === now.getFullYear()) && idx === now.getMonth()) {
+        bar.classList.add("ca-bar--current");
+      }
       const h = (m.totalTTC / maxVal) * 140; // 140px max
       bar.style.height = `${Math.round(h)}px`;
 
@@ -4874,6 +4921,42 @@ function isDevisExpired(docType, validityDate) {
   const v = new Date(validityDate);
   v.setHours(0, 0, 0, 0);
   return v.getTime() < today.getTime();
+}
+
+// 🔴 Auto-expiration des devis : un devis « en attente » dont la date de validité
+//    est dépassée passe automatiquement en « Expiré » (statut persisté + synchronisé).
+//    Ex : émis le 28/07, validité 27/08 → le 28/08 il devient Expiré.
+//    On ne touche QUE les devis « en attente » (jamais un devis accepté/réalisé/clôturé).
+function checkExpiredDevis() {
+  const docs = (typeof getAllDocuments === "function") ? getAllDocuments() : [];
+  let changed = false;
+
+  docs.forEach((d) => {
+    if (!d || d.type !== "devis") return;
+    const st = d.status || "en_attente";
+    if (st === "en_attente" && isDevisExpired("devis", d.validityDate)) {
+      d.status = "refuse";
+      d.updatedAt = new Date().toISOString();
+      changed = true;
+
+      try {
+        addHistoryEntry(d, {
+          type: "status",
+          detail: "Devis passé automatiquement en « Refusé » (date de validité dépassée).",
+        });
+      } catch (e) {}
+
+      if (typeof saveSingleDocumentToFirestore === "function") {
+        try { saveSingleDocumentToFirestore(d); } catch (e) {}
+      }
+    }
+  });
+
+  if (changed) {
+    if (typeof saveDocuments === "function") saveDocuments(docs);
+    if (typeof loadDocumentsList === "function") loadDocumentsList();
+    if (typeof refreshHomeStats === "function") refreshHomeStats();
+  }
 }
 
 function refreshDevisStatusUI(docType, validityDate) {
@@ -6814,7 +6897,8 @@ function generatePDFRapportFromRecord(record, mode = "print") {
 
   const rapSig = localStorage.getItem("companySignature");
   if (rapSig) {
-    try { doc.addImage(rapSig, "PNG", M, y - 14, 50, 14); } catch(e) {}
+    const _rapSigFmt = /^data:image\/jpe?g/i.test(rapSig) ? "JPEG" : "PNG";
+    try { doc.addImage(rapSig, _rapSigFmt, M, y - 14, 50, 14); } catch(e) {}
   }
 
   const dateSign = record.date ? record.date.split("-").reverse().join("/") : new Date().toLocaleDateString("fr-FR");
@@ -11077,7 +11161,7 @@ function loadDocumentsList() {
         isDevisExpired("devis", doc.validityDate) &&
         storedStatus === "en_attente"
       ) {
-        displayStatus = "expire";
+        displayStatus = "refuse";
       }
 
       let badgeDevisClass = "badge-devis-en-attente";
@@ -11226,14 +11310,29 @@ function _renderMobileDocList(docs) {
     const isDevis   = doc.type === "devis";
     const isFacture = doc.type === "facture";
 
-    // Badge statut
-    let statusBadge = "";
+    // Badge statut (bien visible)
+    let statusCls = "mdoc-status--neutral";
+    let statusLabel = "";
+    let isLate = false;
     if (isDevis) {
-      const st = doc.status || "en_attente";
+      let st = doc.status || "en_attente";
+      if (st === "en_attente" && isDevisExpired("devis", doc.validityDate)) st = "refuse";
       const stMap = { en_attente:"🟡 En attente", accepte:"🟢 Accepté", realise:"🟠 Réalisé", refuse:"🔴 Refusé", cloture:"⚫ Clôturé", expire:"⚠️ Expiré" };
-      statusBadge = stMap[st] || st;
+      statusLabel = stMap[st] || st;
     } else if (isFacture) {
-      statusBadge = doc.paid ? "🟢 Payée" : (doc.paidLate ? "🔴 En retard" : "🟡 En attente");
+      if (doc.paid) {
+        statusCls = "mdoc-status--paid";
+        statusLabel = "Payée";
+      } else {
+        if (doc.date) {
+          const d = new Date(doc.date), t = new Date();
+          d.setHours(0, 0, 0, 0); t.setHours(0, 0, 0, 0);
+          const diff = Math.floor((t - d) / 86400000);
+          if (!isNaN(diff) && diff > 30) isLate = true;
+        }
+        statusCls = isLate ? "mdoc-status--overdue" : "mdoc-status--pending";
+        statusLabel = isLate ? "En retard" : "En attente";
+      }
     }
 
     const dateText = doc.date ? new Date(doc.date).toLocaleDateString("fr-FR", {day:"2-digit",month:"short",year:"numeric"}) : "";
@@ -11244,10 +11343,13 @@ function _renderMobileDocList(docs) {
     const typeIcon = isDevis ? "📄" : "💰";
     const typeLabel = isDevis ? "Devis" : "Facture";
 
-    // Couleur carte selon statut
-    let borderColor = "#e2ecf8";
-    if (isFacture && doc.paid) borderColor = "#c6f6d5";
-    else if (isFacture && !doc.paid) borderColor = "#fed7d7";
+    // Classe d'accent de la carte selon le statut de la facture
+    let cardStatusClass = "";
+    if (isFacture) {
+      cardStatusClass = doc.paid
+        ? "mdoc-card--paid"
+        : (isLate ? "mdoc-card--overdue" : "mdoc-card--pending");
+    }
 
     // Sélecteur de mode de paiement (factures uniquement)
     let payRow = "";
@@ -11269,20 +11371,25 @@ function _renderMobileDocList(docs) {
       </div>`;
     }
 
+    const paidDateSub = (isFacture && doc.paid && doc.paymentDate)
+      ? `<span class="mdoc-status-sub">le ${new Date(doc.paymentDate).toLocaleDateString("fr-FR")}</span>`
+      : "";
+
     const card = document.createElement("div");
-    card.className = "mdoc-card";
-    card.style.borderLeftColor = borderColor;
-    card.style.borderLeftWidth = "4px";
+    card.className = "mdoc-card " + cardStatusClass;
     card.innerHTML = `
       <div class="mdoc-top">
         <div class="mdoc-num">${typeIcon} ${num}</div>
         <div class="mdoc-amount">${amount}</div>
       </div>
+      <div class="mdoc-statusrow">
+        <span class="mdoc-status ${statusCls}">${statusLabel}</span>
+        ${paidDateSub}
+      </div>
       <div class="mdoc-client">${clientName}</div>
       <div class="mdoc-meta">
         <span>📅 ${dateText}</span>
         ${subject ? `<span>· ${subject}</span>` : ""}
-        <span>· ${statusBadge}</span>
       </div>
       ${payRow}
       <div class="mdoc-actions">
@@ -11697,7 +11804,8 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
 
   const attSig = localStorage.getItem("companySignature");
   if (attSig) {
-    try { doc.addImage(attSig, "PNG", margin, y - 14, 50, 14); } catch(e) {}
+    const _sigFmt = /^data:image\/jpe?g/i.test(attSig) ? "JPEG" : "PNG";
+    try { doc.addImage(attSig, _sigFmt, margin, y - 14, 50, 14); } catch(e) {}
   }
 
   const dateSign = record.date ? record.date.split("-").reverse().join("/") : new Date().toLocaleDateString("fr-FR");
@@ -12777,6 +12885,38 @@ if (
   }
 }
 
+
+  // 2b) Clôture MANUELLE d'un devis → générer la facture si elle n'existe pas
+  //     encore (devis sans contrat lié). Permet de facturer même sans passer
+  //     par l'étape "Réalisé".
+  if (
+    status === "cloture" &&
+    oldStatus !== "cloture" &&
+    !skipRapport &&
+    typeof createInvoiceFromDevis === "function"
+  ) {
+    try {
+      const linkedContracts =
+        (typeof getAllContracts === "function" ? getAllContracts() : [])
+          .filter((c) => c.meta && c.meta.sourceDevisId === doc.id);
+      const existingFac = getAllDocuments().find(
+        (d) => d.type === "facture" && d.sourceDevisId === doc.id,
+      );
+      if (linkedContracts.length === 0 && !existingFac) {
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const facture = createInvoiceFromDevis(doc, todayISO);
+        if (facture) {
+          if (typeof loadDocumentsList === "function") loadDocumentsList();
+          if (typeof refreshHomeStats === "function") refreshHomeStats();
+          if (typeof showToast === "function") {
+            showToast(`Facture ${facture.number} générée`, "success");
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Erreur génération facture à la clôture du devis :", e);
+    }
+  }
 
   // 3) Si on vient de passer à "accepte" → logique contrats + facture auto (comme avant)
   if (status === "accepte" && oldStatus !== "accepte") {
@@ -15636,6 +15776,155 @@ function openFromHome(type) {
   }
 }
 
+// 📅 Calcule la liste des interventions prévues pour une date donnée (ISO).
+//    Réutilise la même logique que le planning hebdo : items manuels + passages
+//    de contrat (dates personnalisées OU cadence régulière), en tenant compte
+//    des déplacements (overrides), retraits et statut "fait".
+function computeDayAgenda(targetISO) {
+  const out = [];
+  if (!targetISO) return out;
+
+  // 1) Items manuels
+  (Array.isArray(manualPlanningItems) ? manualPlanningItems : []).forEach((it) => {
+    if (it && it.date === targetISO) {
+      out.push({
+        type: "manual",
+        time: it.time || "",
+        service: it.service || it.label || "Intervention",
+        clientName: it.clientName || "",
+        isDone: !!it.isDone,
+      });
+    }
+  });
+
+  // 2) Passages de contrat
+  const contracts = (typeof getAllContracts === "function") ? getAllContracts() : [];
+  const target = new Date(targetISO + "T00:00:00");
+  if (isNaN(target.getTime())) return out;
+
+  // Lundi de la semaine de la date cible
+  const monday = new Date(target);
+  const dow = (monday.getDay() + 6) % 7; // 0 = lundi
+  monday.setDate(monday.getDate() - dow);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const cols = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    cols.push(formatDateYMD(d));
+  }
+
+  contracts.forEach((contract) => {
+    const status = (typeof computeContractStatus === "function") ? computeContractStatus(contract) : null;
+    if (status !== CONTRACT_STATUS.EN_COURS && status !== CONTRACT_STATUS.A_RENOUVELER) return;
+
+    const _signed = (typeof isContractSigned === "function") ? isContractSigned(contract) : false;
+    const _devisOK = (typeof isDevisAcceptedForContract === "function") ? isDevisAcceptedForContract(contract) : false;
+    if (!_signed && !_devisOK) return;
+
+    const clientName =
+      (contract.client && contract.client.name) ||
+      (contract.client && contract.client.reference) || "Client";
+    const serviceLabel = (typeof getServiceLabelForContract === "function") ? getServiceLabelForContract(contract) : "Entretien";
+
+    const pushVisit = (origISO) => {
+      out.push({
+        type: "contract",
+        time: "",
+        service: serviceLabel,
+        clientName,
+        isDone: (typeof isContractVisitDone === "function") ? isContractVisitDone(contract.id, origISO) : false,
+      });
+    };
+
+    // 2a) Dates personnalisées
+    const custom = Array.isArray(contract?.pricing?.customPassageDates)
+      ? contract.pricing.customPassageDates.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x))
+      : [];
+    if (custom.length) {
+      custom.forEach((origISO) => {
+        if (isContractVisitRemoved(contract.id, origISO)) return;
+        if (getOverriddenContractDate(contract.id, origISO) === targetISO) pushVisit(origISO);
+      });
+      return;
+    }
+
+    // 2b) Cadence régulière
+    if (typeof contractIsActiveDuringWeek === "function" && !contractIsActiveDuringWeek(contract, monday, sunday)) return;
+    const visits = (typeof getVisitsPerWeekForDate === "function") ? getVisitsPerWeekForDate(contract, monday) : 0;
+    if (!visits) return;
+
+    const startISO = contract?.pricing?.startDate;
+    const d0 = startISO ? new Date(startISO + "T00:00:00") : null;
+    const preferredIndex = d0 && !isNaN(d0.getTime()) ? (d0.getDay() + 6) % 7 : 3;
+
+    for (let i = 0; i < visits; i++) {
+      const dayIdx = (visits === 1) ? preferredIndex : Math.min(6, Math.floor(((i + 0.5) * 7) / visits));
+      const origISO = cols[dayIdx];
+      if (startISO && origISO < startISO) continue;
+      const cEnd = (typeof getContractEndDate === "function") ? getContractEndDate(contract) : null;
+      if (cEnd) {
+        const eISO = cEnd.toISOString().split("T")[0];
+        if (origISO > eISO) continue;
+      }
+      if (isContractVisitRemoved(contract.id, origISO)) continue;
+      if (getOverriddenContractDate(contract.id, origISO) === targetISO) pushVisit(origISO);
+    }
+  });
+
+  // Tri : par heure (les sans heure à la fin), puis par client
+  out.sort((a, b) => {
+    const ta = a.time || "99:99", tb = b.time || "99:99";
+    if (ta !== tb) return ta.localeCompare(tb);
+    return (a.clientName || "").localeCompare(b.clientName || "");
+  });
+  return out;
+}
+
+// 📅 Affiche l'agenda "aujourd'hui / demain" sur la vue d'ensemble
+function renderDashboardAgenda() {
+  const todayList = document.getElementById("agendaTodayList");
+  const tomorrowList = document.getElementById("agendaTomorrowList");
+  if (!todayList && !tomorrowList) return;
+
+  const today = new Date();
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  const todayISO = formatDateYMD(today);
+  const tomorrowISO = formatDateYMD(tomorrow);
+
+  const frDay = (d) => {
+    const s = d.toLocaleDateString("fr-FR", { weekday: "long", day: "2-digit", month: "long" });
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  };
+  const tTitle = document.getElementById("agendaTodayTitle");
+  const mTitle = document.getElementById("agendaTomorrowTitle");
+  if (tTitle) tTitle.textContent = "Aujourd’hui — " + frDay(today);
+  if (mTitle) mTitle.textContent = "Demain — " + frDay(tomorrow);
+
+  const buildHtml = (items) => {
+    if (!items.length) {
+      return `<div class="agenda-empty">Rien de prévu ✨</div>`;
+    }
+    return items.map((it) => {
+      const doneCls = it.isDone ? " is-done" : "";
+      const time = it.time ? `<span class="agenda-time">${escapeHtml(it.time)}</span>` : `<span class="agenda-time agenda-time--none">—</span>`;
+      return `<div class="agenda-item agenda-item--${it.type}${doneCls}">` +
+        time +
+        `<div class="agenda-body">` +
+          `<div class="agenda-service">${escapeHtml(it.service || "")}</div>` +
+          (it.clientName ? `<div class="agenda-client">${escapeHtml(it.clientName)}</div>` : "") +
+        `</div>` +
+        (it.isDone ? `<span class="agenda-done">✓</span>` : "") +
+        `</div>`;
+    }).join("");
+  };
+
+  if (todayList) todayList.innerHTML = buildHtml(computeDayAgenda(todayISO));
+  if (tomorrowList) tomorrowList.innerHTML = buildHtml(computeDayAgenda(tomorrowISO));
+}
+
 function refreshHomeStats() {
   // Sécu : si pas de dashboard sur la page, on ne fait rien
   if (!document.getElementById("homeView")) return;
@@ -15645,6 +15934,11 @@ function refreshHomeStats() {
   //    synchro Firestore, navigation…). Plus besoin du bouton Rafraîchir.
   if (typeof renderClientsFollowup === "function") {
     try { renderClientsFollowup(); } catch (e) {}
+  }
+
+  // 📅 Agenda du jour (aujourd'hui & demain)
+  if (typeof renderDashboardAgenda === "function") {
+    try { renderDashboardAgenda(); } catch (e) {}
   }
 
   const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
@@ -24968,6 +25262,11 @@ window.onload = function () {
   if (typeof switchListType === "function") switchListType("devis");
   if (typeof updateButtonColors === "function") updateButtonColors();
   if (typeof showHome === "function") showHome();
+
+  // 🔴 Devis dont la validité est dépassée → passage automatique en « Expiré »
+  if (typeof checkExpiredDevis === "function") {
+    checkExpiredDevis();
+  }
 
   if (
     typeof checkScheduledInvoices === "function" &&
