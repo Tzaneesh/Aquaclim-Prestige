@@ -258,6 +258,34 @@
             </div>
           </div>
         </div>
+
+        <!-- ⚖️ Répartition d'activité : Piscine vs Climatisation -->
+        <div class="activity-split" id="dashActivitySplit">
+          <div class="asplit-title">⚖️ Répartition activité (CA facturé)</div>
+          <div class="asplit-bar" id="asplitBar">
+            <div class="asplit-seg asplit-seg--pool" id="asplitPoolSeg"></div>
+            <div class="asplit-seg asplit-seg--clim" id="asplitClimSeg"></div>
+            <div class="asplit-seg asplit-seg--autre" id="asplitAutreSeg"></div>
+          </div>
+          <div class="asplit-legend">
+            <div class="asplit-leg asplit-leg--pool">
+              <span class="asplit-dot"></span>
+              <span class="asplit-leg-name">Piscine / Spa</span>
+              <span class="asplit-leg-val" id="asplitPoolVal">–</span>
+            </div>
+            <div class="asplit-leg asplit-leg--clim">
+              <span class="asplit-dot"></span>
+              <span class="asplit-leg-name">Climatisation</span>
+              <span class="asplit-leg-val" id="asplitClimVal">–</span>
+            </div>
+            <div class="asplit-leg asplit-leg--autre">
+              <span class="asplit-dot"></span>
+              <span class="asplit-leg-name">Autre (jardin, divers)</span>
+              <span class="asplit-leg-val" id="asplitAutreVal">–</span>
+            </div>
+          </div>
+        </div>
+
         <button type="button" class="btn btn-primary btn-small" onclick="openClientStatsPopup()"
                 style="margin-top:12px; width:100%;">
           📋 Voir le détail par client
@@ -357,6 +385,12 @@
         <tr><td colspan="5" class="no-docs-cell">Chargement…</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- 💰 Total des factures à payer -->
+  <div class="followup-total" id="followupTotal">
+    <span class="followup-total-label">💰 Total à encaisser</span>
+    <span class="followup-total-value" id="followupTotalValue">–</span>
   </div>
 </div>
 

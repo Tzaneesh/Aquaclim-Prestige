@@ -3219,6 +3219,16 @@ function onGenerateRapportFromCurrent() {
   }
 }
 
+// Remplit le menu déroulant « Type de rapport » avec tous les modèles.
+//    (À appeler à CHAQUE ouverture du popup, création ET édition.)
+function fillRapportTypeSelect() {
+  const sel = document.getElementById("rapportType");
+  if (!sel) return;
+  sel.innerHTML =
+    `<option value="">— Choisir —</option>` +
+    RAPPORT_TEMPLATES.map((t) => `<option value="${t.id}">${t.label}</option>`).join("");
+}
+
 function openPiscineRapportGenerator(docId = null) {
   // 👉 on est en mode "nouveau"
   currentRapportId = null;
@@ -3230,10 +3240,7 @@ function openPiscineRapportGenerator(docId = null) {
   const sel = document.getElementById("rapportType");
   if (!sel) return;
 
-  sel.innerHTML = `<option value="">— Choisir —</option>`;
-  RAPPORT_TEMPLATES.forEach((t) => {
-    sel.innerHTML += `<option value="${t.id}">${t.label}</option>`;
-  });
+  fillRapportTypeSelect();
 
   // on vide les champs
   const name = document.getElementById("rapClientName");
@@ -5910,7 +5917,18 @@ function getAllRapports() {
 }
 
 function saveRapports(list) {
-  localStorage.setItem("rapports", JSON.stringify(list || []));
+  try {
+    localStorage.setItem("rapports", JSON.stringify(list || []));
+  } catch (e) {
+    // Quota localStorage dépassé (souvent : trop de photos lourdes)
+    console.error("saveRapports localStorage:", e);
+    if (typeof showToast === "function") {
+      showToast("Stockage local saturé : réduis le nombre de photos par rapport.", "warning");
+    } else {
+      alert("Impossible d'enregistrer : stockage local saturé. Réduis le nombre de photos par rapport.");
+    }
+    // On continue quand même l'envoi Firestore ci-dessous
+  }
 
   // ✅ push Firestore (ou queue si offline)
   if (!db || !navigator.onLine) {
@@ -5954,16 +5972,56 @@ function _fileToDataUrl(file) {
   });
 }
 
+// 📷 Compresse/redimensionne une image avant stockage (évite de dépasser le
+//    quota localStorage et la limite 1 Mo/document Firestore).
+//    Photo de téléphone (~3 Mo) → ~150-300 Ko en JPEG.
+function _compressImage(file, maxDim = 1280, quality = 0.7) {
+  return new Promise((resolve, reject) => {
+    // Non-image → on garde le fichier tel quel
+    if (!file || !file.type || !file.type.startsWith("image/")) {
+      return _fileToDataUrl(file).then(resolve, reject);
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          let w = img.naturalWidth || img.width;
+          let h = img.naturalHeight || img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w >= h) { h = Math.round((h * maxDim) / w); w = maxDim; }
+            else { w = Math.round((w * maxDim) / h); h = maxDim; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", quality));
+        } catch (e) {
+          // En cas d'échec du canvas → repli sur l'image d'origine
+          _fileToDataUrl(file).then(resolve, reject);
+        }
+      };
+      img.onerror = () => { _fileToDataUrl(file).then(resolve, reject); };
+      img.src = String(reader.result || "");
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 async function _onRapportPhotosChange() {
   const input = document.getElementById("rapPhotosInput");
   if (!input || !input.files) return;
 
   const files = Array.from(input.files || []);
   for (const f of files) {
-    const dataUrl = await _fileToDataUrl(f);
+    // 📷 Compression avant stockage (photo téléphone → ~200 Ko)
+    const dataUrl = await _compressImage(f);
     currentRapportPhotosTemp.push({
       name: f.name,
-      type: f.type || "image/jpeg",
+      type: "image/jpeg",
       dataUrl,
     });
   }
@@ -6022,10 +6080,12 @@ async function _onRapportFilesChange() {
 
   const files = Array.from(input.files || []);
   for (const f of files) {
-    const dataUrl = await _fileToDataUrl(f);
+    const isImg = f.type && f.type.startsWith("image/");
+    // Les images sont compressées ; les autres fichiers gardés tels quels
+    const dataUrl = await _compressImage(f);
     currentRapportAttachmentsTemp.push({
       name: f.name,
-      type: f.type || "application/octet-stream",
+      type: isImg ? "image/jpeg" : (f.type || "application/octet-stream"),
       dataUrl,
     });
   }
@@ -6599,6 +6659,91 @@ function _pdfUrlForViewer(doc) {
 
 
 
+// 📝 Rend un texte technique libre en une mise en page PRO et lisible :
+//    - Titres numérotés ("1. …", "2. …") en gras bleu, avec espace avant
+//    - Sous-titres ("Juin :", "Dernier passage :") en gras
+//    - Intitulés ("Objet : …", "Fréquence : …") avec libellé en gras
+//    - Corps : les phrases consécutives sont REGROUPÉES en paragraphes fluides
+//    Retourne le nouveau y.
+function _drawRapportRichText(doc, text, ctx) {
+  let { M, W, y, PAGE_B, PAGE_T, blue, dark } = ctx;
+  const LINE = 4.9;
+  const ensure = (need) => { if (y + need > PAGE_B) { doc.addPage(); y = PAGE_T; } };
+
+  // Analyse LIGNE PAR LIGNE (les lignes vides sont ignorées → les phrases de
+  // corps fusionnent en paragraphes ; les titres restent toujours isolés).
+  const lines = String(text || "")
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((l) => l.replace(/\s+/g, " ").trim());
+
+  const isMainH = (s) => /^\d+[.)]\s+\S/.test(s) && s.length <= 70;       // "1. Chronologie"
+  const isSubH  = (s) => s.length <= 42 && /:\s*$/.test(s);              // "Juin :"
+  // "Libellé : valeur" — libellé court, sans ponctuation de phrase avant le :
+  const isMeta  = (s) => /^[A-Za-zÀ-ÿ0-9][^:.!?]{1,33}:\s+\S/.test(s);
+  const isTitle = (s) => s.length <= 90 && (s === s.toUpperCase() || /rapport/i.test(s));
+
+  let seenContent = false;
+  let body = [];
+  const flushBody = () => {
+    if (!body.length) return;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...dark);
+    doc.splitTextToSize(body.join(" "), W).forEach((ln) => {
+      ensure(LINE); doc.text(ln, M, y); y += LINE;
+    });
+    y += 2.6;                                          // espace entre paragraphes
+    body = [];
+  };
+
+  lines.forEach((line) => {
+    if (!line) return;                                 // ligne vide → ignorée
+    const first = !seenContent;
+    seenContent = true;
+
+    if (first && isTitle(line)) {
+      flushBody();
+      ensure(8);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(11); doc.setTextColor(...blue);
+      doc.splitTextToSize(line, W).forEach((ln) => { ensure(6); doc.text(ln, M, y); y += 5.6; });
+      y += 2.4;
+    } else if (isMainH(line)) {
+      flushBody();
+      y += 2.5; ensure(16);                            // pas de titre orphelin en bas de page
+      doc.setFont("helvetica", "bold"); doc.setFontSize(10.5); doc.setTextColor(...blue);
+      doc.splitTextToSize(line, W).forEach((ln) => { ensure(6); doc.text(ln, M, y); y += 5.3; });
+      y += 1.8;
+    } else if (isSubH(line)) {
+      flushBody();
+      y += 1.8; ensure(12);
+      doc.setFont("helvetica", "bold"); doc.setFontSize(9.5); doc.setTextColor(...dark);
+      doc.text(line, M, y); y += LINE;
+      y += 0.8;
+    } else if (isMeta(line)) {
+      flushBody();
+      const idx = line.indexOf(":");
+      const label = line.slice(0, idx + 1);
+      const val = line.slice(idx + 1).trim();
+      ensure(LINE);
+      doc.setFontSize(9.5); doc.setTextColor(...dark);
+      doc.setFont("helvetica", "bold");
+      const labW = doc.getTextWidth(label + " ");
+      doc.text(label, M, y);
+      doc.setFont("helvetica", "normal");
+      const valLines = doc.splitTextToSize(val, W - labW);
+      if (valLines.length) doc.text(valLines[0], M + labW, y);
+      y += LINE;
+      for (let k = 1; k < valLines.length; k++) { ensure(LINE); doc.text(valLines[k], M, y); y += LINE; }
+      y += 1.8;
+    } else {
+      body.push(line);                                 // corps → accumulé en paragraphe
+    }
+  });
+  flushBody();
+  return y;
+}
+
 function generatePDFRapportFromRecord(record, mode = "print") {
   if (!window.jspdf || !window.jspdf.jsPDF) {
     alert("Librairie jsPDF manquante.");
@@ -6636,13 +6781,8 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setTextColor(...blue);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
-  doc.text("RAPPORT TECHNIQUE", 164, 11, { align: "center" });
-  if (record.numero) {
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7.5);
-    doc.setTextColor(80, 80, 80);
-    doc.text("N\xB0 " + record.numero, 164, 18, { align: "center" });
-  }
+  // Numéro de rapport retiré du document (à la demande) — on centre le titre.
+  doc.text("RAPPORT TECHNIQUE", 164, 14, { align: "center" });
 
   /* ====================================================
      COORDONNÉES SOCIÉTÉ
@@ -6772,20 +6912,20 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   (record.sections || []).forEach((sec) => {
     const items = sec.items || [];
 
-    // Hauteur estimée de la section entière (header + tous les items)
-    const secTotalH = SEC_H + items.length * ITEM_H;
-    // Hauteur minimale pour ne pas laisser le header seul en bas
-    // (header + au moins 2 items, ou la section entière si elle est petite)
-    const minH = SEC_H + Math.min(items.length, 2) * ITEM_H;
+    // Hauteur estimée de la section entière (header + tous les items + espace)
+    const secTotalH = SEC_H + items.length * ITEM_H + 3;
+    const fullPageH = PAGE_B - PAGE_T;
 
-    if (y + minH > PAGE_B) {
-      // Pas assez de place même pour le header + 2 items → saut de page
+    // ✅ On garde chaque section d'un seul tenant : si elle ne rentre pas dans
+    //    la place restante mais tient sur une page, on la déplace EN ENTIER.
+    if (y + secTotalH > PAGE_B && secTotalH <= fullPageH) {
       doc.addPage();
       y = PAGE_T;
-    } else if (y + secTotalH <= PAGE_B) {
-      // La section entière tient : ne rien faire
+    } else if (y + SEC_H + ITEM_H > PAGE_B) {
+      // Section plus haute qu'une page (rare) : au moins pas de header seul en bas
+      doc.addPage();
+      y = PAGE_T;
     }
-    // Sinon : la section est longue, on la laisse se couper entre items
 
     // Barre de section — bleu foncé + texte blanc
     doc.setFillColor(...blue);
@@ -6801,10 +6941,8 @@ function generatePDFRapportFromRecord(record, mode = "print") {
     doc.setFontSize(9);
 
     items.forEach((itemRaw, idx) => {
-      // Saut de page entre items : on garde au moins 1 item suivant sur la même page
-      const isLast = idx === items.length - 1;
-      const spaceNeeded = isLast ? ITEM_H : ITEM_H * 2;
-      if (y + spaceNeeded > PAGE_B) { doc.addPage(); y = PAGE_T; }
+      // Coupure uniquement si l'item lui-même ne rentre pas (évite les gros vides)
+      if (y + ITEM_H > PAGE_B) { doc.addPage(); y = PAGE_T; }
 
       const isObj   = typeof itemRaw === "object";
       const txtRaw  = isObj ? itemRaw.text : itemRaw;
@@ -6837,14 +6975,9 @@ function generatePDFRapportFromRecord(record, mode = "print") {
     doc.text("Remarques / anomalies", M + 4, y + 5.5);
     y += 15;
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...dark);
-    const wrapped = doc.splitTextToSize(record.notes, W);
-    wrapped.forEach((line) => {
-      if (y > 272) { doc.addPage(); y = 18; }
-      doc.text(line, M, y);
-      y += 5;
+    // 📝 Mise en page pro : titres, sous-titres, intitulés et paragraphes fluides
+    y = _drawRapportRichText(doc, record.notes, {
+      M, W, y, PAGE_B, PAGE_T, blue, dark,
     });
     y += 3;
   }
@@ -7007,6 +7140,9 @@ function openRapportPopupForEdit(rapportId) {
   s("rapDate",        rec.date);
   s("rapNextService", rec.nextService);
   s("rapNotes",       rec.notes);
+  // ⚠️ Remplir la liste des types AVANT de sélectionner celui du rapport,
+  //    sinon le menu déroulant reste vide et on ne peut pas choisir le type.
+  fillRapportTypeSelect();
   s("rapportType",    rec.typeId);
 
   const numEl = document.getElementById("rapNumeroDisplay");
@@ -11310,19 +11446,50 @@ function _renderMobileDocList(docs) {
     const isDevis   = doc.type === "devis";
     const isFacture = doc.type === "facture";
 
-    // Badge statut (bien visible)
+    // Badge statut (bien visible) + accent de la carte
     let statusCls = "mdoc-status--neutral";
     let statusLabel = "";
+    let cardStatusClass = "";
     let isLate = false;
+
     if (isDevis) {
       let st = doc.status || "en_attente";
-      if (st === "en_attente" && isDevisExpired("devis", doc.validityDate)) st = "refuse";
-      const stMap = { en_attente:"🟡 En attente", accepte:"🟢 Accepté", realise:"🟠 Réalisé", refuse:"🔴 Refusé", cloture:"⚫ Clôturé", expire:"⚠️ Expiré" };
-      statusLabel = stMap[st] || st;
+
+      // Périmé → considéré Refusé (cohérent avec l'auto-bascule)
+      if (st === "en_attente" && isDevisExpired("devis", doc.validityDate)) {
+        st = "refuse";
+      }
+
+      // Bientôt expiré : en attente + validité dans ≤ 5 jours (pas encore passée)
+      let soonDays = null;
+      if (st === "en_attente" && doc.validityDate) {
+        const v = new Date(doc.validityDate + "T00:00:00"), t = new Date();
+        v.setHours(0, 0, 0, 0); t.setHours(0, 0, 0, 0);
+        const dd = Math.round((v - t) / 86400000);
+        if (dd >= 0 && dd <= 5) soonDays = dd;
+      }
+
+      if (soonDays !== null) {
+        statusCls = "mdoc-status--bientot";
+        statusLabel = soonDays === 0 ? "Expire aujourd’hui" : `Bientôt expiré (${soonDays} j)`;
+        cardStatusClass = "mdoc-card--bientot";
+      } else {
+        const map = {
+          en_attente: ["mdoc-status--attente", "En attente", "mdoc-card--attente"],
+          accepte:    ["mdoc-status--accepte", "Accepté",    "mdoc-card--accepte"],
+          realise:    ["mdoc-status--realise", "Réalisé",    "mdoc-card--realise"],
+          refuse:     ["mdoc-status--refuse",  "Refusé",     "mdoc-card--refuse"],
+          cloture:    ["mdoc-status--cloture", "Clôturé",    "mdoc-card--cloture"],
+          expire:     ["mdoc-status--expire",  "Expiré",     "mdoc-card--expire"],
+        };
+        const m = map[st] || map.en_attente;
+        statusCls = m[0]; statusLabel = m[1]; cardStatusClass = m[2];
+      }
     } else if (isFacture) {
       if (doc.paid) {
         statusCls = "mdoc-status--paid";
         statusLabel = "Payée";
+        cardStatusClass = "mdoc-card--paid";
       } else {
         if (doc.date) {
           const d = new Date(doc.date), t = new Date();
@@ -11332,6 +11499,7 @@ function _renderMobileDocList(docs) {
         }
         statusCls = isLate ? "mdoc-status--overdue" : "mdoc-status--pending";
         statusLabel = isLate ? "En retard" : "En attente";
+        cardStatusClass = isLate ? "mdoc-card--overdue" : "mdoc-card--pending";
       }
     }
 
@@ -11342,14 +11510,6 @@ function _renderMobileDocList(docs) {
     const amount = formatEuro(doc.totalTTC);
     const typeIcon = isDevis ? "📄" : "💰";
     const typeLabel = isDevis ? "Devis" : "Facture";
-
-    // Classe d'accent de la carte selon le statut de la facture
-    let cardStatusClass = "";
-    if (isFacture) {
-      cardStatusClass = doc.paid
-        ? "mdoc-card--paid"
-        : (isLate ? "mdoc-card--overdue" : "mdoc-card--pending");
-    }
 
     // Sélecteur de mode de paiement (factures uniquement)
     let payRow = "";
@@ -15925,6 +16085,95 @@ function renderDashboardAgenda() {
   if (tomorrowList) tomorrowList.innerHTML = buildHtml(computeDayAgenda(tomorrowISO));
 }
 
+// Classe une facture/devis en catégorie d'activité : "clim" | "piscine" | "autre".
+//    (le jardin et les prestations diverses tombent dans "autre")
+function _docActivityCategory(doc) {
+  if (!doc) return "autre";
+
+  // 1) Climatisation (réutilise la détection existante)
+  if (typeof _docLooksClim === "function" && _docLooksClim(doc)) return "clim";
+
+  // 2) Piscine / Spa — par type de prestation
+  const PISCINE_KINDS = [
+    "piscine_chlore", "piscine_sel", "hivernage_piscine",
+    "remise_service_propre", "remise_service_piscine", "traitement_choc",
+    "changement_sable", "remplacement_roulement", "remplacement_pompe_mo",
+    "remplacement_cellule_mo", "nettoyage_local", "depannage_piscine",
+    "entretien_jacuzzi", "vidange_jacuzzi", "depannage_jacuzzi",
+  ];
+  if (Array.isArray(doc.prestations) && doc.prestations.some((p) => p && PISCINE_KINDS.includes(p.kind))) {
+    return "piscine";
+  }
+
+  // 2b) Piscine / Spa — par mots-clés
+  const hay = (
+    (doc.subject || "") + " " +
+    (Array.isArray(doc.prestations) ? doc.prestations.map((p) => (p && p.desc) || "").join(" ") : "")
+  ).toLowerCase();
+  if (/piscine|bassin|\bspa\b|jacuzzi|filtration|chlore|hivernage|electrolyse|électrolyse/.test(hay)) {
+    return "piscine";
+  }
+
+  // 2c) Piscine / Spa — via le contrat lié
+  if (doc.contractId && typeof getContract === "function") {
+    const c = getContract(doc.contractId);
+    const ms = (c?.pricing?.mainService || c?.pool?.type || "");
+    if (["piscine_chlore", "piscine_sel", "entretien_jacuzzi", "spa", "spa_jacuzzi"].includes(ms)) {
+      return "piscine";
+    }
+  }
+
+  // 3) Sinon → Autre (jardin, produits divers, etc.)
+  return "autre";
+}
+
+// ⚖️ Répartition d'activité Piscine / Climatisation / Autre (part du CA facturé)
+function renderActivitySplit() {
+  const bar = document.getElementById("asplitBar");
+  if (!bar) return;
+
+  const docs = (typeof getAllDocuments === "function") ? getAllDocuments() : [];
+  const factures = docs.filter((d) => d && d.type === "facture");
+
+  const acc = {
+    piscine: { amt: 0, cnt: 0 },
+    clim:    { amt: 0, cnt: 0 },
+    autre:   { amt: 0, cnt: 0 },
+  };
+  factures.forEach((f) => {
+    const amt = Number(f.totalTTC) || 0;
+    const cat = _docActivityCategory(f);
+    acc[cat].amt += amt;
+    acc[cat].cnt += 1;
+  });
+
+  const total = acc.piscine.amt + acc.clim.amt + acc.autre.amt;
+  const pct = (v) => (total > 0 ? Math.round((v / total) * 100) : 0);
+  // Ajuste pour que la somme fasse exactement 100 %
+  let pPool = pct(acc.piscine.amt);
+  let pClim = pct(acc.clim.amt);
+  let pAutre = total > 0 ? 100 - pPool - pClim : 0;
+  if (pAutre < 0) { pPool += pAutre; pAutre = 0; } // sécurité arrondi
+
+  const fmt = (typeof formatEuro === "function") ? formatEuro : (v) => (v || 0) + " €";
+
+  const setSeg = (id, p) => {
+    const el = document.getElementById(id);
+    if (el) { el.style.width = p + "%"; el.textContent = p >= 12 ? p + "%" : ""; }
+  };
+  setSeg("asplitPoolSeg", pPool);
+  setSeg("asplitClimSeg", pClim);
+  setSeg("asplitAutreSeg", pAutre);
+
+  const setVal = (id, p, data) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = total > 0 ? `${p}% · ${fmt(data.amt)} · ${data.cnt} fact.` : "Aucune facture";
+  };
+  setVal("asplitPoolVal", pPool, acc.piscine);
+  setVal("asplitClimVal", pClim, acc.clim);
+  setVal("asplitAutreVal", pAutre, acc.autre);
+}
+
 function refreshHomeStats() {
   // Sécu : si pas de dashboard sur la page, on ne fait rien
   if (!document.getElementById("homeView")) return;
@@ -15939,6 +16188,11 @@ function refreshHomeStats() {
   // 📅 Agenda du jour (aujourd'hui & demain)
   if (typeof renderDashboardAgenda === "function") {
     try { renderDashboardAgenda(); } catch (e) {}
+  }
+
+  // ⚖️ Répartition d'activité Piscine / Climatisation
+  if (typeof renderActivitySplit === "function") {
+    try { renderActivitySplit(); } catch (e) {}
   }
 
   const docs = typeof getAllDocuments === "function" ? getAllDocuments() : [];
@@ -25058,6 +25312,15 @@ function renderClientsFollowup() {
   const docs = getAllDocuments() || [];
   const factures = docs.filter((d) => d.type === "facture");
   const unpaid = factures.filter((f) => !f.paid);
+
+  // 💰 Total de TOUTES les factures à payer (pas seulement le top 10 affiché)
+  const totalUnpaid = unpaid.reduce((s, f) => s + (Number(f.totalTTC) || 0), 0);
+  const totalEl = document.getElementById("followupTotalValue");
+  if (totalEl) {
+    totalEl.textContent = unpaid.length
+      ? `${_fmtEUR(totalUnpaid)} · ${unpaid.length} facture${unpaid.length > 1 ? "s" : ""}`
+      : "0,00 € · aucune";
+  }
 
   if (!unpaid.length) {
     tbody.innerHTML = `<tr><td colspan="5" class="no-docs-cell">✅ Aucun impayé </td></tr>`;
