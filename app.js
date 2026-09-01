@@ -7226,6 +7226,59 @@ function getNextNumber(type) {
   return prefix + "-" + year + "-" + String(next).padStart(3, "0");
 }
 
+// 🔢 Corrige les DOUBLONS de numéro de facture : si deux factures portent le
+//    même numéro (collision multi-appareils), on garde la plus ancienne et on
+//    réattribue un numéro libre à la/les autre(s). Idempotent (rien à faire une
+//    fois corrigé). Se lance au chargement pour s'auto-réparer.
+function fixDuplicateInvoiceNumbers() {
+  const docs = getAllDocuments();
+  const byNumber = {};
+  docs.forEach((d) => {
+    if (!d || d.type !== "facture") return;
+    if (typeof d.number !== "string" || !/^FAC-\d{4}-\d{3}$/.test(d.number)) return;
+    (byNumber[d.number] = byNumber[d.number] || []).push(d);
+  });
+
+  const changes = [];
+  Object.keys(byNumber).forEach((num) => {
+    const group = byNumber[num];
+    if (group.length <= 1) return;
+
+    // On garde la plus ancienne (date puis createdAt), on renumérote les autres
+    group.sort((a, b) => {
+      const ka = (a.date || "") + "|" + (a.createdAt || "");
+      const kb = (b.date || "") + "|" + (b.createdAt || "");
+      return ka < kb ? -1 : ka > kb ? 1 : 0;
+    });
+
+    for (let i = 1; i < group.length; i++) {
+      const f = group[i];
+      const oldNum = f.number;
+      // sauvegarde intermédiaire pour que getNextNumber voie les n° déjà réattribués
+      localStorage.setItem("documents", JSON.stringify(docs));
+      f.number = getNextNumber("facture");
+      f.updatedAt = new Date().toISOString();
+      localStorage.setItem("documents", JSON.stringify(docs));
+      changes.push({ id: f.id, from: oldNum, to: f.number });
+    }
+  });
+
+  if (changes.length) {
+    saveDocuments(docs);
+    changes.forEach((c) => {
+      const f = docs.find((d) => d.id === c.id);
+      if (f && typeof saveSingleDocumentToFirestore === "function") {
+        try { saveSingleDocumentToFirestore(f); } catch (e) {}
+      }
+    });
+    if (typeof loadDocumentsList === "function") loadDocumentsList();
+    if (typeof showToast === "function") {
+      changes.forEach((c) => showToast(`Doublon de n° corrigé : ${c.from} → ${c.to}`, "warning"));
+    }
+    console.log("Doublons de numéro de facture corrigés :", changes);
+  }
+}
+
 function generateId(prefix) {
   // ID du style "FAC-1735665123456-042381"
   const rnd = Math.floor(Math.random() * 1e6)
@@ -17981,7 +18034,8 @@ async function confirmManualPlanningPopup() {
   const label = prestation || client;
 
   try {
-    if (!db) throw new Error("Firestore db non initialisé");
+    if (!Array.isArray(manualPlanningItems)) manualPlanningItems = [];
+    const toSync = [];   // items à envoyer à Firestore en arrière-plan
 
     // ✅ MODE ÉDITION = on modifie seulement UNE intervention
     if (editingManualPlanningId) {
@@ -18001,9 +18055,10 @@ async function confirmManualPlanningPopup() {
         updatedAt: Date.now(),
       };
 
-      await db.collection("planningManual").doc(editingManualPlanningId).set(payload, {
-        merge: true,
-      });
+      const idx = manualPlanningItems.findIndex((x) => x && x.id === editingManualPlanningId);
+      if (idx >= 0) manualPlanningItems[idx] = { ...manualPlanningItems[idx], ...payload };
+      else manualPlanningItems.push(payload);
+      toSync.push(payload);
     } else {
       // ✅ MODE CRÉATION
       const dates =
@@ -18032,11 +18087,19 @@ async function confirmManualPlanningPopup() {
           updatedAt: Date.now(),
         };
 
-        await db.collection("planningManual").doc(id).set(payload, {
-          merge: true,
-        });
+        manualPlanningItems.push(payload);
+        toSync.push(payload);
       }
     }
+
+    // 💾 Cache local + affichage IMMÉDIATS (validation instantanée)
+    try { localStorage.setItem("manualPlanningItems", JSON.stringify(manualPlanningItems)); } catch (e) {}
+    try { renderPlanningWeek(); } catch (e) {}
+
+    // ☁️ Envoi Firestore en ARRIÈRE-PLAN — n'attend PAS l'accusé réseau
+    toSync.forEach((it) => {
+      try { upsertManualPlanningItemToFirestore(it).catch(() => {}); } catch (e) {}
+    });
 
     closeManualPlanningPopup();
 
@@ -25525,6 +25588,11 @@ window.onload = function () {
   if (typeof switchListType === "function") switchListType("devis");
   if (typeof updateButtonColors === "function") updateButtonColors();
   if (typeof showHome === "function") showHome();
+
+  // 🔢 Corrige d'éventuels doublons de numéro de facture (collisions multi-appareils)
+  if (typeof fixDuplicateInvoiceNumbers === "function") {
+    try { fixDuplicateInvoiceNumbers(); } catch (e) {}
+  }
 
   // 🔴 Devis dont la validité est dépassée → passage automatique en « Expiré »
   if (typeof checkExpiredDevis === "function") {
