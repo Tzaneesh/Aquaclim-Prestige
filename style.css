@@ -1078,6 +1078,64 @@ textarea {
     overflow: hidden;
     border: 1px solid #dde6f0;
 }
+
+/* Syndic / Agence retiré : on masque la colonne de prix « Syndic » (3ᵉ colonne) */
+.tarifs-table th:nth-child(3),
+.tarifs-table td:nth-child(3) { display: none; }
+
+/* 💰 Marge nette privée (formulaire devis/facture) */
+.marge-box {
+  border: 1px dashed #86efac;
+  background: linear-gradient(180deg, #f0fdf4, #ffffff);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 10px;
+}
+.marge-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  font-weight: 800; color: #15803d; font-size: 14px; margin-bottom: 10px;
+}
+.marge-badge {
+  font-size: 11px; font-weight: 700; color: #64748b;
+  background: #eef2f7; border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+}
+.marge-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+.marge-inputs-auto { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+.marge-inputs label { display: block; font-size: 12px; font-weight: 600; color: #475569; margin-bottom: 4px; }
+.marge-inputs input { width: 100%; box-sizing: border-box; }
+.marge-lines { display: flex; flex-direction: column; gap: 5px; }
+.marge-line { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; color: #334155; }
+.marge-line span:last-child { font-variant-numeric: tabular-nums; font-weight: 600; }
+.marge-net {
+  border-top: 1px solid #d1fae5; margin-top: 4px; padding-top: 8px;
+  font-size: 15px; font-weight: 800;
+}
+.marge-sub { font-size: 12px; color: #94a3b8; }
+
+/* Verdict de rentabilité */
+.marge-verdict {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 800;
+  text-align: center;
+}
+.marge-verdict--neutral { background: #eef2f7; color: #64748b; }
+.marge-verdict--good    { background: #dcfce7; color: #15803d; }
+.marge-verdict--warn    { background: #fef3c7; color: #b45309; }
+.marge-verdict--bad     { background: #fee2e2; color: #b91c1c; }
+.marge-suggested {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  background: #eff6ff;
+  border: 1px dashed #bfdbfe;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #1d4ed8;
+}
+@media (max-width: 520px) { .marge-inputs { grid-template-columns: 1fr; } }
 .tarifs-table th {
     background: #1a74d9;
     color: #fff;

@@ -1008,11 +1008,13 @@
 
       <div id="descEditor" class="desc-editor hidden">
         <h4>Texte détaillé du modèle</h4>
-        <label>Texte Particulier</label>
+        <label>Texte détaillé</label>
         <textarea id="descPartInput"></textarea>
 
-        <label>Texte Syndic / Agence</label>
-        <textarea id="descSynInput"></textarea>
+        <div style="display:none;">
+          <label>Texte Syndic / Agence</label>
+          <textarea id="descSynInput"></textarea>
+        </div>
 
         <div class="desc-editor-buttons">
           <button class="btn btn-primary btn-small" onclick="saveDescEditor()">Enregistrer</button>
@@ -1036,11 +1038,13 @@
         <label>Nom de la prestation</label>
         <input type="text" id="popupName">
 
-        <label>Prix Particulier</label>
+        <label>Prix</label>
         <input type="number" id="popupPricePart" step="0.01" oninput="onPopupPricePartChange()">
 
-        <label>Prix Syndic</label>
-        <input type="number" id="popupPriceSyn" step="0.01">
+        <div style="display:none;">
+          <label>Prix Syndic</label>
+          <input type="number" id="popupPriceSyn" step="0.01">
+        </div>
 
         <div class="popup-buttons">
           <button class="btn btn-primary" onclick="confirmPrestationPopup()">Valider</button>
@@ -1072,6 +1076,26 @@
           <label>Année</label>
           <select id="yearFilter" onchange="loadDocumentsList()">
             <option value="all">Toutes</option>
+          </select>
+        </div>
+
+        <!-- Filtre mois (factures uniquement) -->
+        <div id="monthFilterContainer" class="hidden">
+          <label>Mois</label>
+          <select id="monthFilter" onchange="loadDocumentsList()">
+            <option value="all">Tous</option>
+            <option value="1">Janvier</option>
+            <option value="2">Février</option>
+            <option value="3">Mars</option>
+            <option value="4">Avril</option>
+            <option value="5">Mai</option>
+            <option value="6">Juin</option>
+            <option value="7">Juillet</option>
+            <option value="8">Août</option>
+            <option value="9">Septembre</option>
+            <option value="10">Octobre</option>
+            <option value="11">Novembre</option>
+            <option value="12">Décembre</option>
           </select>
         </div>
 
@@ -1185,7 +1209,11 @@
 
         <div class="form-group">
           <label>Numéro</label>
-          <input type="text" id="docNumber" readonly>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <input type="text" id="docNumber" readonly style="flex:1;">
+            <button type="button" class="btn btn-secondary btn-small" onclick="toggleDocNumberEdit(this)"
+                    title="Modifier le numéro à la main" style="white-space:nowrap;">✏️ Modifier</button>
+          </div>
         </div>
 
         <div class="form-group">
@@ -1207,15 +1235,15 @@
         <input type="text" id="docSubject" placeholder="Ex : Entretien piscine + clim – Villa Martin">
       </div>
 
-      <!-- type client -->
-      <div class="form-group">
+      <!-- type client (masqué : tarif unique particulier) -->
+      <div class="form-group" style="display:none;">
        <label class="form-label">
   Type de client <span class="required-star">*</span>
 </label>
         <div class="client-type-row">
 
           <label class="client-type-option">
-            <input type="radio" name="clientType" value="particulier" id="clientParticulier" onchange="selectClientType('particulier')">
+            <input type="radio" name="clientType" value="particulier" id="clientParticulier" checked onchange="selectClientType('particulier')">
             Particulier
           </label>
 
@@ -1440,10 +1468,60 @@
         <div class="tva-note" id="tvaNote">TVA non applicable, article 293 B du CGI.</div>
       </div>
 
+      <!-- 💰 MARGE NETTE — PRIVÉ (jamais imprimé / envoyé au client) -->
+      <div class="form-group no-print marge-box" id="margeBox">
+        <div class="marge-head">
+          <span>💰 Ma marge</span>
+          <span class="marge-badge">🔒 non imprimé</span>
+        </div>
+        <div class="marge-inputs marge-inputs-auto">
+          <div>
+            <label>Coût produits (auto, depuis le devis)</label>
+            <input type="text" id="margeAutoCost" readonly value="0,00 €" style="background:#f1f5f9;">
+          </div>
+          <div>
+            <label>Autres coûts (€)</label>
+            <input type="number" id="margeCost" step="0.01" min="0" placeholder="ex : sous-traitance" oninput="computeMargeNette()">
+          </div>
+          <div>
+            <label>Charges URSSAF (%)</label>
+            <input type="number" id="margeRate" step="0.1" min="0" value="21.2" oninput="computeMargeNette()">
+          </div>
+          <div>
+            <label>Impôts (%)</label>
+            <input type="number" id="margeImpotRate" step="0.1" min="0" value="6" oninput="computeMargeNette()">
+          </div>
+          <div>
+            <label>Temps passé (h)</label>
+            <input type="number" id="margeHours" step="0.25" min="0" placeholder="ex : 1" oninput="computeMargeNette()">
+          </div>
+          <div>
+            <label>Objectif €/h net</label>
+            <input type="number" id="margeTarget" step="1" min="0" value="50" oninput="computeMargeNette()">
+          </div>
+        </div>
+        <div class="marge-lines">
+          <div class="marge-line"><span>Recette (encaissée)</span><span id="margeRecette">0,00 €</span></div>
+          <div class="marge-line"><span>− Coût total (produits + autres)</span><span id="margeCostView">0,00 €</span></div>
+          <div class="marge-line"><span>− Charges URSSAF (est.)</span><span id="margeCharges">0,00 €</span></div>
+          <div class="marge-line"><span>− Impôts (est.)</span><span id="margeImpots">0,00 €</span></div>
+          <div class="marge-line marge-net"><span>= Net qui te reste</span><span id="margeNet">0,00 €</span></div>
+          <div class="marge-line"><span>Net / heure</span><span id="margeNetPerHour">—</span></div>
+        </div>
+        <div class="marge-verdict marge-verdict--neutral" id="margeVerdict">Indique le temps passé pour évaluer la rentabilité</div>
+        <div class="marge-suggested" id="margeSuggested" style="display:none;"></div>
+      </div>
+
 
       <!-- SECTION PAIEMENT (factures) -->
       <div class="form-group no-print" id="paymentSection">
         <label>Règlement</label>
+
+        <div class="pay-line" style="margin-bottom:10px;padding:8px 10px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;">
+          <label style="font-weight:600;color:#92400e;">
+            <input type="checkbox" id="noDevisRequired"> Facture directe — client dispensé de devis (autorise &gt; 150 € sans devis)
+          </label>
+        </div>
 
         <div class="pay-line">
           <label><input type="radio" name="payMode" id="payNone" value="" checked onchange="onPayModeChange()"> Facture non réglée</label>
@@ -1832,7 +1910,8 @@
     <!-- TYPE CLIENT + DATES (commun aux deux blocs)               -->
     <!-- ========================================================= -->
     <div class="row">
-      <div class="form-group">
+      <!-- type client contrat (masqué : tarif unique particulier) -->
+      <div class="form-group" style="display:none;">
         <label>Type de client <span class="required-star">*</span></label>
         <div class="client-type-row">
           <label class="client-type-option">
@@ -2032,6 +2111,7 @@
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
 <button id="contractTransformButtonBottom" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+    <button class="btn btn-secondary" type="button" onclick="restoreContractRemovedVisits(currentContractId)" title="Remettre dans le planning les passages retirés par erreur">♻️ Restaurer passages</button>
 
 
      <button class="btn btn-primary" onclick="createDevisFromCurrentContract()">🧾 Créer un devis</button>

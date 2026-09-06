@@ -1844,6 +1844,51 @@ Cordialement,
 Loïc – AquaClim Prestige`;
 }
 
+// 🗓️ Statistiques de passages d'un client (d'après le planning) :
+//    total prévu, faits, retirés, restants — sur ses contrats piscine/spa
+//    ET ses interventions manuelles du planning (clients sans contrat).
+function _getClientPoolPassageStats(contracts, clientName) {
+  const POOL = ["piscine_chlore", "piscine_sel", "entretien_jacuzzi", "spa", "spa_jacuzzi"];
+  const doneSet = (typeof _getContractDoneSet === "function") ? _getContractDoneSet() : new Set();
+  const remSet = (typeof _getContractRemovedSet === "function") ? _getContractRemovedSet() : new Set();
+
+  let total = 0, done = 0, removed = 0, sources = 0;
+
+  // 1) Contrats piscine / spa
+  (contracts || []).forEach((c) => {
+    if (!c || !c.id) return;
+    const ms = (c.pricing && c.pricing.mainService) || (c.pool && c.pool.type) || "";
+    if (!POOL.includes(ms)) return;
+    sources++;
+
+    const custom = Array.isArray(c.pricing && c.pricing.customPassageDates)
+      ? c.pricing.customPassageDates.filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x))
+      : [];
+    const t = custom.length ? custom.length : (Number(c.pricing && c.pricing.totalPassages) || 0);
+
+    const prefix = c.id + "|";
+    total += t;
+    done += [...doneSet].filter((k) => k.startsWith(prefix)).length;
+    removed += [...remSet].filter((k) => k.startsWith(prefix)).length;
+  });
+
+  // 2) Interventions manuelles du planning pour ce client (sans contrat)
+  const cn = (clientName || "").trim().toLowerCase();
+  if (cn && Array.isArray(manualPlanningItems)) {
+    const mine = manualPlanningItems.filter(
+      (it) => it && (it.clientName || "").trim().toLowerCase() === cn,
+    );
+    if (mine.length) {
+      sources++;
+      total += mine.length;
+      done += mine.filter((it) => it.isDone).length;
+    }
+  }
+
+  const remaining = Math.max(0, total - done - removed);
+  return { poolContracts: sources, total, done, removed, remaining };
+}
+
 function openClientSheet(name) {
   const n = (name || "").trim();
   if (!n) {
@@ -1892,6 +1937,7 @@ function openClientSheet(name) {
   const email = client?.email || "";
   const type = client?.type || client?.clientType || "";
 const privateNotes = client?.privateNotes || "";
+const poolStats = _getClientPoolPassageStats(contratsAll, n);
 
 
   const html = `
@@ -1953,13 +1999,26 @@ const privateNotes = client?.privateNotes || "";
       ">Fermer</button>
     </div>
 
-    <div style="display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-top: 14px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); gap: 12px; margin-top: 14px;">
       <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
         <div style="opacity:.7; font-size:12px;">CA facturé (TTC)</div>
         <div style="font-size:22px; font-weight:900; margin-top:4px; color:#1e7f43;">
           ${_fmtEUR(caTTC)}
         </div>
       </div>
+
+      ${poolStats.total > 0 ? `
+      <div style="border:1px solid #dbeafe; border-radius:12px; padding:12px; background:linear-gradient(180deg,#f0f7ff,#fff);">
+        <div style="opacity:.7; font-size:12px;">🗓️ Passages</div>
+        <div style="font-size:22px; font-weight:900; margin-top:4px; color:#1d4ed8;">
+          ${poolStats.done} <span style="font-size:14px;color:#64748b;font-weight:700;">faits</span>
+          &nbsp;/&nbsp;
+          ${poolStats.remaining} <span style="font-size:14px;color:#64748b;font-weight:700;">restants</span>
+        </div>
+        <div style="opacity:.75; margin-top:2px; font-size:12px;">
+          sur ${poolStats.total} prévus${poolStats.removed ? ` · ${poolStats.removed} retiré(s)` : ""}
+        </div>
+      </div>` : ""}
 
       <div style="border:1px solid #eee; border-radius:12px; padding:12px;">
         <div style="opacity:.7; font-size:12px;">Impayés (TTC)</div>
@@ -7279,6 +7338,34 @@ function fixDuplicateInvoiceNumbers() {
   }
 }
 
+// ✏️ Déverrouille / verrouille le champ Numéro pour édition manuelle
+function toggleDocNumberEdit(btn) {
+  const el = document.getElementById("docNumber");
+  if (!el) return;
+  const locked = el.hasAttribute("readonly");
+  if (locked) {
+    el.removeAttribute("readonly");
+    el.style.background = "#fffbea";           // fond jaune pâle = en édition
+    el.focus();
+    try { el.select(); } catch (e) {}
+    if (btn) btn.textContent = "🔒 Verrouiller";
+  } else {
+    el.setAttribute("readonly", "");
+    el.style.background = "";
+    if (btn) btn.textContent = "✏️ Modifier";
+  }
+}
+
+// Reverrouille le champ Numéro (à chaque ouverture/chargement de document)
+function _lockDocNumber() {
+  const el = document.getElementById("docNumber");
+  if (!el) return;
+  el.setAttribute("readonly", "");
+  el.style.background = "";
+  const btn = el.parentElement ? el.parentElement.querySelector("button") : null;
+  if (btn) btn.textContent = "✏️ Modifier";
+}
+
 function generateId(prefix) {
   // ID du style "FAC-1735665123456-042381"
   const rnd = Math.floor(Math.random() * 1e6)
@@ -7443,6 +7530,10 @@ function switchListType(type) {
   if (yearFilterContainer) {
     yearFilterContainer.classList.toggle("hidden", type !== "facture");
   }
+  const monthFilterContainer = document.getElementById("monthFilterContainer");
+  if (monthFilterContainer) {
+    monthFilterContainer.classList.toggle("hidden", type !== "facture");
+  }
   if (exportContainer) {
     exportContainer.classList.toggle("hidden", type !== "facture");
   }
@@ -7471,6 +7562,17 @@ function switchListType(type) {
 
   resetTarifsPanel();
   currentDocumentId = null;
+
+  // 🔄 En ouvrant l'onglet Factures, on génère d'abord les factures d'échéance
+  //    de contrat arrivées à terme → elles apparaissent sans devoir passer par
+  //    l'onglet Contrats. (Idempotent : anti-doublon + id déterministe.)
+  if (
+    type === "facture" &&
+    typeof checkScheduledInvoices === "function" &&
+    typeof countContractInstallmentInvoices === "function"
+  ) {
+    try { checkScheduledInvoices(); } catch (e) {}
+  }
 
   loadYearFilter();
   loadDocumentsList();
@@ -7532,10 +7634,14 @@ function loadYearFilter() {
       select.appendChild(opt);
     });
 
-  // Sécurité : le conteneur du filtre ne s'affiche que sur "Factures"
+  // Sécurité : les filtres année/mois ne s'affichent que sur "Factures"
   const container = document.getElementById("yearFilterContainer");
   if (container) {
     container.classList.toggle("hidden", currentListType !== "facture");
+  }
+  const monthContainer = document.getElementById("monthFilterContainer");
+  if (monthContainer) {
+    monthContainer.classList.toggle("hidden", currentListType !== "facture");
   }
 }
 // ================== TVA & TYPE DOCUMENT ==================
@@ -8703,6 +8809,10 @@ function calculateTotals() {
   document.getElementById("tvaAmount").textContent = formatEuro(tvaAmount);
   document.getElementById("totalTTC").textContent = formatEuro(totalTTC);
 
+  // 💰 Marge nette (privé) : on mémorise la recette et on recalcule
+  window.__currentSaleTotal = totalTTC;
+  try { computeMargeNette(); } catch (e) {}
+
   const totalLabelEl = document.getElementById("totalLabel");
   if (totalLabelEl) {
     const clientType = getCurrentClientType();
@@ -8716,6 +8826,95 @@ function calculateTotals() {
 
   // 🔻 Total collant en bas du formulaire
   _updateStickyTotal(formatEuro(totalTTC));
+}
+
+// 💰 Somme des coûts d'achat des produits/fournitures saisis dans le devis
+//    (prix d'achat × quantité, par ligne).
+function _sumDevisProductCost() {
+  let total = 0;
+  document.querySelectorAll(".prestation-line").forEach((line) => {
+    const pInp = line.querySelector(".prestation-purchase");
+    if (!pInp) return;
+    const purchase = parseFloat(pInp.value) || 0;
+    if (purchase <= 0) return;
+    const qty = parseFloat(line.querySelector(".prestation-qty")?.value) || 1;
+    total += purchase * qty;
+  });
+  return total;
+}
+
+// 💰 Calcule et affiche la marge nette PRIVÉE (jamais imprimée).
+//    Coût = produits du devis (auto) + autres coûts (manuel).
+//    Net = Recette − coût total − charges URSSAF estimées.
+function computeMargeNette() {
+  const recette = Number(window.__currentSaleTotal) || 0;
+  const autoCost = _sumDevisProductCost();
+  const autres = parseFloat(document.getElementById("margeCost")?.value || "0") || 0;
+  const cost = autoCost + autres;
+  const rate = parseFloat(document.getElementById("margeRate")?.value || "0") || 0;
+  const impotRate = parseFloat(document.getElementById("margeImpotRate")?.value || "0") || 0;
+
+  const charges = recette * (rate / 100);
+  const impots = recette * (impotRate / 100);
+  const brute = recette - cost;
+  const net = recette - cost - charges - impots;
+
+  const fmt = (typeof formatEuro === "function")
+    ? formatEuro
+    : (v) => (Number(v) || 0).toFixed(2) + " €";
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = fmt(v); };
+
+  const autoEl = document.getElementById("margeAutoCost");
+  if (autoEl) autoEl.value = fmt(autoCost);
+
+  set("margeRecette", recette);
+  set("margeCostView", cost);
+  set("margeCharges", charges);
+  set("margeImpots", impots);
+  set("margeNet", net);
+
+  const netEl = document.getElementById("margeNet");
+  if (netEl) netEl.style.color = net < 0 ? "#dc2626" : "#15803d";
+
+  // ⏱️ Rentabilité : net / heure + verdict + tarif conseillé
+  const hours = parseFloat(document.getElementById("margeHours")?.value || "0") || 0;
+  const target = parseFloat(document.getElementById("margeTarget")?.value || "0") || 0;
+  const netPerHour = hours > 0 ? net / hours : null;
+
+  const nphEl = document.getElementById("margeNetPerHour");
+  if (nphEl) nphEl.textContent = (netPerHour == null) ? "—" : (fmt(netPerHour) + " /h");
+
+  const verdictEl = document.getElementById("margeVerdict");
+  if (verdictEl) {
+    if (netPerHour == null) {
+      verdictEl.textContent = "⏱️ Indique le temps passé pour évaluer la rentabilité";
+      verdictEl.className = "marge-verdict marge-verdict--neutral";
+    } else {
+      let label, cls;
+      if (netPerHour >= 60)      { label = "🟢 Très rentable"; cls = "good"; }
+      else if (netPerHour >= 40) { label = "🟢 Rentable"; cls = "good"; }
+      else if (netPerHour >= 25) { label = "🟠 Correct — à surveiller"; cls = "warn"; }
+      else if (net < 0)          { label = "🔴 Tu perds de l'argent"; cls = "bad"; }
+      else                       { label = "🔴 Peu rentable — augmente ton tarif"; cls = "bad"; }
+      verdictEl.textContent = `${label}  (${fmt(netPerHour)} /h net)`;
+      verdictEl.className = "marge-verdict marge-verdict--" + cls;
+    }
+  }
+
+  // 💡 Tarif conseillé pour atteindre l'objectif €/h net
+  const sugEl = document.getElementById("margeSuggested");
+  if (sugEl) {
+    const r = (rate + impotRate) / 100;
+    const denom = 1 - r;
+    if (hours > 0 && target > 0 && denom > 0 && netPerHour != null && netPerHour < target) {
+      // net = recette*(1−r) − cost  →  recette = (objectif*heures + cost) / (1−r)
+      const suggested = (target * hours + cost) / denom;
+      sugEl.textContent = `💡 Pour ${fmt(target)} /h net, facture plutôt ~ ${fmt(suggested)} (au lieu de ${fmt(recette)})`;
+      sugEl.style.display = "";
+    } else {
+      sugEl.style.display = "none";
+    }
+  }
 }
 
 // Crée/maj le bandeau de total collant, visible quand on remplit un devis/facture
@@ -8930,6 +9129,20 @@ function newDocument(type) {
   document.getElementById("clientEmail").value = "";
   document.getElementById("notes").value = "";
 
+  // 💰 Réinitialiser la marge privée pour un nouveau document
+  const _mcNew = document.getElementById("margeCost");
+  if (_mcNew) _mcNew.value = "";
+  const _mrNew = document.getElementById("margeRate");
+  if (_mrNew) _mrNew.value = "21.2";
+  const _miNew = document.getElementById("margeImpotRate");
+  if (_miNew) _miNew.value = "6";
+  const _mhNew = document.getElementById("margeHours");
+  if (_mhNew) _mhNew.value = "";
+  const _mtNew = document.getElementById("margeTarget");
+  if (_mtNew) _mtNew.value = "50";
+  const _ndNew = document.getElementById("noDevisRequired");
+  if (_ndNew) _ndNew.checked = false;
+
   const clientCivilityEl = document.getElementById("clientCivility");
   if (clientCivilityEl) clientCivilityEl.value = "";
 
@@ -8959,6 +9172,7 @@ function newDocument(type) {
   const today = new Date().toISOString().split("T")[0];
   document.getElementById("docDate").value = today;
   document.getElementById("docNumber").value = getNextNumber(type);
+  _lockDocNumber();
 
   const discountCb = document.getElementById("discountEnabled");
   const discountInput = document.getElementById("discountPercentInput");
@@ -9015,8 +9229,23 @@ function loadDocument(id) {
 
   document.getElementById("docType").value = doc.type;
   document.getElementById("docNumber").value = doc.number;
+  _lockDocNumber();
   document.getElementById("docDate").value = doc.date;
   document.getElementById("validityDate").value = doc.validityDate || "";
+
+  // 💰 Restaurer la marge privée
+  const _mc = document.getElementById("margeCost");
+  if (_mc) _mc.value = (doc._margeCost != null && doc._margeCost !== 0) ? doc._margeCost : "";
+  const _mr = document.getElementById("margeRate");
+  if (_mr) _mr.value = (doc._margeChargeRate != null) ? doc._margeChargeRate : "21.2";
+  const _mi = document.getElementById("margeImpotRate");
+  if (_mi) _mi.value = (doc._margeImpotRate != null) ? doc._margeImpotRate : "6";
+  const _mh = document.getElementById("margeHours");
+  if (_mh) _mh.value = (doc._margeHours != null && doc._margeHours !== 0) ? doc._margeHours : "";
+  const _mt = document.getElementById("margeTarget");
+  if (_mt) _mt.value = (doc._margeTarget != null) ? doc._margeTarget : "50";
+  const _nd = document.getElementById("noDevisRequired");
+  if (_nd) _nd.checked = !!doc._noDevisRequired;
   document.getElementById("clientName").value = doc.client.name;
   document.getElementById("clientAddress").value = doc.client.address;
   document.getElementById("clientPhone").value = doc.client.phone;
@@ -9510,6 +9739,16 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
     totalTTC,
     notes,
     conditionsType,
+
+    // 💰 Marge privée (jamais imprimée / envoyée au client)
+    _margeCost: parseFloat(document.getElementById("margeCost")?.value || "0") || 0,
+    _margeChargeRate: parseFloat(document.getElementById("margeRate")?.value || "21.2") || 21.2,
+    _margeImpotRate: parseFloat(document.getElementById("margeImpotRate")?.value || "6") || 6,
+    _margeHours: parseFloat(document.getElementById("margeHours")?.value || "0") || 0,
+    _margeTarget: parseFloat(document.getElementById("margeTarget")?.value || "50") || 50,
+
+    // 🧾 Dispense de devis (facture directe autorisée > 150 € particulier)
+    _noDevisRequired: document.getElementById("noDevisRequired")?.checked || false,
 
     paymentMode:
       docType === "facture"
@@ -11166,6 +11405,15 @@ function loadDocumentsList() {
       );
     }
 
+    // Filtre mois
+    const monthSel = document.getElementById("monthFilter");
+    if (monthSel && monthSel.value !== "all") {
+      const mo = parseInt(monthSel.value, 10);
+      filtered = filtered.filter(
+        (d) => d.date && (new Date(d.date + "T00:00:00").getMonth() + 1) === mo,
+      );
+    }
+
     // Filtre "seulement les factures impayées"
     const unpaidToggle = document.getElementById("filterUnpaid");
     if (unpaidToggle && unpaidToggle.checked) {
@@ -11200,8 +11448,9 @@ function loadDocumentsList() {
   const sortMode = sortSel ? sortSel.value : "payment_desc";
 
   filtered.sort((a, b) => {
-    // 🔴 FACTURES : les impayées toujours en haut (ça saute aux yeux)
-    if (currentListType === "facture") {
+    // 🔴 FACTURES : les impayées en haut (ça saute aux yeux) —
+    //    SAUF quand on trie par numéro, où on veut un tri purement par n°.
+    if (currentListType === "facture" && !String(sortMode).startsWith("number")) {
       const ua = a.paid ? 1 : 0;
       const ub = b.paid ? 1 : 0;
       if (ua !== ub) return ua - ub; // impayée (0) avant payée (1)
@@ -11212,6 +11461,12 @@ function loadDocumentsList() {
       const nb = (b.number || "").toString();
       // On compare en chaîne, mais comme tes numéros sont normalisés ça passe très bien
       return nb.localeCompare(na, "fr", { numeric: true });
+    }
+
+    if (sortMode === "number_asc") {
+      const na = (a.number || "").toString();
+      const nb = (b.number || "").toString();
+      return na.localeCompare(nb, "fr", { numeric: true });
     }
 
     if (sortMode === "payment_desc") {
@@ -16762,6 +17017,42 @@ function _saveContractRemovedSet(set) {
 function isContractVisitRemoved(contractId, originalDate) {
   return _getContractRemovedSet().has(contractId + "|" + originalDate);
 }
+
+// ♻️ Restaure TOUS les passages retirés (par erreur) d'un contrat → ils
+//    réapparaissent dans le planning. (Synchronisé sur tous les appareils.)
+function restoreContractRemovedVisits(contractId) {
+  if (!contractId) {
+    if (typeof showToast === "function") showToast("Ouvre d'abord le contrat concerné", "warning");
+    return;
+  }
+  const set = _getContractRemovedSet();
+  const prefix = contractId + "|";
+  const removedKeys = [...set].filter((k) => k.startsWith(prefix));
+
+  if (!removedKeys.length) {
+    showConfirmDialog({
+      title: "Aucun passage retiré",
+      message: "Ce contrat n'a aucun passage retiré du planning.",
+      confirmLabel: "OK", cancelLabel: "", variant: "info", icon: "ℹ️",
+    });
+    return;
+  }
+
+  showConfirmDialog({
+    title: "Restaurer les passages",
+    message: `${removedKeys.length} passage(s) retiré(s) de ce contrat vont être remis dans le planning.`,
+    confirmLabel: "Restaurer",
+    cancelLabel: "Annuler",
+    variant: "success",
+    icon: "♻️",
+    onConfirm: () => {
+      removedKeys.forEach((k) => set.delete(k));
+      _saveContractRemovedSet(set);
+      try { renderPlanningWeek(); } catch (e) {}
+      if (typeof showToast === "function") showToast(`${removedKeys.length} passage(s) restauré(s)`, "success");
+    },
+  });
+}
 function removeContractVisit(contractId, originalDate, dateStr) {
   showConfirmDialog({
     title: "Retirer ce passage",
@@ -19224,6 +19515,9 @@ function generateDevisFromInvoice(invoice) {
 function maybeForceDevisInsteadOfSavingInvoice(invoiceDraft) {
   if (!invoiceDraft) return false;
   if (invoiceDraft.type !== "facture") return false;
+
+  // ✅ Dispense de devis cochée (client récurrent facturé directement) → on autorise
+  if (invoiceDraft._noDevisRequired) return false;
 
   // ✅ Facture issue d'un CONTRAT validé → le contrat tient lieu d'accord,
   //    pas besoin de devis obligatoire. On laisse modifier librement.
