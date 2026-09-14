@@ -6281,7 +6281,7 @@ function saveRapportOnly() {
           const elSubj = document.getElementById("docSubject");
           if (elName) { elName.value = rapName; elName.dispatchEvent(new Event("change")); }
           if (elAddr) elAddr.value = rapAddr;
-          if (elSubj) elSubj.value = `${rapTypeLabel}${rapDate ? " – " + rapDate.split("-").reverse().join("/") : ""}`;
+          if (elSubj) { elSubj.value = `${rapTypeLabel}${rapDate ? " – " + rapDate.split("-").reverse().join("/") : ""}`; elSubj.dataset.manualEdited = "1"; }
         }, 350);
       }
     });
@@ -8446,9 +8446,12 @@ function applyTemplate(selectEl) {
       : template.descSyndic;
   line.dataset.detail = detailHidden || "";
 
-  // Unité par défaut
+  // Unité par défaut :
+  //   - Clim (entretien) + produits/fournitures → "unité"
+  //   - Dépannages → "heure"
+  //   - Tout le reste (piscine, spa, réparations, forfaits...) → "forfait"
   if (unitInput) {
-    let unitVal = "";
+    let unitVal = "forfait";
     if (
       template.kind === "depannage_clim" ||
       template.kind === "depannage_piscine" ||
@@ -8456,30 +8459,11 @@ function applyTemplate(selectEl) {
     ) {
       unitVal = "heure";
     } else if (
+      template.kind === "entretien_clim" ||
       template.kind === "produits" ||
       template.kind === "fournitures"
     ) {
       unitVal = "unité";
-    } else if (
-      template.kind === "entretien_clim" ||
-      template.kind === "piscine_chlore" ||
-      template.kind === "piscine_sel" ||
-      template.kind === "entretien_jacuzzi" ||
-      template.kind === "hivernage_piscine" ||
-      template.kind === "remise_service_propre" ||
-      template.kind === "remise_service_piscine" ||
-      template.kind === "vidange_jacuzzi" ||
-      template.kind === "traitement_choc" ||
-      template.kind === "changement_sable" ||
-      template.kind === "remplacement_roulement" ||
-      template.kind === "remplacement_pompe_mo" ||
-      template.kind === "remplacement_cellule_mo" ||
-      template.kind === "nettoyage_local" ||
-      template.kind === "deplacement"
-    ) {
-      unitVal = "unité";
-    } else {
-      unitVal = "forfait";
     }
     unitInput.value = unitVal;
   }
@@ -9159,7 +9143,12 @@ function newDocument(type) {
   if (siteCivilityEl) siteCivilityEl.value = "";
 
   const subjectInput = document.getElementById("docSubject");
-  if (subjectInput) subjectInput.value = "";
+  if (subjectInput) {
+    subjectInput.value = "";
+    // ✅ Nouveau document : on réarme l'auto-remplissage de l'objet
+    // (sinon le flag "manuel" d'un doc précédent reste collé et bloque le remplissage)
+    subjectInput.dataset.manualEdited = "";
+  }
 
   const cbClientPart = document.getElementById("clientParticulier");
   const cbClientSyn = document.getElementById("clientSyndic");
@@ -9260,7 +9249,12 @@ function loadDocument(id) {
   document.getElementById("notes").value = doc.notes || "";
 
   const subjectInput = document.getElementById("docSubject");
-  if (subjectInput) subjectInput.value = doc.subject || "";
+  if (subjectInput) {
+    subjectInput.value = doc.subject || "";
+    // Doc existant : si un objet était déjà saisi, on le considère "manuel"
+    // pour ne pas l'écraser en modifiant une prestation ; sinon on autorise l'auto-remplissage
+    subjectInput.dataset.manualEdited = doc.subject ? "1" : "";
+  }
 
   // 🚫 Ne pas afficher le nom du client dans l'objet (quel que soit le client)
   if (subjectInput && doc?.client?.name) {
@@ -9632,6 +9626,13 @@ document.querySelectorAll(".prestation-line").forEach((line) => {
     if (!purchase || purchase <= 0) missingPurchase = true;
   }
 
+  // 5b) Dates de passage saisies sur la ligne
+  const dates = isDetail
+    ? []
+    : Array.from(line.querySelectorAll(".prestation-date"))
+        .map((inp) => (inp.value || "").trim())
+        .filter(Boolean);
+
 // 6) sauvegarde
   if (desc) {
     prestations.push({
@@ -9643,7 +9644,8 @@ document.querySelectorAll(".prestation-line").forEach((line) => {
       kind,
       isDetail,
       purchase,
-      detail: line.dataset.detail || "",   // ✅ AJOUT : description longue pour le PDF
+      dates,                               // ✅ dates de passage (pour le PDF)
+      detail: line.dataset.detail || "",   // ✅ description longue pour le PDF
     });
   }
 });
@@ -14935,12 +14937,11 @@ doc.prestations.forEach((p) => {
 
   let extraHtml = "";
   if (!isFirstContractInvoice && p.dates && p.dates.length) {
-    extraHtml += `<div class="sub-info">`;
-    extraHtml += `<div class="sub-info-line"><span class="dates-label">Dates de passage :</span></div>`;
-    p.dates.forEach((dv) => {
-      extraHtml += `<div class="sub-info-line">${dv}</div>`;
-    });
-    extraHtml += `</div>`;
+    const frDates = p.dates.map((dv) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(dv) ? dv.split("-").reverse().join("/") : dv,
+    );
+    const dateLabel = frDates.length > 1 ? "Dates de passage" : "Date de passage";
+    extraHtml += `<div class="sub-info"><div class="sub-info-line"><span class="dates-label">${dateLabel} :</span> ${frDates.join(", ")}</div></div>`;
   }
 
   const detailHtml = p.detail
@@ -15667,10 +15668,10 @@ const html = `<!DOCTYPE html>
     /* ===== PRINT (iOS SAFE) ===== */
     @media print{
       /* marges ici = plus stable iOS */
-      @page{ size:A4; margin:10mm 12mm 14mm 12mm; }
+      @page{ size:A4; margin:8mm 12mm 8mm 12mm; }
 
       /* SHRINK = évite la 2e page. iOS a besoin d'un peu plus que le PC. */
-      body{ zoom:${(typeof isIOS === "function" && isIOS()) ? "0.80" : "0.90"}; }
+      body{ zoom:${(typeof isIOS === "function" && isIOS()) ? "0.76" : "0.85"}; }
 
       /* pas de padding en print (marges gérées par @page) */
       .page{ padding:0 !important; }
@@ -17434,10 +17435,15 @@ function getVisitsPerWeekForDate(contract, monday) {
 function getPlanningColorClass(service) {
   const s = (service || "").toLowerCase();
 
-  if (s.includes("clim")) return "planning-kind-clim";
-  if (s.includes("jacuzzi") || s.includes("spa")) return "planning-kind-jacuzzi";
-  if (s.includes("dépannage") || s.includes("depannage")) return "planning-kind-depannage";
-  if (s.includes("piscine")) return "planning-kind-piscine";
+  const isDep = s.includes("dépannage") || s.includes("depannage");
+
+  // On distingue le domaine ET s'il s'agit d'un dépannage (teinte plus soutenue)
+  if (s.includes("clim")) return isDep ? "planning-kind-clim-dep" : "planning-kind-clim";
+  if (s.includes("jacuzzi") || s.includes("spa")) return isDep ? "planning-kind-jacuzzi-dep" : "planning-kind-jacuzzi";
+  if (s.includes("piscine")) return isDep ? "planning-kind-piscine-dep" : "planning-kind-piscine";
+
+  // Dépannage sans domaine identifié → orange générique
+  if (isDep) return "planning-kind-depannage";
 
   return "planning-kind-default";
 }
