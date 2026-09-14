@@ -1616,6 +1616,7 @@
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
 <button id="contractTransformButtonTop" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+    <button class="btn btn-success" onclick="invoiceNextContractInstallmentNow(currentContractId)">💶 Facturer l'échéance maintenant</button>
 
 
       <button class="btn btn-primary" onclick="createDevisFromCurrentContract()">🧾 Créer un devis</button>
@@ -2111,6 +2112,7 @@
     <button class="btn btn-primary" onclick="saveContract()">💾 Enregistrer</button>
     <button class="btn btn-primary" onclick="openContractPDF()">🖨️ Imprimer</button>
 <button id="contractTransformButtonBottom" class="btn btn-success" style="display:none;" onclick="transformContractToInvoice()">💶 Facturer</button>
+    <button class="btn btn-success" onclick="invoiceNextContractInstallmentNow(currentContractId)">💶 Facturer l'échéance maintenant</button>
     <button class="btn btn-secondary" type="button" onclick="restoreContractRemovedVisits(currentContractId)" title="Remettre dans le planning les passages retirés par erreur">♻️ Restaurer passages</button>
 
 

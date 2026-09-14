@@ -25321,6 +25321,71 @@ function countContractInstallmentInvoices(contractId) {
 
 // ---------- FACTURES D’ÉCHÉANCE AUTOMATIQUES ----------
 
+// 💶 Génère MAINTENANT la prochaine échéance d'un contrat (sans attendre la date).
+//    Utile pour facturer un mois dès qu'il est terminé, à la demande.
+function invoiceNextContractInstallmentNow(contractId) {
+  const contract = (typeof getContract === "function") ? getContract(contractId || currentContractId) : null;
+  if (!contract) { if (typeof showToast === "function") showToast("Contrat introuvable", "warning"); return; }
+
+  const pr = contract.pricing || {};
+  if (!pr.billingMode) {
+    showConfirmDialog({ title: "Pas de facturation", message: "Ce contrat n'a pas de mode de facturation défini.", confirmLabel: "OK", cancelLabel: "", variant: "warning", icon: "🧾" });
+    return;
+  }
+
+  // Contrat signé OU devis accepté requis
+  const signed = !!contract.signature;
+  const devisOK = (typeof isDevisAcceptedForContract === "function") ? isDevisAcceptedForContract(contract) : false;
+  if (!signed && !devisOK) {
+    showConfirmDialog({ title: "Contrat non validé", message: "Le contrat doit être signé (ou son devis accepté) avant de facturer.", confirmLabel: "OK", cancelLabel: "", variant: "warning", icon: "🧾" });
+    return;
+  }
+
+  const totalInstallments = (typeof getNumberOfInstallments === "function") ? getNumberOfInstallments(pr) : 0;
+  const already = (typeof countContractInstallmentInvoices === "function") ? countContractInstallmentInvoices(contract.id) : 0;
+  if (totalInstallments && already >= totalInstallments) {
+    showConfirmDialog({ title: "Déjà tout facturé", message: "Toutes les échéances de ce contrat ont déjà été facturées.", confirmLabel: "OK", cancelLabel: "", variant: "info", icon: "✅" });
+    return;
+  }
+
+  // S'assurer d'une date d'échéance à facturer
+  if (!pr.nextInvoiceDate) {
+    pr.nextInvoiceDate = (typeof computeNextInvoiceDate === "function") ? (computeNextInvoiceDate(contract) || "") : "";
+    contract.pricing = pr;
+  }
+  if (!pr.nextInvoiceDate) {
+    showConfirmDialog({ title: "Échéance introuvable", message: "Impossible de déterminer l'échéance à facturer.", confirmLabel: "OK", cancelLabel: "", variant: "warning", icon: "🧾" });
+    return;
+  }
+
+  const fac = createAutomaticInvoice(contract);
+  if (!fac) {
+    showConfirmDialog({ title: "Rien à facturer", message: "Cette échéance semble déjà facturée.", confirmLabel: "OK", cancelLabel: "", variant: "info", icon: "ℹ️" });
+    return;
+  }
+
+  // 🗓️ On émet la facture aujourd'hui (jamais une date future)
+  const todayISO = new Date().toISOString().slice(0, 10);
+  if (fac.date && fac.date > todayISO) fac.date = todayISO;
+
+  const docs = getAllDocuments();
+  docs.push(fac);
+  saveDocuments(docs);
+  if (typeof saveSingleDocumentToFirestore === "function") saveSingleDocumentToFirestore(fac);
+
+  // Avancer à l'échéance suivante
+  contract.pricing.nextInvoiceDate = (typeof computeNextInvoiceDate === "function") ? (computeNextInvoiceDate(contract) || "") : "";
+  const all = getAllContracts().map((c) => (c.id === contract.id ? contract : c));
+  saveContracts(all);
+  if (typeof saveSingleContractToFirestore === "function") saveSingleContractToFirestore(contract);
+
+  if (typeof showToast === "function") showToast(`Facture ${fac.number} générée`, "success");
+
+  // Ouvrir la facture créée
+  if (typeof openFromHome === "function") openFromHome("facture");
+  if (typeof loadDocument === "function") loadDocument(fac.id);
+}
+
 function checkScheduledInvoices() {
   let docs = getAllDocuments();
   const contracts = getAllContracts();
