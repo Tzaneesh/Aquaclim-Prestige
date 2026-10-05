@@ -12341,6 +12341,17 @@ function refreshContractsStatuses() {
       changed = true;
     }
 
+    // 1bis) Contrat terminé / résilié → on efface tout forçage manuel résiduel
+    // (ex. "En cours" laissé par erreur) pour éviter un affichage contradictoire
+    if (
+      (newStatus === CONTRACT_STATUS.TERMINE ||
+        newStatus === CONTRACT_STATUS.RESILIE) &&
+      c.meta.manualStatus
+    ) {
+      c.meta.manualStatus = "";
+      changed = true;
+    }
+
     // 2) Si le contrat est en "Terminé" ET lié à un devis non encore clôturé
     if (
       newStatus === CONTRACT_STATUS.TERMINE &&
@@ -12472,6 +12483,14 @@ function renderContractStatusBadge(contract) {
 
 function renderContractStatusCell(contract) {
   const badge = renderContractStatusBadge(contract);
+
+  // Statuts "verrouillés" par les dates ou la résiliation :
+  // le menu de forçage manuel n'a plus de sens → on n'affiche que le badge
+  const cst = computeContractStatus(contract);
+  if (cst === CONTRACT_STATUS.TERMINE || cst === CONTRACT_STATUS.RESILIE) {
+    return `<div class="contract-status-cell">${badge}</div>`;
+  }
+
   const manual = contract?.meta?.manualStatus || "";
 
   return `
@@ -15667,14 +15686,15 @@ const html = `<!DOCTYPE html>
 
     /* ===== PRINT (iOS SAFE) ===== */
     @media print{
-      /* marges ici = plus stable iOS */
-      @page{ size:A4; margin:8mm 12mm 8mm 12mm; }
+      /* marge @page = 0 → supprime l'en-tête/pied de page du navigateur
+         (date + URL GitHub). Les vraies marges sont reportées sur .page */
+      @page{ size:A4; margin:0; }
 
       /* SHRINK = évite la 2e page. iOS a besoin d'un peu plus que le PC. */
       body{ zoom:${(typeof isIOS === "function" && isIOS()) ? "0.76" : "0.85"}; }
 
-      /* pas de padding en print (marges gérées par @page) */
-      .page{ padding:0 !important; }
+      /* marges d'impression gérées ici (puisque @page est à 0) */
+      .page{ padding:8mm 12mm !important; }
 
       /* IMPORTANT: le footer ne doit PAS être “avoid” sinon iOS pousse page 2 */
       .page-footer,
@@ -15886,18 +15906,37 @@ function computeContractStatus(contract) {
   const pr = contract.pricing;
   let endDateObj = null;
 
-  // 1) priorité : startDate + durationMonths
-  if (pr.startDate && pr.durationMonths) {
+  // 1) PRIORITÉ : date de fin RÉELLE (contrats à dates personnalisées / clôture explicite)
+  //    a) endDateISO (champ ISO exact, renseigné pour les contrats "dates libres")
+  const _endISO = (pr.endDateISO || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(_endISO)) {
+    const d = new Date(_endISO + "T00:00:00");
+    if (!isNaN(d.getTime())) endDateObj = d;
+  }
+  //    b) sinon : dernière date de passage du calendrier personnalisé
+  if (!endDateObj && Array.isArray(pr.customPassageDates) && pr.customPassageDates.length) {
+    const valid = pr.customPassageDates
+      .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x))
+      .slice()
+      .sort();
+    if (valid.length) {
+      const d = new Date(valid[valid.length - 1] + "T00:00:00");
+      if (!isNaN(d.getTime())) endDateObj = d;
+    }
+  }
+
+  // 2) sinon : startDate + durationMonths (durée arrondie pour éviter les décalages)
+  if (!endDateObj && pr.startDate && pr.durationMonths) {
     const start = new Date(pr.startDate + "T00:00:00");
     if (!isNaN(start.getTime())) {
       const end = new Date(start);
-      end.setMonth(end.getMonth() + pr.durationMonths);
+      end.setMonth(end.getMonth() + Math.round(pr.durationMonths));
       end.setDate(end.getDate() - 1);
       endDateObj = end;
     }
   }
 
-  // 2) fallback : pr.endDateLabel (jj/mm/aaaa)
+  // 3) fallback : pr.endDateLabel (jj/mm/aaaa)
   if (!endDateObj && pr.endDateLabel) {
     const iso = parseFrenchDate(pr.endDateLabel); // ta fonction existe déjà
     if (iso) {
