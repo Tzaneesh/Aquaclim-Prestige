@@ -2397,6 +2397,8 @@ function onClientNameChange() {
   if (addr) addr.value = client.address || "";
   if (phone) phone.value = client.phone || "";
   if (email) email.value = client.email || "";
+  const siretInp = document.getElementById("clientSiret");
+  if (siretInp) siretInp.value = client.siret || "";
 
   const civ = document.getElementById("clientCivility");
   if (civ && client.civility) {
@@ -3612,6 +3614,7 @@ function addCurrentClient() {
   const address = document.getElementById("clientAddress").value.trim();
   const phone = document.getElementById("clientPhone").value.trim();
   const email = document.getElementById("clientEmail").value.trim();
+  const siret = document.getElementById("clientSiret")?.value.trim() || "";
   const civility = document.getElementById("clientCivility")?.value.trim();
 
   if (!name) {
@@ -3635,7 +3638,7 @@ function addCurrentClient() {
 
   if (existingIndex === -1) {
     // ➕ Nouveau client (avec id)
-    const tmp = { civility, name, address, phone, email };
+    const tmp = { civility, name, address, phone, email, siret };
     const id = getClientDocId(tmp);
     clientObj = { ...tmp, id };
     clients.push(clientObj);
@@ -3649,6 +3652,7 @@ function addCurrentClient() {
       address,
       phone,
       email,
+      siret,
     };
     clients[existingIndex] = clientObj;
   }
@@ -5123,6 +5127,8 @@ function createDocForClient(type, clientName) {
   if (a) a.value = c.address || "";
   if (p) p.value = c.phone || "";
   if (m) m.value = c.email || "";
+  const sEl = document.getElementById("clientSiret");
+  if (sEl) sEl.value = c.siret || "";
 
   // (optionnel) déclenche les auto-fill si tu en as
   try { if (typeof onClientNameChange === "function") onClientNameChange(); } catch(e){}
@@ -8193,6 +8199,14 @@ function addPrestation() {
    <div class="form-group no-print prestation-remove-wrapper">
       <button
         type="button"
+        class="btn btn-secondary btn-small no-print"
+        onclick="addDetailLineAfter(this)"
+        title="Ajouter une ligne de détail juste sous cette prestation"
+      >
+        ➕ Détail
+      </button>
+      <button
+        type="button"
         class="btn btn-danger btn-small date-remove-btn no-print"
         onclick="removePrestation(${prestationCount})"
         title="Supprimer cette prestation"
@@ -8214,11 +8228,9 @@ function addPrestation() {
 }
 
 
-function addDetailLine() {
+// Construit une ligne de détail (élément DOM, non encore inséré)
+function _createDetailLineEl() {
   prestationCount++;
-
-  const container = document.getElementById("prestationsContainer");
-  if (!container) return;
 
   const line = document.createElement("div");
   line.className = "prestation-line prestation-detail-line";
@@ -8253,7 +8265,50 @@ function addDetailLine() {
 </div>
   `;
 
-  container.appendChild(line);
+  return line;
+}
+
+// Ajoute une ligne de détail à la FIN (bouton global, comportement historique)
+function addDetailLine() {
+  const container = document.getElementById("prestationsContainer");
+  if (!container) return;
+
+  container.appendChild(_createDetailLineEl());
+
+  if (typeof _addDetailToggles === "function") _addDetailToggles();
+  calculateTotals();
+}
+
+// ✅ Ajoute une ligne de détail JUSTE SOUS la prestation du bouton cliqué
+// (sans toucher aux autres lignes). Se place après les détails déjà présents
+// de cette prestation.
+function addDetailLineAfter(btn) {
+  const container = document.getElementById("prestationsContainer");
+  if (!container) return;
+
+  const line = btn.closest(".prestation-line");
+  if (!line) {
+    addDetailLine();
+    return;
+  }
+
+  // On descend tant que les lignes suivantes sont des détails appartenant
+  // à cette prestation, pour insérer après le dernier détail existant.
+  let anchor = line;
+  let next = anchor.nextElementSibling;
+  while (next && next.classList.contains("prestation-detail-line")) {
+    anchor = next;
+    next = anchor.nextElementSibling;
+  }
+
+  const detailEl = _createDetailLineEl();
+  anchor.insertAdjacentElement("afterend", detailEl);
+
+  if (typeof _addDetailToggles === "function") _addDetailToggles();
+  calculateTotals();
+
+  const inp = detailEl.querySelector(".prestation-desc");
+  if (inp) inp.focus();
 }
 
 function _ensureIndemnite40InFormUI() {
@@ -9111,6 +9166,8 @@ function newDocument(type) {
   document.getElementById("clientAddress").value = "";
   document.getElementById("clientPhone").value = "";
   document.getElementById("clientEmail").value = "";
+  const _siretReset = document.getElementById("clientSiret");
+  if (_siretReset) _siretReset.value = "";
   document.getElementById("notes").value = "";
 
   // 💰 Réinitialiser la marge privée pour un nouveau document
@@ -9239,6 +9296,8 @@ function loadDocument(id) {
   document.getElementById("clientAddress").value = doc.client.address;
   document.getElementById("clientPhone").value = doc.client.phone;
   document.getElementById("clientEmail").value = doc.client.email;
+  const _siretEl = document.getElementById("clientSiret");
+  if (_siretEl) _siretEl.value = doc.client.siret || "";
 
   const civilitySelect = document.getElementById("clientCivility");
   if (civilitySelect) civilitySelect.value = doc.client.civility || "";
@@ -9550,6 +9609,8 @@ function saveDocument() {
     document.getElementById("clientPhone")?.value?.trim() || "";
   const clientEmail =
     document.getElementById("clientEmail")?.value?.trim() || "";
+  const clientSiret =
+    document.getElementById("clientSiret")?.value?.trim() || "";
   const docSubject =
     document.getElementById("docSubject")?.value?.trim() || "";
 
@@ -9724,6 +9785,7 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
       address: clientAddress,
       phone: clientPhone,
       email: clientEmail,
+      siret: clientSiret,
     },
 
     // ✅ Adresse du chantier / lieu d'intervention (le formulaire fait foi)
@@ -15762,6 +15824,7 @@ const html = `<!DOCTYPE html>
             ${doc.client?.address ? `<p class="client-line">${doc.client.address}</p>` : ""}
             ${doc.client?.phone ? `<p class="client-line">${doc.client.phone}</p>` : ""}
             ${doc.client?.email ? `<p class="client-line">${doc.client.email}</p>` : ""}
+            ${doc.client?.siret ? `<p class="client-line">SIRET : ${doc.client.siret}</p>` : ""}
           </div>
 
           ${
