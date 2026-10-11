@@ -5070,7 +5070,26 @@ function getDocument(id) {
 }
 
 function saveDocuments(docs) {
-  localStorage.setItem("documents", JSON.stringify(docs));
+  try {
+    localStorage.setItem("documents", JSON.stringify(docs));
+  } catch (e) {
+    // Ex. quota dépassé (QuotaExceededError) → on prévient au lieu d'échouer en silence
+    console.error("Échec localStorage.setItem(documents):", e);
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Enregistrement local impossible",
+        message:
+          "La sauvegarde dans la mémoire du navigateur a échoué (" +
+          ((e && e.name) || "erreur") +
+          ").\n\nLe document est quand même envoyé au cloud si possible. " +
+          "Si le texte collé dans les notes est très long, essaie de le raccourcir.",
+        confirmLabel: "OK",
+        variant: "warning",
+        icon: "⚠️",
+      });
+    }
+    // on NE bloque pas la suite (Firestore peut encore réussir)
+  }
 
   // ✅ Refresh global après toute modification de documents
   if (typeof refreshAfterDocsChange === "function") {
@@ -8203,7 +8222,7 @@ function addPrestation() {
         onclick="addDetailLineAfter(this)"
         title="Ajouter une ligne de détail juste sous cette prestation"
       >
-        ➕ Détail
+        ➕ Ajouter un détail
       </button>
       <button
         type="button"
@@ -8292,11 +8311,18 @@ function addDetailLineAfter(btn) {
     return;
   }
 
-  // On descend tant que les lignes suivantes sont des détails appartenant
-  // à cette prestation, pour insérer après le dernier détail existant.
+  // On descend tant que les éléments suivants appartiennent à cette prestation :
+  //  - les lignes de détail déjà présentes
+  //  - le bouton "Masquer/Afficher les détails" (inséré ENTRE la prestation et ses détails)
+  // afin d'insérer le nouveau détail APRÈS le dernier détail existant (et pas au-dessus).
   let anchor = line;
   let next = anchor.nextElementSibling;
-  while (next && next.classList.contains("prestation-detail-line")) {
+  while (
+    next &&
+    next.classList &&
+    (next.classList.contains("prestation-detail-line") ||
+      next.classList.contains("detail-toggle-btn"))
+  ) {
     anchor = next;
     next = anchor.nextElementSibling;
   }
@@ -9849,11 +9875,29 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
   }
 
   // === Save local ===
-  const docs = getAllDocuments();
-  const idx = docs.findIndex((d) => d.id === doc.id);
-  if (idx >= 0) docs[idx] = doc;
-  else docs.push(doc);
-  saveDocuments(docs);
+  try {
+    const docs = getAllDocuments();
+    const idx = docs.findIndex((d) => d.id === doc.id);
+    if (idx >= 0) docs[idx] = doc;
+    else docs.push(doc);
+    saveDocuments(docs);
+  } catch (e) {
+    // ⚠️ Plus jamais de "rien ne se passe" : on affiche la vraie raison
+    console.error("Erreur lors de l'enregistrement du document :", e);
+    if (typeof showConfirmDialog === "function") {
+      showConfirmDialog({
+        title: "Échec de l'enregistrement",
+        message:
+          "Une erreur a empêché l'enregistrement :\n" +
+          ((e && e.message) || String(e)) +
+          "\n\nRéessaie. Si ça persiste et que tu viens de coller un texte, raccourcis-le.",
+        confirmLabel: "OK",
+        variant: "warning",
+        icon: "⚠️",
+      });
+    }
+    return;
+  }
 
   // === Save Firestore (si dispo) ===
   try {
@@ -9885,7 +9929,7 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
   showToast(`${_typeLabel} ${doc.number || ""} enregistré${doc.type === "facture" ? "e" : ""}`, "success");
 
   currentDocumentId = doc.id;
-  loadDocumentsList();
+  try { loadDocumentsList(); } catch (e) { console.error("loadDocumentsList après save:", e); }
 }
 
 
