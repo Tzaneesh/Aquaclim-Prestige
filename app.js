@@ -7842,6 +7842,12 @@ function updateTransformButtonVisibility() {
   if (contractBtn) {
     contractBtn.style.display = canTransform ? "inline-block" : "none";
   }
+
+  // 🔁 Bouton "Transformer en devis" : visible pour une FACTURE enregistrée
+  const canTransformToDevis = type === "facture" && !!currentDocumentId;
+  document.querySelectorAll(".js-transform-devis").forEach((btn) => {
+    btn.style.display = canTransformToDevis ? "inline-block" : "none";
+  });
   // 🔥 Le(s) bouton(s) rapport apparaissent pour les devis ET les factures
   //    (uniquement quand le document est enregistré)
   //    → pour une FACTURE CLIM, ils deviennent "Générer attestation clim"
@@ -13307,6 +13313,42 @@ function transformToInvoice() {
       if (typeof refreshHomeStats === "function") refreshHomeStats();
       if (typeof loadDocumentsList === "function") loadDocumentsList();
       loadDocument(invoice.id);
+    },
+  });
+}
+
+// 🔁 Transformer une FACTURE en DEVIS (sens inverse)
+function transformToDevis() {
+  if (!currentDocumentId) return;
+
+  const docs = getAllDocuments();
+  const facture = docs.find(
+    (d) => d.id === currentDocumentId && d.type === "facture",
+  );
+  if (!facture) return;
+
+  showConfirmDialog({
+    title: "Transformer en devis",
+    message: `Créer un devis à partir de la facture ${facture.number || ""} ?\nLa facture n'est pas modifiée.`,
+    confirmLabel: "Créer le devis",
+    cancelLabel: "Annuler",
+    variant: "success",
+    icon: "🔁",
+    onConfirm: () => {
+      const devis = generateDevisFromInvoice(facture);
+      if (!devis) return;
+
+      const all = getAllDocuments();
+      all.push(devis);
+      saveDocuments(all);
+
+      if (typeof saveSingleDocumentToFirestore === "function") {
+        saveSingleDocumentToFirestore(devis);
+      }
+
+      if (typeof switchListType === "function") switchListType("devis");
+      if (typeof loadDocumentsList === "function") loadDocumentsList();
+      loadDocument(devis.id);
     },
   });
 }
@@ -19621,6 +19663,7 @@ function generateDevisFromInvoice(invoice) {
       address: invoice.client?.address || "",
       phone: invoice.client?.phone || "",
       email: invoice.client?.email || "",
+      siret: invoice.client?.siret || "",
     },
 
     siteCivility: invoice.siteCivility || "",

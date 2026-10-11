@@ -307,14 +307,16 @@ border-radius: 999px;
 
 /* Le bouton Enregistrer reste l'action principale (bleu) */
 .action-button[onclick*="saveDocument"],
-.action-button[onclick*="saveContract"] {
+.action-button[onclick*="saveContract"],
+.action-button[onclick*="transformToDevis"] {
     background: #2563eb;
     color: #fff;
     border-color: #2563eb;
 }
 
 .action-button[onclick*="saveDocument"]:hover:not(:disabled),
-.action-button[onclick*="saveContract"]:hover:not(:disabled) {
+.action-button[onclick*="saveContract"]:hover:not(:disabled),
+.action-button[onclick*="transformToDevis"]:hover:not(:disabled) {
     background: #1d4ed8;
     border-color: #1d4ed8;
 }
