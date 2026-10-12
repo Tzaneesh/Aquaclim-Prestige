@@ -93,6 +93,16 @@ function getCompanySettings() {
   }
 }
 
+// Nom légal AVEC la mention "EI" (Entrepreneur Individuel), obligatoire à côté
+// du nom sur tous les documents pro depuis la réforme du 15/05/2022.
+// (On ne modifie pas le champ Config : la mention est ajoutée à l'affichage.)
+function getLegalNameEI() {
+  const ln = String(getCompanySettings().legalName || "").trim();
+  if (!ln) return "";
+  if (/\bEI\b/i.test(ln) || /entrepreneur\s+individuel/i.test(ln)) return ln;
+  return ln + " EI";
+}
+
 // ================== CONSTANTES / MODÈLES ==================
 
 // Modèles de prestations (Particulier / Syndic + descriptions + types)
@@ -6435,7 +6445,7 @@ function exportRapportWord(rapId) {
     <h1 style="margin:0;color:#1976d2;">Rapport d’intervention</h1>
     <p style="margin:6px 0 12px;color:#444;">
       <strong>${_escapeTextForWord(company.companyName || "AquaClim Prestige")}</strong><br>
-      ${_escapeTextForWord(company.legalName || "")} – ${_escapeTextForWord(company.address || "")}<br>
+      ${_escapeTextForWord(getLegalNameEI())} – ${_escapeTextForWord(company.address || "")}<br>
       Tél : ${_escapeTextForWord(company.phone || "")} – Email : ${_escapeTextForWord(company.email || "")}
     </p>
 
@@ -6875,7 +6885,7 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   doc.setTextColor(...grey);
-  doc.text(company.legalName + " – " + company.address, M, y);
+  doc.text(getLegalNameEI() + " – " + company.address, M, y);
   y += 4.5;
   doc.text("Tel : " + company.phone + " – " + company.email, M, y);
   y += 7;
@@ -7128,7 +7138,7 @@ function generatePDFRapportFromRecord(record, mode = "print") {
   doc.setFontSize(7.5);
   doc.setTextColor(160, 160, 160);
   doc.text(
-    (company.legalName || "AquaClim Prestige") + " – SIRET " + (company.siret || "XXXXXXXXXXXXX"),
+    (getLegalNameEI() || "AquaClim Prestige") + " – SIRET " + (company.siret || "XXXXXXXXXXXXX"),
     105, 287, { align: "center" }
   );
 
@@ -12214,7 +12224,7 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   let y = 38;
 
   const company = getCompanySettings();
-  doc.text(`${company.legalName} – ${company.address}`, margin, y);
+  doc.text(`${getLegalNameEI()} – ${company.address}`, margin, y);
   y += 5;
   doc.text(`Tél : ${company.phone} – Email : ${company.email}`, margin, y);
   y += 8;
@@ -12391,7 +12401,7 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
   }
 
   const dateSign = record.date ? record.date.split("-").reverse().join("/") : new Date().toLocaleDateString("fr-FR");
-  doc.text("Fait le " + dateSign + " – " + (company.legalName || "AquaClim Prestige"), margin, y + 10);
+  doc.text("Fait le " + dateSign + " – " + (getLegalNameEI() || "AquaClim Prestige"), margin, y + 10);
 
   if (y < 280) y = 280;
   doc.setFont("helvetica", "italic");
@@ -15877,7 +15887,7 @@ const html = `<!DOCTYPE html>
         <h1>${getCompanySettings().companyName}</h1>
         <p class="subtitle">${getCompanySettings().subtitle}</p>
         <p class="contact">
-          ${getCompanySettings().legalName} – ${getCompanySettings().address}<br>
+          ${getLegalNameEI()} – ${getCompanySettings().address}<br>
           Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}<br>
           SIRET : <strong>${getCompanySettings().siret}</strong><br>
           ${
@@ -23666,7 +23676,7 @@ img.sig-client {
          <h1>${getCompanySettings().companyName}</h1>
     <p class="subtitle">${getCompanySettings().subtitle}</p>
     <p class="contact">
-      ${getCompanySettings().legalName} – SIRET : ${getCompanySettings().siret}<br>
+      ${getLegalNameEI()} – SIRET : ${getCompanySettings().siret}<br>
       Adresse : ${getCompanySettings().address} – Tél : ${getCompanySettings().phone} – Email : ${getCompanySettings().email}
     </p>
 
@@ -23693,7 +23703,7 @@ ${terminationBillingBlockTop}
     <div class="section-title">1. Identification des parties</div>
     <div class="block">
            <p class="label">Prestataire</p>
-      <p>${getCompanySettings().companyName} – représentée par ${getCompanySettings().legalName}</p>
+      <p>${getCompanySettings().companyName} – représentée par ${getLegalNameEI()}</p>
       <p>Domiciliation : ${getCompanySettings().address}</p>
       <p>SIRET : ${getCompanySettings().siret}</p>
       <p>RC Pro : Oui (attestation disponible sur demande)</p>
