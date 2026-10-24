@@ -1473,7 +1473,51 @@ db.collection("rapports").onSnapshot((snap) => {
           if (data) cloudDocs.push(data);
         });
 
-        localStorage.setItem("documents", JSON.stringify(cloudDocs));
+        // 🛡️ FUSION ANTI-CONFLIT DU STATUT DE PAIEMENT
+        // Si notre copie locale a un changement de paiement PLUS RÉCENT que le cloud
+        // (paidUpdatedAt plus grand), on garde notre statut et on RÉPARE le cloud.
+        // → empêche qu'un appareil au cache périmé réécrive un "payé" en "impayé".
+        let _localDocs = [];
+        try {
+          _localDocs = JSON.parse(localStorage.getItem("documents") || "[]") || [];
+        } catch (e) {
+          _localDocs = [];
+        }
+        const _localById = {};
+        _localDocs.forEach((d) => {
+          if (d && d.id) _localById[d.id] = d;
+        });
+
+        const _toHeal = []; // docs dont le cloud est périmé → à re-pousser
+        const _mergedDocs = cloudDocs.map((cloud) => {
+          const local = _localById[cloud.id];
+          if (!local) return cloud;
+          const cloudPT = Number(cloud.paidUpdatedAt || 0);
+          const localPT = Number(local.paidUpdatedAt || 0);
+          if (localPT > cloudPT) {
+            // Notre statut de paiement est plus récent → on le conserve
+            const fixed = {
+              ...cloud,
+              paid: local.paid,
+              paymentMode: local.paymentMode,
+              paymentDate: local.paymentDate,
+              paidUpdatedAt: local.paidUpdatedAt,
+            };
+            _toHeal.push(fixed);
+            return fixed;
+          }
+          return cloud;
+        });
+
+        localStorage.setItem("documents", JSON.stringify(_mergedDocs));
+
+        // 🔧 Auto-réparation du cloud (re-pousse les statuts plus récents).
+        // Converge : une fois le cloud à jour, paidUpdatedAt s'égalise → plus de heal.
+        if (_toHeal.length && typeof saveSingleDocumentToFirestore === "function") {
+          _toHeal.forEach((d) => {
+            try { saveSingleDocumentToFirestore(d); } catch (e) {}
+          });
+        }
 
         // ⚠️ mets un guard si jamais sanitizeManualPlanningItems n’existe pas
         if (typeof sanitizeManualPlanningItems === "function") {
@@ -9884,6 +9928,16 @@ const totalTTC = subtotalAfterDiscount + tvaAmount;
     createdAt: existing ? existing.createdAt : new Date().toISOString(),
   };
 
+  // 🛡️ Horodatage du statut de paiement (anti-conflit de synchro) :
+  // on ne le met à jour QUE si le statut payé change réellement, sinon on conserve l'ancien.
+  {
+    const _oldPaid = !!(existing && existing.paid);
+    doc.paidUpdatedAt =
+      doc.paid !== _oldPaid
+        ? Date.now()
+        : (existing && existing.paidUpdatedAt) || 0;
+  }
+
   // ✅ Devis obligatoire >150€
   if (typeof maybeForceDevisInsteadOfSavingInvoice === "function") {
     const blocked = maybeForceDevisInsteadOfSavingInvoice(doc);
@@ -13386,6 +13440,21 @@ if (!mode) {
   // ✅ Date de paiement = AUJOURD’HUI (sauf si déjà renseignée à la main)
   doc.paymentDate = doc.paymentDate || todayISO;
 }
+
+// 🛡️ Horodatage du changement de statut de paiement (anti-conflit de synchro)
+doc.paidUpdatedAt = Date.now();
+
+// 🧾 Journal du changement de statut de paiement (date + appareil)
+// → permet de retrouver la dernière vraie action si un conflit de sync survient
+try {
+  if (typeof addHistoryEntry === "function") {
+    const _device = (typeof isIOS === "function" && isIOS()) ? "iPhone" : "PC";
+    const _detail = (doc.paid
+      ? `💶 Marquée PAYÉE${doc.paymentMode ? " (" + doc.paymentMode + ")" : ""}${doc.paymentDate ? " le " + doc.paymentDate : ""}`
+      : "⏳ Remise en IMPAYÉE") + " — depuis " + _device;
+    addHistoryEntry(doc, { type: "payment", detail: _detail });
+  }
+} catch (e) {}
 
 // 💾 On sauvegarde d'abord la facture modifiée
 saveDocuments(docs);
