@@ -12431,7 +12431,7 @@ function generatePDFAttestationFromRecord(record, mode = "print") {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(blue.r, blue.g, blue.b);
-    doc.text("Prochain entretien recommande : " + frNext, margin + 4, y + 4);
+    doc.text("Prochain entretien recommandé : " + frNext, margin + 4, y + 4);
     y += 16;
   }
 
